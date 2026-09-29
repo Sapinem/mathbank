@@ -9,6 +9,13 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- **`MILESTONE.md` v2.0 — rombak menyeluruh** agar meng-cover semua sisa pekerjaan:
+  - **3 fase eksplisit:** MVP (M1–M8) · Lanjut (M9–M12) · **Operasional/Hardening (M13–M17, baru)** — utang keamanan belum tertutup (S4–S9), kualitas tes, UI/UX polish, observabilitas, dokumentasi rilis 1.0.
+  - **M4 dipecah 4 sub** (a/b ✅ · c/d ⬜) dengan task konkret per bagian.
+  - **M5–M8 diperluas** (task nyata + dokumen pendukung yang belum ditulis).
+  - **P1–P13** diperbarui (audit Base UI, fix akses LAN).
+  - Tabel dokumen per-milestone + status; risiko jadwal; Langkah Berikutnya berurutan prioritas.
+  - Disinkronkan: `KAMUS-DATA.md` (M0–M17), `PETA-DOKUMEN.md` (v2.0).
 - **Skrip `pnpm start:lan`** (`next start -H 0.0.0.0`) — untuk menguji aplikasi dari HP/perangkat lain lewat LAN. Mode **dev** (Turbopack) mengirim ~8,8 MB JS + kompilasi on-demand → HP tampak "freeze" saat memuat; produksi hanya ~1,4 MB (6,3× lebih kecil). Didokumentasikan di `RENCANA-UI-MOBILE.md` §11.4.
 
 ### Diperbaiki

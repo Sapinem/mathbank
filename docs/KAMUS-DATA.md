@@ -76,7 +76,7 @@
 | Istilah | Arti |
 |---------|------|
 | **L1–L9** | 9 lapisan arsitektur (`DESAIN-PER-LAPISAN-MATHBANK.md`). |
-| **M0–M12** | Milestone pembangunan (`MILESTONE.md`). MVP = M1–M8. |
+| **M0–M17** | Milestone pembangunan (`MILESTONE.md`). MVP = M1–M8; fase lanjut M9–M12; operasional/hardening M13–M17. |
 | **FSM** | Finite State Machine — aturan transisi status soal. |
 | **Guard** | Penjaga aturan (izin/kesiapan) di service/API. |
 | **Token `--mb-*`** | Variabel warna tema (OKLCH) hasil mesin tema. |

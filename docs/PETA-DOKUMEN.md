@@ -27,7 +27,7 @@
 |---|---------|:------:|---------|
 | A1 | `VISION.md` | ✅ | **diselaraskan untuk MathBank** 2026-09-29 |
 | A2 | `PRD.md` | ✅ | kanonik |
-| A3 | `MILESTONE.md` | ✅ | status M0–M3 & angka 27 diperbarui |
+| A3 | `MILESTONE.md` | ✅ | **v2.0** — 3 fase (MVP M1–M8 · lanjut M9–M12 · hardening M13–M17); M4 dipecah a–d |
 | A4 | `arsip/ROADMAP-QBANK.md` | 📦 | **diarsipkan** 2026-09-29 |
 | A5 | `CETAK-BIRU-MATHBANK.md` | ✅ | inventaris fitur |
 
