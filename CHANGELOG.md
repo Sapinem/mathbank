@@ -31,6 +31,14 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - `CETAK-BIRU-MATHBANK.md`: rujukan migrasi & ROADMAP diperbarui (arsip/dibatalkan).
 
 ### Ditambahkan
+- **Tes komponen kustom** (2026-09-29): 6 berkas tes baru (**24 tes**) menutup celah cakupan UI yang ditemukan audit —
+  - `src/components/questions/question-card.test.tsx` (9) — status/tipe/grade, seleksi, **gating `isCorrect`** (terkait S3), pemangkasan konten.
+  - `src/components/layout/desktop-only.test.tsx` (3) — cabang desktop vs pesan ramah.
+  - `src/components/layout/sidebar-user.test.tsx` (4) — nama/peran/muat/tamu (mock hook + `SidebarProvider`).
+  - `src/components/layout/page-header.test.tsx` (3), `skip-link.test.tsx` (2).
+  - `src/lib/hooks/use-media-query.test.ts` (4) — subscribe/notify/cleanup via `matchMedia` tiruan.
+  - `vitest.setup.ts`: stub `window.matchMedia` (jsdom tak punya).
+  - Coverage: **16 file** terukur (dari 10), **97,05%** statements; unit **185** (dari 161).
 - **Security headers (S2)** (2026-09-29): `next.config.ts` `headers()` untuk **semua rute** — CSP (ketat, `frame-ancestors 'none'`, `object-src 'none'`), `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `X-DNS-Prefetch-Control`; **HSTS hanya produksi**. `'unsafe-eval'` hanya di dev (React debug). Terverifikasi: halaman + KaTeX render benar (nol error CSP) + **8 tes e2e** baru (`e2e/security-headers.spec.ts`). Menutup utang **S2**; utang lanjutan **S9** (nonce).
 - **Rate limiting (S1) — token bucket** (2026-09-29): `src/lib/api/rate-limit.ts` — in-memory, nol dependensi, **interface siap-swap ke Redis**. Diterapkan di `wrapRoute` (opsi `rateLimit`), di-key per aktor (fallback IP). Kelebihan → **429** + `Retry-After`. Kebijakan: default 60/menit; mutasi lebih ketat (POST 20, DELETE 10). **Terverifikasi live** (20×201 → 429) + **13 tes baru** (`rate-limit.test.ts` 10, `route-wrapper.test.ts` +3). Menutup utang keamanan **S1**.
 - **Audit RBAC + riset Better Auth** (2026-09-29):

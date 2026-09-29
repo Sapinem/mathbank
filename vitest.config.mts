@@ -29,6 +29,13 @@ export default defineConfig({
         "src/lib/api/route-wrapper.ts",
         "src/lib/api/rate-limit.ts",
         "src/lib/db/projections/question.ts",
+        // Komponen kustom (BUKAN vendor ui/**) yang punya tes komponen.
+        "src/components/questions/question-card.tsx",
+        "src/components/layout/desktop-only.tsx",
+        "src/components/layout/page-header.tsx",
+        "src/components/layout/skip-link.tsx",
+        "src/components/layout/sidebar-user.tsx",
+        "src/lib/hooks/use-media-query.ts",
       ],
       // Ambang = lantai jujur saat ini; NAIKKAN bertahap, jangan turunkan.
       thresholds: {

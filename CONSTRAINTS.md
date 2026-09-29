@@ -7,7 +7,7 @@
 1. **Zero type errors** — `pnpm typecheck` (tsc --noEmit) harus 0 error.
 2. **Zero lint errors** — `pnpm lint` bersih (0 error, 0 warning).
 3. **Coverage ≥ 85% statements** — diukur via `pnpm test:coverage` (bagian dari `pnpm check`).
-   - Cakupan diskop ke **logika murni + keamanan** yang dapat diuji tanpa DB/HTTP: `auth/**`, `fsm/question-fsm`, `contracts/question`, `display/labels`, `api/route-wrapper`, `api/rate-limit`, `db/projections/question`.
+   - Cakupan diskop ke **logika murni + keamanan + komponen kustom teruji** yang dapat diuji tanpa DB/HTTP: `auth/**`, `fsm/question-fsm`, `contracts/question`, `display/labels`, `api/route-wrapper`, `api/rate-limit`, `db/projections/question`, `hooks/use-media-query`, dan komponen kustom teruji (`question-card`, `desktop-only`, `page-header`, `skip-link`, `sidebar-user`).
    - **Ini sengaja bukan angka proyek keseluruhan**: service/route/hook/komponen (butuh DB/HTTP) diuji lewat **integrasi DB** (`pnpm test:db`, 21 tes) + **e2e** (`e2e/`, 41 tes). Ketika mengutip angka coverage, **sebutkan lingkupnya** (mis. "97,7% pada 10 file logika murni") — jangan klaim "coverage proyek".
    - **Jangan turunkan ambang**; naikkan bertahap saat cakupan bertambah.
 4. **Build sukses** — `pnpm build` exit 0.
