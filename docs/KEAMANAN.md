@@ -105,20 +105,42 @@ Dua kelas kredensial, satu sistem:
 
 ---
 
-## 8. Kesadaran Risiko Operasional (utang keamanan)
+## 8. Header Keamanan (S2 — aktif)
+
+Diterapkan ke **semua rute** via `next.config.ts` `headers()`:
+
+| Header | Nilai | Fungsi |
+|--------|-------|--------|
+| `Content-Security-Policy` | lihat bawah | cegah XSS/injeksi |
+| `X-Content-Type-Options` | `nosniff` | cegah MIME sniffing |
+| `X-Frame-Options` | `DENY` | anti-clickjacking |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | batasi kebocoran referrer |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | matikan fitur tak dipakai |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | **produksi saja** (HSTS) |
+| `X-DNS-Prefetch-Control` | `off` | privasi |
+
+**CSP (produksi):** `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`.
+
+- **Dev** menambah `'unsafe-eval'` (React debug) — **tak pernah** di produksi.
+- **Utang lanjutan:** ganti `'unsafe-inline'` skrip dengan **nonce/hash** (S9) untuk CSP ketat.
+
+---
+
+## 9. Kesadaran Risiko Operasional (utang keamanan)
 
 Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 
 | # | Utang | Prioritas |
 |---|-------|-----------|
 | S1 | ~~Rate limiting untuk route umum~~ **✅ SELESAI** (2026-09-29): token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Siap-swap ke Redis. Lihat `src/lib/api/rate-limit.ts`. | ✅ |
-| S2 | **Security headers** (CSP, HSTS, X-Frame-Options) di `next.config.ts` — **belum diset** | 🔴 |
+| S2 | ~~Security headers~~ **✅ SELESAI** (2026-09-29): CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS (produksi). Di `next.config.ts`. Pengerasan lanjutan: nonce/hash CSP (kini `'unsafe-inline'`). | ✅ |
 | S3 | **Pemisahan output** `answer_key` — soal publik tak boleh memuat kunci | 🔴 |
 | S4 | **Verifikasi email** — kini `requireEmailVerification: false` | 🟠 |
 | S5 | **Kebijakan kata sandi kuat** + rotasi | 🟠 |
 | S6 | Pemindaian rahasia (**gitleaks**) di CI — tak tersedia | 🟠 |
 | S7 | Audit akses (siapa membaca apa), bukan hanya mutasi | 🟢 |
 | S8 | **Pantau advisory Better Auth** + pin `^1.7` (riset 2026 menemukan banyak CVE; versi kini 1.7.6 aman — lihat `RISET-BETTER-AUTH.md` §7.1) | 🟠 |
+| S9 | **CSP nonce/hash** — ganti `'unsafe-inline'` skrip dengan nonce (pengerasan lanjutan S2) | 🟢 |
 
 ---
 

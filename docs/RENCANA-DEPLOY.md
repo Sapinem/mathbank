@@ -103,8 +103,8 @@ jobs:
 - [ ] CI menjalankan `pnpm check` + `pnpm test:db`
 - [ ] `AUTH_DEV_BYPASS=false` di produksi (verifikasi)
 - [ ] Rahasia di secret manager (bukan `.env` di repo)
-- [ ] HTTPS + security headers (utang **S2**, `KEAMANAN.md`)
-- [ ] Rate limiting (utang **S1**)
+- [x] ~~Security headers (utang **S2**)~~ **✅ selesai** (`next.config.ts`); sisa: HTTPS/TLS di reverse proxy
+- [x] ~~Rate limiting (utang **S1**)~~ **✅ selesai**
 - [ ] Backup terjadwal + **uji restore** (`BACKUP-RECOVERY.md`)
 - [ ] Observabilitas: logging + health check (`OBSERVABILITAS.md`)
 - [ ] `db:verify` hijau di DB produksi
