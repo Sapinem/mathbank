@@ -32,7 +32,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M1 | Skema Database | 🔴 | M0 | ✅ **· direview (1 fix)** |
 | M2 | Auth & Peran | 🔴 | M1 | ✅ **· direview (2 temuan)** |
 | M3 | Tema & Shell | 🔴 | M2 | ✅ **· direview** |
-| M4 | Bank Soal (CRUD) | 🔴 | M3 | 🟡 **· M4a/b/c ✅, M4d berikutnya** |
+| M4 | Bank Soal (CRUD) | 🔴 | M3 | ✅ **· M4a/b/c/d selesai** |
 | **M4** | **Bank Soal (CRUD)** | 🔴 | M3 | 🟡 **M4a/M4b ✅ · M4c/M4d ⬜** |
 | M5 | Taksonomi (Referensi) | 🔴 | M4 | ⬜ |
 | M6 | Pencarian & Filter | 🔴 | M5 | ⬜ |
@@ -170,7 +170,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 ---
 
-## M4 — Bank Soal (CRUD) 🟡 BERJALAN
+## M4 — Bank Soal (CRUD) ✅ SELESAI
 
 **Tujuan:** inti produk — buat/edit/hapus/lihat soal.
 
@@ -180,7 +180,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 | **M4a** | Service + API (L5/L4) | ✅ `9607da8` |
 | **M4b** | Halaman daftar Bank Soal | ✅ `7fe4dc9` |
 | **M4c** | Editor soal + halaman detail | ✅ (editor 11 tipe + detail + FSM) |
-| **M4d** | Telaah + Pengaturan | ⬜ |
+| **M4d** | Telaah + Pengaturan | ✅ (telaah 2 tab + pengaturan umum) |
 
 ### M4a — Service & API ✅
 - [x] `question-service.ts` (create/list/get/update/delete/status/flag)
@@ -209,9 +209,9 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - 📄 **RENCANA-SOAL.md** — dibuat ✅
 
 ### M4d — Telaah & Pengaturan ⬜
-- [ ] Halaman **Telaah**: tab *perlu telaah* / *ditandai*; aksi ubah status + flag
-- [ ] Alur ulasan (reviewer): setujui → `ready`, tolak → `draft` + catatan
-- [ ] Halaman **Pengaturan**: bagian umum (org, default); bagian AI menyusul M10
+- [x] Halaman **Telaah**: tab *perlu telaah* / *ditandai*; aksi ubah status + flag ✅
+- [x] Alur ulasan (reviewer): setujui → `ready`, tolak → `draft` + catatan ✅
+- [x] Halaman **Pengaturan**: bagian umum (org, default) ✅; bagian AI menyusul M10
 - [ ] Service `review/` bila logika > UI
 
 ### Kriteria Selesai (M4 penuh)

@@ -1,11 +1,13 @@
-import { PageHeader } from "@/components/layout/page-header";
-import { ComingSoon } from "@/components/ui/states";
+import { Suspense } from "react";
+import { TelaahView } from "@/components/questions/telaah-view";
+import { LoadingState } from "@/components/ui/states";
+
+export const metadata = { title: "Telaah — MathBank" };
 
 export default function TelaahPage() {
   return (
-    <>
-      <PageHeader title="Telaah" description="Kurasi soal: perlu telaah, ditandai, dan kategorisasi." />
-      <ComingSoon milestone="M4" />
-    </>
+    <Suspense fallback={<LoadingState label="Memuat Telaah…" />}>
+      <TelaahView />
+    </Suspense>
   );
 }

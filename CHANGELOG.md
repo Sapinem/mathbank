@@ -9,6 +9,8 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- **M4d — Telaah & Pengaturan** — **Telaah**: tab *Perlu Telaah* (`status=review`) & *Ditandai* (`flagged=1`); aksi penelaah setujui→`ready`, tolak→`draft` (+catatan), lepas tanda. **Pengaturan**: bagian *Umum* (nama org, jenjang & kesulitan bawaan) tersimpan ke `app_settings` via `GET/PATCH /api/settings`. Bagian AI ditandai "menyusul M10". **Keamanan:** service settings **memask nilai `is_secret`** (tak pernah dikembalikan) & endpoint umum **ber-allowlist** (kunci AI tak bisa ditulis dari sini — diuji). e2e 10/10. **Menutup M4 penuh.**
+
 - **`MILESTONE.md` v2.0 — rombak menyeluruh** agar meng-cover semua sisa pekerjaan:
   - **3 fase eksplisit:** MVP (M1–M8) · Lanjut (M9–M12) · **Operasional/Hardening (M13–M17, baru)** — utang keamanan belum tertutup (S4–S9), kualitas tes, UI/UX polish, observabilitas, dokumentasi rilis 1.0.
   - **M4 dipecah 4 sub** (a/b ✅ · c/d ⬜) dengan task konkret per bagian.

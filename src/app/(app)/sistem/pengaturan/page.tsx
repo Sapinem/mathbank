@@ -1,11 +1,7 @@
-import { PageHeader } from "@/components/layout/page-header";
-import { ComingSoon } from "@/components/ui/states";
+import { PengaturanView } from "@/components/system/pengaturan-view";
+
+export const metadata = { title: "Pengaturan — MathBank" };
 
 export default function PengaturanPage() {
-  return (
-    <>
-      <PageHeader title="Pengaturan" description="Umum, AI, pengguna, dan sistem." />
-      <ComingSoon milestone="M4" />
-    </>
-  );
+  return <PengaturanView />;
 }
