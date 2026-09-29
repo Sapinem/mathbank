@@ -99,7 +99,7 @@ Inti sistem. Stimulus = soal biasa dengan `parent_id` NULL; anak menunjuk ke sti
 | `cognitive_level` | enum | ✗ | Bloom |
 | `grade` | varchar(20) | ✗ | validasi vs `grades` |
 | `content_markdown` | text | ✗ | isi soal (KaTeX `\(...\)`) |
-| `data_payload` | jsonb | ✗ | default `{}` — **skema per-tipe** (§Data Payload) |
+| `data_payload` | jsonb | ✗ | default `{}` — **hanya** matrix_grid & matching (§Data Payload) |
 | `answer_key` | jsonb | ✗ | default `{}` — **skema per-tipe** (§Answer Key) |
 | `status` | enum | ✗ | default `'draft'` |
 | `is_flagged` | boolean | ✗ | default false |
@@ -352,17 +352,19 @@ Inti sistem. Stimulus = soal biasa dengan `parent_id` NULL; anak menunjuk ke sti
 
 ## Answer Key — Skema per Tipe (T13)
 
-```ts
-// single_choice / assertion_reason / quantitative_pq / data_sufficiency
-{ correct: "A" }
+> **Prinsip:** hampir semua tipe = **pilihan ganda** (opsi + kunci). Bedanya hanya **presentasi `content_markdown`**. Kunci tetap sederhana.
 
-// multiple_choice_checkbox / combination_1234
+```ts
+// single_choice / assertion_reason / combination_1234 / quantitative_pq / data_sufficiency
+{ correct: "A" }          // combination & quantitative_pq JUGA pilihan ganda biasa
+
+// multiple_choice_checkbox
 { correct: ["A", "C"] }
 
-// matrix_grid
-{ rows: [{ label: "1", correct: ["B"] }, ...] }
+// matrix_grid — UI interaktif (payload dipakai)
+{ rows: [{ correct: ["A"] }, ...] }
 
-// matching
+// matching — UI interaktif (payload dipakai)
 { pairs: [{ left: "A", right: "2" }, ...] }
 
 // short_answer
@@ -377,21 +379,29 @@ Inti sistem. Stimulus = soal biasa dengan `parent_id` NULL; anak menunjuk ke sti
 
 ## Data Payload — Skema per Tipe
 
+> **Keputusan (revisi):** `data_payload` dipakai **HANYA** untuk tipe yang butuh **render UI interaktif** — yaitu **`matrix_grid`** & **`matching`**. Tipe lain → **`{}`** (cukup `content_markdown`).
+
 ```ts
-// combination_1234: statements diekstrak dari content_markdown
-{ statements: ["Pernyataan 1", "Pernyataan 2", "Pernyataan 3", "Pernyataan 4"] }
+// matrix_grid — baris/kolom terstruktur (tabel klik B/S)
+{
+  columns: ["Benar", "Salah"],
+  rows: [
+    { label: "Sisi miring = 5 cm" },
+    { label: "Sudut = 90°" }
+  ]
+}
 
-// matrix_grid
-{ rows: [...], columns: ["B", "S"] }
+// matching — dua kolom (UI menjodohkan)
+{
+  left:  ["sin 30°", "cos 60°", "tan 45°"],
+  right: ["1/2", "1", "√3"]
+}
 
-// matching
-{ left: [...], right: [...] }
-
-// quantitative_pq
-{ p: "Pernyataan P", q: "Pernyataan Q" }
-
-// tipe lain: {}
+// SEMUA tipe lain (single_choice, combination_1234, quantitative_pq,
+// assertion_reason, data_sufficiency, short_answer, essay, stimulus): {}
 ```
+
+> ⚠️ **Revisi penting:** `combination_1234` & `quantitative_pq` **TIDAK** butuh payload — keduanya **pilihan ganda biasa**; pernyataan P/Q ditulis di `content_markdown`. (Koreksi pemilik produk: "bukannya disederhanakan setipe pilihan ganda ya?")
 
 ---
 

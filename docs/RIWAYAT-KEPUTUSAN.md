@@ -50,7 +50,7 @@ Puluhan keputusan. Yang paling penting:
 - **Embedding satu tempat** (inline `questions.embedding`).
 - **Soal diedit langsung** walau sudah dipakai naskah (naskah = bukan snapshot; user menerima konsekuensi).
 - **`is_flagged`+`flag_notes`** dipertahankan (kurasi kualitas inti).
-- **`answer_key`** & **`data_payload`**: skema per-tipe soal (11 tipe) — lihat L7.
+- **`answer_key`** & **`data_payload`**: skema per-tipe soal. **Prinsip: hampir semua tipe = pilihan ganda** (presentasi beda di `content_markdown`). `data_payload` **hanya** untuk `matrix_grid` & `matching` (UI interaktif); tipe lain `{}`.
 - **Audit:** SATU tabel `audit_logs` generik (bukan dua terpisah).
 - **Matematika saja** → tak ada tabel `subjects`. **Kurikulum** (Merdeka/K13) tidak perlu.
 - **Pencarian:** trigram `pg_trgm` GIN + vektor HNSW + hybrid **RRF** (dari cetak biru). Dedup 0.98 master-dup / 0.85 near-dup.
