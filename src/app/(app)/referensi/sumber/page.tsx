@@ -1,11 +1,7 @@
-import { PageHeader } from "@/components/layout/page-header";
-import { ComingSoon } from "@/components/ui/states";
+import { SourcesView } from "@/components/reference/sources-view";
+
+export const metadata = { title: "Sumber & Asal — MathBank" };
 
 export default function SumberPage() {
-  return (
-    <>
-      <PageHeader title="Sumber & Asal" description="Buku, situs, sekolah, dan institusi asal soal." />
-      <ComingSoon milestone="M5" />
-    </>
-  );
+  return <SourcesView />;
 }

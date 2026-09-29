@@ -1,11 +1,7 @@
-import { PageHeader } from "@/components/layout/page-header";
-import { ComingSoon } from "@/components/ui/states";
+import { EventsView } from "@/components/reference/events-view";
+
+export const metadata = { title: "Event — MathBank" };
 
 export default function EventPage() {
-  return (
-    <>
-      <PageHeader title="Event" description="UTBK, OSN, ujian sekolah, dan subtesnya." />
-      <ComingSoon milestone="M5" />
-    </>
-  );
+  return <EventsView />;
 }

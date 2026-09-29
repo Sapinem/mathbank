@@ -9,6 +9,15 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- **M5 — Taksonomi (Referensi) selesai**:
+  - **Topik** — pohon 3-level (`/referensi/topik`): CRUD, anti-siklus,
+    hapus RESTRICT (tolak bila ada anak/dipakai soal).
+  - **Sumber & Asal** (`/referensi/sumber`) — Buku/Situs/Sekolah/Kompetisi,
+    slug otomatis, kolom "Dipakai" (usageCount nyata), hapus RESTRICT.
+  - **Event** (`/referensi/event`) — UTBK/OSN dll + subtes & alias.
+  - **Label** (`/referensi/label`) — tag lintas-topik + usageCount.
+  - Service `taxonomy-service.ts` + API CRUD (`/api/{sources,events,tags}[/id]`).
+  - Guard RESTRICT mencegah hapus entitas yang masih dipakai soal (409).
 - **M4d — Telaah & Pengaturan** — **Telaah**: tab *Perlu Telaah* (`status=review`) & *Ditandai* (`flagged=1`); aksi penelaah setujui→`ready`, tolak→`draft` (+catatan), lepas tanda. **Pengaturan**: bagian *Umum* (nama org, jenjang & kesulitan bawaan) tersimpan ke `app_settings` via `GET/PATCH /api/settings`. Bagian AI ditandai "menyusul M10". **Keamanan:** service settings **memask nilai `is_secret`** (tak pernah dikembalikan) & endpoint umum **ber-allowlist** (kunci AI tak bisa ditulis dari sini — diuji). e2e 10/10. **Menutup M4 penuh.**
 
 - **`MILESTONE.md` v2.0 — rombak menyeluruh** agar meng-cover semua sisa pekerjaan:

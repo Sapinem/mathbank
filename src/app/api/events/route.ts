@@ -1,21 +1,26 @@
-import { asc } from "drizzle-orm";
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
-import { db } from "@/lib/db";
-import { events } from "@/lib/db/schema/event";
+import { createEvent, listEvents } from "@/lib/services/taxonomy-service";
 
-/** GET /api/events — daftar event. */
+const eventSchema = z.object({
+  name: z.string().trim().min(1).max(150),
+  shortname: z.string().trim().min(1).max(50),
+  category: z.string().trim().min(1).max(50),
+  subtests: z.array(z.string().max(100)).max(50).optional(),
+  aliases: z.array(z.string().max(100)).max(50).optional(),
+});
+
+/** GET /api/events — daftar event (dengan subtes & aliases). */
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
-  handler: async () => {
-    return db
-      .select({
-        id: events.id,
-        name: events.name,
-        shortname: events.shortname,
-        category: events.category,
-      })
-      .from(events)
-      .orderBy(asc(events.name));
-  },
+  handler: async () => listEvents(),
+});
+
+/** POST /api/events — buat event. */
+export const POST = wrapRoute({
+  rateLimit: { capacity: 30, refillPerSec: 1 },
+  permission: "taxonomy:manage",
+  body: eventSchema,
+  handler: async ({ body, actor }) => createEvent(body, actor),
 });
