@@ -8,6 +8,7 @@
 2. **Zero lint errors** — `pnpm lint` bersih.
 3. **Coverage ≥ 85% statements** — untuk logika inti (service, engine, parser).
 4. **Build sukses** — `pnpm build` exit 0.
+5. **Install library saat perlu saja** — paket hanya dipasang saat milestonenya tiba (lihat `TUMPUKAN-TEKNOLOGI.md`). Tak menumpuk dependency di awal.
 
 ## Aturan React (React Compiler aktif)
 

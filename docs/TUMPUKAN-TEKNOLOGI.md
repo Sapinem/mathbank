@@ -9,10 +9,14 @@
 ## Filosofi Pemilihan
 
 1. **Kanvas bersih** — pilih yang terbaik, bukan warisan QBank.
-2. **Pasang saat perlu** — per-milestone, bukan semua di awal.
+2. **Pasang saat perlu** — per-milestone, bukan semua di awal. Tiap paket = beban (update, keamanan, learning).
 3. **Kode milik kita** — utamakan yang bisa di-copy (shadcn) daripada dependency hitam.
 4. **Standar industri** — pakai yang matang & luas (React Query, Zod, Drizzle).
 5. **Sesuai gaya** — Linear/Vercel (padat, presisi).
+
+> ✅ **KEPUTUSAN (diratifikasi):** Daftar di bawah adalah **rencana**, bukan perintah install.
+> **JANGAN install paket sebelum milestonenya tiba.** Saat mulai milestone N, baru pasang paket untuk N.
+> Alasan: hindari dependency bloat & kode mati; tiap paket hanya masuk saat benar-benar dipakai.
 
 ---
 
@@ -151,14 +155,15 @@
 
 ---
 
-## ❓ Keputusan yang Perlu Dikonfirmasi
+## ✅ Keputusan (diratifikasi)
 
-1. **shadcn/ui** sebagai basis komponen — setuju? (sudah dipilih di awal)
-2. **React Query** (bukan Zustand/Redux) — setuju?
-3. **KaTeX** — tentu ya (inti).
-4. **Editor soal:** markdown+preview dulu, atau langsung Tiptap (WYSIWYG)?
-5. **PDF:** cetak browser dulu (M8), atau siapkan @react-pdf sejak awal?
-6. Pasang **M3 sekarang** (7 paket), sisanya menyusul?
+1. **shadcn/ui** sebagai basis komponen — ✅ setuju
+2. **React Query** (bukan Zustand/Redux) — ✅ setuju
+3. **KaTeX** — ✅ (inti)
+4. **Prinsip "install saat sampai milestonenya"** — ✅ **dipegang** (aturan)
+5. Editor soal (markdown vs Tiptap) & PDF — diputuskan **saat M4/M8 tiba**
+
+> **Aturan instalasi:** saat mulai milestone N → baru install paket untuk N. Tidak menumpuk di awal.
 
 ---
 
