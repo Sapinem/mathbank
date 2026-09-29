@@ -19,6 +19,7 @@ export const GET = wrapRoute({
 
 /** PATCH /api/questions/[id] — perbarui soal. */
 export const PATCH = wrapRoute({
+  rateLimit: { capacity: 30, refillPerSec: 1 },
   permission: "question:edit",
   body: updateQuestionSchema,
   handler: async ({ params, body, actor }) => updateQuestion(params.id, body, actor),
@@ -26,6 +27,7 @@ export const PATCH = wrapRoute({
 
 /** DELETE /api/questions/[id] — hapus lunak. */
 export const DELETE = wrapRoute({
+  rateLimit: { capacity: 10, refillPerSec: 0.2 },
   permission: "question:delete",
   handler: async ({ params, actor }) => {
     await deleteQuestion(params.id, actor);

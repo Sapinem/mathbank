@@ -5,6 +5,7 @@ import { sources } from "@/lib/db/schema/source";
 
 /** GET /api/sources — daftar sumber. */
 export const GET = wrapRoute({
+  rateLimit: true,
   permission: "question:view",
   handler: async () => {
     return db

@@ -54,6 +54,7 @@ Validasi menambah `details`:
 | 404 | `NOT_FOUND` | Sumber daya tak ada |
 | 409 | `CONFLICT` | Konflik data / `INVALID_TRANSITION` (transisi FSM salah) |
 | 422 | `NOT_READY` | `review→ready` tanpa `answer_key` (guard kesiapan) |
+| 429 | `RATE_LIMITED` | Terlalu banyak permintaan (rate limit token bucket) — sertakan header `Retry-After` (detik) |
 | 500 | `INTERNAL_ERROR` | Kesalahan tak terduga |
 
 ---
@@ -146,7 +147,9 @@ Ditegakkan sebagai **guard service** (`assertReady()` di `fsm/question-fsm.ts`),
 
 ## 7. Rate Limiting & Keamanan
 
-- **Belum ada rate limiting** (utang **S1** di `KEAMANAN.md`) — akan ditambahkan sebelum produksi.
+- **Rate limiting AKTIF** (sejak 2026-09-29): token bucket **in-memory** per aktor (fallback IP), diterapkan di `wrapRoute` via opsi `rateLimit`. Kelebihan → **429** + header `Retry-After`.
+  - Kebijakan: default 60 burst / ~60 per menit; mutasi lebih ketat (`POST /api/questions` 20 burst, `DELETE` 10 burst).
+  - Implementasi: `src/lib/api/rate-limit.ts`; store **siap-swap** ke Redis saat multi-instance.
 - API key di-hash; rahasia tak pernah masuk log.
 - **Utang S3:** jangan bocorkan `answer_key` ke peran yang tak berhak (perlu audit serialisasi).
 

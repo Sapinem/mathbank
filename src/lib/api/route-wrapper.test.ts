@@ -25,6 +25,7 @@ import {
   ConflictError,
 } from "@/lib/auth/guards";
 import { InvalidTransitionError, NotReadyError } from "@/lib/fsm/question-fsm";
+import { MemoryStore, setStore } from "./rate-limit";
 
 /** Aktor admin (punya semua izin). */
 function adminActor(): Actor {
@@ -39,6 +40,7 @@ function req(url = "http://localhost/api/x", init?: RequestInit): Request {
 beforeEach(() => {
   resolveActorMock.mockReset();
   resolveActorMock.mockResolvedValue(adminActor());
+  setStore(new MemoryStore()); // reset rate limiter antar-tes
 });
 
 describe("wrapRoute — alur sukses", () => {
@@ -209,6 +211,42 @@ describe("wrapRoute — autentikasi & izin", () => {
       handler: async () => ({ ok: true }),
     });
     expect((await handler(req())).status).toBe(200);
+  });
+});
+
+describe("wrapRoute — rate limiting", () => {
+  it("menolak dengan 429 setelah kapasitas habis (+ header Retry-After)", async () => {
+    resolveActorMock.mockResolvedValue(adminActor());
+    const handler = wrapRoute({
+      rateLimit: { capacity: 2, refillPerSec: 1 },
+      handler: async () => ({ ok: true }),
+    });
+    expect((await handler(req())).status).toBe(200);
+    expect((await handler(req())).status).toBe(200);
+    const limited = await handler(req());
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("Retry-After")).toBeTruthy();
+    const json = await limited.json();
+    expect(json.error.code).toBe("RATE_LIMITED");
+  });
+
+  it("tanpa opsi rateLimit → tak dibatasi", async () => {
+    const handler = wrapRoute({ handler: async () => ({ ok: true }) });
+    for (let i = 0; i < 100; i++) {
+      expect((await handler(req())).status).toBe(200);
+    }
+  });
+
+  it("bucket terpisah per aktor (satu kena limit, lain tidak)", async () => {
+    const handler = wrapRoute({
+      rateLimit: { capacity: 1, refillPerSec: 1 },
+      handler: async () => ({ ok: true }),
+    });
+    resolveActorMock.mockResolvedValue(adminActor()); // id u1
+    expect((await handler(req())).status).toBe(200);
+    expect((await handler(req())).status).toBe(429);
+    resolveActorMock.mockResolvedValue({ ...adminActor(), id: "u2" });
+    expect((await handler(req())).status).toBe(200); // bucket u2 masih penuh
   });
 });
 

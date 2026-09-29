@@ -111,7 +111,7 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 
 | # | Utang | Prioritas |
 |---|-------|-----------|
-| S1 | **Rate limiting** untuk route umum (kini hanya API key) | 🔴 |
+| S1 | ~~Rate limiting untuk route umum~~ **✅ SELESAI** (2026-09-29): token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Siap-swap ke Redis. Lihat `src/lib/api/rate-limit.ts`. | ✅ |
 | S2 | **Security headers** (CSP, HSTS, X-Frame-Options) di `next.config.ts` — **belum diset** | 🔴 |
 | S3 | **Pemisahan output** `answer_key` — soal publik tak boleh memuat kunci | 🔴 |
 | S4 | **Verifikasi email** — kini `requireEmailVerification: false` | 🟠 |

@@ -11,6 +11,7 @@ import { wrapRoute } from "@/lib/api/route-wrapper";
  * Dihitung langsung dari DB (bukan data contoh).
  */
 export const GET = wrapRoute({
+  rateLimit: true,
   permission: "question:view",
   handler: async () => {
     const [

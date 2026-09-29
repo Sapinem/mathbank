@@ -5,6 +5,7 @@ import { events } from "@/lib/db/schema/event";
 
 /** GET /api/events — daftar event. */
 export const GET = wrapRoute({
+  rateLimit: true,
   permission: "question:view",
   handler: async () => {
     return db

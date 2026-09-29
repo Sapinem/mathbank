@@ -4,6 +4,7 @@ import { changeQuestionStatus } from "@/lib/services/question-service";
 
 /** PATCH /api/questions/[id]/status — ubah status lewat FSM (L6). */
 export const PATCH = wrapRoute({
+  rateLimit: { capacity: 30, refillPerSec: 1 },
   permission: "question:edit",
   body: changeStatusSchema,
   handler: async ({ params, body, actor }) =>

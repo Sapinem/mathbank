@@ -9,6 +9,13 @@ import {
   ConflictError,
   assertCan,
 } from "@/lib/auth/guards";
+import {
+  checkRateLimit,
+  rateLimitKey,
+  RateLimitError,
+  DEFAULT_POLICY,
+  type RateLimitPolicy,
+} from "./rate-limit";
 import type { Actor } from "@/lib/auth/actor";
 import type { Permission } from "@/lib/auth/permissions";
 
@@ -42,6 +49,21 @@ export interface RouteOptions<TQuery, TBody, TResult> {
   handler: (ctx: RouteContext<TQuery, TBody>) => Promise<TResult>;
   /** Status sukses (default 200). */
   status?: number;
+  /**
+   * Aktifkan rate limiting untuk route ini.
+   * `true` = kebijakan default; atau objek kebijakan khusus.
+   * Di-key per aktor (id) atau per IP bila tak terautentikasi.
+   */
+  rateLimit?: boolean | RateLimitPolicy;
+  /** Nama scope (default: dari permission). */
+  rateLimitScope?: string;
+}
+
+/** Ambil IP klien dari header proxy (X-Forwarded-For) atau fallback. */
+function clientIp(req: Request): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]!.trim();
+  return req.headers.get("x-real-ip");
 }
 
 /** Bangun objek dari URLSearchParams → plain object untuk Zod. */
@@ -95,6 +117,16 @@ function errorResponse(err: unknown): NextResponse {
       { status: 422 },
     );
   }
+  if (err instanceof RateLimitError) {
+    const retryAfterSec = Math.ceil(err.retryAfterMs / 1000);
+    return NextResponse.json(
+      { error: { code: err.code, message: err.message } },
+      {
+        status: 429,
+        headers: { "Retry-After": String(retryAfterSec) },
+      },
+    );
+  }
   if (err instanceof ZodError) {
     return NextResponse.json(
       {
@@ -130,6 +162,19 @@ export function wrapRoute<TQuery, TBody, TResult>(
         throw new ForbiddenError("Harus ganti password lebih dulu");
       }
       if (opts.permission) assertCan(actor, opts.permission);
+
+      // Rate limit (bila diaktifkan) — di-key per aktor, fallback IP.
+      if (opts.rateLimit) {
+        const policy =
+          opts.rateLimit === true ? DEFAULT_POLICY : opts.rateLimit;
+        const key = rateLimitKey(
+          actor.id,
+          clientIp(req),
+          opts.rateLimitScope ?? opts.permission ?? "default",
+        );
+        const result = checkRateLimit(key, policy);
+        if (!result.allowed) throw new RateLimitError(result.retryAfterMs);
+      }
 
       const query = opts.query
         ? opts.query.parse(searchParamsToObject(req.url))

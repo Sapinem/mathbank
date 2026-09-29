@@ -5,6 +5,7 @@ import { topics } from "@/lib/db/schema/taxonomy";
 
 /** GET /api/topics — daftar topik (untuk filter & editor). */
 export const GET = wrapRoute({
+  rateLimit: true,
   permission: "question:view",
   handler: async () => {
     return db

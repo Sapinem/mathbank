@@ -26,6 +26,7 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - `CETAK-BIRU-MATHBANK.md`: rujukan migrasi & ROADMAP diperbarui (arsip/dibatalkan).
 
 ### Ditambahkan
+- **Rate limiting (S1) — token bucket** (2026-09-29): `src/lib/api/rate-limit.ts` — in-memory, nol dependensi, **interface siap-swap ke Redis**. Diterapkan di `wrapRoute` (opsi `rateLimit`), di-key per aktor (fallback IP). Kelebihan → **429** + `Retry-After`. Kebijakan: default 60/menit; mutasi lebih ketat (POST 20, DELETE 10). **Terverifikasi live** (20×201 → 429) + **13 tes baru** (`rate-limit.test.ts` 10, `route-wrapper.test.ts` +3). Menutup utang keamanan **S1**.
 - **Audit RBAC + riset Better Auth** (2026-09-29):
   - `src/lib/auth/resolve.test.ts` (**16 tes**) — pintu masuk identitas: pagar keras dev-bypass (mati di produksi), prioritas session→API key, pemetaan header, ketahanan error. **`resolve.ts` coverage 0% → 94%**.
   - `src/lib/auth/permissions.test.ts` (**20 tes**) — **kunci exhaustive** seluruh matriks izin (setiap sel 16 aksi × 5 peran) + invarian (machine tak boleh destruktif, agent tak boleh bundle, dll). Perubahan matriks tak sengaja kini **tertangkap tes**.
