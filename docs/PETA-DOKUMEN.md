@@ -64,6 +64,7 @@
 | D5 | `AUDIT-KONSISTENSI-PERENCANAAN.md` | ✅ | |
 | D6 | `REVIEW-TUMPUKAN-TEKNOLOGI.md` | ✅ | |
 | D7 | `RIWAYAT-KEPUTUSAN.md` | ✅ | |
+| D10 | `RISET-BETTER-AUTH.md` | ✅ | **dibuat** 2026-09-29 — evaluasi RBAC Better Auth |
 | D8 | `CONTRIBUTING.md` | ✅ | **dibuat** 2026-09-29 — alur kontribusi |
 | D9 | `GOVERNANCE.md` | ✅ | **dibuat** 2026-09-29 — kepemilikan & wewenang |
 

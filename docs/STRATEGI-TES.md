@@ -154,9 +154,13 @@ Coverage **tidak** diukur sebagai satu angka global. Dua scope:
 | T3 | L3 Hooks | 5 hook tanpa tes | 🟡 sedang | ⬜ |
 | T4 | L2 Komponen | 37 komponen, 0 tes (hanya e2e) | 🟡 sedang | ⬜ |
 | T5 | L8 Data | schema tanpa tes integrasi (ditutup `db:verify`) | 🟢 rendah | ✅ (db:verify) |
+| T6 | L1 Auth | `resolve.ts` 0% (pintu identitas + pagar dev-bypass) | 🔴 tinggi | ✅ **selesai** (16 tes) |
+| T7 | L1 Auth | Matriks izin tak dikunci exhaustive | 🟠 menengah | ✅ **selesai** (20 tes kunci) |
 
 > **Diperbarui 2026-09-29:** T1 & T2 dibayar. `route-wrapper` masuk scope coverage;
 > tes integrasi DB dapat perintah sendiri `pnpm test:db` (lihat §5).
+> **T6 & T7 dibayar** (audit RBAC): `resolve.ts` 0%→**94%**; matriks izin dikunci exhaustive
+> (setiap sel) sehingga perubahan tak sengaja tertangkap. Modul `auth` kini **43 tes**.
 
 ---
 

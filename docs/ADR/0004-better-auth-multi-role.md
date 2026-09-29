@@ -39,3 +39,8 @@ Aplikasi butuh **dua kelas kredensial**: session cookie untuk manusia (guru, rev
 ## Catatan
 
 Better Auth `admin`/`apiKey` plugin selaras pola multi-peran. Terverifikasi terbaru via Context7 (`REVIEW-TUMPUKAN-TEKNOLOGI.md`).
+
+**Dikukuhkan oleh riset (2026-09-29)** — lihat `RISET-BETTER-AUTH.md`:
+- Plugin RBAC resmi Better Auth (`admin`, `organization`) **tak menjawab** kebutuhan inti MathBank: izin **`own`** (kepemilikan resource) & **multi-role** yang mulus. Semua opsi tetap butuh kode `own` sendiri.
+- **Keputusan: pakai Better Auth HANYA untuk autentikasi** (session + API key); otorisasi tetap matriks sendiri (`permissions.ts` + `guards.ts`), kini **43 tes** (kunci exhaustive).
+- Boleh **nanti** pertimbangkan plugin `admin` **hanya untuk manajemen user** (bukan otorisasi).
