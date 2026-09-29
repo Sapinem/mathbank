@@ -118,6 +118,7 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 | S5 | **Kebijakan kata sandi kuat** + rotasi | 🟠 |
 | S6 | Pemindaian rahasia (**gitleaks**) di CI — tak tersedia | 🟠 |
 | S7 | Audit akses (siapa membaca apa), bukan hanya mutasi | 🟢 |
+| S8 | **Pantau advisory Better Auth** + pin `^1.7` (riset 2026 menemukan banyak CVE; versi kini 1.7.6 aman — lihat `RISET-BETTER-AUTH.md` §7.1) | 🟠 |
 
 ---
 

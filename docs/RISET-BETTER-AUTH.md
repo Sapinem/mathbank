@@ -120,11 +120,46 @@ Tiga opsi:
 
 ---
 
-## 7. Temuan Lain (relevan)
+## 7. Temuan Lain (relevan) — TERVERIFIKASI
 
-- **Next.js 16 mengganti `middleware.ts` → `proxy.ts`** (Node.js runtime default). Kita **tak memakai** middleware/proxy (auth di `wrapRoute`) — tak terpengaruh, tapi catat untuk masa depan.
-- **Riwayat keamanan Better Auth (2025–2026):** ada beberapa advisory (OAuth/OIDC, rate-limit IPv6, session). **Aksi:** jaga versi terbaru + pantau advisory; ini memperkuat keputusan **meminimalkan** permukaan (pakai sedikit plugin).
-- **Rate limit API key** bersifat **per-key**, bukan per-IP → tetap butuh rate-limit per-IP di reverse proxy (utang **S1**, `KEAMANAN.md`).
+### 7.1 Postur keamanan kita (diverifikasi terhadap CVE 2025–2026)
+
+Riset menemukan **banyak CVE** di Better Auth 2026. Kami verifikasi postur kita:
+
+| CVE (contoh) | Dampak | Perbaikan di | Kita (1.7.6) |
+|---|---|---|---|
+| CVE-2026-53512 (9.1) | Refresh token OAuth tanpa verifikasi secret | ≥ 1.6.11 | ✅ aman |
+| GHSA-rjg6-39jm-rgg4 (9.9) | SCIM provider-ID collision | ≥ 1.6.22 | ✅ aman |
+| CVE-2026-67327 (8.3) | Pre-account hijacking | ≥ 1.6.22 / 1.7 | ✅ aman |
+| CVE-2026-67333 (7.2) | Stored XSS via redirect_uri | ≥ 1.6.13 | ✅ aman |
+| CVE-2026-45364 (7.3) | Rate limiter bypass via IPv6 | ≥ 1.4.17 | ✅ aman |
+
+**Kesimpulan:** versi kita (**1.7.6**) **di atas semua ambang perbaikan** yang ditemukan. **Aman.**
+
+### 7.2 Kenapa CVE terbesar **tak berlaku** untuk kita
+
+- **CVE-2025-29927** (bypass middleware Next.js) & **jebakan Server Actions**: risiko bila autentikasi diandalkan **hanya** di middleware/proxy, atau bila Server Action tak validasi ulang. **Kita:**
+  - ❌ **Tak ada `middleware.ts`/`proxy.ts`** — auth di route handler (`wrapRoute`).
+  - ❌ **Tak ada Server Action (`"use server"`)** — nol permukaan ini.
+  - ✅ **Setiap** route memvalidasi aktor via `resolveActor` (teruji 16 tes).
+  → Kelas kerentanan ini **secara arsitektur tak berlaku**.
+
+### 7.3 `nextCookies()` — kita **tak butuh**
+
+Plugin `nextCookies()` wajib **hanya bila** memanggil `auth.api.signIn*` dari **Server Action**. Kita pakai `toNextJsHandler(auth)` di route handler `/api/auth/[...all]` → cookie ter-set normal. **Tidak perlu** plugin ini. (Catatan: bila nanti memakai Server Action untuk auth, wajib tambahkan `nextCookies()` **paling akhir** di array plugins.)
+
+### 7.4 Next.js 16: `middleware.ts` → `proxy.ts`
+
+Next.js 16 mengganti nama middleware → proxy (Node runtime default). Kita tak memakai keduanya → tak terpengaruh. Catat untuk masa depan (mis. bila mau redirect UX berbasis cookie).
+
+### 7.5 Rate limit API key = per-key, bukan per-IP
+
+`apiKey.rateLimit` Better Auth mengikat **per-key**. Tetap butuh **rate-limit per-IP** di reverse proxy → utang **S1** (`KEAMANAN.md`).
+
+### 7.6 Template `KEAMANAN.md` (rencana)
+
+- [ ] Tambah **S8**: pantau advisory Better Auth + pin `^1.7`.
+- [ ] Tutup **S1** (rate limit per-IP) sebelum produksi.
 
 ---
 
