@@ -68,6 +68,7 @@
 | D8 | `CONTRIBUTING.md` | ✅ | **dibuat** 2026-09-29 — alur kontribusi |
 | D9 | `GOVERNANCE.md` | ✅ | **dibuat** 2026-09-29 — kepemilikan & wewenang |
 | D11 | `AUDIT-MUTU-M0-M4B.md` | ✅ | **dibuat** 2026-09-29 — audit mutu menyeluruh M0–M4b |
+| D12 | `REVIEW-PER-MILESTONE.md` | ✅ | **dibuat** 2026-09-30 — review berurutan M1→…; temuan + perbaikan per milestone |
 
 ### Kategori E — Keamanan, Operasi & Kepatuhan
 

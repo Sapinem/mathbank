@@ -467,6 +467,26 @@ Inti sistem. Stimulus = soal biasa dengan `parent_id` NULL; anak menunjuk ke sti
 4. Lintas — trigger, ekstensi, index, seeder, skrip verifikasi
 5. Migrasi `db:generate`
 
+### Cara Membangun DB dari Nol (WAJIB — pelajaran review M1)
+
+> ⚠️ **Jangan** pakai `drizzle-kit migrate` langsung, dan **jangan** andalkan
+> `db:push`. Rantai yang benar:
+
+```bash
+# 1) SEKALI per DB — sebagai SUPERUSER (pgvector `vector` menuntut hak superuser):
+sudo -u postgres psql -p 5433 -d <db> -f drizzle/manual/00-extensions.sql
+
+# 2) Selalu lewat pnpm db:migrate (bukan drizzle-kit migrate langsung):
+pnpm db:migrate     # = db-ensure-extensions → drizzle-kit migrate → db:safety
+```
+
+**Mengapa:** migrasi `0000_*.sql` memakai tipe `vector` & `gin_trgm_ops` tetapi
+**tidak** memuat ekstensinya → di DB bersih `CREATE TABLE questions` gagal dan
+seluruh skema tak terbangun. Trigger/CHECK/HNSW juga ada di `drizzle/manual/`
+yang **hanya** dijalankan oleh `pnpm db:safety`. Lihat `REVIEW-PER-MILESTONE.md` §M1.
+
+Urutan yang benar: **ekstensi → tabel (migrasi) → invarian (safety)**.
+
 ---
 
 *Dokumen ini jembatan desain → kode. Bila kode menuntut perbedaan, koreksi di sini dulu.*
