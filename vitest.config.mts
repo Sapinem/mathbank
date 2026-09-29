@@ -30,6 +30,8 @@ export default defineConfig({
         "src/lib/api/rate-limit.ts",
         "src/lib/db/projections/question.ts",
         "src/lib/theme/color.ts",
+        "src/lib/search/fusion.ts",
+        "src/lib/taxonomy/tree.ts",
         // Komponen kustom (BUKAN vendor ui/**) yang punya tes komponen.
         "src/components/questions/question-card.tsx",
         "src/components/questions/bank-soal-view.tsx",

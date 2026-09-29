@@ -11,6 +11,8 @@ import {
   listQuestions,
 } from "./question-service";
 import { NotFoundError } from "@/lib/auth/guards";
+import { buildQuestionFilter, collectTopicDescendants } from "@/lib/question/filters";
+import { createTopic } from "./topic-service";
 import { NotReadyError } from "@/lib/fsm/question-fsm";
 
 /**
@@ -269,5 +271,55 @@ describe("setQuestionFlag & deleteQuestion", () => {
     const q = await createQuestion(baseInput(), teacher);
     await deleteQuestion(q.id, teacher);
     expect(await getQuestion(q.id)).toBeNull();
+  });
+});
+
+describe("M6 — filter & pencarian", () => {
+  it("filter topik TERMASUK anak (rekursif)", async () => {
+    // Buat Kategori > Topik > SubTopik, soal dikaitkan ke SubTopik.
+    const kat = await createTopic({ name: `M6 Kat ${Date.now()}` }, admin);
+    const top = await createTopic({ name: "Topik Anak", parentId: kat.id }, admin);
+    const sub = await createTopic({ name: "Sub Soal", parentId: top.id }, admin);
+
+    const q = await createQuestion(baseInput({ topicIds: [sub.id] }), teacher);
+
+    // Filter pada KATEGORI (induk) harus menemukan soal yang terkait SUB-nya.
+    const res = await listQuestions(
+      { topicId: kat.id, limit: 20, offset: 0 } as never,
+      teacher,
+    );
+    expect(res.items.map((i) => i.id)).toContain(q.id);
+  });
+
+  it("collectTopicDescendants mengumpulkan seluruh subtree", async () => {
+    const a = await createTopic({ name: `D ${Date.now()}` }, admin);
+    const b = await createTopic({ name: "b", parentId: a.id }, admin);
+    await createTopic({ name: "c", parentId: b.id }, admin);
+    const ids = await collectTopicDescendants(a.id);
+    expect(ids).toHaveLength(3);
+    expect(ids).toContain(a.id);
+  });
+
+  it("pencarian trigram toleran typo ringan", async () => {
+    await createQuestion(
+      baseInput({ contentMarkdown: "Tentukan hasil dari limit fungsi trigonometri" }),
+      teacher,
+    );
+    await createQuestion(
+      baseInput({ contentMarkdown: "Hitung luas bangun datar persegi" }),
+      teacher,
+    );
+    // "trigonometri" salah ketik jadi "trigonometr" → tetap menemukan.
+    const res = await listQuestions(
+      { q: "trigonometr", limit: 20, offset: 0 } as never,
+      teacher,
+    );
+    expect(res.items.length).toBeGreaterThanOrEqual(1);
+    expect(res.items[0].contentMarkdown).toContain("trigonometri");
+  });
+
+  it("buildQuestionFilter: tanpa q → byRelevance false", async () => {
+    const f = await buildQuestionFilter({ limit: 20, offset: 0 } as never);
+    expect(f.byRelevance).toBe(false);
   });
 });

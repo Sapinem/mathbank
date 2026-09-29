@@ -21,6 +21,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { QuestionCard } from "@/components/questions/question-card";
+import {
+  ViewModeToggle,
+  modeClass,
+  type ViewMode,
+} from "@/components/questions/view-mode-toggle";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { useQuestions } from "@/lib/hooks/use-questions";
 import { useTopics, useSources } from "@/lib/hooks/use-reference";
@@ -50,6 +55,8 @@ export function BankSoalView() {
 
   const [search, setSearch] = useState(params.get("q") ?? "");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Mode tampilan (M6): list padat / grid / masonry — disimpan di URL.
+  const mode = (params.get("mode") as ViewMode) ?? "list";
 
   const query = { ...filter, limit: PAGE_SIZE, offset: page * PAGE_SIZE };
   const { data, isLoading, isError, error } = useQuestions(query);
@@ -178,6 +185,8 @@ export function BankSoalView() {
           <span className="hidden shrink-0 text-sm text-muted-foreground sm:inline">
             {total} soal
           </span>
+
+          <ViewModeToggle value={mode} onChange={(m) => setParam("mode", m)} />
           <Button render={<Link href="/bank-soal/baru" />} nativeButton={false} size="sm" className="shrink-0">
             <Plus data-icon="inline-start" />
             <span className="hidden sm:inline">Buat Soal</span>
@@ -205,7 +214,7 @@ export function BankSoalView() {
               }
             />
           ) : (
-            <div>
+            <div className={modeClass(mode)}>
               {data.items.map((q) => (
                 <QuestionCard key={q.id} question={q} href={`/bank-soal/${q.id}`} />
               ))}

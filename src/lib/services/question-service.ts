@@ -7,6 +7,7 @@ import {
   type QuestionOption,
 } from "@/lib/db/schema/question";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
+import { buildQuestionFilter } from "@/lib/question/filters";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { transition, assertReady, type QuestionStatus } from "@/lib/fsm/question-fsm";
@@ -109,55 +110,23 @@ export async function listQuestions(
   query: ListQuestionsQuery,
   viewer?: Actor,
 ): Promise<{ items: PublicQuestion[]; total: number }> {
-  const conds = [];
-  if (!query.includeDeleted) conds.push(isNull(questions.deletedAt));
-  if (query.status) conds.push(eq(questions.status, query.status));
-  if (query.questionType) conds.push(eq(questions.questionType, query.questionType));
-  if (query.grade) conds.push(eq(questions.grade, query.grade));
-  if (query.difficulty) conds.push(eq(questions.difficulty, query.difficulty));
-  if (query.cognitiveLevel) conds.push(eq(questions.cognitiveLevel, query.cognitiveLevel));
-  if (query.sourceId) conds.push(eq(questions.sourceId, query.sourceId));
-  if (query.eventId) conds.push(eq(questions.eventId, query.eventId));
-  if (query.flagged !== undefined) conds.push(eq(questions.isFlagged, query.flagged));
-  if (query.q) {
-    conds.push(
-      sql`${questions.contentMarkdown} ILIKE ${"%" + query.q + "%"}`,
-    );
-  }
-
-  // Filter via relasi (topik/label)
-  let restrictIds: string[] | null = null;
-  if (query.topicId) {
-    const rows = await db
-      .select({ id: questionTopics.questionId })
-      .from(questionTopics)
-      .where(eq(questionTopics.topicId, query.topicId));
-    restrictIds = rows.map((r) => r.id);
-  }
-  if (query.tagId) {
-    const rows = await db
-      .select({ id: questionTags.questionId })
-      .from(questionTags)
-      .where(eq(questionTags.tagId, query.tagId));
-    const ids = rows.map((r) => r.id);
-    restrictIds = restrictIds ? restrictIds.filter((i) => ids.includes(i)) : ids;
-  }
-  if (restrictIds) {
-    if (restrictIds.length === 0) return { items: [], total: 0 };
-    conds.push(inArray(questions.id, restrictIds));
-  }
-  const finalWhere = conds.length ? and(...conds) : undefined;
+  const { where: finalWhere, byRelevance } = await buildQuestionFilter(query);
 
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(questions)
     .where(finalWhere);
 
+  // Urutkan: relevansi trigram bila ada pencarian, selain itu terbaru dulu.
+  const orderBy = byRelevance && query.q
+    ? [desc(sql`similarity(${questions.contentMarkdown}, ${query.q.trim()})`), desc(questions.createdAt)]
+    : [desc(questions.createdAt)];
+
   const rows = await db
     .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
     .from(questions)
     .where(finalWhere)
-    .orderBy(desc(questions.createdAt))
+    .orderBy(...orderBy)
     .limit(query.limit)
     .offset(query.offset);
 
