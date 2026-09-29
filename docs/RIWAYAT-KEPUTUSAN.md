@@ -68,6 +68,7 @@ Ini **inti kanvas bersih**. Dibahas L1→L9, tiap lapisan dikunci.
 - **Taxonomy kelola:** bukan admin-only (teacher/reviewer/agent bisa kelola miliknya).
 - **Hard-delete:** admin boleh semua; **teacher boleh hapus soal sendiri**.
 - **MCP bisa enrichment** dengan izin khusus (agent bertindak sebagai enrichment).
+- **Enrichment manual:** `teacher` & `reviewer` **boleh** memicu (keputusan pemilik produk, review M2 2026-09-30).
 
 ### L2 — Antarmuka ✅
 - 4 grup sidebar: **Kerja / Referensi / Studio / Sistem**.

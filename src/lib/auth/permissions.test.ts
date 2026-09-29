@@ -26,7 +26,7 @@ const EXPECTED: Record<Permission, Record<Role, "yes" | "own" | "no">> = {
   "media:manage": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "no" },
   "settings:manage": { admin: "yes", teacher: "no", reviewer: "no", agent: "no", machine: "no" },
   "user:manage": { admin: "yes", teacher: "no", reviewer: "no", agent: "no", machine: "no" },
-  "enrichment:run": { admin: "yes", teacher: "no", reviewer: "no", agent: "yes", machine: "yes" },
+  "enrichment:run": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "yes" },
 };
 
 describe("matriks izin — kunci exhaustive", () => {

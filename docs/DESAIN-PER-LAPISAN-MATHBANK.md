@@ -59,13 +59,13 @@
 | Kelola aset media | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Kelola pengaturan | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Kelola pengguna | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Enrichment soal | ✅ | ❌ | ❌ | ✅* | ✅ |
+| Enrichment soal | ✅ | ✅ | ✅ | ✅* | ✅ |
 | Kirim ingest (batch) | ✅ | — | — | — | ✅ *(endpoint `/api/v1/ingest/*`, M9)* |
 
 > `own` = teacher/reviewer/agent hanya untuk sumber daya **miliknya** (`authorId === actor.id`).
 > `*` **Izin enrichment agen** = keputusan pemilik produk (agen AI boleh enrichment terbatas).
-> **Catatan:** `teacher`/`reviewer` **tidak** memicu enrichment via izin
-> `enrichment:run` — guru mengedit langsung di UI (lihat §Enrichment 3 jalur).
+> **Keputusan pemilik produk (review M2, 2026-09-30):** `teacher` & `reviewer` **boleh**
+> memicu enrichment manual (lihat §Enrichment 3 jalur: jalur "Manual").
 > **Ingest batch** belum jadi permission tersendiri (diimplementasi di M9).
 
 ## Enrichment — 3 jalur

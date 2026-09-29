@@ -186,16 +186,18 @@ tak ada UI-nya. (Untuk app shell, ini belum krusial — error muncul sebagai pes
 | Aksi | Dokumen L1 | Kode | Sumber keputusan |
 |------|-----------|------|------------------|
 | Kelola taksonomi | teacher ✅, reviewer ❌, agent ❌, machine ❌ | teacher/reviewer/agent `own`, machine `yes` | `RIWAYAT-KEPUTUSAN.md:68` (bukan admin-only) → **kode benar** |
-| Enrichment | teacher ✅, reviewer ✅, machine ❌ | teacher ❌, reviewer ❌, machine `yes` | kode lebih ketat; **perlu konfirmasi** |
+| Enrichment | teacher ✅, reviewer ✅, machine ❌ | ~~teacher ❌, reviewer ❌~~ | **✅ KEPUTUSAN PEMILIK PRODUK: dokumen benar** → kode diperbaiki (teacher/reviewer `yes`); machine tetap `yes` |
 | Buat soal (machine) | ❌ | `yes` (ingest hasilkan draft) | komentar kode: ingest → draft → **kode benar** |
 | Ingest batch | ada baris | **tidak ada permission** | belum diimplementasi (M9) |
 
 **Verdict:** kode mencerminkan keputusan **yang lebih baru** (`RIWAYAT-KEPUTUSAN.md`),
 tetapi **tabel di dokumen L1 belum diperbarui** → pembaca bisa salah paham.
-**Perbaikan:** perlakukan `permissions.ts` sebagai **sumber kebenaran**, lalu
-**selaraskan tabel L1** (atau beri catatan "lihat `permissions.ts`"). Enrichment
-teacher/reviewer perlu **konfirmasi pemilik produk** (apakah guru boleh memicu AI
-enrichment manual?).
+**Perbaikan (dilakukan):**
+1. `permissions.ts` dijadikan **sumber kebenaran**; tabel L1 diselaraskan + peringatan
+   "kode menang bila berbeda".
+2. **Enrichment:** diputuskan oleh **pemilik produk** → `teacher` & `reviewer` **boleh**
+   (`enrichment:run` = `yes`) → **kode diubah** + tes `EXPECTED` diperbarui + dokumen
+   L1 & `RIWAYAT-KEPUTUSAN` dicatat.
 
 #### 🟡 T-M2-4 — Jumlah permission: dokumen bilang 16, kode 15
 

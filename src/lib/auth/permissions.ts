@@ -152,10 +152,10 @@ export const PERMISSIONS: Record<keyof PermissionMatrix, Record<Role, Access>> =
   },
   "enrichment:run": {
     admin: "yes",
-    teacher: "no",
-    reviewer: "no",
+    teacher: "yes", // keputusan pemilik produk: guru boleh memicu enrichment manual
+    reviewer: "yes", // penelaah boleh memicu enrichment saat menelaah
     agent: "yes", // L1: MCP/agen boleh enrichment (izin khusus)
-    machine: "yes",
+    machine: "yes", // pipeline ingest menjalankan enrichment
   },
 };
 
