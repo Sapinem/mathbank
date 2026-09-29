@@ -23,9 +23,11 @@
 
 ---
 
-## Daftar Tabel (18)
+## Daftar Tabel (27 = 21 domain + 6 auth)
 
-### A. Soal & Asal
+> ⚠️ **Koreksi:** dokumen awal menulis "18" — itu **salah hitung**. Tabel domain sebenarnya **21** (A+B+C), plus **6 tabel auth** (Better Auth) = **27**.
+
+### A. Soal & Asal (7)
 1. `questions` — soal (termasuk stimulus via `parent_id`)
 2. `question_options` — opsi jawaban
 3. `solutions` — pembahasan
@@ -34,7 +36,7 @@
 6. `institutions` — atribut sekolah (anak `sources`)
 7. `events` — peristiwa ujian (UTBK/OSN/SBMPTN)
 
-### B. Taksonomi & Relasi
+### B. Taksonomi & Relasi (7)
 8. `topics` — topik 3-level (dulu `categories`)
 9. `grades` — jenjang/kelas
 10. `difficulty_levels` — tingkat kesulitan
@@ -43,12 +45,22 @@
 13. `question_topics` — M:N soal↔topik (1 primary)
 14. `question_tags` — M:N soal↔tag
 
-### C. Paket, Media, Sistem, Audit
+### C. Paket, Media, Sistem, Audit (7)
 15. `bundles` — paket/naskah soal
 16. `bundle_items` — isi paket
-17. `media_assets` + `question_media` — aset & jembatan
-18. `app_settings` · `audit_logs`
-+ `users` + `user_roles` (auth) · `ingest_queue` (fase M9)
+17. `media_assets` — galeri aset
+18. `question_media` — M:N soal↔aset
+19. `app_settings` — konfigurasi key-value (termasuk AI)
+20. `audit_logs` — audit generik
+21. `ingest_queue` — antrean ingest (fase M9)
+
+### D. Auth (6 — Better Auth + multi-role)
+22. `user` — akun
+23. `session` — sesi login
+24. `account` — kredensial
+25. `verification` — verifikasi
+26. `apikey` — API key (agen/mesin)
+27. `user_roles` — peran per akun (multi-role, L1)
 
 ---
 
