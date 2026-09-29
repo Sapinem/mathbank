@@ -119,9 +119,10 @@ Diterapkan ke **semua rute** via `next.config.ts` `headers()`:
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | **produksi saja** (HSTS) |
 | `X-DNS-Prefetch-Control` | `off` | privasi |
 
-**CSP (produksi):** `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`.
+**CSP (produksi):** `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests`.
 
 - **Dev** menambah `'unsafe-eval'` (React debug) — **tak pernah** di produksi.
+- **Dev TIDAK memakai `upgrade-insecure-requests`** ⚠️ — directive ini memaksa browser menaikkan `http://` → `https://`. Di `localhost` browser mengecualikannya (secure context), tapi saat dev diakses via **LAN** (`http://192.168.x.x:3001`, tanpa TLS) seluruh CSS/JS/font gagal dimuat → halaman tampil tanpa gaya. Karena itu hanya ditambahkan pada CSP produksi (TLS diterminasi reverse-proxy). *Bug ditemukan & diperbaiki 2026-09-29 (akses LAN).*
 - **Utang lanjutan:** ganti `'unsafe-inline'` skrip dengan **nonce/hash** (S9) untuk CSP ketat.
 
 ---

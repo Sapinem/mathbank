@@ -8,6 +8,9 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ## [Belum Dirilis]
 
+### Diperbaiki
+- **🐛 Akses via LAN tampil tanpa CSS (CSP `upgrade-insecure-requests` di dev)** — saat dev dibuka dari perangkat lain (`http://192.168.18.100:3001`), browser menaikkan semua request ke `https://…` (tak ada TLS di port dev) → CSS/JS/font gagal dimuat → halaman tampil sebagai HTML polos. Di `localhost` ini tak terlihat karena browser mengecualikannya sebagai secure context. **Perbaikan:** `upgrade-insecure-requests` dipindah dari CSP dasar ke **CSP produksi saja** (`next.config.ts`); `CSP_DEV` kini bebas directive itu. Terverifikasi via LAN: CSS/JS/font termuat, halaman bergaya penuh. Didokumentasikan di `docs/KEAMANAN.md` §8.
+
 ### Diubah
 - **🎨 Basis primitif UI bermigrasi penuh: Radix UI → Base UI** (`@base-ui/react` 1.8.0) — menutup ambiguitas dokumen-vs-kode (ADR-0005 → **ADR-0008**). shadcn style kini **`base-nova`**:
   - **14 komponen `ui/**` di-regenerate** dari registry `base-nova` (button, badge, dialog, dropdown-menu, select, sheet, sidebar, tooltip, avatar, checkbox, label, separator, switch, tabs) — **nol impor `radix-ui`** di seluruh kode.

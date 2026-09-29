@@ -33,12 +33,18 @@ const CSP = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
 ].join("; ");
 
 /**
  * CSP untuk DEV: tambah `'unsafe-eval'` — React dev butuh `eval()` untuk
  * rekonstruksi callstack (fitur debug). **Tak pernah** dipakai di produksi.
+ *
+ * CATATAN: `upgrade-insecure-requests` **sengaja TIDAK** ada di dev. Directive itu
+ * memaksa browser menaikkan semua request `http://` → `https://`. Di `localhost`
+ * browser punya pengecualian (secure context), tapi saat dev diakses lewat LAN
+ * (`http://192.168.x.x:3001`) tak ada HTTPS → CSS/JS/font gagal dimuat → halaman
+ * tampil tanpa gaya. Directive ini hanya ditambahkan di produksi (lihat
+ * `securityHeaders`), tempat TLS diterminasi reverse-proxy.
  */
 const CSP_DEV = CSP.replace(
   "script-src 'self' 'unsafe-inline'",
@@ -50,8 +56,13 @@ const CSP_DEV = CSP.replace(
  * pengembangan lokal (`http://localhost`) tetap berjalan.
  */
 function securityHeaders(isDev: boolean) {
+  // `upgrade-insecure-requests` HANYA produksi: di dev ia mematahkan akses via
+  // LAN (http://<ip>:3001 tanpa TLS → aset gagal → halaman tanpa CSS).
+  const cspValue = isDev
+    ? CSP_DEV
+    : `${CSP}; upgrade-insecure-requests`;
   const headers = [
-    { key: "Content-Security-Policy", value: isDev ? CSP_DEV : CSP },
+    { key: "Content-Security-Policy", value: cspValue },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "X-Frame-Options", value: "DENY" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
