@@ -43,6 +43,7 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - `PERFORMA.md` — anggaran Core Web Vitals, kondisi nyata (halaman static, 50 index), titik rawan.
   - `SLA-SLO.md` — SLI/SLO usulan (uptime, latensi, RPO/RTO), error budget.
   - `GOVERNANCE.md` — peran, jenis keputusan, alur, kepemilikan dokumen.
+  - `KEPATUHAN-PRIVASI.md` — UU PDP 27/2022 + GDPR: data pribadi nyata (user, session ip/user-agent, account token, audit_logs), hak subjek data, retensi, notifikasi pelanggaran 72 jam.
 - **`docs/PETA-DOKUMEN.md`** — indeks hidup seluruh dokumen (ada + direncanakan) dengan status & tata kelola; mencegah "dokumen lupa".
 - **`docs/KEAMANAN.md`** — model keamanan: aset, threat model (STRIDE), autentikasi, RBAC, permukaan berisiko, utang keamanan (S1–S7), daftar periksa pra-produksi.
 - **`docs/ADR/`** — Architecture Decision Records: `README` (indeks), `template`, dan 7 ADR awal (bangun-ulang, lapisan L1–L9, PG18+uuidv7, Better Auth multi-role, shadcn resmi, invarian lunak, DB reproduktif).

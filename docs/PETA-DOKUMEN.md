@@ -77,7 +77,7 @@
 | E3 | `OBSERVABILITAS.md` | ✅ | **dibuat** 2026-09-29 — logging, metrik, health check, alerting |
 | E4 | `BACKUP-RECOVERY.md` | ✅ | **dibuat** 2026-09-29 — RPO/RTO, uji restore |
 | E5 | `RUNBOOK.md` | 🟢 | **belum** — prosedur operasional & insiden |
-| E6 | `KEPATUHAN-PRIVASI.md` | 🟢 | **belum** — UU PDP, retensi, data siswa |
+| E6 | `KEPATUHAN-PRIVASI.md` | ✅ | **dibuat** 2026-09-29 — UU PDP, retensi, hak subjek data |
 | E7 | `SLA-SLO.md` | ✅ | **dibuat** 2026-09-29 — target ketersediaan/performa |
 | E8 | `PERFORMA.md` | ✅ | **dibuat** 2026-09-29 — budget performa, Core Web Vitals |
 
@@ -116,7 +116,7 @@
 |-----------|---------|-------------|
 | 🔴 **Kritis** | ~~`KEAMANAN.md`~~ ✅, ~~`docs/ADR/`~~ ✅ | ✅ **selesai** 2026-09-29 |
 | 🟠 **Penting** | ~~RENCANA-DEPLOY~~ ✅, ~~KONTRAK-API~~ ✅, ~~BACKUP-RECOVERY~~ ✅, ~~KAMUS-DATA~~ ✅, ~~A11Y~~ ✅, ~~CONTRIBUTING~~ ✅, ~~OBSERVABILITAS~~ ✅ | ✅ **SEMUA SELESAI** 2026-09-29 |
-| 🟢 **Menyusul** | ~~SLA-SLO~~ ✅, ~~PERFORMA~~ ✅, ~~GOVERNANCE~~ ✅ · sisa: `RUNBOOK`, `KEPATUHAN-PRIVASI`, `RENCANA-MCP/EKSPOR/MOODLE`, `STRATEGI-INGEST`, `RENCANA-ENRICHMENT/TAKSONOMI`, `PANDUAN-OPERASIONAL` | sisa bergantung fitur (M9–M12) |
+| 🟢 **Menyusul** | ~~SLA-SLO~~ ✅, ~~PERFORMA~~ ✅, ~~GOVERNANCE~~ ✅, ~~KEPATUHAN-PRIVASI~~ ✅ · sisa: `RUNBOOK`, `RENCANA-MCP/EKSPOR/MOODLE`, `STRATEGI-INGEST`, `RENCANA-ENRICHMENT/TAKSONOMI`, `PANDUAN-OPERASIONAL` | sisa bergantung fitur/tim (M5,M9–M12) |
 | 📦 **Arsip** | `arsip/ROADMAP-QBANK`, `arsip/RENCANA-MIGRASI-DATA` (era QBank) | ✅ **selesai** 2026-09-29 |
 
 ---
