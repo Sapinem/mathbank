@@ -9,6 +9,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // Tes integrasi DB (*.db.test.ts) dikecualikan di sini — dijalankan
+    // terpisah via vitest.db.config.mts (butuh PG). Lihat docs/STRATEGI-TES.md.
+    exclude: ["**/node_modules/**", "src/**/*.db.test.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
@@ -23,6 +26,7 @@ export default defineConfig({
         "src/lib/contracts/question.ts",
         "src/lib/display/labels.ts",
         "src/lib/auth/actor.ts",
+        "src/lib/api/route-wrapper.ts",
       ],
       // Ambang = lantai jujur saat ini; NAIKKAN bertahap, jangan turunkan.
       thresholds: {
