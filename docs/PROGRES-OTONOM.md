@@ -14,8 +14,8 @@
 | M1 Skema DB | ✅ LULUS | 🔴 migrasi dari nol diperbaiki & terverifikasi |
 | M2 Auth & Peran | ✅ LULUS | 🟠 matriks diselaraskan; 🟡 login/forbidden → utang M15 |
 | M3 Tema & Shell | ✅ LULUS | 🔴 klaim WCAG palsu → **diimplementasikan** (16/16 lulus); audit shadcn |
-| M4 Bank Soal | 🟡 separuh | M4a/b/c ✅; 🟠 dead-link T-M4-1 **ditutup** (M4c); **M4d berikutnya** |
-| M5–M12 | ⏳ | |
+| M4 Bank Soal | ✅ **SELESAI** | M4a/b ✅ LULUS; M4c (editor+detail) & M4d (telaah+pengaturan) **dibangun**; dead-link ditutup; e2e 10/10 |
+| M5 Taksonomi | 🔄 berjalan | |
 
 ## M3 — temuan sementara
 
