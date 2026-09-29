@@ -1,0 +1,237 @@
+# RENCANA UI — MathBank
+
+> **Dokumen ini menjawab:** *Bagaimana antarmuka MathBank — menu, halaman, alur, keputusan desain?*
+> **Status:** 📝 Draft v1 — meratifikasi keputusan L2 + menuntaskan UI menggantung.
+> **Basis:** L2 (DESAIN-PER-LAPISAN) + STATUS-UI-MENGGANTUNG + arah Linear/Vercel.
+
+---
+
+## 1. Prinsip
+
+| Aspek | Keputusan |
+|-------|-----------|
+| **Gaya** | Linear/Vercel — gelap/terang, padat, presisi, border tipis, satu aksen |
+| **Tema** | Kerangka generatif (3 warna sumber → seluruh UI); status warna **universal** |
+| **Font** | Roboto Flex (UI) + Roboto Mono (kode/angka) |
+| **Mode** | Gelap + Terang, **default ikut OS** (`prefers-color-scheme`) |
+| **Layout** | **Sidebar kiri tetap**, **collapsible** |
+| **Navigasi cepat** | Command palette (⌘K) |
+| **Breadcrumb** | Konsisten di semua halaman |
+| **"Buat Soal" di header** | **DIHAPUS** (jarang dipakai) |
+
+---
+
+## 2. Struktur Sidebar (4 grup)
+
+```
+┌─────────────────────────────┐
+│  [M] MathBank               │  ← logo + (collapse toggle)
+├─────────────────────────────┤
+│  KERJA                      │
+│   ◻ Dasbor                  │  /
+│   ◻ Bank Soal               │  /bank-soal
+│   ◻ Telaah          (badge)  │  /telaah
+│   ◻ Paket Soal              │  /paket
+├─────────────────────────────┤
+│  REFERENSI                  │
+│   ◻ Topik                   │  /referensi/topik
+│   ◻ Sumber & Asal           │  /referensi/sumber
+│   ◻ Event                   │  /referensi/event
+│   ◻ Label                   │  /referensi/label
+├─────────────────────────────┤
+│  STUDIO                     │
+│   ◻ Galeri Aset             │  /studio/aset
+│   ◻ TikZ Studio             │  /studio/tikz
+├─────────────────────────────┤
+│  SISTEM                     │
+│   ◻ Ingest & Integrasi ¹    │  /sistem/ingest
+│   ◻ Pengaturan              │  /sistem/pengaturan
+└─────────────────────────────┘
+```
+
+¹ **Disembunyikan sampai M9** (fase lanjut). Menu kosong membingungkan → munculkan saat siap.
+
+**Keputusan L2 yang ditegaskan:**
+- **Referensi = link terpisah** di bawah judul grup (bukan accordion) → tiap halaman bookmarkable.
+- **URL berprefix** (`/referensi/*`, `/studio/*`, `/sistem/*`) → terkelompok rapi.
+- Menu **sama** untuk semua peran (bedanya aksi, bukan menu) — konfirmasi L2.
+- Badge "Telaah" = jumlah soal menunggu (dynamic).
+
+---
+
+## 3. Halaman (Peta)
+
+### KERJA
+
+**3.1 Dasbor `/`** — **informatif ("ramai")**
+```
+┌─ Sapaan + ringkasan cepat ──────────────────────┐
+│ Selamat datang.  [Cari (⌘K)]                    │
+├─────────────────────────────────────────────────┤
+│ ▢ Stat: Total soal · Siap · Perlu telaah        │
+│ ▢ Stat: Ditandai · Paket · Sumber               │
+├─────────────────────────────────────────────────┤
+│ Aktivitas terbaru (soal dibuat/diubah)          │
+│ Distribusi: topik teratas · kesulitan · jenjang │
+│ Antrean: soal perlu telaah (tautan)             │
+└─────────────────────────────────────────────────┘
+```
+
+**3.2 Bank Soal `/bank-soal`** — inti produk
+- Daftar soal: **3 mode** (list padat / grid / masonry)
+- Filter sidebar: topik, sumber, event, status, jenjang, kesulitan, Bloom, label
+- Pencarian: teks (fuzzy) + semantik
+- Aksi: lihat detail; bulk (pilih banyak)
+- Turunan: `/bank-soal/baru`, `/bank-soal/[id]`, `/bank-soal/[id]/edit`
+
+**3.3 Telaah `/telaah`** — kurasi (bertab)
+```
+TELAHAH
+  [Perlu Telaah] [Ditandai] [Kategorisasi] [Semua]
+   ↑ status='review'  ↑ flagged     ↑ tanpa topik
+```
+- **Perlu Telaah** — soal berstatus `review`, menunggu persetujuan (reviewer/admin → set `ready`)
+- **Ditandai** — soal `is_flagged=true` (masalah kualitas)
+- **Kategorisasi** — soal tanpa topik
+- **Semua** — semua soal
+- Aksi: setujui (`ready`), tolak (kembali `draft`), tandai/lepas tanda, sunting
+
+**3.4 Paket Soal `/paket`**
+- Daftar paket; buat paket (`source_id`)
+- Turunan: `/paket/baru`, `/paket/[id]` (susun), `/paket/[id]/edit`
+- Di dalam: tambah soal dari bank (dengan pencarian), urutkan, section, nomor
+- Ekspor (M8): cetak/PDF
+
+### REFERENSI
+
+**3.5 Topik `/referensi/topik`** — 3-level (Kategori›Topik›SubTopik), CRUD, pindah induk (anti-siklus)
+**3.6 Sumber & Asal `/referensi/sumber`** — pola B (buku/web/sekolah); CRUD + anak (books/institutions)
+**3.7 Event `/referensi/event`** — UTBK/OSN/SBMPTN; CRUD + subtes
+**3.8 Label `/referensi/label`** — tags; CRUD
+
+### STUDIO
+
+**3.9 Galeri Aset `/studio/aset`** — galeri media; unggah; tri-facet (gambar/svg/tikz)
+**3.10 TikZ Studio `/studio/tikz`** — editor TikZ → SVG
+
+### SISTEM
+
+**3.11 Ingest & Integrasi `/sistem/ingest`** — **disembunyikan sampai M9**
+```
+Ingest & Integrasi (bertab):
+  [Unggah]    unggah naskah (PDF/LaTeX) → antrean
+  [Antrean]   status naskah (pending/processing/gagal)
+  [Integrasi] API key, webhook, dokumentasi endpoint mesin
+```
+
+**3.12 Pengaturan `/sistem/pengaturan`** — bertab
+```
+[Umum] [AI] [Pengguna] [Sistem]
+```
+- **Umum**: identitas, preferensi
+- **AI**: base_url, api_key (terenkripsi), model, on/off — **9router di sini** (L9)
+- **Pengguna**: kelola user & peran (multi-role)
+- **Sistem**: backup, info DB
+
+### AUTH
+
+**3.13 Login `/login`**
+**3.14 Ganti Password `/ganti-password`**
+
+---
+
+## 4. Keputusan Menggantung — TUNTAS ✅
+
+| # | Isu | Keputusan |
+|---|-----|-----------|
+| 1 | Sidebar | Kiri, tetap, **collapsible** |
+| 2 | Referensi | **Link terpisah** (bukan accordion) |
+| 3 | URL Referensi | `/referensi/topik` dst |
+| 4 | Nama "Telaah" | Bukan "Antrean Review" di URL |
+| 5 | Dasbor | Informatif ("ramai") |
+| 6 | **Flagged** | **Tab di "Telaah"** (pendekatan A) |
+| 7 | Arti flagged | **Manual (reviewer) + otomatis (dedup)** — dua-duanya |
+| 8 | Ingest menu | **Disembunyikan sampai M9** |
+| 9 | Ingest isi | 3 tab: Unggah/Antrean/Integrasi |
+| 10 | Menu per-peran | Sama untuk semua |
+
+---
+
+## 5. Komponen Dasar (M3)
+
+Dari shadcn/ui + kustom (Fase B QBank, disempurnakan):
+
+| Komponen | Untuk |
+|----------|-------|
+| `Button` | Aksi (varian: primary/secondary/ghost/danger) |
+| `Badge` | Status, label, hitungan |
+| `Card` | Wadah soal/paket |
+| `Modal` / `ConfirmModal` | Dialog |
+| `Input` / `Textarea` / `Select` | Form |
+| `Tabs` | Telaah, Pengaturan, Ingest |
+| `Table` | Daftar (list padat) |
+| `CommandMenu` (⌘K) | Navigasi cepat |
+| `Toast` (sonner) | Notifikasi |
+| `EmptyState` / `LoadingState` / `ErrorState` | Kondisi |
+
+---
+
+## 6. Tema (M3)
+
+**Mesin tema:** 3 warna sumber → OKLCH → token `--mb-<peran>`.
+
+| Warna sumber | Nilai | Peran |
+|--------------|-------|-------|
+| Primer | `#0158CA` | Aksen utama (tombol, link, aktif) |
+| Sekunder | netral | Latar, border, teks |
+| Aksen | `#D5AC1E` | "Perlu perhatian" (emas) |
+
+**Aturan penting:**
+- **Warna status UNIVERSAL** (sukses=hijau, error=merah, warning=kuning, info=biru) — **tidak ikut brand.**
+- **"Siap" = biru brand** (bukan hijau). Emas = "perlu perhatian".
+- Ganti brand = ubah 3 warna → bangun ulang token.
+
+**Mode:** gelap + terang, default ikut OS, tanpa flash (skrip di `<head>`).
+
+---
+
+## 7. Alur Kerja (Wireframe Alur)
+
+```
+LOGIN → DASBOR
+          │
+          ├─→ BANK SOAL ──→ [cari/filter] ──→ detail ──→ edit
+          │                      │
+          │                      └─→ pilih → +Paket
+          │
+          ├─→ TELAHAH ──→ [Perlu Telaah] ──→ setujui (ready)
+          │              [Ditandai]     ──→ lepas tanda / sunting
+          │
+          ├─→ PAKET ──→ susun ──→ EKSPOR (cetak/PDF)  ← ALUR TUNTAS
+          │
+          └─→ REFERENSI / STUDIO / SISTEM
+```
+
+---
+
+## 8. Fase Pengerjaan (M3+)
+
+| Fase | Isi | Milestone |
+|------|-----|-----------|
+| **A** | Mesin tema (3 warna → OKLCH, WCAG) | M3 |
+| **B** | Komponen dasar | M3 |
+| **C** | Shell (sidebar, header, ⌘K) | M3 |
+| **D** | Halaman (dasbor, bank soal, telaah, ...) | M4–M8 |
+
+---
+
+## 9. Rujukan
+
+- Desain lapisan: `DESAIN-PER-LAPISAN-MATHBANK.md` (L2, L3)
+- Status lama: `STATUS-UI-MENGGANTUNG.md`
+- Tema: `DESIGN-THEME-FRAMEWORK.md`, `THEME-FRAMEWORK-GUIDE.md`
+- Stack UI: `TUMPUKAN-TEKNOLOGI.md` (M3)
+
+---
+
+*Dokumen ini menuntaskan UI yang menggantung. Bila keputusan berubah, koreksi di sini dulu.*

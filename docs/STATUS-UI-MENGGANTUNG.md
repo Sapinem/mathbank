@@ -1,90 +1,64 @@
-# STATUS UI — MENGGANTUNG ⏸️
+# STATUS UI — TUNTAS ✅
 
-> UI redesign **DIJEDA** (2026-09-29 di QBank) untuk kembali mereview arsitektur.
-> **Belum dilanjutkan di MathBank.** Menunggu fase planning.
-> Sumber asli: QBank `docs/_archive/.../_reconcile/STATUS-PENDING-UI.md`.
-
----
-
-## Kenapa Dijeda
-
-Saat mengerjakan UI, ditemukan bahwa **`exam_events` sudah ada API-nya & sudah jadi tab di `/sources`** — tapi tak ada di menu. Ini memicu pertanyaan lebih besar: **"apakah data pendukung sebaiknya digabung menjadi satu halaman?"** → merembet ke review arsitektur menyeluruh → berujung keputusan bikin MathBank baru.
-
-**Pelajaran:** jangan putuskan struktur menu sebelum arsitektur mantap. Perubahan arsitektur = perubahan menu/halaman.
+> **DIPERBARUI:** UI yang dulu menggantung kini **TUNTAS** — lihat `RENCANA-UI.md`.
+> Semua keputusan (sidebar, referensi, flagged, ingest, dasbor) sudah diputuskan.
+> Sisa pengerjaan = **Fase C & D** (M3 & M4–M8).
 
 ---
 
-## ✅ SUDAH Diputuskan (carry-over ke MathBank)
+## Ringkas: Semua Keputusan Sudah Tuntas
 
-Keputusan UI yang **sudah final** dan berlaku di MathBank:
+| # | Isu | Keputusan |
+|---|-----|-----------|
+| 1 | Sidebar | Kiri, tetap, collapsible |
+| 2 | Referensi | Link terpisah (bukan accordion) |
+| 3 | URL | `/referensi/topik` dst |
+| 4 | "Telaah" | Nama menu (bukan "Antrean Review") |
+| 5 | Dasbor | Informatif ("ramai") |
+| 6 | Flagged | Tab di "Telaah" |
+| 7 | Arti flagged | Manual (reviewer) + otomatis (dedup) |
+| 8 | Ingest | Disembunyikan sampai M9 |
+| 9 | Menu per-peran | Sama untuk semua |
 
-| Item | Keputusan |
-|------|-----------|
-| Nama menu | "Eksplorer Soal" → **"Bank Soal"** |
-| Quick-action header | **Tombol "Cari" (⌘K)** |
-| Tombol "Buat Soal" | **DIHAPUS** (jarang dipakai) |
-| Struktur sidebar | 4 grup: **Kerja / Referensi / Studio / Sistem** (L2) |
-| Referensi | **Submenu lipat**: Topik · Sumber & Asal · Event · Label (L2) |
-| Event | Punya **halaman** (dulu: ada API, tak ada halaman) |
-| Ingest | Pindah ke grup **Sistem** (L2) |
-| Menu per-peran | **Sama** untuk semua peran dulu (belum dibedakan) |
-| Gaya visual | Linear/Vercel — gelap/terang, padat, presisi, border tipis |
-| Tema | Kerangka generatif (3 warna sumber → seluruh UI) |
-| Font | Roboto Flex + Roboto Mono |
-| Mode | Gelap + Terang, default ikut OS |
-| Command palette | ⌘K untuk navigasi cepat |
-| Breadcrumb | Konsisten |
+➡️ **Detail lengkap: `RENCANA-UI.md`**
 
 ---
 
-## ⏸️ BELUM Final (menunggu planning)
+## Sisa Pengerjaan (bukan lagi "keputusan")
 
-Keputusan yang **masih menggantung** dan perlu dituntaskan di fase planning:
-
-1. **Struktur domain sidebar final** — usulan lama: Kerja / Katalog-Referensi / Aset-Studio / Sistem. Sudah direvisi ke 4 grup L2, tapi perlu dikonfirmasi final.
-2. **Referensi: submenu lipat vs 1 halaman bertab vs halaman terpisah?**
-   - QBank: 3 menu terpisah
-   - Usulan lama: 1 halaman bertab (`/referensi?tab=topik`)
-   - L2 (revisi terakhir): **submenu lipat** ← *perlu konfirmasi final*
-3. **URL pattern** Referensi — `/referensi?tab=topik` (bookmarkable) atau `/topik`, `/sumber` terpisah?
-4. **Perbedaan menu per-peran** — sekarang sama semua; nanti apakah reviewer punya "Telaah" menonjol?
-5. **Command palette** — penyedia (⌘K) & cakupan aksi.
+| Fase | Isi | Milestone |
+|------|-----|-----------|
+| A | Mesin tema | M3 |
+| B | Komponen dasar | M3 |
+| C | Shell (sidebar, header, ⌘K) | M3 |
+| D | Halaman (dasbor, bank soal, telaah, paket, editor) | M4–M8 |
 
 ---
 
-## 🚧 Fase UI Tersisa (belum dikerjakan di MathBank)
+## Catatan Teknis (dari QBank, untuk dibawa)
 
-| Fase | Isi | Status |
-|------|-----|--------|
-| **A** | Mesin tema (3 warna → OKLCH + WCAG), wiring, default OS | ✅ Di QBank (perlu dibawa) |
-| **B** | Komponen dasar Linear (Button/Badge/Modal/State) | ✅ Di QBank (perlu dibawa) |
-| **C** | Sidebar + Header + Command Palette | ⏸️ **Belum** |
-| **D** | Halaman (Dasbor, Bank Soal, Telaah, Paket, Editor, Sumber, dll) | ⏸️ **Belum** |
-
----
-
-## 📌 Catatan Teknis Berguna (dari QBank, untuk dibawa)
-
-- **Token tema:** `--qbank-<peran>` (OKLCH) + alias `--color-<peran>` di `src/styles/tokens/generated.css`. Ganti brand: ubah `scripts/theme/sources.ts` → `pnpm theme:build`.
-- **Default mode ikut OS** (`ThemeContext.tsx` + skrip larangan-flash di `layout.tsx`).
-- **Warna status UNIVERSAL** (tak ikut brand). "Siap" = biru brand (bukan hijau).
-- **WCAG terverifikasi:** beberapa token diperbaiki (border-strong 1.71→3:1; brand-fg dark mode-dependent).
-- **Pelanggaran React Compiler:** QBank melanggar larangan `useMemo`/`useCallback` — MathBank **tidak boleh** (L3).
-- Dokumen desain terkait (ada di QBank `docs/`): `DESIGN-THEME-FRAMEWORK.md`, `THEME-FRAMEWORK-GUIDE.md` (sudah disalin ke `docs/` MathBank).
+- **Token tema:** `--mb-<peran>` (OKLCH) — ganti 3 warna → `pnpm theme:build`.
+- **Default mode ikut OS** (skrip tanpa flash di `layout.tsx`).
+- **Warna status UNIVERSAL** (tak ikut brand). "Siap" = biru brand.
+- **WCAG** terverifikasi (border/teks kontras).
+- **Pelanggaran React Compiler** QBank (`useMemo`/`useCallback`) — MathBank **tidak boleh**.
 
 ---
 
-## ⚠️ Sebelum Melanjutkan UI
+## Referensi Lama (arsip sejarah)
 
-1. **Selesaikan planning** (dokumen apa yang perlu — lihat `CATATAN-PLANNING.md`).
-2. **Bawa Fase A & B** dari QBank (mesin tema + komponen dasar) — atau bangun ulang.
-3. **Konfirmasi** keputusan "belum final" di atas.
-4. Baru kerjakan **Fase C** (Shell).
+Konteks berikut menjelaskan **kenapa** UI dulu dijeda — disimpan sebagai sejarah:
 
----
+### Kenapa Dijeda (2026-09-29)
+Saat mengerjakan UI, ditemukan bahwa **`exam_events` sudah ada API & tab di `/sources`** tapi tak ada di menu → memicu pertanyaan "apakah data pendukung sebaiknya digabung?" → merembet ke review arsitektur menyeluruh → berujung keputusan bikin MathBank baru.
 
-## 🔗 Prinsip UI yang Dipegang
+**Pelajaran:** jangan putuskan struktur menu sebelum arsitektur mantap.
 
-- **Zero Silent Assumptions** (AGENTS.md) — jangan asumsikan struktur UI tanpa konfirmasi.
-- **Konstruksi per-fase** — A→B→C→D, tiap fase ada checkpoint.
-- **Dokumen UI target** (belum ada di MathBank): `RENCANA-REDESIGN-UI.md`, `FASE-B-KOMPONEN-DASAR.md` — perlu dibawa/dibuat ulang.
+### Keputusan Carry-over (dari QBank)
+- "Eksplorer Soal" → **"Bank Soal"** ✓
+- Tombol "Buat Soal" header → **dihapus** ✓
+- Quick-action → **Cari (⌘K)** ✓
+
+### Fase yang Sudah Selesai di QBank (untuk dibawa/dibangun ulang di M3)
+- **Fase A** (tema): mesin 3 warna → OKLCH + WCAG
+- **Fase B** (komponen): Button/Badge/Modal/ConfirmModal/State
