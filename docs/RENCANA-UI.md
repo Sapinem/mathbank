@@ -210,22 +210,31 @@ Memaksakan mobile-first = biaya besar, manfaat kecil. Jadi: **desktop untuk kerj
 
 ---
 
-## 5. Komponen Dasar (M3)
+## 5. Komponen Dasar
 
-Dari shadcn/ui + kustom (Fase B QBank, disempurnakan):
+**Prinsip: komponen RESMI shadcn lebih dulu; kustom hanya bila shadcn tak punya.**
+(Registry shadcn kini 61+ komponen; pakai `sidebar`, `breadcrumb`, `avatar`, dst.)
 
 | Komponen | Untuk |
 |----------|-------|
+| **`sidebar`** (resmi) | Shell: SidebarProvider/Header/Content/Group/Menu/Footer/Trigger/Rail/Inset |
+| **`breadcrumb`** (resmi) | Jejak navigasi di header |
+| **`avatar`** (resmi) | Foto/inisial pengguna (footer sidebar) |
 | `Button` | Aksi (varian: primary/secondary/ghost/danger) |
 | `Badge` | Status, label, hitungan |
 | `Card` | Wadah soal/paket |
-| `Modal` / `ConfirmModal` | Dialog |
+| `Dialog` / `Sheet` | Modal & drawer |
+| `DropdownMenu` | Menu (pengguna, aksi baris) |
+| `Collapsible` / `ScrollArea` / `Separator` / `Skeleton` | Struktur & keadaan |
 | `Input` / `Textarea` / `Select` | Form |
 | `Tabs` | Telaah, Pengaturan, Ingest |
 | `Table` | Daftar (list padat) |
 | `CommandMenu` (⌘K) | Navigasi cepat |
 | `Toast` (sonner) | Notifikasi |
-| `EmptyState` / `LoadingState` / `ErrorState` | Kondisi |
+| `EmptyState` / `LoadingState` / `ErrorState` | Kondisi (kustom tipis) |
+
+> **Selalu periksa registry shadcn dulu** (via MCP `search_items_in_registries`)
+> sebelum membuat komponen sendiri.
 
 ---
 
