@@ -13,6 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { QuestionCard } from "@/components/questions/question-card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { useQuestions } from "@/lib/hooks/use-questions";
@@ -22,7 +28,7 @@ import type { ListQuestionsQuery } from "@/lib/contracts/question";
 
 const PAGE_SIZE = 20;
 
-/** Halaman Bank Soal — daftar, filter, pencarian (RENCANA-UI §3.2). */
+/** Halaman Bank Soal — daftar, filter, pencarian (RENCANA-UI §3.2, §4b). */
 export function BankSoalView() {
   const router = useRouter();
   const params = useSearchParams();
@@ -42,13 +48,9 @@ export function BankSoalView() {
   const page = Number(params.get("page") ?? "0");
 
   const [search, setSearch] = useState(params.get("q") ?? "");
-  const [showFilters, setShowFilters] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const query = {
-    ...filter,
-    limit: PAGE_SIZE,
-    offset: page * PAGE_SIZE,
-  };
+  const query = { ...filter, limit: PAGE_SIZE, offset: page * PAGE_SIZE };
   const { data, isLoading, isError, error } = useQuestions(query);
   const { data: topics } = useTopics();
   const { data: sources } = useSources();
@@ -71,87 +73,110 @@ export function BankSoalView() {
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  /** Isi panel filter — dipakai di desktop (aside) & mobile (Sheet). */
+  const filterContent = (
+    <>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm font-medium">Filter</span>
+        {activeCount > 0 && (
+          <button
+            onClick={() => {
+              router.replace("/bank-soal");
+              setFiltersOpen(false);
+            }}
+            className="flex items-center gap-1 text-xs text-brand hover:underline"
+          >
+            <X className="size-3" /> Reset ({activeCount})
+          </button>
+        )}
+      </div>
+      <FilterSelect
+        label="Status"
+        value={filter.status}
+        onChange={(v) => setParam("status", v)}
+        options={Object.entries(STATUS_LABELS).map(([v, l]) => ({ v, l }))}
+      />
+      <FilterSelect
+        label="Tipe Soal"
+        value={filter.questionType}
+        onChange={(v) => setParam("questionType", v)}
+        options={Object.entries(TYPE_LABELS).map(([v, l]) => ({ v, l }))}
+      />
+      <FilterSelect
+        label="Kesulitan"
+        value={filter.difficulty ? String(filter.difficulty) : undefined}
+        onChange={(v) => setParam("difficulty", v)}
+        options={[1, 2, 3, 4, 5].map((n) => ({ v: String(n), l: `Level ${n}` }))}
+      />
+      <FilterSelect
+        label="Topik"
+        value={filter.topicId}
+        onChange={(v) => setParam("topicId", v)}
+        options={(topics ?? []).map((t) => ({ v: t.id, l: t.name }))}
+      />
+      <FilterSelect
+        label="Sumber"
+        value={filter.sourceId}
+        onChange={(v) => setParam("sourceId", v)}
+        options={(sources ?? []).map((s) => ({ v: s.id, l: s.label }))}
+      />
+    </>
+  );
+
   return (
     <div className="flex h-full">
-      {/* Filter sidebar */}
-      <aside
-        className={
-          "w-64 shrink-0 overflow-y-auto border-r border-border p-4 " +
-          (showFilters ? "block" : "hidden lg:block")
-        }
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-medium">Filter</span>
-          {activeCount > 0 && (
-            <button
-              onClick={() => router.replace("/bank-soal")}
-              className="flex items-center gap-1 text-xs text-brand hover:underline"
-            >
-              <X className="size-3" /> Reset ({activeCount})
-            </button>
-          )}
-        </div>
-
-        <FilterSelect
-          label="Status"
-          value={filter.status}
-          onChange={(v) => setParam("status", v)}
-          options={Object.entries(STATUS_LABELS).map(([v, l]) => ({ v, l }))}
-        />
-        <FilterSelect
-          label="Tipe Soal"
-          value={filter.questionType}
-          onChange={(v) => setParam("questionType", v)}
-          options={Object.entries(TYPE_LABELS).map(([v, l]) => ({ v, l }))}
-        />
-        <FilterSelect
-          label="Kesulitan"
-          value={filter.difficulty ? String(filter.difficulty) : undefined}
-          onChange={(v) => setParam("difficulty", v)}
-          options={[1, 2, 3, 4, 5].map((n) => ({ v: String(n), l: `Level ${n}` }))}
-        />
-        <FilterSelect
-          label="Topik"
-          value={filter.topicId}
-          onChange={(v) => setParam("topicId", v)}
-          options={(topics ?? []).map((t) => ({ v: t.id, l: t.name }))}
-        />
-        <FilterSelect
-          label="Sumber"
-          value={filter.sourceId}
-          onChange={(v) => setParam("sourceId", v)}
-          options={(sources ?? []).map((s) => ({ v: s.id, l: s.label }))}
-        />
+      {/* Filter sidebar (desktop) */}
+      <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-border p-4 lg:block">
+        {filterContent}
       </aside>
+
+      {/* Filter sheet (mobile/tablet) */}
+      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <SheetContent side="left" className="w-72 overflow-y-auto p-4">
+          <SheetHeader className="mb-2 p-0">
+            <SheetTitle className="text-base">Filter</SheetTitle>
+          </SheetHeader>
+          {filterContent}
+          <Button className="mt-2 w-full" onClick={() => setFiltersOpen(false)}>
+            Terapkan
+          </Button>
+        </SheetContent>
+      </Sheet>
 
       {/* Konten */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2 border-b border-border px-3 py-3 sm:px-4">
           <button
-            onClick={() => setShowFilters((s) => !s)}
-            className="rounded-md border border-border p-2 lg:hidden"
-            aria-label="Tampilkan filter"
+            onClick={() => setFiltersOpen(true)}
+            className="relative rounded-md border border-border p-2 lg:hidden"
+            aria-label="Buka filter"
           >
             <SlidersHorizontal className="size-4" />
+            {activeCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-brand text-[10px] font-medium text-brand-fg">
+                {activeCount}
+              </span>
+            )}
           </button>
 
-          <form onSubmit={submitSearch} className="relative flex-1 min-w-48">
+          <form onSubmit={submitSearch} className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari soal…"
-              className="pl-8"
+              className="pl-8 text-base sm:text-sm"
             />
           </form>
 
-          <span className="hidden text-sm text-muted-foreground sm:inline">
+          <span className="hidden shrink-0 text-sm text-muted-foreground sm:inline">
             {total} soal
           </span>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="shrink-0">
             <Link href="/bank-soal/baru">
-              <Plus className="size-4" /> Buat Soal
+              <Plus className="size-4" />
+              <span className="hidden sm:inline">Buat Soal</span>
             </Link>
           </Button>
         </div>
@@ -161,10 +186,7 @@ export function BankSoalView() {
           {isLoading ? (
             <LoadingState label="Memuat soal…" />
           ) : isError ? (
-            <ErrorState
-              title="Gagal memuat soal"
-              description={error?.message}
-            />
+            <ErrorState title="Gagal memuat soal" description={error?.message} />
           ) : !data || data.items.length === 0 ? (
             <EmptyState
               title="Tidak ada soal"
@@ -184,23 +206,19 @@ export function BankSoalView() {
           ) : (
             <div>
               {data.items.map((q) => (
-                <QuestionCard
-                  key={q.id}
-                  question={q}
-                  href={`/bank-soal/${q.id}`}
-                />
+                <QuestionCard key={q.id} question={q} href={`/bank-soal/${q.id}`} />
               ))}
             </div>
           )}
         </div>
 
-        {/* Paginasi */}
+        {/* Paginasi — ringkas, tetap satu baris di mobile */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-border px-4 py-2 text-sm">
-            <span className="text-muted-foreground">
-              Halaman {page + 1} dari {totalPages}
+          <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-sm sm:px-4">
+            <span className="truncate text-muted-foreground">
+              Hal. {page + 1}/{totalPages}
             </span>
-            <div className="flex gap-2">
+            <div className="flex shrink-0 gap-2">
               <Button
                 variant="outline"
                 size="sm"

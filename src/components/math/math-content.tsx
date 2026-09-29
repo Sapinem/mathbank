@@ -17,7 +17,10 @@ type Token =
 
 export function tokenizeMath(input: string): Token[] {
   const tokens: Token[] = [];
-  const re = /\$\$([^$]+)\$\$|\$([^$]+)\$/g;
+  // Mendukung DUA gaya (CONSTRAINTS #25: konten baru pakai \( \) ; data lama $ ):
+  //   display: \[ ... \]  atau  $$ ... $$
+  //   inline : \( ... \)   atau  $ ... $
+  const re = /\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$|\\\(([\s\S]+?)\\\)|\$([^$\n]+?)\$/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(input)) !== null) {
@@ -26,8 +29,12 @@ export function tokenizeMath(input: string): Token[] {
     }
     if (m[1] !== undefined) {
       tokens.push({ kind: "math", value: m[1], display: true });
+    } else if (m[2] !== undefined) {
+      tokens.push({ kind: "math", value: m[2], display: true });
+    } else if (m[3] !== undefined) {
+      tokens.push({ kind: "math", value: m[3], display: false });
     } else {
-      tokens.push({ kind: "math", value: m[2], display: false });
+      tokens.push({ kind: "math", value: m[4], display: false });
     }
     last = re.lastIndex;
   }
@@ -65,7 +72,9 @@ function renderMath(value: string, display: boolean): string {
 
 /**
  * Komponen render konten soal.
- * `as` = elemen pembungkus (default span, agar inline).
+ *
+ * Pembungkus punya `overflow-x-auto` (CONSTRAINTS #12) supaya rumus lebar
+ * dapat digeser, bukan memecah layout halaman di layar sempit.
  */
 export function MathContent({
   content,
@@ -76,7 +85,7 @@ export function MathContent({
 }) {
   const tokens = tokenizeMath(content);
   return (
-    <span className={className}>
+    <span className={className ? `block overflow-x-auto ${className}` : "block overflow-x-auto"}>
       {tokens.map((t, i) =>
         t.kind === "text" ? (
           <span key={i} dangerouslySetInnerHTML={{ __html: renderText(t.value) }} />
