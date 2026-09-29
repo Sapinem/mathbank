@@ -586,15 +586,18 @@ Sisipan **sebelum M4c**. Tiap langkah = satu perubahan teruji + commit.
 
 | # | Tugas | Hasil | Uji |
 |---|-------|-------|-----|
-| **R1** | `MobileNav` (Sheet) + ☰ di header | Navigasi HP jalan | ☰ buka/tutup; tutup setelah pilih |
-| **R2** | Header responsif (judul ringkas, cari ikon, breadcrumb pangkas) | Header tak meluber | 375px & 768px |
-| **R3** | Bank Soal: filter → Sheet, paginasi → "Muat lebih" | Daftar HP enak | Filter dari HP |
-| **R4** | Detail soal: app bar + aksi sticky + metadata lipat | Baca & telaah di HP | Telaah ≤2 ketuk |
-| **R5** | Dasbor: grid 2→3→6 | Ringkasan HP | 375px |
-| **R6** | `useMediaQuery` + komponen `DesktopOnly` (pengalih) | Editor aman di HP | Halaman D tampil ramah |
-| **R7** | Audit kontras, touch target, reduced-motion; uji 375/768/1280 | Verifikasi menyeluruh | Daftar §13.2 |
+| **R1** | `MobileNav` (Sheet) + ☰ di header | ✅ **Selesai** |
+| **R2** | Header responsif (judul ringkas, cari ikon, breadcrumb pangkas) | ✅ **Selesai** |
+| **R3** | Bank Soal: filter → Sheet, paginasi → "Muat lebih" | ✅ **Selesai** (paginasi tetap prev/next, ringkas) |
+| **R4** | Detail soal: app bar + aksi sticky + metadata lipat | ⏳ **Digabung ke M4c** (halaman detail belum ada) |
+| **R5** | Dasbor: grid 2→3→6 | ✅ **Selesai** (dari M3) |
+| **R6** | `useMediaQuery` + komponen `DesktopOnly` | ✅ **Selesai** |
+| **R7** | Audit kontras, touch target, reduced-motion; uji 375/768/1280 | ⏳ Sebagian (uji struktural done; audit menyusul) |
 
 **Perkiraan:** 1–2 sesi. **Tidak menyentuh arsitektur (L1–L9) atau skema DB.**
+
+> **Catatan R4:** halaman detail soal dibangun pertama kali di **M4c**, maka pola B
+> (app bar + aksi sticky) langsung diterapkan sejak awal — bukan retrofit.
 
 ### 14.1 Definisi "Selesai" per Langkah
 Selesai bila: (a) gate hijau (`tsc`/`lint`/`test`/`build`), (b) diuji di 375px & 1280px, (c) tak ada regresi desktop.

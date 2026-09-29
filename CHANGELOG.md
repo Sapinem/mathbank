@@ -9,7 +9,25 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Ditambahkan
-- *(rencana)* **M4 — Bank Soal**: service layer, API, daftar soal, editor 11 tipe, Telaah, Pengaturan.
+- **Fase R — Responsif** (sisipan sebelum M4c):
+  - **R1** Navigasi mobile: `MobileNav` (Sheet kiri) + tombol ☰ di header; sidebar desktop `hidden lg:flex`.
+  - **R2** Header responsif: mobile (☰ + judul halaman + ikon cari), desktop (breadcrumb penuh + kotak cari).
+  - **R3** Bank Soal: filter → Sheet di mobile (badge jumlah aktif); panel tetap di desktop; toolbar & paginasi ringkas.
+  - **R5** Dasbor: grid `2 → sm:3 → lg:6` (diverifikasi).
+  - **R6** `useMediaQuery` + komponen `DesktopOnly` (pengalih halaman desktop-saja).
+- **Rancangan responsif enterprise** — `docs/RENCANA-UI-MOBILE.md` v2 (17 bagian + 2 lampiran, matriks adaptasi 22 elemen).
+- **CONSTRAINTS #10–14** — aturan responsif (wajib desktop+tablet+mobile, touch 44px, `MathContent` overflow-x-auto, input ≥16px, batas kunci `lg`).
+
+### Diubah
+- `MathContent` — dukung `\(...\)` & `\[...\]` (selain `$...$`); pembungkus `overflow-x-auto` (rumus lebar tak memecah layout).
+- `CONSTRAINTS.md` — perbaiki duplikasi nomor; aturan responsif ditambahkan.
+
+### Ditunda
+- **R4** (detail soal: app bar + aksi sticky) → digabung ke **M4c** (halaman detail dibangun pertama kali di sana).
+- **R7** audit aksesibilitas menyeluruh → menyusul setelah halaman-halaman ada.
+
+### Gerbang Mutu
+- `tsc` 0 · `lint` 0 · tes 40/40 · `build` 0.
 
 ---
 
