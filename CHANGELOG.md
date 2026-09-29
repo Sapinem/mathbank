@@ -9,6 +9,13 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- **Integritas & Reproduktibilitas DB** (perbaikan Fase 1 audit):
+  - `drizzle/manual/db_safety.sql` — fungsi `set_updated_at`, 21 trigger `updated_at`, trigger `trg_questions_stimulus_depth` (stimulus maks 1 level), `trg_topics_cycle` (cegah siklus taksonomi), `trg_question_{topics,tags}_usage` (`usage_count` akurat), + index **HNSW** `idx_questions_embedding_hnsw`.
+  - `scripts/db-apply-safety.ts` + `pnpm db:safety` (di-chain otomatis dari `pnpm db:migrate`).
+  - `scripts/db-verify.ts` + `pnpm db:verify` — memeriksa tabel/CHECK/trigger/HNSW, **gagal bila drift**.
+  - Migrasi drizzle-kit `0002_naive_nightshade.sql` — CHECK `chk_questions_difficulty` (1–5) & `chk_topics_level` (1–3).
+  - **`assertReady`** di `question-fsm.ts` — soal boleh dibuat tanpa `answer_key`, tapi **tak bisa `ready`** (422 `NOT_READY`) & tak bisa diekspor Moodle sampai jawaban diisi (kecuali `stimulus`).
+  - **CONSTRAINTS #24–27** — aturan DB (reproduktif, `db:verify` hijau, snapshot drizzle, invarian lunak di service).
 - **Fase R — Responsif** (sisipan sebelum M4c):
   - **R1** Navigasi mobile: `MobileNav` (Sheet kiri) + tombol ☰ di header; sidebar desktop `hidden lg:flex`.
   - **R2** Header responsif: mobile (☰ + judul halaman + ikon cari), desktop (breadcrumb penuh + kotak cari).

@@ -137,11 +137,13 @@ Inti sistem. Stimulus = soal biasa dengan `parent_id` NULL; anak menunjuk ke sti
 
 **Index:** PK; `parent_id`; `status`; `grade`; `difficulty`; `source_id`; `event_id`; `author_id`; `deleted_at`; composite `(grade,difficulty,status)`; GIN trigram `content_markdown`; HNSW `embedding`.
 
-**Invarian (CHECK):**
+**Invarian:**
 - **Stimulus:** soal `question_type='stimulus'` **wajib** `parent_id IS NULL`. Soal anak **wajib** `question_type != 'stimulus'`.
-- **Depth ≤1:** stimulus tak boleh menunjuk stimulus (dijaga trigger).
-- **`ready` wajib `answer_key`** non-kosong (kecuali tipe yang memang tanpa kunci).
+- **Depth ≤1:** stimulus tak boleh menunjuk stimulus (dijaga **trigger** `trg_questions_stimulus_depth`).
+- **`ready` wajib `answer_key`** non-kosong (kecuali `stimulus`) — dijaga **guard service**, BUKAN CHECK constraint.
+  - **Keputusan produk (2026-09-29):** soal **BOLEH dibuat tanpa `answer_key`** (fokus: buat soal dulu) dan tetap bisa `draft`/`review`. Batasannya: tak bisa **ditandai `ready`** dan tak bisa **diekspor ke Moodle** (M12) sebelum jawaban diisi. Ditegakkan di `question-fsm.ts` (`assertReady`) → HTTP 422 `NOT_READY`.
 - `event_year` diisi bila `event_id` diisi.
+- **CHECK keras:** `chk_questions_difficulty` (difficulty 1–5), `chk_topics_level` (level 1–3).
 
 > ⚠️ **T1 (perbaikan):** QBank pakai `parent_id ON DELETE CASCADE` → hapus stimulus **menghapus anak!** MathBank: **RESTRICT** (cegah, bukan cascade).
 
@@ -421,14 +423,14 @@ Inti sistem. Stimulus = soal biasa dengan `parent_id` NULL; anak menunjuk ke sti
 
 | # | Invarian | Cara |
 |---|----------|------|
-| 1 | Stimulus depth ≤ 1 | CHECK + trigger |
-| 2 | Soal `ready` wajib `answer_key` | CHECK |
+| 1 | Stimulus depth ≤ 1 | trigger `trg_questions_stimulus_depth` |
+| 2 | Soal `ready` wajib `answer_key` (kecuali stimulus) | guard service (`assertReady`) → 422 |
 | 3 | `bundle_items` tak boleh duplikat soal | UNIQUE `(bundle_id, question_id)` |
 | 4 | Hapus stimulus dgn anak → **ditolak** | FK RESTRICT |
 | 5 | Hapus soal terpakai paket → **ditolak** | FK RESTRICT |
-| 6 | Topik tak boleh siklus | trigger |
+| 6 | Topik tak boleh siklus | trigger `trg_topics_cycle` |
 | 7 | Slug bundle unik antar yang aktif | unique partial |
-| 8 | `usage_count` akurat | trigger |
+| 8 | `usage_count` akurat | trigger `trg_question_{topics,tags}_usage` |
 | 9 | Aset terpakai tak terhapus | FK RESTRICT |
 
 ---

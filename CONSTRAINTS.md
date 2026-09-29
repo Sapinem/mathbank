@@ -43,8 +43,15 @@
 22. **Validasi input via Zod** di semua boundary (API, MCP).
 23. **`AUTH_DEV_BYPASS` hanya untuk dev** — default `false`; pagar keras `NODE_ENV !== "production"` di `resolve.ts` menjamin bypass **mati total** di produksi.
 
+## Database (integritas & reproduktibilitas)
+
+24. **DB harus bisa direproduksi dari file** — `pnpm db:migrate` di DB kosong wajib menghasilkan skema penuh (tabel + trigger + invarian + index). Objek yang hanya ada di DB lokal (bukan di file) = **cacat**.
+25. **`pnpm db:verify` harus hijau** — memeriksa jumlah tabel/CHECK/trigger/HNSW & objek kritis; jalankan setelah perubahan skema. Gagal = drift.
+26. **Migrasi drizzle-kit wajib punya snapshot** — file `.sql` yang ditulis tangan ditaruh di `drizzle/manual/` dan diterapkan lewat skrip (`pnpm db:safety`), JANGAN dicampur ke alur drizzle-kit.
+27. **Invarian "lunak" (bergantung keadaan/transisi) dijaga di service**, bukan CHECK keras — mis. `ready` wajib `answer_key` adalah guard `assertReady` (422), bukan constraint, agar soal tetap boleh dibuat tanpa kunci.
+
 ## Konvensi
 
-24. **Bahasa dokumen & komentar UI: Indonesia** (konvensi proyek).
-25. **KaTeX: `\( ... \)` inline, `\[ ... \]` display** — dilarang `$`/`$$` di konten soal baru.
-26. **Nama tabel & kolom: snake_case** (Drizzle).
+28. **Bahasa dokumen & komentar UI: Indonesia** (konvensi proyek).
+29. **KaTeX: `\( ... \)` inline, `\[ ... \]` display** — dilarang `$`/`$$` di konten soal baru.
+30. **Nama tabel & kolom: snake_case** (Drizzle).

@@ -44,6 +44,59 @@ export function nextStatuses(from: QuestionStatus): QuestionStatus[] {
   return [...(TRANSITIONS[from] ?? [])];
 }
 
+/** Kesalahan ketika soal belum siap ditandai `ready` (HTTP 422/409). */
+export class NotReadyError extends Error {
+  readonly code = "NOT_READY";
+  constructor(message: string) {
+    super(message);
+    this.name = "NotReadyError";
+  }
+}
+
+/** Bentuk minimal data yang dibutuhkan untuk menilai kesiapan. */
+export interface ReadinessInput {
+  questionType: string;
+  answerKey: Record<string, unknown> | null;
+}
+
+/** Apakah `answerKey` dianggap kosong (belum diisi)? */
+export function isAnswerKeyEmpty(
+  answerKey: Record<string, unknown> | null,
+): boolean {
+  return (
+    answerKey == null ||
+    Object.keys(answerKey).length === 0 ||
+    (answerKey as { __empty?: boolean }).__empty === true
+  );
+}
+
+/**
+ * Apakah soal boleh ditandai `ready`?
+ *
+ * Aturan (keputusan pemilik produk):
+ * - Soal BOLEH dibuat tanpa `answer_key` — boleh `draft`/`review` seperti biasa.
+ * - Namun untuk jadi `ready`, `answer_key` WAJIB terisi — kecuali `stimulus`
+ *   (wacana/bacaan tak punya jawaban sendiri; jawabannya di soal anak).
+ *
+ * Konsekuensi hilir: soal tanpa `answer_key` juga TIDAK bisa diekspor ke Moodle
+ * (lihat guard M12) — inilah "batasan" yang dimaksud.
+ */
+export function canBeReady(input: ReadinessInput): boolean {
+  if (input.questionType === "stimulus") return true;
+  return !isAnswerKeyEmpty(input.answerKey);
+}
+
+/**
+ * Jaminan kesiapan. Melempar `NotReadyError` bila `answer_key` belum diisi.
+ */
+export function assertReady(input: ReadinessInput): void {
+  if (!canBeReady(input)) {
+    throw new NotReadyError(
+      "Soal belum bisa ditandai 'Siap': jawaban (answer_key) belum diisi.",
+    );
+  }
+}
+
 /**
  * Jaminan transisi. Melempar `InvalidTransitionError` bila tak sah.
  * Idempoten: from === to diizinkan (tak mengubah apa pun).

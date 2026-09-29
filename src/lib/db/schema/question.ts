@@ -8,6 +8,7 @@ import {
   timestamp,
   jsonb,
   index,
+  check,
   customType,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -111,6 +112,8 @@ export const questions = pgTable(
       "gin",
       sql`${t.contentMarkdown} gin_trgm_ops`,
     ),
+    // Invarian #1 — difficulty 1..5 (lihat drizzle/0003_*.sql)
+    check("chk_questions_difficulty", sql`${t.difficulty} BETWEEN 1 AND 5`),
   ],
 );
 

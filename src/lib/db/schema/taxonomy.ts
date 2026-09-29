@@ -10,9 +10,10 @@ import {
   index,
   uniqueIndex,
   primaryKey,
+  check,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { questions } from "./question";
 
 /** topics — taksonomi 3-level (Kategori › Topik › SubTopik). Dulu `categories`. */
@@ -38,6 +39,8 @@ export const topics = pgTable(
     index("idx_topics_parent_id").on(t.parentId),
     index("idx_topics_level").on(t.level),
     index("idx_topics_name_trgm").using("gin", t.name.op("gin_trgm_ops")),
+    // Invarian — level topik 1..3 (lihat drizzle/0002_db_safety.sql)
+    check("chk_topics_level", sql`${t.level} BETWEEN 1 AND 3`),
   ],
 );
 

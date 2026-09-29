@@ -9,7 +9,7 @@ import {
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
-import { transition, type QuestionStatus } from "@/lib/fsm/question-fsm";
+import { transition, assertReady, type QuestionStatus } from "@/lib/fsm/question-fsm";
 import { recordAudit } from "./audit";
 import type {
   CreateQuestionInput,
@@ -307,6 +307,12 @@ export async function changeQuestionStatus(
   // Izin per tujuan transisi (L1)
   if (to === "ready") {
     assertCan(actor, "question:setReady");
+    // Batasan: soal boleh ada tanpa answer_key, TAPI tak boleh jadi `ready`
+    // sebelum jawabannya diisi (kecuali stimulus). Lihat question-fsm.ts.
+    assertReady({
+      questionType: existing.questionType,
+      answerKey: existing.answerKey,
+    });
   } else if (to === "archived") {
     assertCan(actor, "question:archive");
   } else {

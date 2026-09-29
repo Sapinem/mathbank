@@ -1,0 +1,2 @@
+ALTER TABLE "questions" ADD CONSTRAINT "chk_questions_difficulty" CHECK ("questions"."difficulty" BETWEEN 1 AND 5);--> statement-breakpoint
+ALTER TABLE "topics" ADD CONSTRAINT "chk_topics_level" CHECK ("topics"."level" BETWEEN 1 AND 3);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { resolveActor } from "@/lib/auth/resolve";
-import { InvalidTransitionError } from "@/lib/fsm/question-fsm";
+import { InvalidTransitionError, NotReadyError } from "@/lib/fsm/question-fsm";
 import {
   UnauthorizedError,
   ForbiddenError,
@@ -87,6 +87,12 @@ function errorResponse(err: unknown): NextResponse {
     return NextResponse.json(
       { error: { code: "INVALID_TRANSITION", message: err.message } },
       { status: 409 },
+    );
+  }
+  if (err instanceof NotReadyError) {
+    return NextResponse.json(
+      { error: { code: err.code, message: err.message } },
+      { status: 422 },
     );
   }
   if (err instanceof ZodError) {
