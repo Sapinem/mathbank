@@ -49,4 +49,9 @@ describe("question-fsm", () => {
       }
     }
   });
+
+  it("dari status tak dikenal → tak ada transisi (fallback aman)", () => {
+    expect(canTransition("ngawur" as never, "review")).toBe(false);
+    expect(nextStatuses("ngawur" as never)).toEqual([]);
+  });
 });

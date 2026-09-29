@@ -6,7 +6,10 @@
 
 1. **Zero type errors** — `pnpm typecheck` (tsc --noEmit) harus 0 error.
 2. **Zero lint errors** — `pnpm lint` bersih (0 error, 0 warning).
-3. **Coverage ≥ 85% statements** — untuk logika inti (service, engine, parser).
+3. **Coverage ≥ 85% statements** — diukur via `pnpm test:coverage` (bagian dari `pnpm check`).
+   - Cakupan diskop ke **logika murni** yang dapat diuji tanpa DB/HTTP: `auth/guards`, `auth/roles`, `auth/permissions`, `auth/actor`, `fsm/question-fsm`, `contracts/question`, `display/labels`.
+   - Service/route/hook (butuh DB) diuji lewat **e2e** (`e2e/`).
+   - **Jangan turunkan ambang**; naikkan bertahap saat cakupan bertambah.
 4. **Build sukses** — `pnpm build` exit 0.
 5. **Install library saat perlu saja** — paket hanya dipasang saat milestonenya tiba (lihat `TUMPUKAN-TEKNOLOGI.md`). Tak menumpuk dependency di awal.
 
@@ -38,7 +41,7 @@
 20. **LaTeX: `openin_any='p'`** (mitigasi LFI) — jangan diubah.
 21. **Rahasia tidak di kode** — lewat ENV / `app_settings` terenkripsi.
 22. **Validasi input via Zod** di semua boundary (API, MCP).
-23. **`AUTH_DEV_BYPASS` hanya untuk dev** — default `false`; jangan diaktifkan di produksi.
+23. **`AUTH_DEV_BYPASS` hanya untuk dev** — default `false`; pagar keras `NODE_ENV !== "production"` di `resolve.ts` menjamin bypass **mati total** di produksi.
 
 ## Konvensi
 

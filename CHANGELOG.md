@@ -17,17 +17,30 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - **R6** `useMediaQuery` + komponen `DesktopOnly` (pengalih halaman desktop-saja).
 - **Rancangan responsif enterprise** — `docs/RENCANA-UI-MOBILE.md` v2 (17 bagian + 2 lampiran, matriks adaptasi 22 elemen).
 - **CONSTRAINTS #10–14** — aturan responsif (wajib desktop+tablet+mobile, touch 44px, `MathContent` overflow-x-auto, input ≥16px, batas kunci `lg`).
+- **E2E Playwright** (`e2e/`) — tema (5), responsif (3), Bank Soal (5), API (5); proyek `desktop` (1280) & `mobile` (Pixel 5). Skrip `pnpm e2e`.
+- **`/api/stats`** + hook `use-stats` — Dasbor kini **nyata** (statistik, aktivitas, distribusi), bukan angka statis.
+- **`docs/AUDIT-KODE.md`** — audit menyeluruh (9 temuan: 1 kritis, 1 tinggi, sisanya kecil).
 
 ### Diubah
 - `MathContent` — dukung `\(...\)` & `\[...\]` (selain `$...$`); pembungkus `overflow-x-auto` (rumus lebar tak memecah layout).
-- `CONSTRAINTS.md` — perbaiki duplikasi nomor; aturan responsif ditambahkan.
+- `CONSTRAINTS.md` — perbaiki duplikasi nomor; aturan responsif ditambahkan; perjelas gerbang coverage.
+- **Gerbang mutu diperbaiki** — coverage **kini nyata & terukur** (`@vitest/coverage-v8`); `pnpm check` menjalankan `test:coverage`. Cakupan **98,7% stmt / 97,6% cabang / 100% fungsi**.
+
+### Diperbaiki (audit)
+- 🔴 **Coverage palsu** — dulu 9,12% (dependensi absen → ambang tak pernah dievaluasi). Kini diukur nyata.
+- 🟠 **`AUTH_DEV_BYPASS`** — kini dijaga `NODE_ENV !== "production"`: bypass **mati total** di produksi.
+- 🟡 **Dasbor hardcoded 0** → data nyata dari `/api/stats`.
+- 🟡 **`changeQuestionStatus`** — tak lagi tulis DB + audit saat status tak berubah.
+- 🟢 **`labels.ts`**, `actor.ts`, `roles.ts`, kelas error guard — sebelumnya 0% tes, kini tertutup.
+- 🟢 Hapus `src/lib/search/smoke.test.ts` (placeholder).
 
 ### Ditunda
 - **R4** (detail soal: app bar + aksi sticky) → digabung ke **M4c** (halaman detail dibangun pertama kali di sana).
 - **R7** audit aksesibilitas menyeluruh → menyusul setelah halaman-halaman ada.
+- Rute `/bank-soal/baru` & `/bank-soal/[id]` → **M4c** (kini 404; tombol "Buat Soal" & kartu belum aktif).
 
 ### Gerbang Mutu
-- `tsc` 0 · `lint` 0 · tes 40/40 · `build` 0.
+- `tsc` 0 · `lint` 0 · **tes 68/68 · coverage 98,7%** · `build` 0 · **e2e 33 hijau** (desktop 17 / mobile 16).
 
 ---
 

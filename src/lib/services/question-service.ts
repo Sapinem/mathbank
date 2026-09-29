@@ -298,6 +298,9 @@ export async function changeQuestionStatus(
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   const from = existing.status as QuestionStatus;
+  // Transisi tak berubah → tak perlu tulis/audit.
+  if (from === to) return existing;
+
   // Validasi transisi (FSM) SEBELUM izin → error transisi lebih jelas
   transition(from, to);
 

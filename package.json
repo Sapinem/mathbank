@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -17,7 +18,9 @@
     "theme:build": "tsx scripts/theme/build.ts",
     "seed:taxonomy": "tsx scripts/seed-taxonomy.ts",
     "seed:questions": "tsx scripts/seed-questions.ts",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "check": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.7.6",
@@ -42,6 +45,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -50,6 +54,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^5.0.2",
     "dotenv": "^18.0.4",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",

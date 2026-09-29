@@ -72,8 +72,10 @@ export async function actorFromApiKey(headers: Headers): Promise<Actor | null> {
   }
 }
 
-/** Aktor dev (hanya bila AUTH_DEV_BYPASS=true) — untuk pengembangan UI tanpa login. */
+/** Aktor dev (hanya bila AUTH_DEV_BYPASS=true DAN bukan produksi). */
 function actorFromDevBypass(): Actor | null {
+  // Pagar keras: JANGAN pernah aktif di produksi, terlepas dari nilai env.
+  if (process.env.NODE_ENV === "production") return null;
   if (process.env.AUTH_DEV_BYPASS !== "true") return null;
   return {
     id: "dev-user",
