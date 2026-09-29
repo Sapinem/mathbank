@@ -29,6 +29,7 @@ export default defineConfig({
         "src/lib/api/route-wrapper.ts",
         "src/lib/api/rate-limit.ts",
         "src/lib/db/projections/question.ts",
+        "src/lib/theme/color.ts",
         // Komponen kustom (BUKAN vendor ui/**) yang punya tes komponen.
         "src/components/questions/question-card.tsx",
         "src/components/questions/bank-soal-view.tsx",

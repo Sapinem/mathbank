@@ -214,4 +214,63 @@ yang dicatat ke M13/M15).
 
 ---
 
-## M3 — *menunggu review*
+## M3 — Tema & Shell
+
+**Direview:** 2026-09-30 · **Verdict:** ✅ **LULUS** (1 temuan kritis diperbaiki, 1 kosmetik)
+
+### Verifikasi klaim
+
+| Klaim MILESTONE | Kenyataan | Verdict |
+|-----------------|-----------|:-------:|
+| Mesin tema (`scripts/theme/build.ts`) 3 warna → OKLCH | `theme:build` jalan; `#0158CA`→`oklch(0.491 0.191 259.198)` | ✅ |
+| Verifikasi WCAG otomatis | ⚠️ **TIDAK ADA** (lihat T-M3-1) → **dibuat** | 🔴→✅ |
+| Gelap+terang, default ikut OS (tanpa flash) | `defaultTheme="system"`, `enableSystem`, `suppressHydrationWarning` | ✅ |
+| Warna status universal | `--mb-success/error/warning/info` hardcoded (tak ikut brand) | ✅ |
+| Font Roboto Flex + Roboto Mono | `next/font/google`, self-host | ✅ |
+| Shell: sidebar 4 grup + header + breadcrumb | Kerja/Referensi/Studio/Sistem, breadcrumb, `SidebarTrigger` | ✅ |
+| Command palette (⌘K) | `CommandDialog` + `CommandGroup` | ✅ |
+| Primitif UI → **Base UI** | 0 sisa `@radix-ui` (package.json & node_modules), 18 file `@base-ui/react` | ✅ |
+| Responsif (Fase R) | sidebar shadcn resmi (drawer mobile), **satu kode** | ✅ |
+
+### Uji perilaku (e2e nyata)
+
+| Uji | Hasil |
+|-----|:-----:|
+| e2e tema (desktop+mobile): default OS, pilih gelap, persist, ikon | ✅ 10/10 |
+| e2e responsif: drawer mobile, no horizontal scroll | ✅ 6/6 |
+| e2e penuh (api, bank-soal, security, tema, responsif) | ✅ 43 lulus, 3 skip, 0 gagal |
+| `useMediaQuery`/`useIsMobile` hydration-safe (`useSyncExternalStore`) | ✅ (bukan pola lama shadcn yg bikin freeze) |
+
+### Temuan
+
+#### 🔴 T-M3-1 — Klaim "Verifikasi WCAG otomatis" TIDAK ADA (klaim kosong)
+
+`A11Y.md:23` & `A11Y.md:32` mencentang `[x]` *"Kontras terverifikasi mesin
+(build.ts)"* — padahal `scripts/theme/` **hanya** `build.ts` (konversi OKLCH), **tak
+ada** kode menghitung rasio kontras. `A11Y.md:79` justru mengaku `[ ]` belum →
+dokumen **saling bertentangan**. Ini klaim palsu (centang tanpa implementasi),
+pola yang sama dengan temuan M1/M2.
+
+**Perbaikan (dilakukan):** dibangun verifikasi nyata:
+- `src/lib/theme/color.ts` — konversi OKLCH↔sRGB + luminansi relatif + `contrastRatio` (rumus WCAG 2.x)
+- `scripts/theme/tokens.ts` — definisi token (sumber kebenaran bersama build & check)
+- `scripts/theme/check.ts` — `pnpm theme:check`: **16 pasangan kontras × 2 mode**, gagal → exit 1 (bisa masuk CI)
+- `src/lib/theme/color.test.ts` — 9 tes matematika warna (verifikasi thd nilai rujukan: hitam/putih = 21:1)
+- dimasukkan ke gate `pnpm check` (dijalankan sebelum typecheck)
+- **Hasil: 16/16 lulus.** Fakta menarik: `muted-fg` di latar (terang) = **4.73:1** — lulus tapi **tipis** (margin hanya 0.23 di atas 4.5). Dicatat agar tidak "digelapkan" tanpa cek.
+
+#### 🟡 T-M3-2 — Variabel font mono salah nama
+
+`layout.tsx` menamai variabel font Roboto Mono sebagai `--font-geist-mono`
+(warisan template Geist). Membingungkan. **Diperbaiki** → `--font-roboto-mono`.
+
+### Kesimpulan M3
+
+Mesin tema & shell **kokoh dan terbukti**: migrasi Base UI bersih total, responsif
+satu-kode (menuntaskan masalah freeze mobile lama), e2e tema+responsif lulus di
+desktop & mobile. **Cacat: klaim WCAG palsu → kini benar-benar diimplementasikan &
+diuji (16/16).** **M3: ✅ LULUS.**
+
+---
+
+## M4 — Bank Soal (CRUD) — *berikutnya*

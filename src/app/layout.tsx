@@ -12,7 +12,7 @@ const robotoFlex = Roboto_Flex({
 });
 
 const robotoMono = Roboto_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-roboto-mono",
   subsets: ["latin"],
   display: "swap",
 });

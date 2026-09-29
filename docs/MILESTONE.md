@@ -31,7 +31,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M0 | Fondasi | 🔴 | — | ✅ |
 | M1 | Skema Database | 🔴 | M0 | ✅ **· direview (1 fix)** |
 | M2 | Auth & Peran | 🔴 | M1 | ✅ **· direview (2 temuan)** |
-| M3 | Tema & Shell | 🔴 | M2 | ✅ |
+| M3 | Tema & Shell | 🔴 | M2 | ✅ **· direview** |
 | **M4** | **Bank Soal (CRUD)** | 🔴 | M3 | 🟡 **M4a/M4b ✅ · M4c/M4d ⬜** |
 | M5 | Taksonomi (Referensi) | 🔴 | M4 | ⬜ |
 | M6 | Pencarian & Filter | 🔴 | M5 | ⬜ |

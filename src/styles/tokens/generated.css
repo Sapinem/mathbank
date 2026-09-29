@@ -2,6 +2,13 @@
 /* Sumber: primary #0158CA, accent #D5AC1E */
 
 :root {
+  --mb-bg: oklch(1 0 0);
+  --mb-fg: oklch(0.145 0 0);
+  --mb-muted-fg: oklch(0.556 0 0);
+  --mb-card: oklch(1 0 0);
+  --mb-card-fg: oklch(0.145 0 0);
+  --mb-border: oklch(0.922 0 0);
+
   /* Brand — primer */
   --mb-brand: oklch(0.491 0.191 259.198);
   --mb-brand-hover: oklch(0.431 0.191 259.198);
@@ -19,13 +26,23 @@
 }
 
 .dark {
+  --mb-bg: oklch(0.145 0 0);
+  --mb-fg: oklch(0.985 0 0);
+  --mb-muted-fg: oklch(0.708 0 0);
+  --mb-card: oklch(0.205 0 0);
+  --mb-card-fg: oklch(0.985 0 0);
+  --mb-border: oklch(0.269 0 0);
+
+  /* Brand — primer */
   --mb-brand: oklch(0.631 0.2 259.198);
-  --mb-brand-hover: oklch(0.691 0.2 259.198);
+  --mb-brand-hover: oklch(0.571 0.2 259.198);
   --mb-brand-fg: oklch(0.13 0 0);
 
+  /* Brand — aksen (emas, "perlu perhatian") */
   --mb-accent: oklch(0.76 0.149 90.578);
   --mb-accent-fg: oklch(0.13 0 0);
 
+  /* Status — UNIVERSAL (tak ikut brand) */
   --mb-success: oklch(0.7 0.15 150);
   --mb-error: oklch(0.704 0.191 22.216);
   --mb-warning: oklch(0.8 0.15 85);
