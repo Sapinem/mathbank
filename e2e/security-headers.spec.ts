@@ -47,4 +47,14 @@ test.describe("Security headers", () => {
     // Di dev, HSTS sengaja tak diset agar localhost tak dipaksa HTTPS.
     expect(res.headers()["strict-transport-security"]).toBeUndefined();
   });
+
+  test("HTTP polos: TIDAK ada upgrade-insecure-requests (aset tetap termuat)", async ({
+    request,
+  }) => {
+    // Regresi: directive ini pernah membuat LAN (http://<ip>:3001) tampil tanpa CSS.
+    // Ia hanya boleh dikirim saat APP_HTTPS=true (di balik TLS).
+    const res = await request.get("/");
+    const csp = res.headers()["content-security-policy"] ?? "";
+    expect(csp).not.toContain("upgrade-insecure-requests");
+  });
 });

@@ -52,6 +52,7 @@ DATABASE_URL=postgresql://...      # jangan pakai akun superuser; hak minimum
 BETTER_AUTH_SECRET=<acak kuat>     # ≥ 32 byte, RAHASIA
 BETTER_AUTH_URL=https://<domain>
 AUTH_DEV_BYPASS=false              # WAJIB false
+APP_HTTPS=true                     # WAJIB true bila di balik reverse-proxy TLS
 NODE_ENV=production
 ```
 Opsional (per fitur): `BGE_M3_SERVICE_URL`, `MEDIA_STORAGE_PATH`, `TIKZ_TMP_ROOT`.

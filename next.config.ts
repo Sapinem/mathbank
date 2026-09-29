@@ -52,15 +52,24 @@ const CSP_DEV = CSP.replace(
 );
 
 /**
- * Header keamanan. Dalam mode dev, header yang memaksa HTTPS dilewati agar
- * pengembangan lokal (`http://localhost`) tetap berjalan.
+ * Header keamanan.
+ *
+ * `isDev`: mode pengembangan (`next dev`) — jangan paksa HTTPS, tambah `'unsafe-eval'`.
+ * `isHttps`: request datang lewat HTTPS (TLS diterminasi reverse-proxy) — hanya di
+ *   kondisi ini `upgrade-insecure-requests` & HSTS aman dikirim.
+ *
+ * ⚠️ `upgrade-insecure-requests` **tidak boleh** dikirim saat halaman disajikan
+ * lewat **HTTP polos** — termasuk saat uji produksi via LAN (`http://<ip>:3001`).
+ * Directive itu memaksa browser menaikkan semua aset ke `https://`; tanpa TLS
+ * aset gagal dimuat → halaman tampil tanpa CSS. Karena itu ia hanya
+ * ditambahkan bila `isHttps` benar.
  */
-function securityHeaders(isDev: boolean) {
-  // `upgrade-insecure-requests` HANYA produksi: di dev ia mematahkan akses via
-  // LAN (http://<ip>:3001 tanpa TLS → aset gagal → halaman tanpa CSS).
-  const cspValue = isDev
-    ? CSP_DEV
-    : `${CSP}; upgrade-insecure-requests`;
+function securityHeaders(isDev: boolean, isHttps: boolean) {
+  let cspValue = isDev ? CSP_DEV : CSP;
+  if (isHttps) {
+    // Hanya saat benar-benar HTTPS: `'unsafe-eval'` tetap dev-only.
+    cspValue = `${cspValue}; upgrade-insecure-requests`;
+  }
   const headers = [
     { key: "Content-Security-Policy", value: cspValue },
     { key: "X-Content-Type-Options", value: "nosniff" },
@@ -72,8 +81,8 @@ function securityHeaders(isDev: boolean) {
     },
     { key: "X-DNS-Prefetch-Control", value: "off" },
   ];
-  // HSTS hanya di produksi (jangan paksa HTTPS di localhost).
-  if (!isDev) {
+  // HSTS hanya saat HTTPS (jangan paksa HTTPS lewat HTTP polos).
+  if (isHttps) {
     headers.push({
       key: "Strict-Transport-Security",
       value: "max-age=63072000; includeSubDomains; preload",
@@ -85,10 +94,15 @@ function securityHeaders(isDev: boolean) {
 const nextConfig: NextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV !== "production";
+    // `upgrade-insecure-requests` + HSTS hanya dikirim bila operator menyatakan
+    // app disajikan via HTTPS (di balik reverse-proxy TLS). Set `APP_HTTPS=true`
+    // di lingkungan produksi. Default: HTTP polos → directive tidak dikirim,
+    // agar uji produksi via LAN (`http://<ip>:3001`) tetap memuat CSS/aset.
+    const isHttps = process.env.APP_HTTPS === "true";
     return [
       {
         source: "/:path*",
-        headers: securityHeaders(isDev),
+        headers: securityHeaders(isDev, isHttps),
       },
     ];
   },

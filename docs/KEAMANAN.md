@@ -122,7 +122,8 @@ Diterapkan ke **semua rute** via `next.config.ts` `headers()`:
 **CSP (produksi):** `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests`.
 
 - **Dev** menambah `'unsafe-eval'` (React debug) — **tak pernah** di produksi.
-- **Dev TIDAK memakai `upgrade-insecure-requests`** ⚠️ — directive ini memaksa browser menaikkan `http://` → `https://`. Di `localhost` browser mengecualikannya (secure context), tapi saat dev diakses via **LAN** (`http://192.168.x.x:3001`, tanpa TLS) seluruh CSS/JS/font gagal dimuat → halaman tampil tanpa gaya. Karena itu hanya ditambahkan pada CSP produksi (TLS diterminasi reverse-proxy). *Bug ditemukan & diperbaiki 2026-09-29 (akses LAN).*
+- **Dev TIDAK memakai `upgrade-insecure-requests`** ⚠️ — directive ini memaksa browser menaikkan `http://` → `https://`. Bila halaman disajikan lewat **HTTP polos** (mis. uji produksi via LAN `http://192.168.x.x:3001`, tanpa TLS), seluruh CSS/JS/font gagal dimuat → halaman tampil tanpa gaya.
+- **Kendali via env `APP_HTTPS=true`** ✅ — directive `upgrade-insecure-requests` **dan** HSTS hanya dikirim bila operator menandai bahwa app berjalan di balik **HTTPS** (reverse-proxy TLS). Default (env tak diset) = HTTP → keduanya **tidak** dikirim. Ini karena `next.config.ts` `headers()` bersifat statis (tak punya akses ke protokol request). *Bug ditemukan & diperbaiki 2026-09-29 (akses LAN, dua kali: dev lalu produksi-HTTP).* **Saat deploy produksi di balik reverse-proxy TLS, wajib set `APP_HTTPS=true`.**
 - **Utang lanjutan:** ganti `'unsafe-inline'` skrip dengan **nonce/hash** (S9) untuk CSP ketat.
 
 ---
