@@ -1,6 +1,6 @@
-# DESIGN & THEME FRAMEWORK — QBank v1.0.0
+# DESIGN & THEME FRAMEWORK — MathBank
 
-> **Status:** 📝 DRAF KONTRAK — menunggu persetujuan sebelum implementasi.
+> **Status:** ✅ berlaku — mesin tema MathBank (implementasi: `scripts/theme/build.ts`).
 > **Arah visual:** Linear / Vercel — gelap-padat-presisi, garis hairline, satu aksen dominan.
 > **Sifat:** Rombak total. Desain lama = referensi saja, bukan kendala.
 > **Font:** Roboto Flex (UI) + Roboto Mono (rumus/ID/kode).
@@ -10,7 +10,7 @@
 
 ## 1. FILOSOFI
 
-Framework ini bukan "tema QBank". Ini **mesin penghasil tema**:
+Framework ini bukan "tema warna kaku". Ini **mesin penghasil tema**:
 
 > **Input:** 3 warna sumber (`primary`, `secondary`, `accent`) — warna, *bukan* logo.
 > **Proses:** Sistem mengekstrak hue/chroma, menghitung lightness sendiri, memverifikasi kontras WCAG.
@@ -219,7 +219,7 @@ FASE E — Polish
 
 ---
 
-## 11. PALET QBank (FINAL — diputuskan bersama)
+## 11. PALET MathBank (FINAL — diputuskan bersama)
 
 Warna sumber dari **logo MathMyID asli** (M biru + W gold):
 
@@ -232,7 +232,7 @@ Warna sumber dari **logo MathMyID asli** (M biru + W gold):
 **Alasan pemilihan (terverifikasi):**
 - Biru `#0158CA` (hue 214°) vs gold `#D5AC1E` (hue 47°) → jarak **167° ≈ komplementer** → harmonis secara alami.
 - `secondary` = **netral**, bukan warna ke-3. Alasan: (1) konsistensi #1 (pola Linear/Vercel = 1 warna brand + grayscale); (2) warna ke-3 dengan hue dekat primary (mis. navy) **tak bisa dibedakan**; (3) warna ke-3 tanpa peran nyata = **dekorasi** yang merusak konsistensi.
-- Framework **tetap menerima 3 input** (generik untuk brand lain); untuk QBank `secondary` diisi netral.
+- Framework **tetap menerima 3 input** (generik untuk brand lain); untuk MathBank `secondary` diisi netral.
 - Opsi cyan-teal (hue ~189°) **ditolak**: peran yang tersedia (status info, progress) sudah terisi brand/status → akan bersaing.
 
 **Catatan:** file `public/brand/mathmyid-logo.svg` di repo hanya versi biru (tanpa gold) — perlu diperbarui agar gold tampil di UI. *(menunggu keputusan)*

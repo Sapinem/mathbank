@@ -35,13 +35,13 @@
 
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
-| B1 | `ARSITEKTUR-SISTEM-FULL.md` | ⚠️ | sebagian QBank (referensi), angka 27 diperbaiki |
+| B1 | `ARSITEKTUR-SISTEM-FULL.md` | 📦 | **referensi era QBank** (banner), angka 27 diperbaiki |
 | B2 | `ARSITEKTUR-DATA-FINAL.md` | ✅ | |
 | B3 | `DESAIN-PER-LAPISAN-MATHBANK.md` | ✅ | L1–L9 |
 | B4 | `SKEMA-DB-DETAIL.md` | ✅ | sumber kebenaran skema |
 | B5 | `L7-TINJAUAN-KRITIS-DATA.md` | ✅ | |
 | B6 | `KAMUS-DATA.md` (glossary) | 🟠 | **belum** — definisi istilah domain |
-| B7 | `docs/ADR/` | 🔴 | **belum** — Architecture Decision Records |
+| B7 | `docs/ADR/` | ✅ | **7 ADR** dibuat 2026-09-29 (0001–0007) |
 
 ### Kategori C — Desain & UI
 
@@ -71,7 +71,7 @@
 
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
-| E1 | `KEAMANAN.md` | 🔴 | **belum** — threat model, OWASP, RBAC, rahasia, API key |
+| E1 | `KEAMANAN.md` | ✅ | **dibuat** 2026-09-29 — threat model, OWASP, RBAC, rahasia, API key |
 | E2 | `RENCANA-DEPLOY.md` | 🟠 | **belum** — dev/staging/prod, CI/CD, rilis, rollback |
 | E3 | `OBSERVABILITAS.md` | 🟠 | **belum** — logging, metrik, health check, alerting |
 | E4 | `BACKUP-RECOVERY.md` | 🟠 | **belum** — RPO/RTO, uji restore, DR |
@@ -113,7 +113,7 @@
 
 | Prioritas | Dokumen | Kapan wajib |
 |-----------|---------|-------------|
-| 🔴 **Kritis** | `KEAMANAN.md`, `docs/ADR/` | **sekarang** |
+| 🔴 **Kritis** | ~~`KEAMANAN.md`~~ ✅, ~~`docs/ADR/`~~ ✅ | ✅ **selesai** 2026-09-29 |
 | 🟠 **Penting** | `RENCANA-DEPLOY`, `KONTRAK-API`, `OBSERVABILITAS`, `BACKUP-RECOVERY`, `KAMUS-DATA`, `A11Y`, `CONTRIBUTING` | sebelum produksi / milestone terkait |
 | 🟢 **Menyusul** | `RUNBOOK`, `KEPATUHAN-PRIVASI`, `SLA-SLO`, `PERFORMA`, `GOVERNANCE`, `RENCANA-MCP/EKSPOR/MOODLE`, `STRATEGI-INGEST`, `RENCANA-ENRICHMENT/TAKSONOMI`, `PANDUAN-OPERASIONAL` | saat fitur/tim bertambah |
 | 📦 **Arsip** | `arsip/ROADMAP-QBANK`, `arsip/RENCANA-MIGRASI-DATA` (era QBank) | ✅ **selesai** 2026-09-29 |

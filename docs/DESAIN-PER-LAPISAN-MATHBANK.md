@@ -171,8 +171,8 @@ Auth:       /login · /change-password
 
 ## Yang Dibawa dari QBank (referensi)
 - Struktur halaman (19 halaman) — dipetakan ulang ke 4 grup
-- Komponen: Sidebar, CommandPalette, Breadcrumb, ThemeSelector
-- Kerangka tema generatif (`scripts/theme/`) + token OKLCH
+- Komponen shell: Sidebar (shadcn resmi), Breadcrumb, CommandPalette, ThemeToggle
+- Kerangka tema generatif (`scripts/theme/build.ts`) + token OKLCH (`--mb-*`)
 
 ---
 

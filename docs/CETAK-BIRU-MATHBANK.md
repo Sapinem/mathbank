@@ -1,4 +1,7 @@
-# Inventaris QBank → Cetak Biru MathBank
+# Cetak Biru MathBank
+
+> **Sifat:** inventaris "apa yang dibawa dari QBank" → jadi basis MathBank.
+> QBank **pensiun** (ADR-0001); dokumen ini mencatat keputusan selektif (apa yang disalin, apa yang tidak).
 
 > **Tujuan:** Daftar lengkap "apa yang harus ada di MathBank" — termasuk hal-hal **implisit tersebar** yang mudah hilang kalau mulai dari nol tanpa inventaris.
 > **Tanggal:** 2026-09-29.
@@ -60,7 +63,7 @@ react, react-dom, sonner, tailwind-merge, yaml, zod
 | `BGE_M3_SERVICE_URL` | Layanan embedding |
 | `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | LLM (ingest, enrichment) |
 | `TIKZ_TMP_ROOT` | Kompilasi TikZ temp |
-| `QBANK_ALLOW_DEV_PASSWORD` / `QBANK_BOOTSTRAP_PASSWORD` | Bootstrap admin |
+| `AUTH_DEV_BYPASS` | Bootstrap admin (dev) |
 | `ALLOW_TEST_AUTH_BYPASS` | Tes (TEST env saja) |
 
 ---

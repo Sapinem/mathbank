@@ -1,29 +1,27 @@
-# Theme Framework — Panduan Teknis
+# Theme Framework — Panduan Teknis (MathBank)
 
-> Dokumen ini menjelaskan **cara kerja** mesin tema QBank (implementasi Fase A).
+> Dokumen ini menjelaskan **cara kerja** mesin tema **MathBank**.
 > Untuk keputusan desain (mengapa begini), lihat `DESIGN-THEME-FRAMEWORK.md`.
-> Terakhir diperbarui: 2026-09-29 · Branch: `redesign/ui-linear`
+> Terakhir diperbarui: 2026-09-29 (diselaraskan dengan kode nyata).
 
 ---
 
 ## 1. Ringkasan
 
-QBank memakai **mesin penghasil tema**, bukan token warna statis. Alurnya:
+MathBank memakai **mesin penghasil tema**, bukan token warna statis. Ganti merek cukup ubah **warna sumber** → `pnpm theme:build`. Alurnya:
 
 ```
-scripts/theme/sources.ts    →  3 WARNA SUMBER (yang diubah untuk ganti brand)
+scripts/theme/build.ts                 →  WARNA SUMBER (yang diubah untuk ganti brand)
         │
         ▼  pnpm theme:build
-scripts/theme/generate.ts   →  ekstrak hue/chroma, hitung lightness,
-        │                       verifikasi kontras WCAG, beri peringatan
-        ▼
-src/styles/tokens/generated.css  →  token lengkap (2 mode: terang & gelap)
+src/styles/tokens/generated.css        →  token OKLCH (2 mode: terang & gelap)
         │
-        ▼  dipakai komponen
-Tailwind:  bg-brand, text-accent, border-border-strong, dst
+        ▼  @import di src/app/globals.css  →  dipetakan ke token shadcn + @theme (Tailwind)
+        ▼
+Komponen: bg-brand?, var(--mb-*), token shadcn (--primary, --sidebar-*, …)
 ```
 
-**Ganti brand = ubah `sources.ts` → jalankan `pnpm theme:build`.** Selesai.
+**Ganti brand = ubah warna sumber di `scripts/theme/build.ts` → jalankan `pnpm theme:build`. Selesai.**
 
 ---
 
@@ -31,132 +29,99 @@ Tailwind:  bg-brand, text-accent, border-border-strong, dst
 
 | Berkas | Peran |
 |--------|-------|
-| `scripts/theme/sources.ts` | **INPUT** — 2–3 warna sumber. Hanya ini yang diubah untuk ganti brand. |
-| `scripts/theme/color-engine.ts` | Matematika warna: konversi OKLCH, skala, kontras WCAG. |
-| `scripts/theme/generate.ts` | Generator: sumber → peran → verifikasi → CSS. |
+| `scripts/theme/build.ts` | **INPUT + GENERATOR** — warna sumber → token OKLCH → CSS. Satu berkas. |
 | `src/styles/tokens/generated.css` | **OUTPUT** — JANGAN edit manual. Dihasilkan otomatis. |
+| `src/app/globals.css` | Memetakan `--mb-*` ke token shadcn (`--primary`, `--sidebar-*`, …) + `@theme inline` untuk Tailwind. |
+| `src/components/providers/theme-provider.tsx` | `next-themes` provider — mode terang/gelap/sistem. |
+| `src/components/layout/theme-toggle.tsx` | Pemilih mode (Terang · Gelap · Ikut Sistem). |
 
 ---
 
 ## 3. Perintah
 
 ```bash
-pnpm theme:build      # generate token dari sources.ts
+pnpm theme:build      # generate token dari build.ts
 ```
 
-Output konsol menampilkan: peringatan input, hasil verifikasi kontras, dan path file.
-Exit code `1` bila ada pasangan kontras yang GAGAL.
+Output: `src/styles/tokens/generated.css` + ringkasan nilai di konsol.
 
 ---
 
 ## 4. Cara ganti brand
 
-1. Buka `scripts/theme/sources.ts`.
-2. Ubah 3 nilai:
+1. Buka `scripts/theme/build.ts`.
+2. Ubah `SOURCES`:
 
 ```ts
-export const MATHMYID: ThemeSources = {
-  primary: '#0158CA',        // ← warna utama
-  secondary: '#0158CA',      // ← hanya sumber hue bila neutralSecondary
-  accent: '#D5AC1E',         // ← warna "perlu perhatian"
-  neutralSecondary: true,    // true = secondary jadi grayscale
+const SOURCES = {
+  primary: "#0158CA",   // ← aksen utama (tombol, link, aktif)
+  accent:  "#D5AC1E",   // ← emas, "perlu perhatian"
 };
+// secondary (netral) dibangkitkan mesin untuk latar/border/teks.
 ```
 
 3. Jalankan `pnpm theme:build`.
-4. Baca output — bila ada ❌, sesuaikan sumber atau nilai langkah di `generate.ts`.
+4. `pnpm build` → pastikan 0 error.
 
 ---
 
-## 5. Aturan yang dipegang mesin
+## 5. Aturan yang dipegang
 
 | Aturan | Penjelasan |
 |--------|------------|
-| **Hue & chroma dari sumber, lightness dihitung** | Input cukup "warnanya apa"; kecerahan diatur sistem agar kontras aman. |
-| **Verifikasi WCAG otomatis** | Teks ≥ 4.5:1, border fungsional ≥ 3:1. Gagal → exit 1. |
-| **Peringatan Δhue < 20°** | Dua warna terlalu mirip → diberi peringatan (bukan auto-fix). |
-| **Border dekoratif vs fungsional** | `border-default`/`subtle` sengaja tipis (hairline Linear); `border-strong` (input/kontrol) wajib terlihat. |
+| **Hue & chroma dari sumber, lightness dihitung** | Cukup "warnanya apa"; kecerahan diatur mesin agar kontras aman. |
+| **Status UNIVERSAL** | `--mb-success/error/warning/info` senantiasa hijau/merah/kuning/biru — **tak** ikut brand. |
 | **brand-fg bergantung mode** | Terang: putih (brand gelap). Gelap: gelap (brand terang). Dipilih agar lolos AA. |
-| **Non-hex diteruskan** | `rgba(...)` (mis. overlay) dilewatkan tanpa konversi. |
+| **Siap = biru brand** | Status "siap" memakai warna brand; emas = "perlu perhatian". |
 
 ---
 
-## 6. Peran yang dihasilkan
+## 6. Token yang dihasilkan
 
-**Surface:** `surface-base`, `surface-raised`, `surface-elevated`, `surface-input`, `surface-overlay`
-**Text:** `text-primary`, `text-secondary`, `text-muted`, `text-disabled`
-**Border:** `border-default`, `border-subtle`, `border-strong`
-**Brand:** `brand`, `brand-hover`, `brand-subtle`, `brand-fg`
-**Accent:** `accent`, `accent-hover`, `accent-subtle`, `accent-fg`
-**Focus:** `focus-ring`
-
-Semua tersedia sebagai `--color-<peran>` di CSS, dan otomatis menjadi kelas Tailwind
-(`bg-surface-base`, `text-text-primary`, `border-border-strong`, …) via `@theme` di `globals.css`.
-
----
-
-## 7. Status integrasi
-
-| Langkah | Status |
-|---------|--------|
-| Mesin warna (color-engine) | ✅ selesai & teruji |
-| Generator + verifikasi WCAG | ✅ selesai (10/10 lolos AA) |
-| `generated.css` | ✅ dihasilkan |
-| Wiring ke `globals.css` (`@theme`) | ✅ selesai |
-| Default mode = sistem OS | ✅ selesai (`ThemeContext` + skrip anti-FOUC) |
-| Token lama dihapus sebagai sumber | ✅ selesai (nama lama kini *dijembatani* dari tema baru) |
-| Pindah komponen ke nama peran baru | ⏳ bertahap (per komponen saat dirombak) |
-
----
-
-## 8. Arsitektur wiring (Fase A selesai)
+Dua mode (terang `:root`, gelap `.dark`):
 
 ```
-scripts/theme/sources.ts  →  pnpm theme:build
-        ▼
-src/styles/tokens/generated.css
-   :root { --qbank-<peran>: <oklch terang>; --color-<peran>: var(--qbank-<peran>); }
-   [data-mode="dark"], .dark { --qbank-<peran>: <oklch gelap>; ... }
-        ▼
-src/app/globals.css
-   @import "generated.css"       ← sumber kebenaran warna
-   @theme inline { --color-surface-base: var(--qbank-surface-base); ... }   ← ke Tailwind
-        ▼
-Komponen: bg-brand, text-text-primary, border-border-strong, var(--color-brand)
+:root {
+  --mb-brand:        oklch(...)   /* primer */
+  --mb-brand-hover:  oklch(...)
+  --mb-brand-fg:     oklch(...)   /* teks di atas brand */
+  --mb-accent:       oklch(...)   /* emas */
+  --mb-accent-fg:    oklch(...)
+  --mb-success/error/warning/info: oklch(...)  /* UNIVERSAL */
+}
+.dark { /* versi gelap token yang sama */ }
 ```
 
-**Dua nama per token:**
-- `--qbank-<peran>` — nilai asli (OKLCH), dihitung mesin.
-- `--color-<peran>` — alias ke `--qbank-<peran>`, agar kode yang memakai
-  `var(--color-*)` langsung tetap bekerja.
-
-**Mode:**
-- `theme:build` menghasilkan blok `:root` (terang) dan `[data-mode="dark"], .dark` (gelap).
-- Default aplikasi = **ikut OS** (`prefers-color-scheme`), diset di
-  `src/context/ThemeContext.tsx` + skrip anti-FOUC di `src/app/layout.tsx`.
-- Pemilih mode (Terang/Gelap/Ikut Sistem) di `src/components/layout/ThemeSelector.tsx`.
-
-**Status (universal, tidak ikut brand):** `status-success/error/warning/info`
-senantiasa hijau/merah/kuning/biru.
+Token brand dipakai lewat `var(--mb-*)` atau dipetakan ke var shadcn di `globals.css` (mis. `--primary: var(--mb-brand)`), sehingga komponen shadcn resmi otomatis ikut tema.
 
 ---
 
-## 9. Catatan verifikasi
+## 7. Mode terang/gelap
 
-Saat membangun mesin, verifikasi kontras **menemukan 4 masalah desain nyata**
-yang kemudian diperbaiki (bukti mesin bekerja, bukan sekadar formalitas):
+- Mesin menghasilkan **dua blok**: `:root` (terang) dan `.dark` (gelap).
+- **Default aplikasi = ikut OS** (`prefers-color-scheme`) via `next-themes`:
+  - Provider: `src/components/providers/theme-provider.tsx`.
+  - Pemilih: `src/components/layout/theme-toggle.tsx`.
+  - Anti-FOUC: skrip inline di `layout.tsx`.
+- Diuji e2e: `e2e/theme.spec.ts`.
 
-1. Border fungsional terlalu tipis (1.71) → dinaikkan ke langkah netral 500 (3.34).
-2. `brand-fg` otomatis memilih hitam → diset manual putih (terang) / gelap (gelap).
-3. `brand` mode terang memakai langkah 500 (biru muda) → diganti 600 (biru brand).
-4. `brand-fg` dipaku putih di kedua mode → gagal 2.59 di gelap → dibedakan per mode.
+---
 
-**Verifikasi Fase A (lanjutan):**
-- `npm run build` → ✓ Compiled + TypeScript 0 error.
-- `tsc --noEmit` → 0 error.
-- Aplikasi dijalankan (`next dev`) → halaman login render benar; seluruh var
-  (`--qbank-brand`, `--color-surface-base`, `--color-text-primary`, dst) resolve;
-  mode default mengikuti OS (terdeteksi `light` di mesin uji).
-- Suite test: 6 gagal (semua **timeout** karena beban paralel — lulus saat
-  dijalankan terpisah; kategori sama dengan flaky LLM/ingest yang memang ditunda).
+## 8. Verifikasi
 
+Setelah `pnpm theme:build`:
+
+1. Cek `src/styles/tokens/generated.css` terisi.
+2. `tsc --noEmit` → 0 error; `pnpm build` → 0 error.
+3. `next dev` → halaman render; var `--mb-*` resolve.
+4. Uji toggle Terang/Gelap/Ikut Sistem (e2e `theme.spec.ts`).
+
+Kontras WCAG dijaga saat membangun token (mis. `brand-fg` dipilih agar kontras cukup per mode).
+
+---
+
+## 9. Rujukan
+
+- Keputusan desain: `DESIGN-THEME-FRAMEWORK.md`
+- Rencana UI: `RENCANA-UI.md` §Tema
+- Kode: `scripts/theme/build.ts`, `src/styles/tokens/generated.css`, `src/app/globals.css`

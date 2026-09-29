@@ -1,4 +1,7 @@
-# Rancangan Arsitektur Data QBank v2 — FINAL
+# Rancangan Arsitektur Data MathBank v2 — FINAL
+
+> **Catatan:** dirancang saat masih berasumsi melanjutkan QBank; setelah keputusan
+> "kanvas bersih" (ADR-0001), dokumen ini menjadi basis data MathBank.
 
 > **Status:** FINAL — hasil interview arsitektur dengan pemilik produk (2026-09-29, 12 putaran).
 > **Metode:** Desain dari nol; data lama dianggap tidak ada (kosong = migrasi belum kelar).

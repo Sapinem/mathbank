@@ -1,7 +1,8 @@
 # CATATAN PLANNING — Dokumen yang Perlu Dilengkapi
 
-> Status: 📝 **AWAL** — untuk dibahas bersama. Ini kerangka, bukan keputusan final.
-> Tujuan: memetakan dokumen planning apa saja yang perlu ada **sebelum** pembangunan MathBank berlanjut.
+> Status: 📦 **arsip perencanaan awal** — sebagian besar sudah dieksekusi.
+> Untuk peta dokumen terkini (ada/direncanakan), lihat **`PETA-DOKUMEN.md`**.
+> Tujuan asli: memetakan dokumen planning apa saja yang perlu ada **sebelum** pembangunan MathBank berlanjut.
 
 ---
 

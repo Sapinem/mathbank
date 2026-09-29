@@ -1,7 +1,9 @@
-# Arsitektur Sistem QBank — Menyeluruh (Full Stack)
+# Arsitektur Sistem — Referensi (sebelumnya QBank)
 
-> ⚠️ **SEBAGIAN QBank-era.** Dokumen ini memetakan sistem **QBank** (23 file schema, 5 tool MCP, dst.).
-> Untuk MathBank, arsitektur aktif ada di **`DESAIN-PER-LAPISAN-MATHBANK.md`** + **`ARSITEKTUR-DATA-FINAL.md`**.
+> ⚠️ **SEBAGIAN QBank-era — dokumen referensi.** Dokumen ini memetakan sistem **QBank**
+> (23 file schema, 5 tool MCP, dst.). Untuk arsitektur aktif MathBank, lihat
+> **`DESAIN-PER-LAPISAN-MATHBANK.md`** + **`ARSITEKTUR-DATA-FINAL.md`**.
+> Dipakai sebagai pelajaran: apa yang **dibawa** & apa yang **tidak**.
 > Berguna sebagai **referensi/inventaris** apa yang harus ada di MathBank — bukan cetak biru langsung.
 
 > **Status:** DRAFT untuk review pemilik produk.

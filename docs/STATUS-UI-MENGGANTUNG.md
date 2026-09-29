@@ -1,8 +1,9 @@
-# STATUS UI — TUNTAS ✅
+# STATUS UI — TUNTAS ✅ (arsip keputusan)
 
 > **DIPERBARUI:** UI yang dulu menggantung kini **TUNTAS** — lihat `RENCANA-UI.md`.
 > Semua keputusan (sidebar, referensi, flagged, ingest, dasbor) sudah diputuskan.
 > Sisa pengerjaan = **Fase C & D** (M3 & M4–M8).
+> **Dokumen ini menyimpan jejak keputusan & pelajaran** (termasuk dari era QBank).
 
 ---
 
@@ -35,13 +36,13 @@
 
 ---
 
-## Catatan Teknis (dari QBank, untuk dibawa)
+## Catatan Teknis (pelajaran era QBank → dibawa ke MathBank)
 
-- **Token tema:** `--mb-<peran>` (OKLCH) — ganti 3 warna → `pnpm theme:build`.
-- **Default mode ikut OS** (skrip tanpa flash di `layout.tsx`).
+- **Token tema:** `--mb-<peran>` (OKLCH) — ganti warna sumber di `scripts/theme/build.ts` → `pnpm theme:build`.
+- **Default mode ikut OS** (`next-themes` + skrip anti-FOUC di `layout.tsx`).
 - **Warna status UNIVERSAL** (tak ikut brand). "Siap" = biru brand.
 - **WCAG** terverifikasi (border/teks kontras).
-- **Pelanggaran React Compiler** QBank (`useMemo`/`useCallback`) — MathBank **tidak boleh**.
+- **Pelanggaran React Compiler** di QBank (`useMemo`/`useCallback`) — MathBank **tidak boleh**.
 
 ---
 
@@ -59,6 +60,6 @@ Saat mengerjakan UI, ditemukan bahwa **`exam_events` sudah ada API & tab di `/so
 - Tombol "Buat Soal" header → **dihapus** ✓
 - Quick-action → **Cari (⌘K)** ✓
 
-### Fase yang Sudah Selesai di QBank (untuk dibawa/dibangun ulang di M3)
-- **Fase A** (tema): mesin 3 warna → OKLCH + WCAG
+### Fase yang Sudah Selesai di QBank (dibangun ulang di MathBank M3)
+- **Fase A** (tema): mesin warna sumber → OKLCH + WCAG
 - **Fase B** (komponen): Button/Badge/Modal/ConfirmModal/State

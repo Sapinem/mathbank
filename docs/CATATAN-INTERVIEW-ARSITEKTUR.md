@@ -1,4 +1,7 @@
-# Catatan Interview Arsitektur Data QBank
+# Catatan Interview Arsitektur Data — MathBank
+
+> **Asal:** sesi interview arsitektur (awalnya untuk QBank) → menjadi dasar desain
+> MathBank. Keputusan final ada di `RIWAYAT-KEPUTUSAN.md`.
 
 > **Tujuan:** Jejak keputusan lengkap dari sesi interview arsitektur dengan pemilik produk.
 > **Tanggal:** 2026-09-29

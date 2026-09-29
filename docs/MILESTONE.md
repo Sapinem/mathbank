@@ -159,13 +159,13 @@ Pecah jadi 3 bagian agar terkelola:
 **Perkiraan:** 3–4 hari
 
 ### Task
-- [ ] **Mesin tema** (dari QBank Fase A, disalin/disempurnakan): 3 warna sumber → OKLCH → token `--mb-<peran>`
-- [ ] Verifikasi WCAG (kontras) — otomatis
-- [ ] Mode gelap+terang, default **ikut OS** (tanpa flash)
-- [ ] Warna status **universal** (tak ikut brand); "Siap" = biru brand
-- [ ] Font: Roboto Flex + Roboto Mono
-- [ ] **Komponen dasar** (dari QBank Fase B): Button, Badge, Modal, ConfirmModal, State (empty/loading/error)
-- [ ] **Shell**: sidebar 4 grup (Kerja/Referensi/Studio/Sistem), header, breadcrumb
+- [x] **Mesin tema** (`scripts/theme/build.ts`): warna sumber → OKLCH → token `--mb-<peran>`
+- [x] Verifikasi WCAG (kontras) — otomatis
+- [x] Mode gelap+terang, default **ikut OS** (tanpa flash)
+- [x] Warna status **universal** (tak ikut brand); "Siap" = biru brand
+- [x] Font: Roboto Flex + Roboto Mono
+- [x] **Komponen dasar**: Button, Badge, Modal, ConfirmModal, State (empty/loading/error)
+- [x] **Shell**: sidebar 4 grup (Kerja/Referensi/Studio/Sistem), header, breadcrumb
 - [ ] **Command palette** (⌘K)
 - [ ] Sidebar Referensi = **submenu lipat** (Topik/Sumber/Event/Label)
 - [ ] Halaman kosong tiap rute (placeholder bermakna, bukan TODO)
@@ -379,7 +379,7 @@ Pecah jadi 3 bagian agar terkelola:
 ### Risiko jadwal
 - **Estimasi** = kerja fokus tanpa gangguan; realistis, mungkin lebih lama.
 - **M4 & M7 (paling besar)** — risiko scope creep; jaga MVP ketat.
-- **M3 (tema)** — bergantung salinan Fase A/B QBank; bila tak cocok, tambah waktu.
+- **M3 (tema)** — ✅ selesai: mesin tema + shell dibangun ulang dengan komponen **resmi shadcn**.
 
 ---
 

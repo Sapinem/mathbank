@@ -127,7 +127,7 @@
 
 | Paket | Kenapa tidak |
 |-------|--------------|
-| **Prisma** | Drizzle lebih ringan, SQL-first, sesuai QBank |
+| **Prisma** | Drizzle lebih ringan, SQL-first, tipe ketat, cocok skema berlapis MathBank |
 | **NextAuth/Auth.js** | Better Auth sudah dipilih (lebih modern) |
 | **Redux / Zustand** | React Query + Context cukup (L3); skala <100 user |
 | **Axios** | `fetch` bawaan cukup |
