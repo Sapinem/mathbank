@@ -72,7 +72,22 @@ export async function actorFromApiKey(headers: Headers): Promise<Actor | null> {
   }
 }
 
-/** Resolusi aktor lengkap (session → apikey). */
+/** Aktor dev (hanya bila AUTH_DEV_BYPASS=true) — untuk pengembangan UI tanpa login. */
+function actorFromDevBypass(): Actor | null {
+  if (process.env.AUTH_DEV_BYPASS !== "true") return null;
+  return {
+    id: "dev-user",
+    name: "Dev User",
+    roles: ["admin"],
+    via: "session",
+  };
+}
+
+/** Resolusi aktor lengkap (dev bypass → session → apikey). */
 export async function resolveActor(headers: Headers): Promise<Actor | null> {
-  return (await actorFromSession(headers)) ?? (await actorFromApiKey(headers));
+  return (
+    actorFromDevBypass() ??
+    (await actorFromSession(headers)) ??
+    (await actorFromApiKey(headers))
+  );
 }
