@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
+import {
+  ChevronsUpDown,
+  LogOut,
+  Settings,
+  User,
+  RefreshCw,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -81,11 +87,19 @@ export function SidebarUser() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuItem render={<Link href="/login" />}>
+              <RefreshCw /> Ganti peran (demo)
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              onSelect={() => {
-                // Endpoint keluar (Better Auth); muat ulang agar sesi tereset.
-                router.push("/api/auth/sign-out");
+              onSelect={async () => {
+                // Better Auth sign-out = POST; lalu ke halaman login.
+                await fetch("/api/auth/sign-out", { method: "POST" }).catch(
+                  () => {},
+                );
+                router.push("/login");
+                router.refresh();
               }}
             >
               <LogOut /> Keluar

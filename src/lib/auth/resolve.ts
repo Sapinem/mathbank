@@ -85,11 +85,20 @@ function actorFromDevBypass(): Actor | null {
   };
 }
 
-/** Resolusi aktor lengkap (dev bypass → session → apikey). */
+/**
+ * Resolusi aktor lengkap.
+ *
+ * Urutan: **session cookie → dev bypass → API key**.
+ *
+ * Kenapa session DIDAHULUKAN atas dev bypass: halaman *quick-login* demo perlu
+ * benar-benar mengubah peran (admin/guru/penelaah). Bila bypass selalu menang,
+ * semua orang jadi admin dan demo peran tak bermakna. Bypass tetap berlaku saat
+ * TAK ada session (akses cepat tanpa login).
+ */
 export async function resolveActor(headers: Headers): Promise<Actor | null> {
   return (
-    actorFromDevBypass() ??
     (await actorFromSession(headers)) ??
+    actorFromDevBypass() ??
     (await actorFromApiKey(headers))
   );
 }

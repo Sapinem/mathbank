@@ -75,5 +75,14 @@ export const auth = betterAuth({
     "http://localhost:3001",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
+    // Domain utama (produksi) — lihat APP_URL / .env.example.
+    ...(process.env.APP_URL ? [process.env.APP_URL] : []),
+    "https://b.iyo.my.id",
+    // Akses dev via LAN (sesuaikan/tambah lewat ALLOWED_DEV_ORIGINS bila perlu).
+    ...(process.env.ALLOWED_DEV_ORIGINS ?? "192.168.18.100")
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean)
+      .flatMap((h) => [`http://${h}:3001`, `http://${h}:3000`]),
   ],
 });
