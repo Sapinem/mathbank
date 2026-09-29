@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -79,15 +80,17 @@ export function BankSoalView() {
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-medium">Filter</span>
         {activeCount > 0 && (
-          <button
+          <Button
+            variant="link"
+            size="xs"
+            className="text-brand"
             onClick={() => {
               router.replace("/bank-soal");
               setFiltersOpen(false);
             }}
-            className="flex items-center gap-1 text-xs text-brand hover:underline"
           >
-            <X className="size-3" /> Reset ({activeCount})
-          </button>
+            <X data-icon="inline-start" /> Reset ({activeCount})
+          </Button>
         )}
       </div>
       <FilterSelect
@@ -147,18 +150,20 @@ export function BankSoalView() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Toolbar */}
         <div className="flex items-center gap-2 border-b border-border px-3 py-3 sm:px-4">
-          <button
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={() => setFiltersOpen(true)}
-            className="relative rounded-md border border-border p-2 lg:hidden"
+            className="relative lg:hidden"
             aria-label="Buka filter"
           >
-            <SlidersHorizontal className="size-4" />
+            <SlidersHorizontal />
             {activeCount > 0 && (
               <span className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-brand text-[10px] font-medium text-brand-fg">
                 {activeCount}
               </span>
             )}
-          </button>
+          </Button>
 
           <form onSubmit={submitSearch} className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -174,7 +179,7 @@ export function BankSoalView() {
             {total} soal
           </span>
           <Button render={<Link href="/bank-soal/baru" />} nativeButton={false} size="sm" className="shrink-0">
-            <Plus className="size-4" />
+            <Plus data-icon="inline-start" />
             <span className="hidden sm:inline">Buat Soal</span>
           </Button>
         </div>
@@ -195,7 +200,7 @@ export function BankSoalView() {
               }
               action={
                 <Button render={<Link href="/bank-soal/baru" />} nativeButton={false} size="sm" className="mt-2">
-                  <Plus className="size-4" /> Buat Soal
+                  <Plus data-icon="inline-start" /> Buat Soal
                 </Button>
               }
             />
@@ -263,12 +268,14 @@ function FilterSelect({
           <SelectValue placeholder="Semua" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Semua</SelectItem>
-          {options.map((o) => (
-            <SelectItem key={o.v} value={o.v}>
-              {o.l}
-            </SelectItem>
-          ))}
+          <SelectGroup>
+            <SelectItem value="all">Semua</SelectItem>
+            {options.map((o) => (
+              <SelectItem key={o.v} value={o.v}>
+                {o.l}
+              </SelectItem>
+            ))}
+          </SelectGroup>
         </SelectContent>
       </Select>
     </div>

@@ -58,7 +58,7 @@ export function CommandPalette({
                     value={`${group.label} ${item.label}`}
                     onSelect={() => go(item.href)}
                   >
-                    <Icon className="size-4" />
+                    <Icon />
                     {item.label}
                   </CommandItem>
                 );

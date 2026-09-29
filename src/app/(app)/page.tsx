@@ -27,7 +27,7 @@ export default function DashboardPage() {
         title="Dasbor"
         description="Ringkasan bank soal, kurasi, dan aktivitas terbaru."
       />
-      <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-6 p-6">
         {isLoading ? (
           <LoadingState label="Memuat ringkasan…" />
         ) : isError ? (
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle>Antrean Kurasi</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
+                <CardContent className="flex flex-col gap-3 text-sm">
                   <QueueRow label="Perlu telaah" href="/telaah?status=review" value={data.stats.review} />
                   <QueueRow label="Ditandai" href="/telaah?flagged=1" value={data.stats.flagged} />
                   <div className="pt-2">
@@ -134,7 +134,7 @@ export default function DashboardPage() {
                     ) : (
                       <Badge
                         variant="outline"
-                        className="border-gold/30 bg-gold/15 text-xs text-gold-fg dark:text-gold"
+                        className="border-gold/30 bg-gold/15 text-xs text-gold-fg"
                       >
                         {data.stats.review + data.stats.flagged} menunggu tindakan
                       </Badge>
@@ -192,7 +192,7 @@ function DistCard({ title, rows }: { title: string; rows: { label: string; n: nu
         {shown.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">Belum ada data.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2">
             {shown.map((r) => (
               <li key={r.label} className="flex items-center gap-3 text-sm">
                 <span className="w-24 shrink-0 truncate text-muted-foreground">{r.label}</span>

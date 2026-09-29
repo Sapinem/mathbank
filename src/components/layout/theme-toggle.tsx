@@ -2,9 +2,11 @@
 
 import { useTheme } from "next-themes";
 import { Moon, Sun, Monitor } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -14,6 +16,9 @@ import {
  *
  * Ikon dirender oleh CSS (`.dark` / `.light`) agar tak perlu state "mounted" —
  * menghindari setState dalam effect (larangan React Compiler).
+ *
+ * Memakai `Button variant="ghost" size="icon-sm"` resmi (bukan tombol kustom);
+ * ukuran ikon ditangani komponen (`[&_svg]:size-4`), jadi TIDAK ada `size-4` manual.
  */
 export function ThemeToggle() {
   const { setTheme } = useTheme();
@@ -21,22 +26,25 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label="Ganti tema"
-        className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted"
+        render={
+          <Button variant="ghost" size="icon-sm" aria-label="Ganti tema" />
+        }
       >
-        <Sun className="size-4 dark:hidden" />
-        <Moon className="hidden size-4 dark:block" />
+        <Sun className="dark:hidden" />
+        <Moon className="hidden dark:block" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          <Sun className="size-4" /> Terang
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <Moon className="size-4" /> Gelap
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          <Monitor className="size-4" /> Ikuti Sistem
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={() => setTheme("light")}>
+            <Sun data-icon="inline-start" /> Terang
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme("dark")}>
+            <Moon data-icon="inline-start" /> Gelap
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme("system")}>
+            <Monitor data-icon="inline-start" /> Ikuti Sistem
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

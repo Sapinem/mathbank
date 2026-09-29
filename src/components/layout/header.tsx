@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import { NAV_GROUPS } from "./nav-config";
 import { breadcrumbFromPath } from "./nav-utils";
 import { ThemeToggle } from "./theme-toggle";
@@ -65,25 +66,26 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
       </Breadcrumb>
 
       <div className="ml-auto flex items-center gap-1.5">
-        {/* Desktop: kotak cari */}
-        <button
-          type="button"
+        {/* Desktop: kotak cari (Button resmi, varian outline) */}
+        <Button
+          variant="outline"
           onClick={onOpenCommand}
-          className="hidden items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted sm:flex"
+          className="hidden gap-2 bg-muted/40 text-muted-foreground sm:inline-flex"
         >
-          <Search className="size-4" />
+          <Search data-icon="inline-start" />
           <span>Cari…</span>
           <kbd className="rounded border border-border px-1 text-xs">⌘K</kbd>
-        </button>
+        </Button>
         {/* Mobile: ikon cari */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onOpenCommand}
           aria-label="Cari"
-          className="rounded-md p-2 text-muted-foreground hover:bg-muted sm:hidden"
+          className="sm:hidden"
         >
-          <Search className="size-5" />
-        </button>
+          <Search />
+        </Button>
         <ThemeToggle />
       </div>
     </header>

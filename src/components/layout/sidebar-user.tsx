@@ -74,10 +74,10 @@ export function SidebarUser() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem render={<Link href="/sistem/profil" />}>
-                <User className="size-4" /> Profil
+                <User /> Profil
               </DropdownMenuItem>
               <DropdownMenuItem render={<Link href="/sistem/pengaturan" />}>
-                <Settings className="size-4" /> Pengaturan
+                <Settings /> Pengaturan
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -88,7 +88,7 @@ export function SidebarUser() {
                 router.push("/api/auth/sign-out");
               }}
             >
-              <LogOut className="size-4" /> Keluar
+              <LogOut /> Keluar
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

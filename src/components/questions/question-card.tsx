@@ -62,7 +62,7 @@ export function QuestionCard({
             · {DIFFICULTY_LABELS[q.difficulty] ?? `Level ${q.difficulty}`}
           </span>
           {q.isFlagged && (
-            <Flag className="size-3.5 text-gold" aria-label="Ditandai" />
+            <Flag className="size-3.5 text-gold" role="img" aria-label="Ditandai" />
           )}
         </div>
 
