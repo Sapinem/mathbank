@@ -9,6 +9,10 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Ditambahkan
+- **`docs/PETA-DOKUMEN.md`** — indeks hidup seluruh dokumen (ada + direncanakan) dengan status & tata kelola; mencegah "dokumen lupa".
+- **`docs/KEAMANAN.md`** — model keamanan: aset, threat model (STRIDE), autentikasi, RBAC, permukaan berisiko, utang keamanan (S1–S7), daftar periksa pra-produksi.
+- **`docs/ADR/`** — Architecture Decision Records: `README` (indeks), `template`, dan 7 ADR awal (bangun-ulang, lapisan L1–L9, PG18+uuidv7, Better Auth multi-role, shadcn resmi, invarian lunak, DB reproduktif).
+- **CONSTRAINTS #31–32** — tata kelola dokumen (wajib terdaftar di PETA) + ADR untuk keputusan besar.
 - **`docs/STRATEGI-TES.md`** — kontrak pengujian per-lapisan (L1–L9): jenis tes wajib, Definition of Done per milestone, infrastruktur DB uji, ambang coverage, daftar utang tes.
 - **Tes API (`src/lib/api/route-wrapper.test.ts`)** — 22 tes: alur sukses, pemetaan error 401/403/404/409/422/400/500, auth & izin (mock `resolveActor`).
 - **Tes integrasi service (`src/lib/services/question-service.db.test.ts`)** — 21 tes terhadap DB uji: transaksi (soal+opsi+topik/label), invarian DB (stimulus depth, difficulty), guard FSM + kesiapan (`ready` wajib `answer_key`), audit.

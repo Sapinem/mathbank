@@ -1,0 +1,148 @@
+# PETA-DOKUMEN.md — Indeks & Tata Kelola Dokumen MathBank
+
+> **Tujuan:** satu peta hidup — apa yang **sudah ada**, apa yang **direncanakan**, kapan wajib dibuat, dan siapa pemiliknya. Mencegah "dokumen lupa".
+> **Status:** 📝 dibuat 2026-09-29 (menjawab "dokumen apa yang belum ada untuk aplikasi enterprise").
+> **Aturan:** dokumen ditulis **saat relevan** (prinsip "install saat perlu"), tetapi **wajib tercatat di sini** sejak direncanakan.
+
+---
+
+## 0. Legenda
+
+| Simbol | Arti |
+|--------|------|
+| ✅ | Sudah ada & dipelihara |
+| 🟡 | Ada tetapi perlu diperbarui (drift) |
+| 🔴 | Belum ada — **kritis** (enterprise) |
+| 🟠 | Belum ada — penting (sebelum produksi) |
+| 🟢 | Belum ada — menyusul (per-milestone) |
+| 📦 | Arsip (era QBank / tak lagi aktif) |
+
+---
+
+## 1. Peta Dokumen Lengkap
+
+### Kategori A — Produk & Visi
+
+| # | Dokumen | Status | Catatan |
+|---|---------|:------:|---------|
+| A1 | `VISION.md` | 🟡 | masih QBank-era → tulis ulang MathBank (audit A1) |
+| A2 | `PRD.md` | ✅ | kanonik |
+| A3 | `MILESTONE.md` | 🟡 | M1–M3 belum ditandai selesai |
+| A4 | `ROADMAP.md` | 📦 | QBank-era → arsipkan |
+| A5 | `CETAK-BIRU-MATHBANK.md` | ✅ | inventaris fitur |
+
+### Kategori B — Arsitektur & Data
+
+| # | Dokumen | Status | Catatan |
+|---|---------|:------:|---------|
+| B1 | `ARSITEKTUR-SISTEM-FULL.md` | 🟡 | masih QBank |
+| B2 | `ARSITEKTUR-DATA-FINAL.md` | ✅ | |
+| B3 | `DESAIN-PER-LAPISAN-MATHBANK.md` | ✅ | L1–L9 |
+| B4 | `SKEMA-DB-DETAIL.md` | ✅ | sumber kebenaran skema |
+| B5 | `L7-TINJAUAN-KRITIS-DATA.md` | ✅ | |
+| B6 | `KAMUS-DATA.md` (glossary) | 🟠 | **belum** — definisi istilah domain |
+| B7 | `docs/ADR/` | 🔴 | **belum** — Architecture Decision Records |
+
+### Kategori C — Desain & UI
+
+| # | Dokumen | Status | Catatan |
+|---|---------|:------:|---------|
+| C1 | `RENCANA-UI.md` | ✅ | + §4b responsif |
+| C2 | `RENCANA-UI-MOBILE.md` | ✅ | mengikat |
+| C3 | `DESIGN-THEME-FRAMEWORK.md` | ✅ | mesin tema |
+| C4 | `THEME-FRAMEWORK-GUIDE.md` | ✅ | panduan teknis |
+| C5 | `A11Y.md` | 🟠 | **belum** — target WCAG 2.2 AA & audit |
+
+### Kategori D — Mutu & Proses
+
+| # | Dokumen | Status | Catatan |
+|---|---------|:------:|---------|
+| D1 | `CONSTRAINTS.md` | ✅ | 30 aturan |
+| D2 | `STRATEGI-TES.md` | ✅ | baru |
+| D3 | `AUDIT-KODE.md` | ✅ | |
+| D4 | `AUDIT-ARSITEKTUR-DAN-DATA.md` | ✅ | |
+| D5 | `AUDIT-KONSISTENSI-PERENCANAAN.md` | ✅ | |
+| D6 | `REVIEW-TUMPUKAN-TEKNOLOGI.md` | ✅ | |
+| D7 | `RIWAYAT-KEPUTUSAN.md` | ✅ | |
+| D8 | `CONTRIBUTING.md` | 🟠 | **belum** — alur kontribusi/PR |
+| D9 | `GOVERNANCE.md` | 🟢 | **belum** — kepemilikan & wewenang |
+
+### Kategori E — Keamanan, Operasi & Kepatuhan
+
+| # | Dokumen | Status | Catatan |
+|---|---------|:------:|---------|
+| E1 | `KEAMANAN.md` | 🔴 | **belum** — threat model, OWASP, RBAC, rahasia, API key |
+| E2 | `RENCANA-DEPLOY.md` | 🟠 | **belum** — dev/staging/prod, CI/CD, rilis, rollback |
+| E3 | `OBSERVABILITAS.md` | 🟠 | **belum** — logging, metrik, health check, alerting |
+| E4 | `BACKUP-RECOVERY.md` | 🟠 | **belum** — RPO/RTO, uji restore, DR |
+| E5 | `RUNBOOK.md` | 🟢 | **belum** — prosedur operasional & insiden |
+| E6 | `KEPATUHAN-PRIVASI.md` | 🟢 | **belum** — UU PDP, retensi, data siswa |
+| E7 | `SLA-SLO.md` | 🟢 | **belum** — target ketersediaan/performa |
+| E8 | `PERFORMA.md` | 🟢 | **belum** — budget performa, Core Web Vitals |
+
+### Kategori F — API & Integrasi
+
+| # | Dokumen | Status | Catatan |
+|---|---------|:------:|---------|
+| F1 | `KONTRAK-API.md` | 🟠 | **belum** — daftar endpoint + OpenAPI + versioning |
+| F2 | `RENCANA-MCP.md` | 🟢 | **belum** — kontrak tool MCP + kebijakan tulis (M11) |
+| F3 | `RENCANA-EKSPOR.md` | 🟢 | **belum** — paket/Moodle/PDF (M8, M12) |
+| F4 | `RENCANA-MOODLE.md` | 🟢 | **belum** — integrasi Moodle (M12) |
+
+### Kategori G — Fitur & Data Pipeline
+
+| # | Dokumen | Status | Catatan |
+|---|---------|:------:|---------|
+| G1 | `STRATEGI-INGEST.md` | 🟢 | **belum** — PDF → soal (M9) |
+| G2 | `RENCANA-ENRICHMENT.md` | 🟢 | **belum** — AI embedding/tagging (M10) |
+| G3 | `RENCANA-TAKSONOMI.md` | 🟢 | **belum** — seed & kelola taksonomi (M5) |
+| G4 | `RENCANA-MIGRASI-DATA.md` | 📦 | migrasi QBank dibatalkan → arsipkan |
+
+### Kategori H — Panduan Pengguna
+
+| # | Dokumen | Status | Catatan |
+|---|---------|:------:|---------|
+| H1 | `PANDUAN-OPERASIONAL.md` | 🟢 | **belum** — cara pakai guru/admin |
+| H2 | `README.md` | ✅ | pintu masuk developer |
+| H3 | `AGENTS.md`/`CLAUDE.md` | ✅ | aturan agen |
+| H4 | `CHANGELOG.md` | ✅ | riwayat versi |
+
+---
+
+## 2. Ringkasan: Yang Belum Ada
+
+| Prioritas | Dokumen | Kapan wajib |
+|-----------|---------|-------------|
+| 🔴 **Kritis** | `KEAMANAN.md`, `docs/ADR/` | **sekarang** |
+| 🟠 **Penting** | `RENCANA-DEPLOY`, `KONTRAK-API`, `OBSERVABILITAS`, `BACKUP-RECOVERY`, `KAMUS-DATA`, `A11Y`, `CONTRIBUTING` | sebelum produksi / milestone terkait |
+| 🟢 **Menyusul** | `RUNBOOK`, `KEPATUHAN-PRIVASI`, `SLA-SLO`, `PERFORMA`, `GOVERNANCE`, `RENCANA-MCP/EKSPOR/MOODLE`, `STRATEGI-INGEST`, `RENCANA-ENRICHMENT/TAKSONOMI`, `PANDUAN-OPERASIONAL` | saat fitur/tim bertambah |
+| 📦 **Arsip** | `ROADMAP`, `RENCANA-MIGRASI-DATA` (era QBank) | saat merapikan |
+
+---
+
+## 3. Aturan Tata Kelola
+
+1. **Dokumen baru wajib terdaftar di sini** (peta = indeks hidup).
+2. **Setiap dokumen punya status** (✅/🟡/🔴/🟠/🟢/📦) — tak ada status implisit.
+3. **Milestone Definition of Done** menyertakan dokumen yang relevan (lihat `MILESTONE.md` + `STRATEGI-TES.md`).
+4. **Dokumen era QBank** ditandai 📦 & dipindah ke `docs/arsip/` saat dirapikan.
+5. **Satu sumber kebenaran:** hindari dua dokumen mengklaim hal sama tanpa rujukan silang.
+
+---
+
+## 4. Pemilik (Owner) — usulan
+
+| Kategori | Pemilik |
+|----------|---------|
+| A (Produk) | Pemilik produk |
+| B (Arsitektur/Data) | Arsitek |
+| C (Desain/UI) | Desainer |
+| D (Mutu/Proses) | Lead engineer |
+| E (Keamanan/Ops) | Lead engineer + Ops |
+| F/G (API/Fitur) | Engineer fitur terkait |
+| H (Panduan) | Tech writer / pemilik produk |
+
+---
+
+*Peta ini hidup — perbarui setiap kali dokumen ditambah/diubah/diarsipkan.
+Rujukan: `CATATAN-PLANNING.md` (§2 daftar rencana awal), `AUDIT-KONSISTENSI-PERENCANAAN.md`.*

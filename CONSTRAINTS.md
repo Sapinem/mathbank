@@ -55,3 +55,5 @@
 28. **Bahasa dokumen & komentar UI: Indonesia** (konvensi proyek).
 29. **KaTeX: `\( ... \)` inline, `\[ ... \]` display** — dilarang `$`/`$$` di konten soal baru.
 30. **Nama tabel & kolom: snake_case** (Drizzle).
+31. **Setiap dokumen wajib terdaftar di `docs/PETA-DOKUMEN.md`** — dengan status (✅/🟡/🔴/🟠/🟢/📦). Tak ada dokumen berstatus implisit.
+32. **Keputusan arsitektural besar → ADR** di `docs/ADR/` (satu keputusan = satu berkas; jangan hapus, tandai "digantikan").
