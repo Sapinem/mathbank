@@ -40,7 +40,7 @@
 | B3 | `DESAIN-PER-LAPISAN-MATHBANK.md` | ✅ | L1–L9 |
 | B4 | `SKEMA-DB-DETAIL.md` | ✅ | sumber kebenaran skema |
 | B5 | `L7-TINJAUAN-KRITIS-DATA.md` | ✅ | |
-| B6 | `KAMUS-DATA.md` (glossary) | 🟠 | **belum** — definisi istilah domain |
+| B6 | `KAMUS-DATA.md` (glossary) | ✅ | **dibuat** 2026-09-29 — glosarium domain |
 | B7 | `docs/ADR/` | ✅ | **7 ADR** dibuat 2026-09-29 (0001–0007) |
 
 ### Kategori C — Desain & UI
@@ -51,7 +51,7 @@
 | C2 | `RENCANA-UI-MOBILE.md` | ✅ | mengikat |
 | C3 | `DESIGN-THEME-FRAMEWORK.md` | ✅ | mesin tema |
 | C4 | `THEME-FRAMEWORK-GUIDE.md` | ✅ | panduan teknis |
-| C5 | `A11Y.md` | 🟠 | **belum** — target WCAG 2.2 AA & audit |
+| C5 | `A11Y.md` | ✅ | **dibuat** 2026-09-29 — target WCAG 2.2 AA |
 
 ### Kategori D — Mutu & Proses
 
@@ -64,7 +64,7 @@
 | D5 | `AUDIT-KONSISTENSI-PERENCANAAN.md` | ✅ | |
 | D6 | `REVIEW-TUMPUKAN-TEKNOLOGI.md` | ✅ | |
 | D7 | `RIWAYAT-KEPUTUSAN.md` | ✅ | |
-| D8 | `CONTRIBUTING.md` | 🟠 | **belum** — alur kontribusi/PR |
+| D8 | `CONTRIBUTING.md` | ✅ | **dibuat** 2026-09-29 — alur kontribusi |
 | D9 | `GOVERNANCE.md` | 🟢 | **belum** — kepemilikan & wewenang |
 
 ### Kategori E — Keamanan, Operasi & Kepatuhan
@@ -72,9 +72,9 @@
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
 | E1 | `KEAMANAN.md` | ✅ | **dibuat** 2026-09-29 — threat model, OWASP, RBAC, rahasia, API key |
-| E2 | `RENCANA-DEPLOY.md` | 🟠 | **belum** — dev/staging/prod, CI/CD, rilis, rollback |
-| E3 | `OBSERVABILITAS.md` | 🟠 | **belum** — logging, metrik, health check, alerting |
-| E4 | `BACKUP-RECOVERY.md` | 🟠 | **belum** — RPO/RTO, uji restore, DR |
+| E2 | `RENCANA-DEPLOY.md` | ✅ | **dibuat** 2026-09-29 — dev/staging/prod, CI/CD, rilis |
+| E3 | `OBSERVABILITAS.md` | ✅ | **dibuat** 2026-09-29 — logging, metrik, health check, alerting |
+| E4 | `BACKUP-RECOVERY.md` | ✅ | **dibuat** 2026-09-29 — RPO/RTO, uji restore |
 | E5 | `RUNBOOK.md` | 🟢 | **belum** — prosedur operasional & insiden |
 | E6 | `KEPATUHAN-PRIVASI.md` | 🟢 | **belum** — UU PDP, retensi, data siswa |
 | E7 | `SLA-SLO.md` | 🟢 | **belum** — target ketersediaan/performa |
@@ -84,7 +84,7 @@
 
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
-| F1 | `KONTRAK-API.md` | 🟠 | **belum** — daftar endpoint + OpenAPI + versioning |
+| F1 | `KONTRAK-API.md` | ✅ | **dibuat** 2026-09-29 — 13 endpoint + envelope + versioning |
 | F2 | `RENCANA-MCP.md` | 🟢 | **belum** — kontrak tool MCP + kebijakan tulis (M11) |
 | F3 | `RENCANA-EKSPOR.md` | 🟢 | **belum** — paket/Moodle/PDF (M8, M12) |
 | F4 | `RENCANA-MOODLE.md` | 🟢 | **belum** — integrasi Moodle (M12) |
@@ -114,7 +114,7 @@
 | Prioritas | Dokumen | Kapan wajib |
 |-----------|---------|-------------|
 | 🔴 **Kritis** | ~~`KEAMANAN.md`~~ ✅, ~~`docs/ADR/`~~ ✅ | ✅ **selesai** 2026-09-29 |
-| 🟠 **Penting** | `RENCANA-DEPLOY`, `KONTRAK-API`, `OBSERVABILITAS`, `BACKUP-RECOVERY`, `KAMUS-DATA`, `A11Y`, `CONTRIBUTING` | sebelum produksi / milestone terkait |
+| 🟠 **Penting** | ~~RENCANA-DEPLOY~~ ✅, ~~KONTRAK-API~~ ✅, ~~BACKUP-RECOVERY~~ ✅, ~~KAMUS-DATA~~ ✅, ~~A11Y~~ ✅, ~~CONTRIBUTING~~ ✅, ~~OBSERVABILITAS~~ ✅ | ✅ **SEMUA SELESAI** 2026-09-29 |
 | 🟢 **Menyusul** | `RUNBOOK`, `KEPATUHAN-PRIVASI`, `SLA-SLO`, `PERFORMA`, `GOVERNANCE`, `RENCANA-MCP/EKSPOR/MOODLE`, `STRATEGI-INGEST`, `RENCANA-ENRICHMENT/TAKSONOMI`, `PANDUAN-OPERASIONAL` | saat fitur/tim bertambah |
 | 📦 **Arsip** | `arsip/ROADMAP-QBANK`, `arsip/RENCANA-MIGRASI-DATA` (era QBank) | ✅ **selesai** 2026-09-29 |
 

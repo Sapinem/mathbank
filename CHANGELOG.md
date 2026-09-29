@@ -26,6 +26,14 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - `CETAK-BIRU-MATHBANK.md`: rujukan migrasi & ROADMAP diperbarui (arsip/dibatalkan).
 
 ### Ditambahkan
+- **7 dokumen enterprise 🟠 (penting)** (2026-09-29) — melengkapi fondasi enterprise:
+  - `KONTRAK-API.md` — 13 endpoint nyata, envelope respons tunggal, peta kode error (400–500), guard kesiapan, rencana versioning.
+  - `RENCANA-DEPLOY.md` — lingkungan, prasyarat PG 18, ENV produksi, langkah rilis, checklist pra-produksi.
+  - `BACKUP-RECOVERY.md` — RPO/RTO, metode `pg_dump`, uji restore via `db:verify`, skenario pemulihan.
+  - `KAMUS-DATA.md` — glosarium 27 entitas + taksonomi + proses + peran + jargon.
+  - `A11Y.md` — target WCAG 2.2 AA, status terpenuhi vs utang, aturan pengembangan.
+  - `CONTRIBUTING.md` (root) — setup, alur kerja, gate mutu, konvensi commit/kode.
+  - `OBSERVABILITAS.md` — logging terstruktur, health check, metrik, alerting (rencana).
 - **`docs/PETA-DOKUMEN.md`** — indeks hidup seluruh dokumen (ada + direncanakan) dengan status & tata kelola; mencegah "dokumen lupa".
 - **`docs/KEAMANAN.md`** — model keamanan: aset, threat model (STRIDE), autentikasi, RBAC, permukaan berisiko, utang keamanan (S1–S7), daftar periksa pra-produksi.
 - **`docs/ADR/`** — Architecture Decision Records: `README` (indeks), `template`, dan 7 ADR awal (bangun-ulang, lapisan L1–L9, PG18+uuidv7, Better Auth multi-role, shadcn resmi, invarian lunak, DB reproduktif).
