@@ -104,7 +104,7 @@ Peran (dari **L1** — terkunci):
 | **Taksonomi** | Topik 3-level · grade/kesulitan/Bloom · sumber · event · label |
 | **Editor** | Editor soal manual (tanpa AI) · render KaTeX |
 | **Paket soal** | Susun paket dari bank soal · section · nomor · ekspor |
-| **Ekspor** | Ekspor paket (minimal: cetak/PDF atau format teks) |
+| **Ekspor** | Ekspor paket ke **cetak/PDF** (lihat §6b) |
 | **Auth & peran** | Login · multi-role · matriks izin (L1) |
 | **Tema** | Gelap+Terang (default OS) · 3 warna sumber · Linear/Vercel |
 
@@ -118,6 +118,20 @@ Peran (dari **L1** — terkunci):
 | **1.4** | **Ekspor Moodle** (XML per-item) |
 | **1.5** | Ekspor PDF lanjutan · TikZ studio · galeri aset lanjutan |
 | **2.x** | Impor selektif dari QBank (opsional) |
+
+### 6b. Ekspor MVP — Cetak / PDF
+
+**Keputusan:** ekspor pertama = **cetak / PDF** (dipilih di atas "format teks"), karena paling nyata untuk kebutuhan guru.
+
+**Cakupan:**
+- Paket soal → dokumen **siap cetak** (layout bersih, siap print)
+- Stimulus tampil **sekali** (hemat) — anak-anaknya ikut merujuk
+- Termasuk: judul paket, petunjuk, soal bernomor, opsi, (opsional) kunci jawaban
+- KaTeX ter-render (rumus benar di PDF)
+
+**Format teknis:** cetak via browser (`@media print`) sebagai langkah pertama, PDF ekspor menyusul bila perlu.
+
+**Di luar MVP:** ekspor Moodle XML (fase 1.4).
 
 ---
 
