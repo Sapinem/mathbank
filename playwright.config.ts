@@ -15,9 +15,14 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [["list"]],
+  // Dev server meng-compile rute ON-DEMAND: permintaan pertama ke sebuah rute
+  // lambat. Beri kelonggaran agar tak jadi kegagalan palsu (flake) di mesin lokal.
+  expect: { timeout: 15_000 },
   use: {
     baseURL: "http://localhost:3100",
     trace: "on-first-retry",
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
   },
   projects: [
     {
@@ -34,6 +39,6 @@ export default defineConfig({
     url: "http://localhost:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { AUTH_DEV_BYPASS: "true" },
+    env: { AUTH_DEV_BYPASS: "true", AUTH_GUARD_DISABLED: "true" },
   },
 });

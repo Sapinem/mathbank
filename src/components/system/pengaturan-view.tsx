@@ -41,9 +41,13 @@ export function PengaturanView() {
   const [defDifficulty, setDefDifficulty] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  if (isLoading) return <LoadingState label="Memuat pengaturan…" />;
   if (isError)
-    return <ErrorState title="Gagal memuat pengaturan" description={error?.message} />;
+    return (
+      <div className="flex flex-col">
+        <PageHeader title="Pengaturan" description="Umum, AI, pengguna, dan sistem." />
+        <ErrorState title="Gagal memuat pengaturan" description={error?.message} />
+      </div>
+    );
 
   const items = data?.items ?? [];
   const get = (key: string) =>
@@ -74,6 +78,10 @@ export function PengaturanView() {
         description="Umum, AI, pengguna, dan sistem."
       />
       <div className="flex flex-col gap-6 p-6">
+        {isLoading ? (
+          <LoadingState label="Memuat pengaturan…" />
+        ) : (
+        <>
         <Card>
           <CardHeader>
             <CardTitle>Umum</CardTitle>
@@ -181,6 +189,8 @@ export function PengaturanView() {
             <Badge variant="outline">Belum tersedia — M10</Badge>
           </CardContent>
         </Card>
+        </>
+        )}
       </div>
     </div>
   );
