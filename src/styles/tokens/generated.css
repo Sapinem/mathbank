@@ -1,0 +1,33 @@
+/* GENERATED — jangan sunting manual. Jalankan: pnpm theme:build */
+/* Sumber: primary #0158CA, accent #D5AC1E */
+
+:root {
+  /* Brand — primer */
+  --mb-brand: oklch(0.491 0.191 259.198);
+  --mb-brand-hover: oklch(0.431 0.191 259.198);
+  --mb-brand-fg: oklch(0.985 0 0);
+
+  /* Brand — aksen (emas, "perlu perhatian") */
+  --mb-accent: oklch(0.76 0.149 90.578);
+  --mb-accent-fg: oklch(0.205 0 0);
+
+  /* Status — UNIVERSAL (tak ikut brand) */
+  --mb-success: oklch(0.6 0.15 150);
+  --mb-error: oklch(0.577 0.245 27.325);
+  --mb-warning: oklch(0.75 0.15 85);
+  --mb-info: oklch(0.6 0.15 250);
+}
+
+.dark {
+  --mb-brand: oklch(0.631 0.2 259.198);
+  --mb-brand-hover: oklch(0.691 0.2 259.198);
+  --mb-brand-fg: oklch(0.13 0 0);
+
+  --mb-accent: oklch(0.76 0.149 90.578);
+  --mb-accent-fg: oklch(0.13 0 0);
+
+  --mb-success: oklch(0.7 0.15 150);
+  --mb-error: oklch(0.704 0.191 22.216);
+  --mb-warning: oklch(0.8 0.15 85);
+  --mb-info: oklch(0.7 0.15 250);
+}
