@@ -181,3 +181,21 @@ Lihat `STATUS-UI-MENGGANTUNG.md` untuk detail lengkap. Ringkasnya:
 7. Buat repo MathBank (kanvas bersih)
 8. Simpan riwayat keputusan (dokumen ini)
 9. ⏭️ **LANJUT: Planning** (dokumen apa yang perlu dilengkapi)
+
+---
+
+## Rancangan Responsif (Rencana v2, enterprise)
+
+**Konteks:** Desain awal belum responsif. User: "buatkan rancangan menyeluruh komprehensif biar benar-benar enterprise."
+
+**Keputusan:**
+- Target **(c) mobile-lihat**: kelola di desktop, lihat/telaah di mobile. Editor & paket = desktop-saja (pengalih ramah).
+- **Batas kunci `lg` (1024px)**; sidebar → drawer di bawahnya.
+- Dokumen `RENCANA-UI-MOBILE.md` v2 (enterprise, 17 bagian + 2 lampiran) jadi acuan **mengikat**.
+- Fase R (R1–R7) disisipkan sebelum M4c: drawer, header responsif, filter→sheet, detail sticky, dasbor grid, pengalih desktop-saja, audit uji.
+- CONSTRAINT baru #10–14 (responsif) ditambahkan.
+
+**⚠️ Inkonsistensi ditemukan (perlu keputusan):**
+CONSTRAINTS #25 berbunyi "KaTeX pakai `\(...\)`, dilarang `$`", tetapi kode aktual
+(`MathContent`, seeder) memakai `$...$`. Keduanya didukung renderer, tapi harus **sepakat**.
+Sementara ditandai: **konten BARU pakai `\(...\)`**; renderer tetap toleran `$` untuk data lama.
