@@ -1,36 +1,137 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MathBank
 
-## Getting Started
+Bank soal **matematika** — kurasi, susun, terbitkan.
 
-First, run the development server:
+Menggantikan QBank; dibangun dari kanvas bersih dengan arsitektur 9 lapisan.
+
+---
+
+## Tentang
+
+MathBank membantu guru & tim kurikulum:
+
+1. **Menyimpan** soal matematika lengkap (11 tipe, rumus KaTeX, media).
+2. **Mencari** dengan filter kaya (topik, sumber, jenjang, kesulitan, level kognitif) + pencarian semantik.
+3. **Menyusun** paket soal (ujian, latihan, sumber).
+4. **Menerbitkan** lewat cetak/PDF.
+
+Untuk satu institusi, skala kecil (<100 pengguna). Lihat `docs/PRD.md`.
+
+---
+
+## Tumpukan Teknologi
+
+| Lapis | Teknologi |
+|-------|-----------|
+| Framework | Next.js 16 · React 19 · TypeScript 5.9 |
+| Gaya | Tailwind v4 · shadcn/ui · mesin tema OKLCH |
+| Data | PostgreSQL 18 · Drizzle ORM · pgvector |
+| Auth | Better Auth (5 peran, multi-role) |
+| Validasi | Zod |
+| Mutu | Vitest · Testing Library · ESLint |
+
+Detail & alasan: `docs/TUMPUKAN-TEKNOLOGI.md`.
+
+---
+
+## Memulai
+
+### Prasyarat
+- Node.js ≥ 20, pnpm
+- PostgreSQL 18 (port `5433`), ekstensi `vector` + `pg_trgm`
+
+### Pasang & jalankan
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env          # isi DATABASE_URL, BETTER_AUTH_SECRET, dst
+pnpm db:migrate               # terapkan skema (27 tabel)
+pnpm seed:taxonomy            # isi jenjang/kesulitan/level kognitif
+pnpm theme:build              # bangun token tema
+pnpm dev                      # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Perintah lain
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Perintah | Fungsi |
+|----------|--------|
+| `pnpm typecheck` | tsc --noEmit (0 error) |
+| `pnpm lint` | ESLint |
+| `pnpm test` | Vitest |
+| `pnpm test:watch` | Vitest mode pantau |
+| `pnpm build` | Build produksi |
+| `pnpm check` | **Semua gerbang mutu** sekaligus |
+| `pnpm db:generate` | Hasilkan migrasi dari skema |
+| `pnpm db:migrate` | Terapkan migrasi |
+| `pnpm db:studio` | Drizzle Studio |
+| `pnpm theme:build` | Bangun ulang token tema |
+| `pnpm seed:taxonomy` | Seed taksonomi dari `curriculum.yaml` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Struktur
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+  app/
+    (app)/            halaman ber-shell (dasbor, bank soal, dst)
+    api/              route API
+    layout.tsx        akar (tema, query, font)
+    globals.css       impor token + Tailwind
+  components/
+    layout/           sidebar, header, shell, ⌘K
+    providers/        tema, react-query
+    ui/               shadcn + keadaan
+  lib/
+    api/              pembungkus route (L4)
+    auth/             peran, izin, guard, actor
+    db/               koneksi + skema (10 modul)
+scripts/
+  theme/build.ts      mesin tema
+  seed-taxonomy.ts    seeder
+docs/                 20 dokumen perencanaan & desain
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Gerbang Mutu
 
-## Deploy on Vercel
+Setiap perubahan wajib lolos:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm check   # typecheck 0 + lint 0 + test + build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Aturan lengkap: `CONSTRAINTS.md`. Prinsip: `AGENTS.md`.
+
+---
+
+## Dokumentasi
+
+Seluruh perencanaan ada di `docs/`. Mulai dari:
+
+| Dokumen | Isi |
+|---------|-----|
+| `PRD.md` | Kebutuhan produk, MVP, alur kerja |
+| `MILESTONE.md` | Rencana M0–M12, tugas per milestone |
+| `DESAIN-PER-LAPISAN-MATHBANK.md` | Arsitektur 9 lapisan (L1–L9) |
+| `SKEMA-DB-DETAIL.md` | Bentuk final skema database |
+| `RENCANA-UI.md` | Struktur menu, halaman, keputusan UI |
+| `TUMPUKAN-TEKNOLOGI.md` | Pilihan library & alasan |
+| `RIWAYAT-KEPUTUSAN.md` | Kronologi keputusan + alasan |
+| `CHANGELOG.md` | Catatan perubahan tiap versi |
+
+---
+
+## Status
+
+Lihat `CHANGELOG.md` untuk versi terbaru & `docs/MILESTONE.md` untuk peta jalan.
+
+| Milestone | Status |
+|-----------|--------|
+| M0 Fondasi | ✅ |
+| M1 Skema Database | ✅ |
+| M2 Auth & Peran | ✅ |
+| M3 Tema & Shell | ✅ |
+| M4 Bank Soal | ⬜ |
+| … | … |
