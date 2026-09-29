@@ -65,7 +65,7 @@
 | D6 | `REVIEW-TUMPUKAN-TEKNOLOGI.md` | ✅ | |
 | D7 | `RIWAYAT-KEPUTUSAN.md` | ✅ | |
 | D8 | `CONTRIBUTING.md` | ✅ | **dibuat** 2026-09-29 — alur kontribusi |
-| D9 | `GOVERNANCE.md` | 🟢 | **belum** — kepemilikan & wewenang |
+| D9 | `GOVERNANCE.md` | ✅ | **dibuat** 2026-09-29 — kepemilikan & wewenang |
 
 ### Kategori E — Keamanan, Operasi & Kepatuhan
 
@@ -77,8 +77,8 @@
 | E4 | `BACKUP-RECOVERY.md` | ✅ | **dibuat** 2026-09-29 — RPO/RTO, uji restore |
 | E5 | `RUNBOOK.md` | 🟢 | **belum** — prosedur operasional & insiden |
 | E6 | `KEPATUHAN-PRIVASI.md` | 🟢 | **belum** — UU PDP, retensi, data siswa |
-| E7 | `SLA-SLO.md` | 🟢 | **belum** — target ketersediaan/performa |
-| E8 | `PERFORMA.md` | 🟢 | **belum** — budget performa, Core Web Vitals |
+| E7 | `SLA-SLO.md` | ✅ | **dibuat** 2026-09-29 — target ketersediaan/performa |
+| E8 | `PERFORMA.md` | ✅ | **dibuat** 2026-09-29 — budget performa, Core Web Vitals |
 
 ### Kategori F — API & Integrasi
 
@@ -115,7 +115,7 @@
 |-----------|---------|-------------|
 | 🔴 **Kritis** | ~~`KEAMANAN.md`~~ ✅, ~~`docs/ADR/`~~ ✅ | ✅ **selesai** 2026-09-29 |
 | 🟠 **Penting** | ~~RENCANA-DEPLOY~~ ✅, ~~KONTRAK-API~~ ✅, ~~BACKUP-RECOVERY~~ ✅, ~~KAMUS-DATA~~ ✅, ~~A11Y~~ ✅, ~~CONTRIBUTING~~ ✅, ~~OBSERVABILITAS~~ ✅ | ✅ **SEMUA SELESAI** 2026-09-29 |
-| 🟢 **Menyusul** | `RUNBOOK`, `KEPATUHAN-PRIVASI`, `SLA-SLO`, `PERFORMA`, `GOVERNANCE`, `RENCANA-MCP/EKSPOR/MOODLE`, `STRATEGI-INGEST`, `RENCANA-ENRICHMENT/TAKSONOMI`, `PANDUAN-OPERASIONAL` | saat fitur/tim bertambah |
+| 🟢 **Menyusul** | ~~SLA-SLO~~ ✅, ~~PERFORMA~~ ✅, ~~GOVERNANCE~~ ✅ · sisa: `RUNBOOK`, `KEPATUHAN-PRIVASI`, `RENCANA-MCP/EKSPOR/MOODLE`, `STRATEGI-INGEST`, `RENCANA-ENRICHMENT/TAKSONOMI`, `PANDUAN-OPERASIONAL` | sisa bergantung fitur (M9–M12) |
 | 📦 **Arsip** | `arsip/ROADMAP-QBANK`, `arsip/RENCANA-MIGRASI-DATA` (era QBank) | ✅ **selesai** 2026-09-29 |
 
 ---

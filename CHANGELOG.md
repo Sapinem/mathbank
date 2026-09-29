@@ -34,6 +34,10 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - `A11Y.md` — target WCAG 2.2 AA, status terpenuhi vs utang, aturan pengembangan.
   - `CONTRIBUTING.md` (root) — setup, alur kerja, gate mutu, konvensi commit/kode.
   - `OBSERVABILITAS.md` — logging terstruktur, health check, metrik, alerting (rencana).
+- **3 dokumen enterprise 🟢** (2026-09-29) — tak bergantung fitur baru:
+  - `PERFORMA.md` — anggaran Core Web Vitals, kondisi nyata (halaman static, 50 index), titik rawan.
+  - `SLA-SLO.md` — SLI/SLO usulan (uptime, latensi, RPO/RTO), error budget.
+  - `GOVERNANCE.md` — peran, jenis keputusan, alur, kepemilikan dokumen.
 - **`docs/PETA-DOKUMEN.md`** — indeks hidup seluruh dokumen (ada + direncanakan) dengan status & tata kelola; mencegah "dokumen lupa".
 - **`docs/KEAMANAN.md`** — model keamanan: aset, threat model (STRIDE), autentikasi, RBAC, permukaan berisiko, utang keamanan (S1–S7), daftar periksa pra-produksi.
 - **`docs/ADR/`** — Architecture Decision Records: `README` (indeks), `template`, dan 7 ADR awal (bangun-ulang, lapisan L1–L9, PG18+uuidv7, Better Auth multi-role, shadcn resmi, invarian lunak, DB reproduktif).
