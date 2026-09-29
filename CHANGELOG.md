@@ -8,6 +8,9 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ## [Belum Dirilis]
 
+### Ditambahkan
+- **Skrip `pnpm start:lan`** (`next start -H 0.0.0.0`) — untuk menguji aplikasi dari HP/perangkat lain lewat LAN. Mode **dev** (Turbopack) mengirim ~8,8 MB JS + kompilasi on-demand → HP tampak "freeze" saat memuat; produksi hanya ~1,4 MB (6,3× lebih kecil). Didokumentasikan di `RENCANA-UI-MOBILE.md` §11.4.
+
 ### Diperbaiki
 - **🐛 Akses via LAN tampil tanpa CSS (CSP `upgrade-insecure-requests` di dev)** — saat dev dibuka dari perangkat lain (`http://192.168.18.100:3001`), browser menaikkan semua request ke `https://…` (tak ada TLS di port dev) → CSS/JS/font gagal dimuat → halaman tampil sebagai HTML polos. Di `localhost` ini tak terlihat karena browser mengecualikannya sebagai secure context. **Perbaikan:** `upgrade-insecure-requests` dipindah dari CSP dasar ke **CSP produksi saja** (`next.config.ts`); `CSP_DEV` kini bebas directive itu. Terverifikasi via LAN: CSS/JS/font termuat, halaman bergaya penuh. Didokumentasikan di `docs/KEAMANAN.md` §8.
 

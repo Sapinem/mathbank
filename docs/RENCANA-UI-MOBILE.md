@@ -515,6 +515,28 @@ Responsif **tidak menyentuh** mesin tema (3 warna → OKLCH). Semua token `--mb-
 | Interaksi (INP) | < 200ms |
 | Muat awal (3G cepat) | < 3s |
 
+### 11.4 ⚠️ JANGAN uji di HP dengan server `dev` — pakai `start:lan`
+
+**Gejala:** dibuka dari HP lewat LAN (`http://192.168.x.x:3001`) halaman tampak "loading" dan **tak bisa dipencet apa-apa** — seolah freeze. Di `localhost`/desktop tak terasa.
+
+**Sebab (bukan bug responsif):** Next mode **dev** (Turbopack) mengirim **puluhan modul JS mentah + kompilasi on-demand serial** per request. Terukur untuk `/bank-soal` via LAN:
+
+| Mode | `<script>` | Total unduhan | Kompilasi |
+|------|-----------|---------------|-----------|
+| `pnpm dev` | 29 | **~8.806 KB** | on-demand tiap modul |
+| `pnpm build && pnpm start:lan` | 15 | **~1.399 KB** (6,3× lebih kecil) | nol (sudah di-build) |
+
+HP (Chrome Android) hanya ~6 koneksi paralel; mengunduh ~9 MB + parse JS sebelum hidrasi → terasa macet total.
+
+**Aturan:** uji di perangkat nyata / lewat LAN **selalu pakai produksi**:
+
+```bash
+pnpm build && pnpm start:lan          # bind 0.0.0.0 → http://<IP-LAN>:3000
+AUTH_DEV_BYPASS=true pnpm build       # bila butuh login dev
+```
+
+`dev` hanya untuk pengembangan di `localhost`. (Directive `upgrade-insecure-requests` juga dimatikan di dev — lihat `KEAMANAN.md` §8 — agar LAN tak tampil tanpa CSS.)
+
 ---
 
 ## 12. TABEL KONTEN & RUMUS
