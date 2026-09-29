@@ -102,7 +102,8 @@ const nextConfig: NextConfig = {
    * `ALLOWED_DEV_ORIGINS` (pisah koma) bila IP LAN Anda berbeda.
    */
   allowedDevOrigins: (
-    process.env.ALLOWED_DEV_ORIGINS ?? "192.168.18.100,localhost,127.0.0.1"
+    process.env.ALLOWED_DEV_ORIGINS ??
+    "192.168.18.100,localhost,127.0.0.1,b.iyo.my.id"
   )
     .split(",")
     .map((s) => s.trim())
