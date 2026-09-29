@@ -21,6 +21,8 @@ export interface PermissionMatrix {
   "question:setReady": Access;
   /** Set status `archived`. */
   "question:archive": Access;
+  /** Tandai/lepas tanda "perlu perhatian" (flag). */
+  "question:flag": Access;
 
   /** Kelola taksonomi (topik/grade/difficulty/cognitive/tag). */
   "taxonomy:manage": Access;
@@ -97,6 +99,13 @@ export const PERMISSIONS: Record<keyof PermissionMatrix, Record<Role, Access>> =
     teacher: "no",
     reviewer: "no",
     agent: "no",
+    machine: "no",
+  },
+  "question:flag": {
+    admin: "yes",
+    teacher: "own",
+    reviewer: "yes", // reviewer menandai masalah kualitas
+    agent: "yes", // dedup/agen boleh menandai
     machine: "no",
   },
   "taxonomy:manage": {

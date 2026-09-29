@@ -74,3 +74,21 @@ export class UnauthorizedError extends Error {
     this.name = "UnauthorizedError";
   }
 }
+
+/** Error sumber daya tak ditemukan (HTTP 404). */
+export class NotFoundError extends Error {
+  readonly code = "NOT_FOUND";
+  constructor(message = "Sumber daya tidak ditemukan") {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
+/** Error konflik/aturan bisnis (HTTP 409). */
+export class ConflictError extends Error {
+  readonly code = "CONFLICT";
+  constructor(message = "Konflik data") {
+    super(message);
+    this.name = "ConflictError";
+  }
+}

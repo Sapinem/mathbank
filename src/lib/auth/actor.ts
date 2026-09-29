@@ -14,3 +14,19 @@ export interface Actor {
   /** Izin dari API key (untuk agen/mesin), bila via apikey. */
   apiKeyPermissions?: Partial<Record<string, string[]>>;
 }
+
+/** Tipe penulis audit (sinkron enum `author_type` DB). */
+export type AuthorType = "teacher" | "agent" | "machine" | "system";
+
+/**
+ * Petakan aktor → `author_type` untuk audit/solusi.
+ * Manusia (session) = teacher; sistem = system; apikey = machine
+ * (agent dianggap machine kecuali punya peran `agent` eksplisit → agent).
+ */
+export function authorTypeOf(actor: Actor): AuthorType {
+  if (actor.via === "system") return "system";
+  if (actor.via === "apikey") {
+    return actor.roles.includes("agent") ? "agent" : "machine";
+  }
+  return "teacher";
+}

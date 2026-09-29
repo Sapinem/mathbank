@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { resolveActor } from "@/lib/auth/resolve";
+import { InvalidTransitionError } from "@/lib/fsm/question-fsm";
 import {
   UnauthorizedError,
   ForbiddenError,
+  NotFoundError,
+  ConflictError,
   assertCan,
 } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
@@ -24,6 +27,8 @@ export interface RouteContext<TQuery, TBody> {
   query: TQuery;
   body: TBody;
   req: Request;
+  /** Parameter rute dinamis, mis. { id } untuk /api/questions/[id]. */
+  params: Record<string, string>;
 }
 
 export interface RouteOptions<TQuery, TBody, TResult> {
@@ -49,6 +54,9 @@ function searchParamsToObject(url: string): Record<string, string> {
   return obj;
 }
 
+/** Argumen kedua handler Next.js (params rute dinamis, async di Next 15+). */
+type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
+
 /** Petakan error → respons terformat. */
 function errorResponse(err: unknown): NextResponse {
   if (err instanceof UnauthorizedError) {
@@ -61,6 +69,24 @@ function errorResponse(err: unknown): NextResponse {
     return NextResponse.json(
       { error: { code: err.code, message: err.message } },
       { status: 403 },
+    );
+  }
+  if (err instanceof NotFoundError) {
+    return NextResponse.json(
+      { error: { code: err.code, message: err.message } },
+      { status: 404 },
+    );
+  }
+  if (err instanceof ConflictError) {
+    return NextResponse.json(
+      { error: { code: err.code, message: err.message } },
+      { status: 409 },
+    );
+  }
+  if (err instanceof InvalidTransitionError) {
+    return NextResponse.json(
+      { error: { code: "INVALID_TRANSITION", message: err.message } },
+      { status: 409 },
     );
   }
   if (err instanceof ZodError) {
@@ -90,7 +116,7 @@ function errorResponse(err: unknown): NextResponse {
 export function wrapRoute<TQuery, TBody, TResult>(
   opts: RouteOptions<TQuery, TBody, TResult>,
 ) {
-  return async (req: Request): Promise<NextResponse> => {
+  return async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
     try {
       const actor = await resolveActor(req.headers);
       if (!actor) throw new UnauthorizedError();
@@ -107,7 +133,9 @@ export function wrapRoute<TQuery, TBody, TResult>(
         ? opts.body.parse(await req.json().catch(() => ({})))
         : (undefined as TBody);
 
-      const data = await opts.handler({ actor, query, body, req });
+      const params = (await args?.params) ?? {};
+
+      const data = await opts.handler({ actor, query, body, req, params });
       return NextResponse.json({ data }, { status: opts.status ?? 200 });
     } catch (err) {
       return errorResponse(err);
