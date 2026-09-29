@@ -92,6 +92,21 @@ function securityHeaders(isDev: boolean, isHttps: boolean) {
 }
 
 const nextConfig: NextConfig = {
+  /**
+   * Origin dev yang diizinkan (Next 16). Sejak Next 16, resource dev
+   * (`/_next/*`, HMR) **diblokir default** untuk origin non-lokal → saat dev
+   * diakses lewat LAN (`http://192.168.x.x:3001`), JS tak termuat → halaman
+   * "loading terus". Daftarkan host LAN di sini agar dev via LAN bekerja.
+   *
+   * ⚠️ Ini HANYA berdampak pada `next dev`, bukan produksi. Ubah/tambah lewat
+   * `ALLOWED_DEV_ORIGINS` (pisah koma) bila IP LAN Anda berbeda.
+   */
+  allowedDevOrigins: (
+    process.env.ALLOWED_DEV_ORIGINS ?? "192.168.18.100,localhost,127.0.0.1"
+  )
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
   async headers() {
     const isDev = process.env.NODE_ENV !== "production";
     // `upgrade-insecure-requests` + HSTS hanya dikirim bila operator menyatakan
