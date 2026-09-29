@@ -56,7 +56,7 @@ export function statusClass(status: string): string {
     case "ready":
       return "bg-brand/10 text-brand border-brand/20";
     case "review":
-      return "bg-gold/15 text-gold-fg dark:text-gold border-gold/30";
+      return "bg-gold/15 text-gold-fg border-gold/30";
     case "archived":
       return "bg-muted text-muted-foreground border-border";
     default: // draft

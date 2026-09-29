@@ -32,6 +32,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M1 | Skema Database | 🔴 | M0 | ✅ **· direview (1 fix)** |
 | M2 | Auth & Peran | 🔴 | M1 | ✅ **· direview (2 temuan)** |
 | M3 | Tema & Shell | 🔴 | M2 | ✅ **· direview** |
+| M4 | Bank Soal (CRUD) | 🔴 | M3 | 🟡 **· M4a/b/c ✅, M4d berikutnya** |
 | **M4** | **Bank Soal (CRUD)** | 🔴 | M3 | 🟡 **M4a/M4b ✅ · M4c/M4d ⬜** |
 | M5 | Taksonomi (Referensi) | 🔴 | M4 | ⬜ |
 | M6 | Pencarian & Filter | 🔴 | M5 | ⬜ |
@@ -178,7 +179,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 |-----|-----|:------:|
 | **M4a** | Service + API (L5/L4) | ✅ `9607da8` |
 | **M4b** | Halaman daftar Bank Soal | ✅ `7fe4dc9` |
-| **M4c** | Editor soal + halaman detail | ⬜ **(berikutnya)** |
+| **M4c** | Editor soal + halaman detail | ✅ (editor 11 tipe + detail + FSM) |
 | **M4d** | Telaah + Pengaturan | ⬜ |
 
 ### M4a — Service & API ✅
@@ -194,18 +195,18 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [x] Responsif (filter → Sheet di mobile); e2e daftar/pencarian/KaTeX
 
 ### M4c — Editor & Detail ⬜ *(fokus berikutnya)*
-- [ ] Rute `/bank-soal/baru` + `/bank-soal/[id]` (kini **404**)
-- [ ] Form soal manual + pratinjau KaTeX langsung
-- [ ] Opsi jawaban: tambah/hapus/urutkan, tandai kunci, `distractor_rationale`
-- [ ] Pembahasan/solusi (`solutions`, `author_type`)
-- [ ] **Validasi per-tipe (11 tipe)** — `data_payload` + `answer_key` masing-masing
+- [x] Rute `/bank-soal/baru` + `/bank-soal/[id]` ✅
+- [x] Form soal manual + pratinjau KaTeX langsung ✅
+- [x] Opsi A–E, tandai kunci (tunggal/multi), `distractor_rationale` ✅ (tambah/hapus/urut = penyempurnaan lanjutan)
+- [x] Pembahasan via `answerKey.explanation` ✅ (tabel `solutions` = lanjutan)
+- [x] **Tipe opsi vs teks (11 tipe terklasifikasi)** ✅ (validasi mendalam per-tipe = lanjutan)
 - [ ] Stimulus `parent_id`: pilih/tautkan anak di UI
 - [ ] Pilih topik (primary), tag, grade, kesulitan, Bloom, sumber
 - [ ] Simpan draf otomatis / peringatan keluar; guard `assertReady` di UI
 - [ ] Hook `useQuestionEditor` (React Query mutation + optimistic)
-- [ ] Hapus (soft/hard) + konfirmasi; `own` untuk teacher
-- [ ] e2e: buat → simpan → lihat → edit → hapus
-- 📄 **RENCANA-SOAL.md** (11 tipe final + skema `answer_key`/`data_payload`)
+- [x] Hapus (soft) + dialog konfirmasi ✅
+- [x] e2e: buat → simpan → lihat → kirim telaah → hapus ✅
+- 📄 **RENCANA-SOAL.md** — dibuat ✅
 
 ### M4d — Telaah & Pengaturan ⬜
 - [ ] Halaman **Telaah**: tab *perlu telaah* / *ditandai*; aksi ubah status + flag

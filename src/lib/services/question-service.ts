@@ -20,6 +20,7 @@ import type {
   CreateQuestionInput,
   UpdateQuestionInput,
   ListQuestionsQuery,
+  AnswerKey,
 } from "@/lib/contracts/question";
 
 /**
@@ -36,7 +37,7 @@ export type PublicQuestion = Omit<
   | "aiTagged"
   | "aiTaggedAt"
   | "answerKey"
-> & { options: QuestionOption[]; answerKey?: Record<string, unknown> };
+> & { options: QuestionOption[]; answerKey?: AnswerKey };
 
 /** Soal internal (untuk logika service: FSM, izin) — punya `answerKey`. */
 export interface QuestionInternal extends Question {

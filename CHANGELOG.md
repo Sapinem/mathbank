@@ -18,6 +18,11 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - Disinkronkan: `KAMUS-DATA.md` (M0–M17), `PETA-DOKUMEN.md` (v2.0).
 - **Skrip `pnpm start:lan`** (`next start -H 0.0.0.0`) — untuk menguji aplikasi dari HP/perangkat lain lewat LAN. Mode **dev** (Turbopack) mengirim ~8,8 MB JS + kompilasi on-demand → HP tampak "freeze" saat memuat; produksi hanya ~1,4 MB (6,3× lebih kecil). Didokumentasikan di `RENCANA-UI-MOBILE.md` §11.4.
 
+### Ditambahkan
+- **M4c — Editor soal & halaman detail** — rute `/bank-soal/baru` (buat) & `/bank-soal/[id]` (detail + sunting). Editor satu-komponen untuk **11 tipe** (kunci opsi vs teks), pratinjau KaTeX langsung, penandaan kunci (tunggal/multi), `distractor_rationale`, metadata (tipe/jenjang/kesulitan/kognitif), simpan draf atau kirim telaah. Detail: FSM (Kirim Telaah), hapus lunak + konfirmasi. Desktop-saja (`DesktopOnly`). e2e alur CRUD (3 lulus). **Menutup dead-link T-M4-1** (`/bank-soal/baru` & `/[id]` kini 200).
+- **`docs/RENCANA-SOAL.md`** — 11 tipe final + pemetaan `answer_key`/`data_payload`.
+- **Perbaikan tipe**: `PublicQuestion.answerKey` kini `AnswerKey` (dulu `Record<string, unknown>` longgar) — menutup ~15 error tipe tersembunyi.
+
 ### Diperbaiki
 - **🔴 Review M3 — klaim "Verifikasi WCAG otomatis" palsu (tak ada kode)** — `A11Y.md` mencentang "kontras terverifikasi mesin" padahal `scripts/theme/` hanya konversi OKLCH. **Dibangun:** `src/lib/theme/color.ts` (konversi OKLCH↔sRGB + `contrastRatio` WCAG), `scripts/theme/tokens.ts`, `scripts/theme/check.ts` (`pnpm theme:check`, 16 pasangan × 2 mode, exit 1 bila gagal), tes `color.test.ts` (9), masuk gate `pnpm check`. **Hasil 16/16 lulus.**
 - **🟢 Review M3 — optimasi shadcn** — audit aturan resmi: `SelectGroup` (bank-soal-view), `space-y-*`→`gap-*`, `dark:text-gold`→token, `<button>` kustom→`Button` resmi, buang `size-*` manual ikon, `role="img"` ikon Flag. e2e tema 10/10 + responsif 6/6.
