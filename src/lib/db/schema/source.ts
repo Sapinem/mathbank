@@ -91,7 +91,7 @@ export const institutions = pgTable(
   ],
 );
 
-export const sourcesRelations = relations(sources, ({ one, many }) => ({
+export const sourcesRelations = relations(sources, ({ one }) => ({
   book: one(books),
   institution: one(institutions),
 }));

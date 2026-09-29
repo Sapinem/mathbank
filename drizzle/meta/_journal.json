@@ -8,6 +8,13 @@
       "when": 1790682090287,
       "tag": "0000_cheerful_jane_foster",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790682197797,
+      "tag": "0001_perpetual_zeigeist",
+      "breakpoints": true
     }
   ]
 }
