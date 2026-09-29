@@ -1,9 +1,9 @@
 # MILESTONE — MathBank (Rencana Eksekusi)
 
 > **Dokumen ini menjawab:** *Urutan pembangunan MathBank — apa dulu, apa kemudian, kapan selesai?*
-> **Status:** 📝 Draft v1 — menunggu ratifikasi.
-> **Versi:** 1.0 · **Tanggal:** 2026-09-29
-> **Rujukan:** `PRD.md` (ruang lingkup), `DESAIN-PER-LAPISAN-MATHBANK.md` (L1–L9).
+> **Status:** 🟢 aktif — M0–M3 ✅ selesai; M4 berjalan (M4a/M4b ✅).
+> **Versi:** 1.1 · **Tanggal:** 2026-09-29
+> **Rujukan:** `PRD.md` (ruang lingkup), `DESAIN-PER-LAPISAN-MATHBANK.md` (L1–L9), `PETA-DOKUMEN.md`.
 
 ---
 
@@ -46,6 +46,26 @@
 
 ---
 
+## Pekerjaan Lintas-Milestone (✅ selesai, di luar alur M)
+
+Pekerjaan fondasi/hardening yang tak terikat satu milestone:
+
+| # | Pekerjaan | Hasil | Commit |
+|---|-----------|-------|--------|
+| P1 | **Audit kode komprehensif** | 9 temuan ditutup (coverage nyata 98→99%, dasbor data nyata, `/api/stats`) | `904df9a` |
+| P2 | **Shell shadcn resmi** | sidebar collapsible + ⌘K + breadcrumb (komponen resmi) | `8ea6afa` |
+| P3 | **Integritas & reproduktibilitas DB** | 21 trigger + 2 CHECK + HNSW di file migrasi; `db:verify` | `b91be3e` |
+| P4 | **Kontrak pengujian per-lapisan** | `STRATEGI-TES.md` + bayar utang T1/T2/T6/T7 | `6936172`, `37a3d27` |
+| P5 | **Rapikan dokumen era QBank** | VISION MathBank, arsip ROADMAP, 18→27 | `ac88023` |
+| P6 | **`uuidv7()`** | PK domain → `uuidv7()` (PG 18), migrasi + verifikasi | `296f233` |
+| P7 | **PCI enterprise docs** | PETA-DOKUMEN, KEAMANAN, ADR (7), +11 dokumen enterprise | `b7e3dad`… |
+| P8 | **Pagar keamanan (S1, S2)** | rate limiting (429) + security headers (CSP/HSTS) | `139900d`, `ac7c4f1` |
+| P9 | **Riset Better Auth** | verdict: otorisasi sendiri; verifikasi CVE | `37a3d27` |
+
+> Detail: `CHANGELOG.md`, `PETA-DOKUMEN.md`, `KEAMANAN.md`, `RISET-BETTER-AUTH.md`.
+
+---
+
 # FASE MVP
 
 ## M0 — Fondasi ✅ SELESAI
@@ -78,39 +98,39 @@
 Pecah jadi 3 bagian agar terkelola:
 
 **M1a — Tabel inti (soal & asal)**
-- [ ] `questions` (soal, stimulus `parent_id`, tipe, status FSM, kunci jawaban, `data_payload`, `embedding` inline, `is_flagged`, `last_reviewed_at`)
-- [ ] `question_options` (opsi jawaban, `distractor_rationale`)
-- [ ] `solutions` (pembahasan, `author_type`)
-- [ ] `sources` (induk; `kind`, `url`) + `books` + `institutions` (anak)
-- [ ] `events` (UTBK/OSN/SBMPTN; `aliases`, `subtests`)
-- [ ] `passages` (bacaan reusable — or `parent_id` stimulus? **keputusan: stimulus via parent_id**, passages untuk bacaan panjang bila perlu)
+- [x] `questions` (soal, stimulus `parent_id`, tipe, status FSM, kunci jawaban, `data_payload`, `embedding` inline, `is_flagged`, `last_reviewed_at`)
+- [x] `question_options` (opsi jawaban, `distractor_rationale`)
+- [x] `solutions` (pembahasan, `author_type`)
+- [x] `sources` (induk; `kind`, `url`) + `books` + `institutions` (anak)
+- [x] `events` (UTBK/OSN/SBMPTN; `aliases`, `subtests`)
+- [x] `passages` (bacaan reusable — or `parent_id` stimulus? **keputusan: stimulus via parent_id**, passages untuk bacaan panjang bila perlu)
 
 **M1b — Taksonomi & relasi**
-- [ ] `topics` (3-level `parent_id`, `usage_count`)
-- [ ] `grades`, `difficulty_levels`, `cognitive_levels` (dari yaml → DB)
-- [ ] `tags` (`usage_count`)
-- [ ] `question_topics` (M:N, 1 primary via `is_primary`)
-- [ ] `question_tags` (M:N)
+- [x] `topics` (3-level `parent_id`, `usage_count`)
+- [x] `grades`, `difficulty_levels`, `cognitive_levels` (dari yaml → DB)
+- [x] `tags` (`usage_count`)
+- [x] `question_topics` (M:N, 1 primary via `is_primary`)
+- [x] `question_tags` (M:N)
 
 **M1c — Paket, media, sistem, audit**
-- [ ] `bundles` (paket; `source_id`; `slug`; soft-delete)
-- [ ] `bundle_items` (`role` enum, `section_name`, `item_number`)
-- [ ] `media_assets` + `question_media` (M:N, `role` enum)
-- [ ] `app_settings` (key-value; AI config, dll)
-- [ ] `ingest_queue` (target_type) — *schema boleh ada, dipakai M9*
-- [ ] `audit_logs` (**satu** tabel generik: `entity_type`, `entity_id`, `action`, `actor_id`, `diff`)
-- [ ] `users` + `user_roles` (multi-role, L1) — *atau via Better Auth + tabel peran tambahan*
+- [x] `bundles` (paket; `source_id`; `slug`; soft-delete)
+- [x] `bundle_items` (`role` enum, `section_name`, `item_number`)
+- [x] `media_assets` + `question_media` (M:N, `role` enum)
+- [x] `app_settings` (key-value; AI config, dll)
+- [x] `ingest_queue` (target_type) — *schema boleh ada, dipakai M9*
+- [x] `audit_logs` (**satu** tabel generik: `entity_type`, `entity_id`, `action`, `actor_id`, `diff`)
+- [x] `users` + `user_roles` (multi-role, L1) — *atau via Better Auth + tabel peran tambahan*
 
 ### Task lintas-bagian
-- [ ] Enum: status soal, tipe soal, `role`, `bundle_type`, `author_type`, dll
-- [ ] Trigger `updated_at` (1 fungsi, pasang ke semua tabel)
-- [ ] Trigger `usage_count` (topics/tags `question_topics`/`question_tags`)
-- [ ] Ekstensi: `pg_trgm`, `vector` (migrasi SQL)
-- [ ] Index: GIN trigram (`questions`, `sources`, `topics`, `tags`), HNSW (`questions.embedding`), B-tree FK/filter
-- [ ] Invarian CHECK (stimulus 1 level; `ready` wajib `answer_key`; dst)
-- [ ] Migrasi Drizzle (`db:generate`)
+- [x] Enum: status soal, tipe soal, `role`, `bundle_type`, `author_type`, dll
+- [x] Trigger `updated_at` (1 fungsi, pasang ke semua tabel)
+- [x] Trigger `usage_count` (topics/tags `question_topics`/`question_tags`)
+- [x] Ekstensi: `pg_trgm`, `vector` (migrasi SQL)
+- [x] Index: GIN trigram (`questions`, `sources`, `topics`, `tags`), HNSW (`questions.embedding`), B-tree FK/filter
+- [x] Invarian CHECK (stimulus 1 level; `ready` wajib `answer_key`; dst)
+- [x] Migrasi Drizzle (`db:generate`)
 - [x] **Skrip verifikasi skema** (pastikan 27 tabel, trigger, CHECK & index ada) — `pnpm db:verify`
-- [ ] Seeder taksonomi (dari yaml → DB)
+- [x] Seeder taksonomi (dari yaml → DB)
 
 ### Kriteria Selesai
 - ✅ `pnpm db:push` sukses di DB bersih
@@ -131,14 +151,14 @@ Pecah jadi 3 bagian agar terkelola:
 **Perkiraan:** 2–3 hari
 
 ### Task
-- [ ] Better Auth setup (session, cookie)
-- [ ] Tabel user & peran (multi-role; union izin)
-- [ ] Modul `auth/`: `roles.ts` (enum), `permissions.ts` (matriks peran×aksi), `guards.ts` (`requireRole`, `canEdit...`), `actor.ts` (session/apikey/machine)
-- [ ] Matriks izin L1 (admin/teacher/reviewer/agent/machine)
-- [ ] **Pembungkus route** (`withRoute({auth, query, body, handler})`) — single response format
-- [ ] Endpoint `GET /api/auth/me` (identitas benar — perbaikan dari QBank)
-- [ ] Halaman login + logout
-- [ ] Forbidden page
+- [x] Better Auth setup (session, cookie)
+- [x] Tabel user & peran (multi-role; union izin)
+- [x] Modul `auth/`: `roles.ts` (enum), `permissions.ts` (matriks peran×aksi), `guards.ts` (`requireRole`, `canEdit...`), `actor.ts` (session/apikey/machine)
+- [x] Matriks izin L1 (admin/teacher/reviewer/agent/machine)
+- [x] **Pembungkus route** (`withRoute({auth, query, body, handler})`) — single response format
+- [x] Endpoint `GET /api/auth/me` (identitas benar — perbaikan dari QBank)
+- [x] Halaman login + logout
+- [x] Forbidden page
 
 ### Kriteria Selesai
 - ✅ Bisa login/logout
@@ -166,9 +186,9 @@ Pecah jadi 3 bagian agar terkelola:
 - [x] Font: Roboto Flex + Roboto Mono
 - [x] **Komponen dasar**: Button, Badge, Modal, ConfirmModal, State (empty/loading/error)
 - [x] **Shell**: sidebar 4 grup (Kerja/Referensi/Studio/Sistem), header, breadcrumb
-- [ ] **Command palette** (⌘K)
-- [ ] Sidebar Referensi = **submenu lipat** (Topik/Sumber/Event/Label)
-- [ ] Halaman kosong tiap rute (placeholder bermakna, bukan TODO)
+- [x] **Command palette** (⌘K) — `src/components/layout/command-palette.tsx`
+- [x] Sidebar Referensi = submenu (Topik/Sumber/Event/Label)
+- [x] Halaman kosong tiap rute (placeholder bermakna, bukan TODO)
 
 ### Kriteria Selesai
 - ✅ Tema berganti dengan ubah 3 warna sumber → `pnpm theme:build`
@@ -183,33 +203,58 @@ Pecah jadi 3 bagian agar terkelola:
 
 ---
 
-## M4 — Bank Soal (CRUD) 🔴
+## M4 — Bank Soal (CRUD) 🟡 BERJALAN
 
 **Tujuan:** inti produk — buat/edit/hapus/lihat soal.
 
-**Dependensi:** M3
-**Perkiraan:** 5–7 hari
+**Dependensi:** M3 · **Perkiraan:** 5–7 hari
 
-### Task
-- [ ] Service `question/` (fungsi biasa): `create`, `query`, `lifecycle`, `media`, `filters`
-- [ ] FSM status (L6) — transisi `draft→review→ready→archived` **via FSM**, diuji
-- [ ] CRUD soal: buat, edit, hapus (soft + hard admin/own)
-- [ ] Tipe soal (daftar final) + `answer_key` per-tipe + `data_payload` per-tipe
-- [ ] Stimulus: `parent_id` (1 level), aturan (tak masuk paket langsung, RESTRICT hapus)
-- [ ] Opsi jawaban + `distractor_rationale` (PG)
-- [ ] Solusi/pembahasan
-- [ ] **Editor soal** (manual, tanpa AI) + render **KaTeX** (`\(...\)`/`\[...\]`)
-- [ ] Hook kecil (L3): `useQuestions`, `useQuestion`, `useQuestionEditor` (≈100 baris)
-- [ ] Halaman: Bank Soal (daftar), detail, baru, edit
+**Status sub-milestone:**
+| Sub | Isi | Status |
+|-----|-----|:------:|
+| **M4a** | Service + API (L5/L4) | ✅ selesai (`9607da8`) |
+| **M4b** | Halaman daftar Bank Soal | ✅ selesai (`7fe4dc9`) |
+| **M4c** | Editor soal + halaman detail | ⬜ belum (rute `/bank-soal/baru`, `/bank-soal/[id]` = **404**) |
+| **M4d** | Telaah + Pengaturan | ⬜ belum |
 
-### Kriteria Selesai
-- ✅ Bisa buat soal (semua tipe MVP) → simpan → lihat → edit → hapus
-- ✅ FSM dites (semua transisi valid + ditolak)
-- ✅ KaTeX render benar (tanpa `$`)
-- ✅ Gate hijau
+### Task M4a — Service & API ✅
+- [x] Service `question-service.ts` (create/list/get/update/delete/status/flag)
+- [x] FSM status (L6) — `draft→review→ready→archived`, diuji
+- [x] CRUD soal + soft/hard delete (`own` untuk teacher)
+- [x] Guard kesiapan `assertReady` (422 `NOT_READY` tanpa `answer_key`)
+- [x] API 7 endpoint: `GET/POST /api/questions`, `[id]` GET/PATCH/DELETE, `[id]/status`, `[id]/flag`
+- [x] Rate limiting + izin per-route (`wrapRoute`)
+- [x] 21 tes integrasi DB (`question-service.db.test.ts`)
+- [ ] Penyuntingan per-tipe (11 tipe) di UI → M4c
+- [ ] Aturan stimulus `parent_id` penuh di UI → M4c
+- [ ] Opsi + `distractor_rationale`, solusi/pembahasan → M4c
+
+### Task M4b — Halaman Daftar ✅
+- [x] Halaman Bank Soal (kartu + filter + pencarian + paginasi)
+- [x] Render **KaTeX** toleran (kurung-siku & dolar)
+- [x] Hook (L3): `useQuestions`, `useReference` (React Query)
+- [x] Responsif (filter jadi Sheet di mobile)
+- [x] e2e: daftar, pencarian, KaTeX, filter mobile
+
+### Task M4c — Editor & Detail ⬜
+- [ ] Halaman `/bank-soal/baru` + `/bank-soal/[id]` (kini **404**)
+- [ ] Editor soal manual + pratinjau KaTeX
+- [ ] Opsi jawaban + kunci + pembahasan
+- [ ] Validasi per-tipe (11 tipe)
+- [ ] Hook `useQuestionEditor`
+
+### Task M4d — Telaah & Pengaturan ⬜
+- [ ] Halaman Telaah (tab: perlu telaah / flagged)
+- [ ] Halaman Pengaturan (umum; AI config menyusul M10)
+
+### Kriteria Selesai (M4 penuh)
+- [ ] Bisa buat soal (semua tipe MVP) → simpan → lihat → edit → hapus
+- [x] FSM dites (semua transisi valid + ditolak)
+- [x] KaTeX render benar
+- [x] Gate hijau (berkelanjutan)
 
 ### Dokumen pendukung
-- 📄 **RENCANA-SOAL.md** (tipe soal final, skema answer_key)
+- 📄 **RENCANA-SOAL.md** (tipe soal final, skema answer_key) — *belum ditulis*
 
 ---
 
@@ -385,8 +430,23 @@ Pecah jadi 3 bagian agar terkelola:
 
 ## Langkah Berikutnya
 
-**M1 — Skema Database** dimulai setelah dokumen ini diratifikasi.
-Dokumen pertama yang ditulis: **`SKEMA-DB-DETAIL.md`** (bentuk final 27 tabel).
+**Posisi:** M0–M3 ✅ · M4a/M4b ✅ · pekerjaan lintas-milestone P1–P9 ✅.
+
+**Fokus berikutnya** — pilih satu:
+1. **M4c — Editor soal + halaman detail** (fitur inti; rute `/bank-soal/baru` & `[id]` kini 404).
+2. **Utang keamanan S3** — pemisahan output `answer_key` (🔴, tak boleh bocor ke soal publik).
+3. **M5 — Taksonomi** (kelola Referensi), bila M4 dianggap cukup untuk menutup loop CRUD.
+
+> Rencana lama ("M1 dimulai") sudah terlampaui — M1–M3 selesai.
+
+---
+
+## Riwayat Perubahan MILESTONE
+
+| Versi | Tanggal | Perubahan |
+|-------|---------|-----------|
+| 1.1 | 2026-09-29 | Sinkronkan dengan kenyataan: M0–M3 ✅, M4 dipecah M4a–M4d (a/b ✅, c/d ⬜), tambah tabel **Pekerjaan Lintas-Milestone** (P1–P9), perbarui Langkah Berikutnya |
+| 1.0 | 2026-09-29 | Draft awal |
 
 ---
 

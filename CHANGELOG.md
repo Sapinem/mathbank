@@ -9,7 +9,12 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Diubah
-- **Bersihkan konteks QBank dari dokumen (2026-09-29)** — MathBank bukan QBank:
+- **`MILESTONE.md` disinkronkan dengan kenyataan (v1.1, 2026-09-29)** — setelah 12 commit terakhir:
+  - Header status: "Draft v1, menunggu ratifikasi" → **"aktif — M0–M3 ✅, M4 berjalan"**.
+  - Task M1/M2/M3 dicentang `[x]` sesuai kenyataan (⌘K, submenu Referensi, halaman kosong → selesai).
+  - **M4 dipecah M4a–M4d**: M4a (service+API) & M4b (halaman daftar) ✅ dengan daftar task nyata; M4c (editor+detail, rute 404) & M4d (telaah+pengaturan) ⬜.
+  - Tambah tabel **Pekerjaan Lintas-Milestone** (P1–P9): audit, shell shadcn, integritas DB, strategi tes, pembersihan QBank, uuidv7, dokumen enterprise, pagar keamanan S1/S2, riset Better Auth.
+  - **Langkah Berikutnya** diperbarui (rencana lama "M1 dimulai" sudah terlampaui) + tabel riwayat perubahan.
   - `THEME-FRAMEWORK-GUIDE.md` **ditulis ulang** — sebelumnya mendokumentasikan var `--qbank-*` (salah; kode pakai `--mb-*`) dan file yang tak ada (`ThemeContext.tsx`, `ThemeSelector.tsx`, `sources.ts`); kini sesuai `scripts/theme/build.ts` + `--mb-*` + `next-themes`.
   - Judul dibersihkan: `ARSITEKTUR-DATA-FINAL` (QBank v2→MathBank), `CATATAN-INTERVIEW-ARSITEKTUR`, `DESIGN-THEME-FRAMEWORK` (QBank v1.0.0→MathBank, "PALET QBank"→"PALET MathBank"), `ARSITEKTUR-SISTEM-FULL` (→"Referensi (sebelumnya QBank)"), `CETAK-BIRU` (→"Cetak Biru MathBank").
   - ENV salah diperbaiki di `CETAK-BIRU`: `QBANK_*` → `AUTH_DEV_BYPASS`.
