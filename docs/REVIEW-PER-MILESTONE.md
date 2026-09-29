@@ -273,4 +273,73 @@ diuji (16/16).** **M3: ✅ LULUS.**
 
 ---
 
-## M4 — Bank Soal (CRUD) — *berikutnya*
+## M4 — Bank Soal (CRUD) — **BERJALAN (setengah)**
+
+**Direview:** 2026-09-30 · **Verdict:** 🟡 **M4a/M4b LULUS · M4c/M4d belum dibangun**
+
+> Catatan: MILESTONE sendiri jujur menandai M4 **"🟡 BERJALAN"** dengan sub-tabel —
+> tidak ada klaim berlebih di sini (beda dari M1/M2/M3). Review = verifikasi bagian
+> yang **sudah** diklaim ✅.
+
+### M4a — Service & API (klaim ✅) — TERVERIFIKASI
+
+| Klaim | Kenyataan | Verdict |
+|-------|-----------|:-------:|
+| `question-service.ts` (create/list/get/update/delete/status/flag) | ada; 449 baris | ✅ |
+| FSM status `draft→review→ready→archived` | `question-fsm.ts`; transisi eksplisit | ✅ |
+| Guard `assertReady` (422 `NOT_READY`) | `NotReadyError`; stimulus dikecualikan | ✅ |
+| **7 endpoint** + rate limit + izin per-route | persis 7 (GET/POST/GET/PATCH/DELETE/PATCH/PATCH) | ✅ |
+| **21 tes integrasi DB** | 21, **bermakna** (invarian DB, FSM, izin, transaksi, audit) | ✅ |
+| Proyeksi kolom aman (S3) | `questionColumns`/`optionColumns` + `canSeeAnswerKey` | ✅ |
+
+**Uji:** `pnpm test:db` → **21/21 lulus** (3.09s). Pagar "jangan uji ke DB dev" ada.
+
+**Uji keamanan S3 (kritis) — LOLOS:**
+- `canSeeAnswerKey`: admin/teacher/reviewer ✅; **agent & machine ❌** (teruji,
+  termasuk multi-peran `machine+teacher`→boleh, `agent+machine`→tidak) — ada tes khusus.
+- API `/api/questions/[id]` pakai `getQuestion(viewer)` (proyeksi aman), **bukan**
+  `getQuestionInternal()`.
+- 2× `.select()` tanpa kolom **hanya** di `getQuestionInternal` (internal, untuk
+  `assertReady`) — disengaja & didokumentasikan. **Bukan** pelanggaran S3.
+- Diuji live: admin (dev bypass) melihat `answerKey` ✅ benar; `deletedAt` muncul
+  sengaja (UI tandai terhapus).
+
+### M4b — Halaman Daftar (klaim ✅) — TERVERIFIKASI
+
+| Klaim | Kenyataan | Verdict |
+|-------|-----------|:-------:|
+| Kartu + filter + pencarian + paginasi | `bank-soal-view.tsx`, 15 tes komponen | ✅ |
+| KaTeX toleran | `math-content` renderer; e2e "KaTeX ter-render" | ✅ |
+| Hook `useQuestions`, `useReference` (React Query) | ada | ✅ |
+| Responsif (filter → Sheet mobile) | `Sheet` + `lg:hidden`; e2e drawer | ✅ |
+
+### Temuan
+
+#### 🟠 T-M4-1 — Dead links aktif ke `/bank-soal/baru` & `/bank-soal/[id]` (404)
+
+**6 tautan** di UI menunjuk rute yang **belum ada** (M4c):
+- `page.tsx:91` ("Buat Soal" di dasbor), `:101` (kartu → detail)
+- `bank-soal-view.tsx:181,202` (tombol "Buat Soal"), `:210` (kartu → detail)
+
+**Diuji live: 404** (`/bank-soal/baru` → 404, `/bank-soal/{id}` → 404).
+**Dampak:** tombol utama "Buat Soal" & klik kartu **mengarah ke halaman error**.
+**Bukan cacat kode** (wajar untuk milestone setengah jalan) — tapi **UX rusak** yang
+terlihat pengguna. **Perbaikan:** bangun M4c (rute + editor). Sampai itu, tombol
+"Buat Soal" sebaiknya `disabled` + tooltip "segera" ATAU diarahkan ke halaman
+placeholder ramah. → **menjadi pekerjaan M4c.**
+
+#### 🟡 T-M4-2 — Tautan "Buat Soal" di dasbor tak konsisten dgn halaman daftar
+
+Keduanya ke `/bank-soal/baru` (akan benar setelah M4c), tapi perlu dipastikan
+kembali konsisten saat M4c dibangun.
+
+### Kesimpulan M4 (sejauh yang dibangun)
+
+M4a & M4b **kokoh dan terverifikasi**: 7 endpoint, 21 tes integrasi DB lulus,
+FSM + guard bekerja, **keamanan S3 diuji tuntas** (agent/machine tak dapat kunci),
+halaman daftar responsif + e2e. **M4a/M4b: ✅ LULUS.** M4c/M4d belum dibangun →
+**pekerjaan berlanjut**, bukan temuan.
+
+---
+
+## M4c — Editor & Detail — **PEKERJAAN BERIKUTNYA**
