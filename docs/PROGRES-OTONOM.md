@@ -1,32 +1,57 @@
-# PROGRES OTONOM — Review per-Milestone
+# PROGRES OTONOM — Review & Pembangunan Milestone
 
-> **Konteks:** pemilik produk minta agent melanjutkan review M3→M12 otonom
-> ("nanti kalau green lanjutin aja sampai milestone terakhir").
-> Aturan main: tiap milestone **diverifikasi terhadap kenyataan** (kode/DB/tes/e2e),
-> temuan dicatat di `REVIEW-PER-MILESTONE.md`, diperbaiki bila jelas, gate wajib
-> hijau (tsc 0 · lint 0 · unit · e2e bila relevan) sebelum commit.
+> **Konteks:** pemilik produk minta agent melanjutkan review M1→M12 + membangun
+> milestone yang belum selesai ("kalau green lanjutin aja sampai milestone terakhir").
+> Aturan: verifikasi terhadap kenyataan (kode/DB/tes/e2e), catat temuan, perbaiki
+> bila jelas, gate hijau (theme:check · tsc · lint · unit · db · e2e) sebelum commit.
 > **JANGAN** ubah schema/arsitektur tanpa persetujuan (AGENTS.md §2).
 
-## Status
+## Ringkasan status
 
-| Milestone | Review | Catatan |
+| Milestone | Status | Catatan |
 |-----------|:------:|---------|
 | M1 Skema DB | ✅ LULUS | 🔴 migrasi dari nol diperbaiki & terverifikasi |
 | M2 Auth & Peran | ✅ LULUS | 🟠 matriks diselaraskan; 🟡 login/forbidden → utang M15 |
-| M3 Tema & Shell | ✅ LULUS | 🔴 klaim WCAG palsu → **diimplementasikan** (16/16 lulus); audit shadcn |
-| M4 Bank Soal | ✅ **SELESAI** | M4a/b ✅ LULUS; M4c (editor+detail) & M4d (telaah+pengaturan) **dibangun**; dead-link ditutup; e2e 10/10 |
-| M5 Taksonomi | 🔄 berjalan | |
+| M3 Tema & Shell | ✅ LULUS | 🔴 klaim WCAG palsu → **diimplementasikan** (16/16); audit shadcn |
+| M4 Bank Soal | ✅ SELESAI | M4a/b LULUS; M4c (editor+detail) & M4d (telaah+pengaturan) dibangun |
+| M5 Taksonomi | 🟡 sebagian | **Topik ✅** (pohon, anti-siklus, RESTRICT); Sumber/Event/Label menyusul |
+| M6–M12 | ⏳ belum | |
 
-## M3 — temuan sementara
+## Commit (dari yang terbaru)
 
-- ✅ Mesin tema (`theme:build`) jalan; `defaultTheme="system"` + anti-flash benar
-- ✅ Radix → Base UI **bersih total** (0 sisa, 18 file)
-- ✅ Responsif **satu kode** (sidebar shadcn resmi, bukan kode terpisah);
-  `useMediaQuery`/`useIsMobile` pakai `useSyncExternalStore` (hydration-safe)
-- ✅ e2e tema 10/10 + responsif 6/6 lulus
-- 🔴 **T-M3-1: klaim "Verifikasi WCAG otomatis" TIDAK ADA** — `scripts/theme/`
-  hanya `build.ts` (konversi OKLCH), **tak ada** hitung kontras. `A11Y.md:23`
-  & `:32` mencentang `[x]` "kontras terverifikasi mesin" tapi `:79` mengaku
-  `[ ]`. **Perlu:** implementasi `theme:check` (hitung rasio kontras WCAG).
-- 🟡 **T-M3-2:** variabel font mono dinamai `--font-geist-mono` padahal Roboto Mono.
-- (audit shadcn selesai → commit `b05780c`)
+| Commit | Isi |
+|--------|-----|
+| `4578a85` | M5 Topik: service+API+UI, anti-siklus, RESTRICT; fix cacat bundel klien |
+| `73e2516` | M4d: Telaah + Pengaturan (M4 penuh) |
+| `2aa6dd5` | M4c: editor soal & detail (11 tipe) |
+| `3d25c0d` | Review M4 (M4a/b LULUS) |
+| `24c0072` | M3: verifikasi WCAG nyata + LULUS |
+| `b05780c` | Optimasi shadcn |
+| `3164e6b` | M2: enrichment teacher/reviewer (keputusan pemilik) |
+| `fe6ded6` | Review M2 |
+| `0fcc2d1` | Review M1 LULUS |
+| `cbc7160` | Fix migrasi dari nol (M1) |
+
+## Laporan lengkap
+
+- `docs/REVIEW-PER-MILESTONE.md` — temuan & perbaikan tiap milestone (M1–M4).
+- `docs/RENCANA-SOAL.md` — 11 tipe soal (M4c).
+
+## Utang / pekerjaan berikutnya
+
+1. **M5 lanjutan** — Sumber, Event, Label (pola CRUD mirip Topik) + `RENCANA-TAKSONOMI.md`.
+2. **M4c lanjutan** — UI interaktif `matrix_grid`/`matching`, tambah/hapus opsi dinamis.
+3. **M15** — halaman login & forbidden (utang M2).
+4. **Produksi** — role DB non-superuser (S10).
+
+## Pengingat arsitektur (pelajaran)
+
+- **Komponen klien JANGAN impor `@/lib/services/*`** (menarik `@/lib/db`→`fs`→
+  bundel browser pecah). Logika murni → file terpisah tanpa DB (mis.
+  `src/lib/taxonomy/tree.ts`). Ditemukan & diperbaiki di M5.
+
+## Riwayat M3 (temuan asli — sudah diselesaikan)
+
+- 🔴 klaim "Verifikasi WCAG otomatis" palsu → dibangun `theme:check` (16/16) ✅
+- 🟡 `--font-geist-mono` → `--font-roboto-mono` ✅
+- ✅ Radix → Base UI bersih total (0 sisa); responsif satu-kode
