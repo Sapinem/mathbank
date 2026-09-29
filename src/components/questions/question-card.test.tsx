@@ -11,7 +11,7 @@ function q(over: Partial<PublicQuestion> = {}): PublicQuestion {
     childOrder: 0,
     questionType: "single_choice",
     difficulty: 3,
-    cognitiveLevel: "C2",
+    cognitiveLevel: "understand",
     grade: "SMA-11",
     contentMarkdown: "Berapa $2+2$?",
     dataPayload: {},
