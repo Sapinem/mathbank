@@ -2,7 +2,7 @@
 
 > **Dokumen ini menjawab:** *Urutan pembangunan MathBank — apa dulu, apa kemudian, kapan selesai?*
 > **Status:** 🟢 aktif — M0–M3 ✅ · M4a/M4b ✅ · lintas-milestone P1–P13 ✅ · **M4c siap dikerjakan**.
-> **Versi:** 2.0 · **Tanggal:** 2026-09-30
+> **Versi:** 2.1 · **Tanggal:** 2026-09-30
 > **Rujukan:** `PRD.md` (ruang lingkup), `DESAIN-PER-LAPISAN-MATHBANK.md` (L1–L9), `PETA-DOKUMEN.md`, `KEAMANAN.md`, `CATATAN-PUTUSAN.md`.
 
 ---
@@ -29,7 +29,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M | Nama | Prioritas | Dependensi | Status |
 |---|------|-----------|------------|:------:|
 | M0 | Fondasi | 🔴 | — | ✅ |
-| M1 | Skema Database | 🔴 | M0 | ✅ |
+| M1 | Skema Database | 🔴 | M0 | ✅ **· direview (1 fix)** |
 | M2 | Auth & Peran | 🔴 | M1 | ✅ |
 | M3 | Tema & Shell | 🔴 | M2 | ✅ |
 | **M4** | **Bank Soal (CRUD)** | 🔴 | M3 | 🟡 **M4a/M4b ✅ · M4c/M4d ⬜** |
@@ -473,6 +473,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 | Versi | Tanggal | Perubahan |
 |-------|---------|-----------|
+| 2.1 | 2026-09-30 | Review M1 (temuan migrasi tak reproduktif → diperbaiki); +S10 (role DB produksi non-superuser) |
 | **2.0** | **2026-09-30** | **Rombak menyeluruh:** tambah **Fase 3 (M13–M17)** menutup utang keamanan (S4–S9), kualitas tes, UI/UX, observabilitas, dokumentasi rilis; perbarui P1–P13 (audit Base UI, akses LAN); tandai M4d sebagai sub-milestone; tambah dokumen pendukung yang belum ditulis (M4–M8); perbarui Langkah Berikutnya |
 | 1.1 | 2026-09-29 | Sinkronkan kenyataan: M0–M3 ✅, M4 dipecah M4a–M4d, tabel **P1–P9**, Langkah Berikutnya |
 | 1.0 | 2026-09-29 | Draft awal |

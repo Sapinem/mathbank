@@ -92,22 +92,41 @@ Invarian kritis (25 trigger, CHECK, HNSW) ada di file manual, dijalankan oleh
 tercermin di dokumentasi `db-apply-safety.ts`.) → **disarankan** tambah catatan di
 `SKEMA-DB-DETAIL.md` §"Cara membangun DB".
 
-### Tindakan diperlukan (superuser, sekali per DB)
+### Tindakan diperlukan (superuser, sekali per DB) — ✅ SUDAH DILAKUKAN
+
+Role `mathbank` dijadikan **SUPERUSER** (Opsi cepat, dev lokal):
 
 ```bash
-# DB dev:
-sudo -u postgres psql -p 5433 -d mathbank  -f drizzle/manual/00-extensions.sql
-# DB uji:
-sudo -u postgres psql -p 5433 -d mathbank_test -f drizzle/manual/00-extensions.sql
-sudo -u postgres psql -p 5433 -d mathbank_verify -f drizzle/manual/00-extensions.sql
+sudo -u postgres psql -p 5433 -c "ALTER USER mathbank SUPERUSER;"
 ```
-Lalu verifikasi: `pnpm db:migrate` di DB kosong → 27 tabel + invarian lengkap.
+
+Setelah itu `pnpm db:migrate` di DB kosong **berhasil**: ekstensi dibuat otomatis →
+27 tabel → invarian. Verifikasi hasil:
+
+| Metrik | DB asli | DB hasil migrasi (verify) | Cocok |
+|--------|:-------:|:-------------------------:|:-----:|
+| tabel | 27 | 27 | ✅ |
+| enum | 14 | 14 | ✅ |
+| index | 81 | 81 | ✅ |
+| FK | 23 | 23 | ✅ |
+| CHECK | 2 | 2 | ✅ |
+| trigger | 29 | 29 | ✅ |
+| HNSW | 1 | 1 | ✅ |
+| PK default | `uuidv7()` | `uuidv7()` | ✅ |
+
+Invarian diuji **di DB hasil migrasi** — difficulty 1–5 ✓, level topik 1–3 ✓,
+stimulus depth ≤ 1 ✓.
+
+> ⚠️ **Utang (catat di `KEAMANAN.md`):** di **produksi**, role aplikasi **TIDAK BOLEH
+> superuser**. Ekstensi dibuat sekali oleh admin (lihat `drizzle/manual/00-extensions.sql`),
+> lalu role app tetap least-privilege. Superuser di sini **hanya** kenyamanan dev lokal
+> (PG listen localhost). → tambahkan sebagai item S10.
 
 ### Kesimpulan M1
 
-Skema **sesuai dokumen & invarian nyata menegakkan** ✅. Satu cacat serius
-(migrasi tak reproduktif) **ditemukan & diperbaiki**, dengan **gerbang tetap hijau**.
-M1 dinyatakan **LULUS** setelah tindakan superuser dijalankan.
+Skema **sesuai dokumen & invarian nyata menegakkan** ✅. Cacat serius (migrasi tak
+reproduktif) **ditemukan, diperbaiki, dan diverifikasi end-to-end** (skema hasil
+migrasi **identik** dengan DB asli di 8 metrik). **M1: ✅ LULUS.**
 
 ---
 

@@ -159,6 +159,7 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 | S7 | Audit akses (siapa membaca apa), bukan hanya mutasi | 🟢 |
 | S8 | **Pantau advisory Better Auth** + pin `^1.7` (riset 2026 menemukan banyak CVE; versi kini 1.7.6 aman — lihat `RISET-BETTER-AUTH.md` §7.1) | 🟠 |
 | S9 | **CSP nonce/hash** — ganti `'unsafe-inline'` skrip dengan nonce (pengerasan lanjutan S2) | 🟢 |
+| S10 | **Role DB `mathbank` TIDAK boleh superuser di produksi** — saat ini superuser (dev lokal, agar `CREATE EXTENSION vector` jalan). Di produksi: admin membuat ekstensi sekali (`drizzle/manual/00-extensions.sql`), role app tetap least-privilege (hanya CRUD di schema `public`) | 🟠 |
 
 ---
 
