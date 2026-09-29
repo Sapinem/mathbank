@@ -130,6 +130,86 @@ migrasi **identik** dengan DB asli di 8 metrik). **M1: ✅ LULUS.**
 
 ---
 
-## M2 — *menunggu review*
+## M2 — Auth & Peran
+
+**Direview:** 2026-09-30 · **Verdict:** ✅ **LULUS** (2 temuan dokumen, 0 cacat kode)
+
+### Verifikasi klaim (terhadap kode & perilaku)
+
+| Klaim MILESTONE | Kenyataan | Verdict |
+|-----------------|-----------|:-------:|
+| Better Auth setup (session, cookie) | `server.ts`: session 7 hari, cookie, email+password | ✅ |
+| Tabel user & peran (multi-role) | `user_roles` M:N; `rolesOf()` ambil semua peran | ✅ |
+| Modul `auth/` (roles/permissions/guards/actor) | 6 file: `roles.ts`, `permissions.ts`, `guards.ts`, `actor.ts`, `resolve.ts`, `server.ts` | ✅ |
+| Matriks izin L1 (5 peran) | 15 permission × 5 peran = **75 sel** | ✅ |
+| Pembungkus route `withRoute` | `route-wrapper.ts`: auth, permission, query, body, rateLimit, 401/403/422/429 | ✅ |
+| `GET /api/auth/me` (identitas benar) | `{"id":"dev-user","name":"Dev User","roles":["admin"]}` (dev bypass) | ✅ |
+| Halaman login + logout | ⚠️ **TIDAK ADA halaman login** (lihat T-M2-1) | ❌ |
+| Forbidden page | ⚠️ **TIDAK ADA halaman 403** (lihat T-M2-2) | ❌ |
+
+### Uji perilaku
+
+| Uji | Hasil |
+|-----|:-----:|
+| `/api/auth/me` dengan dev bypass | ✅ `Dev User/admin` |
+| `/api/auth/me` tanpa auth (produksi) | ✅ `401 UNAUTHORIZED` |
+| `/api/questions` tanpa auth (produksi) | ✅ `401` |
+| `withRoute` paksa `mustChangePassword` | ✅ `403 "Harus ganti password dulu"` |
+| Guard dipakai di service (`assertCan`) | ✅ 7 tempat (`create/edit/setReady/archive/flag/delete`) |
+| Matriks izin diuji (75 sel) | ✅ 63 tes auth, `EXPECTED` independen (bukan salin) |
+| Multi-role = union izin (`yes > own > no`) | ✅ diuji (`teacher+reviewer` → boleh setReady) |
+| Pagar dev bypass (`NODE_ENV=production` → mati) | ✅ `resolve.ts` memeriksa lebih dulu |
+
+### Temuan
+
+#### 🟡 T-M2-1 — Tidak ada halaman login (MILESTONE salah centang)
+
+MILESTONE M2 mencentang `[x] Halaman login + logout`. **Halaman login tidak ada** —
+tidak ada rute `/login`/`/masuk`, tak ada `signIn` di kode. Yang ada hanya **tombol
+"Keluar"** di dropdown pengguna (`sidebar-user.tsx` → `/api/auth/sign-out`).
+Autentikasi manusia hanya jalan lewat **API** Better Auth; UI login belum dibuat.
+**Dampak:** tanpa dev bypass, pengguna manusia tak bisa masuk (hanya 401).
+**Catatan:** ini konsisten dengan dev bypass yang aktif selama pengembangan. Login UI
+perlu ditambahkan sebelum deploy (masuk **M13/M15** atau sub-task tersendiri).
+
+#### 🟡 T-M2-2 — Tidak ada halaman Forbidden (403)
+
+MILESTONE mencentang `[x] Forbidden page`. **Tidak ada** rute/halaman 403. Error 403
+hanya dikembalikan sebagai JSON di API. `ForbiddenError` ada (dipakai guards), tapi
+tak ada UI-nya. (Untuk app shell, ini belum krusial — error muncul sebagai pesan.)
+
+#### 🟠 T-M2-3 — Divergensi matriks dokumen L1 vs kode (3 sel)
+
+`DESAIN-PER-LAPISAN-MATHBANK.md` (tabel "Matriks Izin Final") **berbeda** dengan
+`permissions.ts`:
+
+| Aksi | Dokumen L1 | Kode | Sumber keputusan |
+|------|-----------|------|------------------|
+| Kelola taksonomi | teacher ✅, reviewer ❌, agent ❌, machine ❌ | teacher/reviewer/agent `own`, machine `yes` | `RIWAYAT-KEPUTUSAN.md:68` (bukan admin-only) → **kode benar** |
+| Enrichment | teacher ✅, reviewer ✅, machine ❌ | teacher ❌, reviewer ❌, machine `yes` | kode lebih ketat; **perlu konfirmasi** |
+| Buat soal (machine) | ❌ | `yes` (ingest hasilkan draft) | komentar kode: ingest → draft → **kode benar** |
+| Ingest batch | ada baris | **tidak ada permission** | belum diimplementasi (M9) |
+
+**Verdict:** kode mencerminkan keputusan **yang lebih baru** (`RIWAYAT-KEPUTUSAN.md`),
+tetapi **tabel di dokumen L1 belum diperbarui** → pembaca bisa salah paham.
+**Perbaikan:** perlakukan `permissions.ts` sebagai **sumber kebenaran**, lalu
+**selaraskan tabel L1** (atau beri catatan "lihat `permissions.ts`"). Enrichment
+teacher/reviewer perlu **konfirmasi pemilik produk** (apakah guru boleh memicu AI
+enrichment manual?).
+
+#### 🟡 T-M2-4 — Jumlah permission: dokumen bilang 16, kode 15
+
+MILESTONE/KONTRAK menulis "16 permissions × 5 roles = 80 sel"; nyatanya **15
+permission = 75 sel**. Perbaiki angka (kecil, tapi akurasi).
+
+### Kesimpulan M2
+
+Inti M2 **kokoh**: matriks 75 sel teruji, guard dipakai konsisten di service & route,
+multi-role union benar, pagar produksi ada, respons 401/403/422/429 berformat tunggal.
+**Cacat: 2 klaim dokumen berlebih (login & forbidden page belum ada) + divergensi
+tabel L1.** Semua **diperbaiki/dicatat** di bawah. **M2: ✅ LULUS** (dengan utang UI
+yang dicatat ke M13/M15).
+
+---
 
 ## M3 — *menunggu review*

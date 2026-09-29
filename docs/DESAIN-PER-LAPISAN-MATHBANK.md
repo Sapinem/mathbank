@@ -37,23 +37,36 @@
 
 ## Matriks Izin Final
 
+> ⚠️ **Sumber kebenaran = `src/lib/auth/permissions.ts`** (15 permission × 5 peran = 75 sel).
+> Tabel di bawah adalah **ringkasan**; bila berbeda, kode yang menang. (Review M2,
+> 2026-09-30 — tabel ini sebelumnya menyimpang di beberapa sel.)
+
 | Aksi | admin | teacher | reviewer | agent | machine |
 |------|:---:|:---:|:---:|:---:|:---:|
 | Lihat soal | ✅ | ✅ | ✅ | ✅ | ❌ |
-| Buat soal | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Buat soal | ✅ | ✅ | ✅ | ✅ | ✅ *(ingest → draft)* |
 | Edit soal **sendiri** | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Edit soal **orang lain** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Set status `ready` | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Archive | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Flag (perlu perhatian) | ✅ | own | ✅ | ✅ | ❌ |
 | Hapus soal **sendiri** | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Hapus soal **orang lain** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Hard-delete** soal sendiri | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Kelola taksonomi** (topik, dll) | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Kelola pengguna & sistem | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Enrichment soal | ✅ | ✅ | ✅ | ✅* | ❌ |
-| Kirim ingest (batch) | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **Kelola taksonomi** | ✅ | own | own | own | ✅ |
+| Kelola sumber/event | ✅ | own | own | own | ❌ |
+| Kelola paket soal | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Kelola aset media | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Kelola pengaturan | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Kelola pengguna | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Enrichment soal | ✅ | ❌ | ❌ | ✅* | ✅ |
+| Kirim ingest (batch) | ✅ | — | — | — | ✅ *(endpoint `/api/v1/ingest/*`, M9)* |
 
-> `*` **Izin enrichment agen** ditambahkan khusus (keputusan pemilik produk):
-> agen AI boleh mengambil peran enrichment **dengan izin tertentu** (dibatasi).
+> `own` = teacher/reviewer/agent hanya untuk sumber daya **miliknya** (`authorId === actor.id`).
+> `*` **Izin enrichment agen** = keputusan pemilik produk (agen AI boleh enrichment terbatas).
+> **Catatan:** `teacher`/`reviewer` **tidak** memicu enrichment via izin
+> `enrichment:run` — guru mengedit langsung di UI (lihat §Enrichment 3 jalur).
+> **Ingest batch** belum jadi permission tersendiri (diimplementasi di M9).
 
 ## Enrichment — 3 jalur
 
