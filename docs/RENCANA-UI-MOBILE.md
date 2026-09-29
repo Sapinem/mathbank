@@ -1,13 +1,55 @@
-# RENCANA UI — Versi Mobile
+# RENCANA UI — Responsif (Adaptasi Layar)
 
-> **Dokumen ini menjawab:** *Bagaimana MathBank tampil & bekerja di ponsel?*
+> **Dokumen ini menjawab:** *Bagaimana MathBank beradaptasi dari layar besar ke kecil?*
 > **Status:** 📝 Rancangan v1 — dasar implementasi.
-> **Basis:** `RENCANA-UI.md` §4b (Responsif) + arah Linear/Vercel.
+> **Basis:** `RENCANA-UI.md` §4b + arah Linear/Vercel.
 > **Prinsip induk:** **"Kelola di desktop, lihat di mobile."**
 
 ---
 
-## 1. Sasaran & Bukan-Sasaran
+## 0. Ringkasan Satu Halaman
+
+| Ukuran | Layout | Sidebar | Kerja utama |
+|--------|--------|---------|-------------|
+| **Desktop** `≥1024` | Penuh, multi-kolom | Tetap (collapsible) | **Semua** (editor, paket, kelola) |
+| **Tablet** `640–1023` | 1–2 kolom | Drawer | **Sebagian besar** (lihat + telaah) |
+| **Mobile** `<640` | 1 kolom | Drawer | **Lihat + telaah** (editor ditunda) |
+
+**Satu batas kunci:** `lg` (1024px) — di bawahnya sidebar jadi drawer.
+**Dua penyesuaian wajib:** touch target ≥44px, jangan andalkan `hover:`.
+
+---
+
+## 1. Matriks Adaptasi (elemen × ukuran)
+
+Ini **inti** rancangan — tiap elemen, di tiap ukuran:
+
+| Elemen | Desktop `≥1024` | Tablet `640–1023` | Mobile `<640` |
+|--------|-----------------|-------------------|---------------|
+| **Sidebar** | Tetap, collapsible (`w-60`/`w-14`) | Drawer | Drawer |
+| **Header** | Breadcrumb penuh + kotak cari "Cari… ⌘K" | ☰ + judul + ikon 🔍 | ☰ + judul + ikon 🔍 |
+| **Breadcrumb** | Semua tingkat | Semua tingkat | **Hanya tingkat terakhir** |
+| **Cari** | Kotak dengan teks + kbd | Kotak ringkas | **Ikon saja** |
+| **Command palette** | ⌘K | ⌘K / ketuk 🔍 | Ketuk 🔍 |
+| **Filter (Bank Soal/Telaah)** | Panel kiri 256px | Sheet | Sheet |
+| **Kartu soal** | 3 kolom metadata sebaris | 3 kolom sebaris | **Ringkas** (maks 3 badge) |
+| **Grid dasbor** | 6 kolom | 3 kolom | **2 kolom** |
+| **Tabel** | Penuh | Gulir-x | Gulir-x |
+| **Tabs** | Sejajar | Sejajar | **Gulir-x (chip)** |
+| **Modal** | Tengah | Tengah | **Bottom sheet** |
+| **Menu (⋯)** | Dropdown | Dropdown | **Bottom sheet** |
+| **Tombol aksi** | Sejajar kanan | Sejajar kanan | **Full-width, sticky bawah** |
+| **Paginasi** | Angka + prev/next | Prev/next | **"Muat lebih"** |
+| **Toast** | Pojok kanan-bawah | Kanan-bawah | **Atas-tengah, lebar** |
+| **Form input** | 2 kolom | 1–2 kolom | **1 kolom** |
+| **Editor soal** | **Aktif** | Bisa (sempit) | **Pengalih desktop-saja** |
+| **Padding halaman** | `px-6` | `px-4` | `px-4` |
+
+Catatan: **Tablet ≈ desktop untuk fitur** (bisa kerja), **mobile = lihat** (editor ditunda). Perbedaan utama tablet↔desktop = sidebar (drawer vs tetap).
+
+---
+
+## 2. Sasaran & Bukan-Sasaran
 
 ### ✅ Sasaran (yang HARUS enak di HP)
 | Alur | Kenapa |
@@ -32,7 +74,7 @@
 
 ---
 
-## 2. Breakpoint & Target
+## 3. Breakpoint & Target
 
 | Nama | Lebar | Perilaku |
 |------|-------|----------|
@@ -45,7 +87,7 @@
 
 ---
 
-## 3. Kerangka (Shell) di Mobile
+## 4. Kerangka (Shell) di Mobile
 
 ```
 ┌─────────────────────────────────┐
@@ -90,7 +132,7 @@
 
 ---
 
-## 4. Pola Layout Mobile
+## 5. Pola Layout Mobile
 
 ### 4.1 Pola A — "Daftar" (Bank Soal, Telaah, Paket)
 ```
@@ -188,24 +230,7 @@
 
 ---
 
-## 5. Komponen yang Menyesuaikan
-
-| Komponen | Desktop | Mobile |
-|----------|---------|--------|
-| **Sidebar** | Tetap, collapsible | Drawer (Sheet) |
-| **Header** | Breadcrumb penuh + kotak cari | ☰ + judul + ikon 🔍 |
-| **Filter panel** | Sidebar kiri 256px | Sheet (tombol "Filter") |
-| **Tabel** | Penuh | Gulir horizontal |
-| **Tabs** | Sejajar | Gulir horizontal (chip) |
-| **Modal/Dialog** | Tengah | **Bottom sheet** (dari bawah) |
-| **Menu (⋯)** | Dropdown | Bottom sheet |
-| **Tombol aksi** | Sejajar kanan | Full-width, sticky bawah |
-| **Toast** | Pojok kanan bawah | Atas-tengah (lebar) |
-| **Form** | 2 kolom | 1 kolom, label di atas |
-
----
-
-## 6. Tema & Sentuhan Mobile
+## 6. Tema & Sentuhan (Detail)
 
 | Aspek | Aturan |
 |-------|--------|
@@ -219,7 +244,7 @@
 
 ---
 
-## 7. Rencana Implementasi (Fase R = Responsif)
+## 7. Rencana Implementasi (Fase R)
 
 Sisipan sebelum **M4c**. Urutan:
 

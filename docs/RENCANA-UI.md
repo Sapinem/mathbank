@@ -197,7 +197,7 @@ Dua breakpoint saja (`lg` sebagai batas) — cukup untuk target "mobile lihat".
 Bank soal = pekerjaan **presisi** (rumus, banyak opsi, filter kompleks) yang tak nyaman di HP.
 Memaksakan mobile-first = biaya besar, manfaat kecil. Jadi: **desktop untuk kerja, mobile untuk lihat.**
 
-➡️ **Rancangan mobile lengkap: `RENCANA-UI-MOBILE.md`** (shell, pola layout, komponen, fase R1–R7).
+➡️ **Rancangan responsif lengkap: `RENCANA-UI-MOBILE.md`** (matriks adaptasi, shell, pola layout, fase R1–R7).
 
 ---
 
