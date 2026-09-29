@@ -157,6 +157,48 @@ Ingest & Integrasi (bertab):
 
 ---
 
+## 4b. Responsif (Sisipan — sebelum M4c)
+
+> **Prinsip: "Kelola di desktop, lihat di mobile."**
+> Guru **menyusun & mengelola** di desktop (editor, filter, paket — kerja berat).
+> Di HP: **melihat & menelaah cepat** (baca soal, setujui/tolak, cek daftar).
+
+**Target perangkat:** Desktop utama → tablet layak → **mobile "bisa dilihat & ditelaah"** (bukan dioptimalkan penuh).
+
+### Breakpoint
+
+| Breakpoint | Sidebar | Konten |
+|------------|---------|--------|
+| `< lg` (< 1024px) | **Drawer** (tombol ☰), overlay | 1 kolom, padding `px-4` |
+| `≥ lg` | Tetap (collapsible) | Multi-kolom |
+
+Dua breakpoint saja (`lg` sebagai batas) — cukup untuk target "mobile lihat".
+
+### Aturan per-elemen
+
+| Elemen | Mobile (`< lg`) | Desktop (`≥ lg`) |
+|--------|-----------------|-------------------|
+| **Sidebar** | Drawer + overlay (shadcn `Sheet`); tutup setelah pilih | Tetap, collapsible |
+| **Header** | ☰ + judul halaman; breadcrumb dipangkas; cari jadi ikon; tema tetap | Breadcrumb penuh + cari + tema |
+| **Filter (Bank Soal/Telaah)** | Tombol "Filter" → Sheet | Sidebar filter tetap |
+| **Tabel** | Scroll horizontal (`overflow-x-auto`) | Penuh |
+| **Grid dasbor** | 2 kolom | 6 kolom |
+| **Tombol aksi** | Full-width di bawah konten | Sejajar kanan |
+| **Command palette** | Tetap (⌘K / tombol cari) | Tetap |
+
+### Bukan sasaran (sadar)
+
+- **Editor soal**: **desktop-saja**. Di mobile → tampilkan catatan "Buka di layar besar untuk mengedit."
+- **Penyusun paket**: sama, desktop-saja.
+- **Drag & drop**: desktop-saja.
+
+### Alasan
+
+Bank soal = pekerjaan **presisi** (rumus, banyak opsi, filter kompleks) yang tak nyaman di HP.
+Memaksakan mobile-first = biaya besar, manfaat kecil. Jadi: **desktop untuk kerja, mobile untuk lihat.**
+
+---
+
 ## 5. Komponen Dasar (M3)
 
 Dari shadcn/ui + kustom (Fase B QBank, disempurnakan):
