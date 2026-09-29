@@ -98,7 +98,7 @@
 └──────────────────────────────────────────────────────────┘
 ```
 
-**Tabel inti: 18** (3 taksonomi baru). Empat relasi M:N (pola WordPress):
+**Tabel inti: 21 domain + 6 auth = 27** (koreksi dari "18" — lihat `SKEMA-DB-DETAIL.md`). Empat relasi M:N (pola WordPress):
 
 ```
 questions ──┬──< question_topics >── topics        (1 utama)

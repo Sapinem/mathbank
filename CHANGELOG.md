@@ -8,6 +8,15 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ## [Belum Dirilis]
 
+### Diubah
+- **Fase 2 audit — rapikan dokumen** (2026-09-29):
+  - `VISION.md` **ditulis ulang untuk MathBank** (sebelumnya QBank-era: MBank-parity, enhancement, multi-tema; kini selaras PRD: bangun-dari-nol, sumber→paket→soal, non-goals).
+  - `ROADMAP.md` → **`docs/arsip/ROADMAP-QBANK.md`** (banner arsip); `RENCANA-MIGRASI-DATA.md` → **`docs/arsip/`** (dibatalkan).
+  - angka **"18 tabel" → 27** di `MILESTONE.md` (3 tempat), `ARSITEKTUR-DATA-FINAL.md`, `ARSITEKTUR-SISTEM-FULL.md`.
+  - `MILESTONE.md`: tabel status milestone + header M1–M3 ditandai ✅ selesai; catatan status 2026-09-29.
+  - `ARSITEKTUR-SISTEM-FULL.md`: banner "sebagian QBank-era" (arsitektur aktif = DESAIN-PER-LAPISAN).
+  - `CETAK-BIRU-MATHBANK.md`: rujukan migrasi & ROADMAP diperbarui (arsip/dibatalkan).
+
 ### Ditambahkan
 - **`docs/PETA-DOKUMEN.md`** — indeks hidup seluruh dokumen (ada + direncanakan) dengan status & tata kelola; mencegah "dokumen lupa".
 - **`docs/KEAMANAN.md`** — model keamanan: aset, threat model (STRIDE), autentikasi, RBAC, permukaan berisiko, utang keamanan (S1–S7), daftar periksa pra-produksi.

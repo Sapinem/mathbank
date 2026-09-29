@@ -1,5 +1,9 @@
 # Rencana Migrasi Arsitektur Data QBank v2
 
+> 📦 **ARSIP — DIBATALKAN.**
+> Migrasi data QBank **dibatalkan** (PRD §Non-Goals; ADR-0001: bangun dari nol, tanpa data lama).
+> Disimpan sebagai referensi historis / pelajaran saja.
+
 > **Status:** DRAFT — menunggu ratifikasi sebelum eksekusi.
 > **Prasyarat:** `docs/ARSITEKTUR-DATA-FINAL.md` sudah disetujui.
 > **Prinsip:** Aman, bertahap, dapat dibalik (rollback) di tiap langkah.

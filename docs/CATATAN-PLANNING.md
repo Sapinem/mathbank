@@ -103,6 +103,8 @@ docs/
 
 ## 6. Catatan
 
-- `RENCANA-MIGRASI-DATA.md` — migrasi QBank **dibatalkan**; dokumen ini mungkin tak relevan. **Perlu ditinjau** (hapus/arsipkan/ubah jadi "arsip referensi").
-- `VISION.md` & `ROADMAP.md` masih **berorientasi QBank** — perlu disesuaikan untuk MathBank.
-- Dokumen QBank `PRD-SYSTEM-ARCHITECTURE.md` **belum disalin** — mungkin berguna sebagai dasar PRD MathBank (perlu ditinjau).
+> **✅ Diselesaikan 2026-09-29 (Fase 2 audit):**
+- `RENCANA-MIGRASI-DATA.md` → **diarsipkan** (`docs/arsip/`); migrasi QBank dibatalkan.
+- `VISION.md` → **ditulis ulang untuk MathBank**; `ROADMAP.md` → **diarsipkan** (`docs/arsip/ROADMAP-QBANK.md`).
+- Dokumen QBank `PRD-SYSTEM-ARCHITECTURE.md` tidak lagi dirujuk (tidak ada); PRD MathBank berdiri sendiri.
+- Peta dokumen menyeluruh ada di **`PETA-DOKUMEN.md`**.

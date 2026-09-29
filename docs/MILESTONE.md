@@ -21,22 +21,26 @@
 
 ## Peta Milestone
 
-| M | Nama | Prioritas | Dependensi | Perkiraan |
-|---|------|-----------|------------|-----------|
-| M0 | Fondasi | 🔴 | — | ✅ selesai |
-| M1 | Skema Database | 🔴 | M0 | 2–3 hari |
-| M2 | Auth & Peran | 🔴 | M1 | 2–3 hari |
-| M3 | Tema & Shell | 🔴 | M2 | 3–4 hari |
-| M4 | Bank Soal (CRUD) | 🔴 | M3 | 5–7 hari |
-| M5 | Taksonomi | 🔴 | M4 | 2–3 hari |
-| M6 | Pencarian | 🔴 | M5 | 3–4 hari |
-| M7 | Paket Soal | 🔴 | M6 | 4–5 hari |
-| M8 | Ekspor Cetak/PDF | 🔴 | M7 | 2–3 hari |
-| — | **MVP SELESAI** | — | — | — |
-| M9 | Ingest PDF | 🟡 | M8 | 5–7 hari |
-| M10 | AI Enrichment | 🟡 | M9 | 4–5 hari |
-| M11 | MCP | 🟡 | M10 | 3–4 hari |
-| M12 | Ekspor Moodle | 🟢 | M8 | 2–3 hari |
+| M | Nama | Prioritas | Dependensi | Perkiraan | Status |
+|---|------|-----------|------------|-----------|:------:|
+| M0 | Fondasi | 🔴 | — | ✅ selesai | ✅ |
+| M1 | Skema Database | 🔴 | M0 | 2–3 hari | ✅ |
+| M2 | Auth & Peran | 🔴 | M1 | 2–3 hari | ✅ |
+| M3 | Tema & Shell | 🔴 | M2 | 3–4 hari | ✅ |
+| M4 | Bank Soal (CRUD) | 🔴 | M3 | 5–7 hari | 🟡 (M4a/M4b ✅, M4c/M4d ⬜) |
+| M5 | Taksonomi | 🔴 | M4 | 2–3 hari | ⬜ |
+| M6 | Pencarian | 🔴 | M5 | 3–4 hari | ⬜ |
+| M7 | Paket Soal | 🔴 | M6 | 4–5 hari | ⬜ |
+| M8 | Ekspor Cetak/PDF | 🔴 | M7 | 2–3 hari | ⬜ |
+| — | **MVP SELESAI** | — | — | — | ⬜ |
+| M9 | Ingest PDF | 🟡 | M8 | 5–7 hari | ⬜ |
+| M10 | AI Enrichment | 🟡 | M9 | 4–5 hari | ⬜ |
+| M11 | MCP | 🟡 | M10 | 3–4 hari | ⬜ |
+| M12 | Ekspor Moodle | 🟢 | M8 | 2–3 hari | ⬜ |
+
+> **Status per 2026-09-29:** M0–M3 ✅ selesai (lihat `CHANGELOG.md` 0.1.0–0.4.0),
+> M4a (service+API) & M4b (halaman daftar) ✅, plus **Fase R (responsif)** & **audit mutu**.
+> Sisa M4: M4c (editor+detail) & M4d (telaah+pengaturan).
 
 **MVP = M1–M8.** Perkiraan total MVP: **~23–32 hari kerja** (asumsi kerja fokus).
 
@@ -63,9 +67,9 @@
 
 ---
 
-## M1 — Skema Database 🔴
+## M1 — Skema Database ✅ SELESAI
 
-**Tujuan:** mewujudkan skema v2 (L7) dalam Drizzle — 18 tabel, enum, relasi, migrasi.
+**Tujuan:** mewujudkan skema v2 (L7) dalam Drizzle — 27 tabel (21 domain + 6 auth), enum, relasi, migrasi.
 
 **Dependensi:** M0
 **Perkiraan:** 2–3 hari
@@ -105,7 +109,7 @@ Pecah jadi 3 bagian agar terkelola:
 - [ ] Index: GIN trigram (`questions`, `sources`, `topics`, `tags`), HNSW (`questions.embedding`), B-tree FK/filter
 - [ ] Invarian CHECK (stimulus 1 level; `ready` wajib `answer_key`; dst)
 - [ ] Migrasi Drizzle (`db:generate`)
-- [ ] **Skrip verifikasi skema** (pastikan 18 tabel & relasi ada) — sebagai tes
+- [x] **Skrip verifikasi skema** (pastikan 27 tabel, trigger, CHECK & index ada) — `pnpm db:verify`
 - [ ] Seeder taksonomi (dari yaml → DB)
 
 ### Kriteria Selesai
@@ -119,7 +123,7 @@ Pecah jadi 3 bagian agar terkelola:
 
 ---
 
-## M2 — Auth & Peran 🔴
+## M2 — Auth & Peran ✅ SELESAI
 
 **Tujuan:** login + multi-role + matriks izin (L1) + pembungkus API (L4).
 
@@ -147,7 +151,7 @@ Pecah jadi 3 bagian agar terkelola:
 
 ---
 
-## M3 — Tema & Shell 🔴
+## M3 — Tema & Shell ✅ SELESAI
 
 **Tujuan:** mesin tema (3 warna sumber) + kerangka UI (sidebar 4 grup, header, ⌘K).
 
@@ -382,7 +386,7 @@ Pecah jadi 3 bagian agar terkelola:
 ## Langkah Berikutnya
 
 **M1 — Skema Database** dimulai setelah dokumen ini diratifikasi.
-Dokumen pertama yang ditulis: **`SKEMA-DB-DETAIL.md`** (bentuk final 18 tabel).
+Dokumen pertama yang ditulis: **`SKEMA-DB-DETAIL.md`** (bentuk final 27 tabel).
 
 ---
 

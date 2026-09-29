@@ -1,5 +1,9 @@
 # Arsitektur Sistem QBank — Menyeluruh (Full Stack)
 
+> ⚠️ **SEBAGIAN QBank-era.** Dokumen ini memetakan sistem **QBank** (23 file schema, 5 tool MCP, dst.).
+> Untuk MathBank, arsitektur aktif ada di **`DESAIN-PER-LAPISAN-MATHBANK.md`** + **`ARSITEKTUR-DATA-FINAL.md`**.
+> Berguna sebagai **referensi/inventaris** apa yang harus ada di MathBank — bukan cetak biru langsung.
+
 > **Status:** DRAFT untuk review pemilik produk.
 > **Melengkapi:** `ARSITEKTUR-DATA-FINAL.md` (yang hanya lapisan data).
 > **Tanggal:** 2026-09-29.
@@ -152,7 +156,7 @@ Dokumen ini memetakan **seluruh lapisan sistem**, bukan hanya DB:
 - **Larangan:** `useMemo`/`useCallback` dilarang (CONSTRAINTS.md:12).
 - **Migrasi:** Drizzle Kit (`drizzle/`).
 
-> **Perubahan besar:** arsitektur data v2 (`ARSITEKTUR-DATA-FINAL.md`) mengubah lapisan ini secara mendalam — 18 tabel inti, `question_sources` dihapus, taksonomi → DB.
+> **Perubahan besar:** arsitektur data v2 (`ARSITEKTUR-DATA-FINAL.md`) mengubah lapisan ini secara mendalam — 27 tabel (21 domain + 6 auth), `question_sources` dihapus, taksonomi → DB.
 
 ---
 

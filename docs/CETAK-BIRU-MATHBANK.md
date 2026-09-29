@@ -155,9 +155,9 @@ react, react-dom, sonner, tailwind-merge, yaml, zod
 - ✅ `ARSITEKTUR-DATA-FINAL.md` — cetak biru data
 - ✅ `ARSITEKTUR-SISTEM-FULL.md` — peta 9 lapisan
 - ✅ `CATATAN-INTERVIEW-ARSITEKTUR.md` — 36 keputusan
-- ✅ `RENCANA-MIGRASI-DATA.md` — untuk impor data nanti
 - ✅ `DESIGN-THEME-FRAMEWORK.md` + `THEME-FRAMEWORK-GUIDE.md` — tema
-- ✅ `VISION.md`, `ROADMAP.md` (ditinjau & disesuaikan)
+- ✅ `VISION.md` (sudah disesuaikan untuk MathBank)
+- 📦 `ROADMAP-QBANK.md` & `RENCANA-MIGRASI-DATA.md` → **arsip** (QBank; migrasi DIBATALKAN)
 
 ---
 
@@ -174,7 +174,7 @@ LANGKAH 6  Services domain (question, source, event, bundle...)
 LANGKAH 7  API layer
 LANGKAH 8  UI (Linear/Vercel — pakai tema yang sudah dirancang)
 LANGKAH 9  Ingest pipeline
-LANGKAH 10 Impor data dari QBank (saat siap — §RENCANA-MIGRASI-DATA)
+LANGKAH 10 (DIBATALKAN) Impor data dari QBank — tak ada migrasi data (ADR-0001)
 ```
 
 ---

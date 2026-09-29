@@ -1,5 +1,9 @@
 # ROADMAP QBank v1.0.0
 
+> 📦 **ARSIP — era QBank. Bukan dokumen aktif.**
+> Rencana eksekusi MathBank ada di **`docs/MILESTONE.md`**. QBank **dipensiunkan** (ADR-0001).
+> Disimpan sebagai referensi historis saja.
+
 > **Dokumen ini menjawab:** *Dalam urutan apa kita mengeksekusi, dan sejauh mana sudah jalan?*
 > **Fondasi:** `VISION.md` (tujuan) · `PRD-SYSTEM-ARCHITECTURE.md` (arsitektur)
 > **Basis verifikasi:** commit `bc135ac` (2026-09-29), dikonfirmasi terhadap kode & DB nyata.

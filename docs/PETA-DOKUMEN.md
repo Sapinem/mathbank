@@ -25,17 +25,17 @@
 
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
-| A1 | `VISION.md` | 🟡 | masih QBank-era → tulis ulang MathBank (audit A1) |
+| A1 | `VISION.md` | ✅ | **diselaraskan untuk MathBank** 2026-09-29 |
 | A2 | `PRD.md` | ✅ | kanonik |
-| A3 | `MILESTONE.md` | 🟡 | M1–M3 belum ditandai selesai |
-| A4 | `ROADMAP.md` | 📦 | QBank-era → arsipkan |
+| A3 | `MILESTONE.md` | ✅ | status M0–M3 & angka 27 diperbarui |
+| A4 | `arsip/ROADMAP-QBANK.md` | 📦 | **diarsipkan** 2026-09-29 |
 | A5 | `CETAK-BIRU-MATHBANK.md` | ✅ | inventaris fitur |
 
 ### Kategori B — Arsitektur & Data
 
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
-| B1 | `ARSITEKTUR-SISTEM-FULL.md` | 🟡 | masih QBank |
+| B1 | `ARSITEKTUR-SISTEM-FULL.md` | ⚠️ | sebagian QBank (referensi), angka 27 diperbaiki |
 | B2 | `ARSITEKTUR-DATA-FINAL.md` | ✅ | |
 | B3 | `DESAIN-PER-LAPISAN-MATHBANK.md` | ✅ | L1–L9 |
 | B4 | `SKEMA-DB-DETAIL.md` | ✅ | sumber kebenaran skema |
@@ -96,7 +96,7 @@
 | G1 | `STRATEGI-INGEST.md` | 🟢 | **belum** — PDF → soal (M9) |
 | G2 | `RENCANA-ENRICHMENT.md` | 🟢 | **belum** — AI embedding/tagging (M10) |
 | G3 | `RENCANA-TAKSONOMI.md` | 🟢 | **belum** — seed & kelola taksonomi (M5) |
-| G4 | `RENCANA-MIGRASI-DATA.md` | 📦 | migrasi QBank dibatalkan → arsipkan |
+| G4 | `arsip/RENCANA-MIGRASI-DATA.md` | 📦 | **diarsipkan** (dibatalkan) 2026-09-29 |
 
 ### Kategori H — Panduan Pengguna
 
@@ -116,7 +116,7 @@
 | 🔴 **Kritis** | `KEAMANAN.md`, `docs/ADR/` | **sekarang** |
 | 🟠 **Penting** | `RENCANA-DEPLOY`, `KONTRAK-API`, `OBSERVABILITAS`, `BACKUP-RECOVERY`, `KAMUS-DATA`, `A11Y`, `CONTRIBUTING` | sebelum produksi / milestone terkait |
 | 🟢 **Menyusul** | `RUNBOOK`, `KEPATUHAN-PRIVASI`, `SLA-SLO`, `PERFORMA`, `GOVERNANCE`, `RENCANA-MCP/EKSPOR/MOODLE`, `STRATEGI-INGEST`, `RENCANA-ENRICHMENT/TAKSONOMI`, `PANDUAN-OPERASIONAL` | saat fitur/tim bertambah |
-| 📦 **Arsip** | `ROADMAP`, `RENCANA-MIGRASI-DATA` (era QBank) | saat merapikan |
+| 📦 **Arsip** | `arsip/ROADMAP-QBANK`, `arsip/RENCANA-MIGRASI-DATA` (era QBank) | ✅ **selesai** 2026-09-29 |
 
 ---
 
