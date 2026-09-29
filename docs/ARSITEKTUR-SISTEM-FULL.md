@@ -78,7 +78,7 @@ Dokumen ini memetakan **seluruh lapisan sistem**, bukan hanya DB:
 | Lapisan | Isi | File |
 |---------|-----|------|
 | **Server state** | React Query (`@tanstack/react-query`) | `src/providers/QueryProvider.tsx` |
-| **Client state** | React Context (tema) | `src/context/ThemeContext.tsx` |
+| **Client state** | React Context (tema) | `src/context/ThemeContext.tsx` *(pola QBank; MathBank pakai `next-themes` di `providers/theme-provider.tsx`)* |
 | **Hooks** | `useQuestionEditor`, `useReviewQueue`, `useSemanticSearch`, `useQuestionExplorer` | `src/hooks/` |
 | **URL state** | Filter tersimpan di query string | `src/lib/url-state.ts` |
 
