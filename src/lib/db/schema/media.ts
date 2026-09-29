@@ -1,3 +1,4 @@
+import { uuidPk } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -19,7 +20,7 @@ import { questions } from "./question";
 export const mediaAssets = pgTable(
   "media_assets",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     title: varchar("title", { length: 255 }).notNull(),
     altText: text("alt_text"),
     caption: text("caption"),
@@ -55,7 +56,7 @@ export const mediaAssets = pgTable(
 export const questionMedia = pgTable(
   "question_media",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     questionId: uuid("question_id").notNull().references(() => questions.id, { onDelete: "cascade" }),
     mediaId: uuid("media_id").notNull().references(() => mediaAssets.id, { onDelete: "restrict" }),
     role: mediaRoleEnum("role").default("content").notNull(),

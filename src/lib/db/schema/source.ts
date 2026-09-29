@@ -1,3 +1,4 @@
+import { uuidPk } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -21,7 +22,7 @@ import { sourceKindEnum } from "./_enums";
 export const sources = pgTable(
   "sources",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     kind: sourceKindEnum("kind").notNull(),
     label: varchar("label", { length: 255 }).notNull(),
     slug: varchar("slug", { length: 255 }).notNull(),
@@ -45,7 +46,7 @@ export const sources = pgTable(
 export const books = pgTable(
   "books",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     sourceId: uuid("source_id")
       .notNull()
       .references(() => sources.id, { onDelete: "cascade" }),
@@ -67,7 +68,7 @@ export const books = pgTable(
 export const institutions = pgTable(
   "institutions",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     sourceId: uuid("source_id")
       .notNull()
       .references(() => sources.id, { onDelete: "cascade" }),

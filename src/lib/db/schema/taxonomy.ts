@@ -1,3 +1,4 @@
+import { uuidPk } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -20,7 +21,7 @@ import { questions } from "./question";
 export const topics = pgTable(
   "topics",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     name: varchar("name", { length: 255 }).notNull(),
     slug: varchar("slug", { length: 255 }).notNull(),
     parentId: uuid("parent_id").references((): AnyPgColumn => topics.id, {
@@ -87,7 +88,7 @@ export const cognitiveLevels = pgTable("cognitive_levels", {
 export const tags = pgTable(
   "tags",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     name: varchar("name", { length: 100 }).notNull(),
     slug: varchar("slug", { length: 100 }).notNull(),
     description: text("description"),

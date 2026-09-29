@@ -31,7 +31,7 @@ QBank memakai `defaultRandom()` = `gen_random_uuid()` (UUIDv4). UUIDv4 acak penu
 
 **Negatif / utang:**
 - **Mengikat ke PG 18** — `uuidv7()` tak ada di versi lebih lama.
-- **⚠️ UTANG KINI:** kode masih `defaultRandom()` (`gen_random_uuid()`) — **belum** dipindah ke `uuidv7()`. Lihat `AUDIT-ARSITEKTUR-DAN-DATA.md` F3. Perlu migrasi + keputusan.
+- **✅ DITERAPKAN 2026-09-29** (migrasi `0003_cloudy_thunderbolt.sql`): kode & DB kini `uuidv7()` (helper `uuidPk()` di `schema/_columns.ts`); `pnpm db:verify` memeriksa agar tak regresi.
 - ID menyiratkan waktu pembuatan (minor info leak).
 
 ## Catatan

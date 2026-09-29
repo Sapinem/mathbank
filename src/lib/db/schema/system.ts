@@ -1,3 +1,4 @@
+import { uuidPk } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -15,7 +16,7 @@ import { auditActionEnum, auditEntityEnum, authorTypeEnum, ingestStatusEnum } fr
 export const appSettings = pgTable(
   "app_settings",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     key: varchar("key", { length: 255 }).notNull(),
     value: jsonb("value").notNull(),
     description: varchar("description", { length: 500 }),
@@ -29,7 +30,7 @@ export const appSettings = pgTable(
 export const auditLogs = pgTable(
   "audit_logs",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     entityType: auditEntityEnum("entity_type").notNull(),
     entityId: varchar("entity_id", { length: 64 }).notNull(),
     action: auditActionEnum("action").notNull(),
@@ -49,7 +50,7 @@ export const auditLogs = pgTable(
 export const ingestQueue = pgTable(
   "ingest_queue",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     title: varchar("title", { length: 255 }).notNull(),
     slug: varchar("slug", { length: 255 }),
     sourceOrigin: varchar("source_origin", { length: 50 }).notNull(),

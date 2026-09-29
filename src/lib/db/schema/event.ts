@@ -1,6 +1,6 @@
+import { uuidPk } from "./_columns";
 import {
   pgTable,
-  uuid,
   varchar,
   text,
   boolean,
@@ -17,7 +17,7 @@ import {
 export const events = pgTable(
   "events",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     name: varchar("name", { length: 150 }).notNull(),
     shortname: varchar("shortname", { length: 50 }).notNull(),
     fullname: varchar("fullname", { length: 255 }).notNull(),

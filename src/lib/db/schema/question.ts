@@ -1,3 +1,4 @@
+import { uuidPk } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -41,7 +42,7 @@ const vector1024 = customType<{ data: number[]; driverData: string }>({
 export const questions = pgTable(
   "questions",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     parentId: uuid("parent_id").references((): AnyPgColumn => questions.id, {
       onDelete: "restrict", // ⚠️ T1: BUKAN cascade — cegah hapus stimulus beranak
     }),
@@ -121,7 +122,7 @@ export const questions = pgTable(
 export const questionOptions = pgTable(
   "question_options",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     questionId: uuid("question_id")
       .notNull()
       .references(() => questions.id, { onDelete: "cascade" }),

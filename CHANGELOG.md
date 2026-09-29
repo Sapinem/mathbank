@@ -9,6 +9,7 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Diubah
+- **`uuidv7()` diterapkan** (Fase 2 audit, ADR-0003): PK semua tabel domain kini `uuidv7()` (PK berurutan waktu) — sebelumnya `gen_random_uuid()` (UUIDv4). Helper `uuidPk()` di `schema/_columns.ts`; migrasi `0003_cloudy_thunderbolt.sql`; `pnpm db:verify` memeriksa agar tak regresi. Terverifikasi di DB bersih.
 - **Fase 2 audit — rapikan dokumen** (2026-09-29):
   - `VISION.md` **ditulis ulang untuk MathBank** (sebelumnya QBank-era: MBank-parity, enhancement, multi-tema; kini selaras PRD: bangun-dari-nol, sumber→paket→soal, non-goals).
   - `ROADMAP.md` → **`docs/arsip/ROADMAP-QBANK.md`** (banner arsip); `RENCANA-MIGRASI-DATA.md` → **`docs/arsip/`** (dibatalkan).

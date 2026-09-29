@@ -22,6 +22,13 @@
       "when": 1790696802068,
       "tag": "0002_naive_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790698088343,
+      "tag": "0003_cloudy_thunderbolt",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
 /** Barrel semua tabel & enum MathBank. */
+export * from "./_columns";
 export * from "./_enums";
 export * from "./source";
 export * from "./event";

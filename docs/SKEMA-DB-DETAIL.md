@@ -19,7 +19,7 @@
 | **Enum** | `pgEnum` untuk semua nilai tertutup (bukan varchar panjang) |
 | **Uang/token** | tak ada di domain ini |
 
-> ⚠️ **Perubahan dari QBank:** QBank pakai `defaultRandom()` (UUIDv4). MathBank pakai **`uuidv7()`** (berurutan waktu → index B-tree lebih rapi).
+> ⚠️ **Perubahan dari QBank:** QBank pakai `defaultRandom()` (UUIDv4). MathBank pakai **`uuidv7()`** (berurutan waktu → index B-tree lebih rapi). **✅ Diadopsi 2026-09-29** (migrasi `0003_cloudy_thunderbolt.sql`); PG 18 menyediakan `uuidv7()` native.
 
 ---
 

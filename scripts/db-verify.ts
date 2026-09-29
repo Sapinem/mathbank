@@ -97,6 +97,15 @@ async function main() {
       console.log(`${ok ? "✓" : "✗"} TRIGGER ${name}`);
       if (!ok) failures.push(`TRIGGER hilang: ${name}`);
     }
+
+    // PK default wajib uuidv7() (PG 18) — cegah regresi ke gen_random_uuid().
+    const [pkDefault] = await sql<{ column_default: string | null }[]>`
+      SELECT column_default FROM information_schema.columns
+       WHERE table_name='questions' AND column_name='id'
+    `;
+    const pkOk = (pkDefault?.column_default ?? "").includes("uuidv7");
+    console.log(`${pkOk ? "✓" : "✗"} PK default = uuidv7() (kini: ${pkDefault?.column_default ?? "-"})`);
+    if (!pkOk) failures.push("PK default bukan uuidv7()");
   } finally {
     await sql.end();
   }

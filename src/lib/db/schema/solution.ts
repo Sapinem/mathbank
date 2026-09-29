@@ -1,3 +1,4 @@
+import { uuidPk } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -15,7 +16,7 @@ import { questions } from "./question";
 export const solutions = pgTable(
   "solutions",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     questionId: uuid("question_id")
       .notNull()
       .references(() => questions.id, { onDelete: "cascade" }),

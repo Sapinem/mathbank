@@ -1,3 +1,4 @@
+import { uuidPk } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -19,7 +20,7 @@ import { events } from "./event";
 export const bundles = pgTable(
   "bundles",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     title: varchar("title", { length: 255 }).notNull(),
     slug: varchar("slug", { length: 255 }).notNull(),
     bundleType: bundleTypeEnum("bundle_type").notNull(),
@@ -51,7 +52,7 @@ export const bundles = pgTable(
 export const bundleItems = pgTable(
   "bundle_items",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: uuidPk(),
     bundleId: uuid("bundle_id").notNull().references(() => bundles.id, { onDelete: "cascade" }),
     questionId: uuid("question_id").notNull().references(() => questions.id, { onDelete: "restrict" }),
     role: bundleItemRoleEnum("role").default("question").notNull(),
