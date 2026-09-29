@@ -12,7 +12,7 @@ import {
   statusClass,
   difficultyClass,
 } from "@/lib/display/labels";
-import type { QuestionWithOptions } from "@/lib/services/question-service";
+import type { PublicQuestion } from "@/lib/services/question-service";
 
 /** Kutipan singkat konten (tanpa memotong rumus). */
 function excerpt(md: string, max = 180): string {
@@ -27,7 +27,7 @@ export function QuestionCard({
   selected,
   onToggleSelect,
 }: {
-  question: QuestionWithOptions;
+  question: PublicQuestion;
   href: string;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;

@@ -7,8 +7,8 @@
 1. **Zero type errors** — `pnpm typecheck` (tsc --noEmit) harus 0 error.
 2. **Zero lint errors** — `pnpm lint` bersih (0 error, 0 warning).
 3. **Coverage ≥ 85% statements** — diukur via `pnpm test:coverage` (bagian dari `pnpm check`).
-   - Cakupan diskop ke **logika murni** yang dapat diuji tanpa DB/HTTP: `auth/guards`, `auth/roles`, `auth/permissions`, `auth/actor`, `fsm/question-fsm`, `contracts/question`, `display/labels`.
-   - Service/route/hook (butuh DB) diuji lewat **e2e** (`e2e/`).
+   - Cakupan diskop ke **logika murni + keamanan** yang dapat diuji tanpa DB/HTTP: `auth/**`, `fsm/question-fsm`, `contracts/question`, `display/labels`, `api/route-wrapper`, `api/rate-limit`, `db/projections/question`.
+   - **Ini sengaja bukan angka proyek keseluruhan**: service/route/hook/komponen (butuh DB/HTTP) diuji lewat **integrasi DB** (`pnpm test:db`, 21 tes) + **e2e** (`e2e/`, 41 tes). Ketika mengutip angka coverage, **sebutkan lingkupnya** (mis. "97,7% pada 10 file logika murni") — jangan klaim "coverage proyek".
    - **Jangan turunkan ambang**; naikkan bertahap saat cakupan bertambah.
 4. **Build sukses** — `pnpm build` exit 0.
 5. **Install library saat perlu saja** — paket hanya dipasang saat milestonenya tiba (lihat `TUMPUKAN-TEKNOLOGI.md`). Tak menumpuk dependency di awal.
@@ -16,6 +16,7 @@
 ## Aturan React (React Compiler aktif)
 
 6. **Dilarang `useMemo` / `useCallback`** — serahkan pada React Compiler.
+   - **Pengecualian: `src/components/ui/**`** (komponen **vendor** shadcn — bukan kode kita). Aturan ini berlaku untuk kode yang kita tulis; vendor dibiarkan apa adanya agar mudah di-update dari registry.
 7. **Dilarang `space-y-*`** — wajib `flex flex-col gap-*`.
 8. **Dilarang manual `z-index`** — pakai token/layer.
 9. Form wajib pakai `FieldGroup` + `Field`.
@@ -58,3 +59,4 @@
 31. **Setiap dokumen wajib terdaftar di `docs/PETA-DOKUMEN.md`** — dengan status (✅/🟡/🔴/🟠/🟢/📦). Tak ada dokumen berstatus implisit.
 32. **Keputusan arsitektural besar → ADR** di `docs/ADR/` (satu keputusan = satu berkas; jangan hapus, tandai "digantikan").
 33. **Endpoint mutasi & daftar wajib punya rate limit** — set opsi `rateLimit` di `wrapRoute` (`src/lib/api/rate-limit.ts`). Route publik tanpa batas = cacat keamanan.
+34. **Jangan `.select()` tanpa kolom di jalur baca API** — itu `SELECT *`, yang membocorkan `answer_key`, `embedding*`, `aiTagged*`. Pakai proyeksi `questionColumns()`/`optionColumns()` (`src/lib/db/projections/question.ts`). Kunci hanya untuk viewer berwenang (`canSeeAnswerKey`).

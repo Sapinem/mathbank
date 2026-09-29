@@ -11,24 +11,78 @@ import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { transition, assertReady, type QuestionStatus } from "@/lib/fsm/question-fsm";
 import { recordAudit } from "./audit";
+import {
+  questionColumns,
+  optionColumns,
+  canSeeAnswerKey,
+} from "@/lib/db/projections/question";
 import type {
   CreateQuestionInput,
   UpdateQuestionInput,
   ListQuestionsQuery,
 } from "@/lib/contracts/question";
 
-/** Soal lengkap dengan opsi. */
-export interface QuestionWithOptions extends Question {
+/**
+ * Bentuk soal untuk RESPONS API.
+ *
+ * `answerKey` hanya ada bila viewer berwenang (lihat `canSeeAnswerKey`);
+ * field internal (`embedding*`, `aiTagged*`) **selalu** dibuang (S3).
+ */
+export type PublicQuestion = Omit<
+  Question,
+  | "embedding"
+  | "embeddingContentHash"
+  | "embeddingModelName"
+  | "aiTagged"
+  | "aiTaggedAt"
+  | "answerKey"
+> & { options: QuestionOption[]; answerKey?: Record<string, unknown> };
+
+/** Soal internal (untuk logika service: FSM, izin) — punya `answerKey`. */
+export interface QuestionInternal extends Question {
   options: QuestionOption[];
 }
 
 // ── Baca ──────────────────────────────────────────────────────
 
-/** Ambil satu soal + opsi (buang yang terhapus). */
+/**
+ * Ambil satu soal + opsi untuk RESPONS API (proyeksi aman, S3).
+ * `answerKey` hanya disertakan bila `viewer` berwenang.
+ */
 export async function getQuestion(
   id: string,
+  opts: { includeDeleted?: boolean; viewer?: Actor } = {},
+): Promise<PublicQuestion | null> {
+  const withAnswerKey = opts.viewer ? canSeeAnswerKey(opts.viewer) : false;
+
+  const [row] = await db
+    .select(questionColumns({ withAnswerKey }))
+    .from(questions)
+    .where(
+      opts.includeDeleted
+        ? eq(questions.id, id)
+        : and(eq(questions.id, id), isNull(questions.deletedAt)),
+    )
+    .limit(1);
+  if (!row) return null;
+
+  const options = await db
+    .select(optionColumns({ withAnswerKey }))
+    .from(questionOptions)
+    .where(eq(questionOptions.questionId, id))
+    .orderBy(asc(questionOptions.orderIndex));
+
+  return { ...row, options } as PublicQuestion;
+}
+
+/**
+ * Baca soal LENGKAP (internal) — untuk logika service yang butuh `answerKey`
+ * (mis. `assertReady`) & field internal. **JANGAN** kirim hasil ini ke klien.
+ */
+export async function getQuestionInternal(
+  id: string,
   opts: { includeDeleted?: boolean } = {},
-): Promise<QuestionWithOptions | null> {
+): Promise<QuestionInternal | null> {
   const [row] = await db
     .select()
     .from(questions)
@@ -49,10 +103,11 @@ export async function getQuestion(
   return { ...row, options };
 }
 
-/** Daftar soal dengan filter & paginasi (buang yang terhapus). */
+/** Daftar soal dengan filter & paginasi (proyeksi aman, S3). */
 export async function listQuestions(
   query: ListQuestionsQuery,
-): Promise<{ items: QuestionWithOptions[]; total: number }> {
+  viewer?: Actor,
+): Promise<{ items: PublicQuestion[]; total: number }> {
   const conds = [];
   if (!query.includeDeleted) conds.push(isNull(questions.deletedAt));
   if (query.status) conds.push(eq(questions.status, query.status));
@@ -98,30 +153,33 @@ export async function listQuestions(
     .where(finalWhere);
 
   const rows = await db
-    .select()
+    .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
     .from(questions)
     .where(finalWhere)
     .orderBy(desc(questions.createdAt))
     .limit(query.limit)
     .offset(query.offset);
 
-  const items = await attachOptions(rows);
+  const items = await attachOptions(rows, viewer ? canSeeAnswerKey(viewer) : false);
   return { items, total: count };
 }
 
-/** Lampirkan opsi ke banyak soal (hindari N+1). */
-async function attachOptions(rows: Question[]): Promise<QuestionWithOptions[]> {
+/** Lampirkan opsi ke banyak soal (hindari N+1). Proyeksi aman (S3). */
+async function attachOptions(
+  rows: Omit<PublicQuestion, "options">[],
+  withAnswerKey: boolean,
+): Promise<PublicQuestion[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const opts = await db
-    .select()
+    .select(optionColumns({ withAnswerKey }))
     .from(questionOptions)
     .where(inArray(questionOptions.questionId, ids))
     .orderBy(asc(questionOptions.orderIndex));
   const byQuestion = new Map<string, QuestionOption[]>();
   for (const o of opts) {
     const arr = byQuestion.get(o.questionId) ?? [];
-    arr.push(o);
+    arr.push(o as QuestionOption);
     byQuestion.set(o.questionId, arr);
   }
   return rows.map((r) => ({ ...r, options: byQuestion.get(r.id) ?? [] }));
@@ -133,7 +191,7 @@ async function attachOptions(rows: Question[]): Promise<QuestionWithOptions[]> {
 export async function createQuestion(
   input: CreateQuestionInput,
   actor: Actor,
-): Promise<QuestionWithOptions> {
+): Promise<PublicQuestion> {
   assertCan(actor, "question:create");
 
   // Stimulus tidak boleh punya parent (parent hanya untuk anak stimulus)
@@ -142,7 +200,7 @@ export async function createQuestion(
   }
   // Anak stimulus wajib punya parent yang benar
   if (input.parentId) {
-    const parent = await getQuestion(input.parentId);
+    const parent = await getQuestionInternal(input.parentId);
     if (!parent) throw new NotFoundError("Stimulus induk tidak ditemukan.");
     if (parent.questionType !== "stimulus") {
       throw new ConflictError("parentId harus menunjuk ke soal bertipe stimulus.");
@@ -206,7 +264,7 @@ export async function createQuestion(
     changeSummary: `Soal ${input.questionType} dibuat`,
   });
 
-  const created = await getQuestion(id);
+  const created = await getQuestion(id, { viewer: actor });
   if (!created) throw new NotFoundError();
   return created;
 }
@@ -216,8 +274,8 @@ export async function updateQuestion(
   id: string,
   input: UpdateQuestionInput,
   actor: Actor,
-): Promise<QuestionWithOptions> {
-  const existing = await getQuestion(id);
+): Promise<PublicQuestion> {
+  const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   // Izin: reviewer/admin boleh semua; teacher hanya miliknya sendiri
@@ -283,7 +341,7 @@ export async function updateQuestion(
     changeSummary: "Soal diperbarui",
   });
 
-  const updated = await getQuestion(id);
+  const updated = await getQuestion(id, { viewer: actor });
   if (!updated) throw new NotFoundError();
   return updated;
 }
@@ -293,8 +351,8 @@ export async function changeQuestionStatus(
   id: string,
   to: QuestionStatus,
   actor: Actor,
-): Promise<QuestionWithOptions> {
-  const existing = await getQuestion(id);
+): Promise<PublicQuestion> {
+  const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   const from = existing.status as QuestionStatus;
@@ -335,7 +393,7 @@ export async function changeQuestionStatus(
     changeSummary: `Status ${from} → ${to}`,
   });
 
-  const updated = await getQuestion(id);
+  const updated = await getQuestion(id, { viewer: actor });
   if (!updated) throw new NotFoundError();
   return updated;
 }
@@ -346,8 +404,8 @@ export async function setQuestionFlag(
   flagged: boolean,
   notes: string | null,
   actor: Actor,
-): Promise<QuestionWithOptions> {
-  const existing = await getQuestion(id);
+): Promise<PublicQuestion> {
+  const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
   assertCan(actor, "question:flag");
 
@@ -364,14 +422,14 @@ export async function setQuestionFlag(
     changeSummary: flagged ? "Soal ditandai" : "Tanda dilepas",
   });
 
-  const updated = await getQuestion(id);
+  const updated = await getQuestion(id, { viewer: actor });
   if (!updated) throw new NotFoundError();
   return updated;
 }
 
 /** Hapus lunak (soft delete). */
 export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
-  const existing = await getQuestion(id);
+  const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   assertCan(actor, "question:delete", { ownerId: existing.authorId });

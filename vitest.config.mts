@@ -27,6 +27,8 @@ export default defineConfig({
         "src/lib/display/labels.ts",
         "src/lib/auth/actor.ts",
         "src/lib/api/route-wrapper.ts",
+        "src/lib/api/rate-limit.ts",
+        "src/lib/db/projections/question.ts",
       ],
       // Ambang = lantai jujur saat ini; NAIKKAN bertahap, jangan turunkan.
       thresholds: {

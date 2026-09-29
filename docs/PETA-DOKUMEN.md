@@ -57,7 +57,7 @@
 
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
-| D1 | `CONSTRAINTS.md` | ✅ | 30 aturan |
+| D1 | `CONSTRAINTS.md` | ✅ | 34 aturan |
 | D2 | `STRATEGI-TES.md` | ✅ | baru |
 | D3 | `AUDIT-KODE.md` | ✅ | |
 | D4 | `AUDIT-ARSITEKTUR-DAN-DATA.md` | ✅ | |
@@ -67,6 +67,7 @@
 | D10 | `RISET-BETTER-AUTH.md` | ✅ | **dibuat** 2026-09-29 — evaluasi RBAC Better Auth |
 | D8 | `CONTRIBUTING.md` | ✅ | **dibuat** 2026-09-29 — alur kontribusi |
 | D9 | `GOVERNANCE.md` | ✅ | **dibuat** 2026-09-29 — kepemilikan & wewenang |
+| D11 | `AUDIT-MUTU-M0-M4B.md` | ✅ | **dibuat** 2026-09-29 — audit mutu menyeluruh M0–M4b |
 
 ### Kategori E — Keamanan, Operasi & Kepatuhan
 

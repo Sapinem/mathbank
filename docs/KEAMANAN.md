@@ -126,6 +126,22 @@ Diterapkan ke **semua rute** via `next.config.ts` `headers()`:
 
 ---
 
+## 8b. Kebijakan Kunci Jawaban (S3 — aktif)
+
+`answer_key` & `options.is_correct` adalah **rahasia**. Aturan:
+
+| Konteks | `answer_key`? | `is_correct`? |
+|---------|:-------------:|:-------------:|
+| Viewer berwenang (admin/teacher/reviewer) | ✅ | ✅ |
+| `agent` / `machine` (API key) | ❌ | ❌ |
+| Field internal (`embedding*`, `aiTagged*`) | ❌ **selalu** | — |
+
+- Ditegakkan di **proyeksi kolom** (bukan filter di UI) — data tak pernah meninggalkan server.
+- Semua jalur baca API lewat `questionColumns()`/`optionColumns()`.
+- Uji: `src/lib/db/projections/question.test.ts` (13 tes).
+
+---
+
 ## 9. Kesadaran Risiko Operasional (utang keamanan)
 
 Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
@@ -134,7 +150,7 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 |---|-------|-----------|
 | S1 | ~~Rate limiting untuk route umum~~ **✅ SELESAI** (2026-09-29): token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Siap-swap ke Redis. Lihat `src/lib/api/rate-limit.ts`. | ✅ |
 | S2 | ~~Security headers~~ **✅ SELESAI** (2026-09-29): CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS (produksi). Di `next.config.ts`. Pengerasan lanjutan: nonce/hash CSP (kini `'unsafe-inline'`). | ✅ |
-| S3 | **Pemisahan output** `answer_key` — soal publik tak boleh memuat kunci | 🔴 |
+| S3 | ~~Pemisahan output `answer_key`~~ **✅ SELESAI** (2026-09-29): proyeksi kolom (`src/lib/db/projections/question.ts`); `answer_key`+`isCorrect` hanya untuk viewer berwenang (admin/teacher/reviewer); `embedding*`/`aiTagged*` **selalu** dibuang. CONSTRAINT #34. Terverifikasi live + 13 tes. | ✅ |
 | S4 | **Verifikasi email** — kini `requireEmailVerification: false` | 🟠 |
 | S5 | **Kebijakan kata sandi kuat** + rotasi | 🟠 |
 | S6 | Pemindaian rahasia (**gitleaks**) di CI — tak tersedia | 🟠 |

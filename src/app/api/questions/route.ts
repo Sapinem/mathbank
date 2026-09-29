@@ -10,7 +10,7 @@ export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
   query: listQuestionsQuerySchema,
-  handler: async ({ query }) => listQuestions(query),
+  handler: async ({ query, actor }) => listQuestions(query, actor),
 });
 
 /** POST /api/questions — buat soal baru. */

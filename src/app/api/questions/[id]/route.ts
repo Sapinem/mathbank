@@ -10,8 +10,8 @@ import { NotFoundError } from "@/lib/auth/guards";
 /** GET /api/questions/[id] — detail soal + opsi. */
 export const GET = wrapRoute({
   permission: "question:view",
-  handler: async ({ params }) => {
-    const q = await getQuestion(params.id);
+  handler: async ({ params, actor }) => {
+    const q = await getQuestion(params.id, { viewer: actor });
     if (!q) throw new NotFoundError("Soal tidak ditemukan.");
     return q;
   },

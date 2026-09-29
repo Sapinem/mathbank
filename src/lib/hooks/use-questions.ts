@@ -6,7 +6,7 @@ import type {
   CreateQuestionInput,
   UpdateQuestionInput,
 } from "@/lib/contracts/question";
-import type { QuestionWithOptions } from "@/lib/services/question-service";
+import type { PublicQuestion } from "@/lib/services/question-service";
 
 /**
  * Hook data soal (L3) — React Query.
@@ -45,7 +45,7 @@ export const questionKeys = {
 };
 
 export interface QuestionListResult {
-  items: QuestionWithOptions[];
+  items: PublicQuestion[];
   total: number;
 }
 
@@ -64,7 +64,7 @@ export function useQuestions(filter: Partial<ListQuestionsQuery>) {
 export function useQuestion(id: string | undefined) {
   return useQuery({
     queryKey: questionKeys.detail(id ?? ""),
-    queryFn: () => apiFetch<QuestionWithOptions>(`/api/questions/${id}`),
+    queryFn: () => apiFetch<PublicQuestion>(`/api/questions/${id}`),
     enabled: Boolean(id),
     staleTime: 30_000,
   });
@@ -75,7 +75,7 @@ export function useCreateQuestion() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateQuestionInput) =>
-      apiFetch<QuestionWithOptions>("/api/questions", {
+      apiFetch<PublicQuestion>("/api/questions", {
         method: "POST",
         body: JSON.stringify(input),
       }),
@@ -88,7 +88,7 @@ export function useUpdateQuestion(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateQuestionInput) =>
-      apiFetch<QuestionWithOptions>(`/api/questions/${id}`, {
+      apiFetch<PublicQuestion>(`/api/questions/${id}`, {
         method: "PATCH",
         body: JSON.stringify(input),
       }),
@@ -101,7 +101,7 @@ export function useChangeQuestionStatus(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (status: string) =>
-      apiFetch<QuestionWithOptions>(`/api/questions/${id}/status`, {
+      apiFetch<PublicQuestion>(`/api/questions/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status }),
       }),
@@ -114,7 +114,7 @@ export function useSetQuestionFlag(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { flagged: boolean; notes?: string | null }) =>
-      apiFetch<QuestionWithOptions>(`/api/questions/${id}/flag`, {
+      apiFetch<PublicQuestion>(`/api/questions/${id}/flag`, {
         method: "PATCH",
         body: JSON.stringify(input),
       }),
