@@ -38,6 +38,15 @@ export const DIFFICULTY_LABELS: Record<number, string> = {
   5: "Sangat Sulit",
 };
 
+/** Label peran (Bahasa Indonesia). */
+export const ROLE_LABELS: Record<string, string> = {
+  admin: "Administrator",
+  teacher: "Guru",
+  reviewer: "Penelaah",
+  agent: "Agen",
+  machine: "Mesin",
+};
+
 /**
  * Warna status (UNIVERSAL — tak ikut brand; "Siap" = biru brand).
  * Mengembalikan kelas Tailwind sesuai aturan RENCANA-UI §6.

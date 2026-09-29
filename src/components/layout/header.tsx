@@ -1,83 +1,68 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Search } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NAV_GROUPS } from "./nav-config";
+import { breadcrumbFromPath } from "./nav-utils";
 import { ThemeToggle } from "./theme-toggle";
 
-/** Bangun breadcrumb dari pathname. */
-function breadcrumb(pathname: string): { label: string; href: string }[] {
-  for (const group of NAV_GROUPS) {
-    for (const item of group.items) {
-      if (item.href !== "/" && (pathname === item.href || pathname.startsWith(item.href + "/"))) {
-        const parts = [{ label: item.label, href: item.href }];
-        const rest = pathname.slice(item.href.length).split("/").filter(Boolean);
-        let acc = item.href;
-        for (const seg of rest) {
-          acc += "/" + seg;
-          parts.push({ label: decodeURIComponent(seg), href: acc });
-        }
-        return parts;
-      }
-    }
-  }
-  return [{ label: "Dasbor", href: "/" }];
-}
-
 /**
- * Header — ☰ (mobile) + breadcrumb + pencarian (⌘K) + tema.
- * (RENCANA-UI.md §3, §4b; tombol "Buat Soal" sengaja TIDAK ada.)
+ * Header halaman — SidebarTrigger (⌘B) + breadcrumb + pencarian (⌘K) + tema.
  *
- * Responsif: mobile = ☰ + judul singkat + ikon cari; desktop = breadcrumb penuh + kotak cari.
+ * `SidebarTrigger` resmi shadcn menggantikan tombol ☰ buatan sendiri:
+ * di desktop mengecilkan sidebar; di mobile membuka drawer.
  */
-export function Header({
-  onOpenCommand,
-  onOpenMobileNav,
-}: {
-  onOpenCommand: () => void;
-  onOpenMobileNav: () => void;
-}) {
+export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
   const pathname = usePathname();
-  const crumbs = breadcrumb(pathname);
+  const crumbs = breadcrumbFromPath(pathname, NAV_GROUPS);
   const last = crumbs[crumbs.length - 1];
 
   return (
-    <header className="flex h-14 items-center gap-2 border-b border-border px-3 sm:px-4">
-      {/* Hamburger — mobile/tablet saja */}
-      <button
-        type="button"
-        onClick={onOpenMobileNav}
-        aria-label="Buka menu"
-        className="-ml-1 rounded-md p-2 text-muted-foreground hover:bg-muted lg:hidden"
-      >
-        <Menu className="size-5" />
-      </button>
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3 sm:px-4">
+      <SidebarTrigger className="-ml-1" />
+      <Separator
+        orientation="vertical"
+        className="mr-1 data-[orientation=vertical]:h-4"
+      />
 
       {/* Mobile: judul halaman saja */}
-      <span className="truncate text-sm font-medium sm:hidden">{last.label}</span>
+      <span className="truncate text-sm font-medium sm:hidden">
+        {last.label}
+      </span>
 
       {/* Desktop: breadcrumb penuh */}
-      <nav
-        aria-label="Breadcrumb"
-        className="hidden min-w-0 items-center gap-1.5 text-sm sm:flex"
-      >
-        {crumbs.map((c, i) => (
-          <span key={c.href} className="flex items-center gap-1.5">
-            {i > 0 && <span className="text-muted-foreground">/</span>}
-            {i === crumbs.length - 1 ? (
-              <span className="truncate font-medium">{c.label}</span>
-            ) : (
-              <Link
-                href={c.href}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                {c.label}
-              </Link>
-            )}
-          </span>
-        ))}
-      </nav>
+      <Breadcrumb className="hidden min-w-0 sm:block">
+        <BreadcrumbList>
+          {crumbs.map((c, i) => {
+            const isLast = i === crumbs.length - 1;
+            return (
+              <span key={c.href} className="contents">
+                {i > 0 && <BreadcrumbSeparator />}
+                <BreadcrumbItem>
+                  {isLast ? (
+                    <BreadcrumbPage className="truncate">{c.label}</BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink asChild>
+                      <Link href={c.href}>{c.label}</Link>
+                    </BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
+              </span>
+            );
+          })}
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <div className="ml-auto flex items-center gap-1.5">
         {/* Desktop: kotak cari */}

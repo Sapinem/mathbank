@@ -21,6 +21,8 @@ export interface NavItem {
   icon: LucideIcon;
   /** Tampilkan badge dinamis (mis. jumlah antrean). */
   badge?: "telaah";
+  /** Nilai badge (jumlah). Kosong = badge tak tampil. */
+  badgeCount?: number;
   /** Menu tersembunyi (belum aktif sampai milestone tertentu). */
   hidden?: boolean;
 }

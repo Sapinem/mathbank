@@ -25,7 +25,7 @@
 
 ```
 ┌─────────────────────────────┐
-│  [M] MathBank               │  ← logo + (collapse toggle)
+│  [M] MathBank        (⌘B)   │  ← logo + SidebarTrigger
 ├─────────────────────────────┤
 │  KERJA                      │
 │   ◻ Dasbor                  │  /
@@ -46,8 +46,17 @@
 │  SISTEM                     │
 │   ◻ Ingest & Integrasi ¹    │  /sistem/ingest
 │   ◻ Pengaturan              │  /sistem/pengaturan
+├─────────────────────────────┤
+│  (avatar) Nama · Peran      │  ← SidebarFooter: UserMenu
 └─────────────────────────────┘
 ```
+
+> **Implementasi (diratifikasi):** memakai komponen **`sidebar` resmi shadcn**
+> (`SidebarProvider` + `Sidebar/SidebarHeader/SidebarContent/SidebarGroup/
+> SidebarMenu/SidebarFooter`), bukan komponen buatan sendiri. Keuntungan bawaan:
+> collapse ke ikon (`collapsible="icon"`), drawer mobile, shortcut **⌘B/Ctrl+B**,
+> persistensi **cookie** (SSR-friendly), aksesibilitas. Lihat `sidebar-07` di
+> registry shadcn sebagai acuan pola.
 
 ¹ **Disembunyikan sampai M9** (fase lanjut). Menu kosong membingungkan → munculkan saat siap.
 

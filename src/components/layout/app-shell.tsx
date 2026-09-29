@@ -1,33 +1,41 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Sidebar } from "./sidebar";
-import { MobileNav } from "./mobile-nav";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppSidebar } from "./app-sidebar";
 import { Header } from "./header";
 import { CommandPalette } from "./command-palette";
+import { SkipLink } from "./skip-link";
 
 /**
- * Shell aplikasi (Fase C + Fase R) — sidebar (desktop) / drawer (mobile)
- * + header + command palette.
+ * Shell aplikasi MathBank.
  *
- * Responsif (RENCANA-UI-MOBILE.md §6): di bawah `lg` sidebar jadi drawer.
+ * Memakai komponen **`sidebar` resmi shadcn**:
+ * - `SidebarProvider` menangani collapse, drawer mobile, shortcut ⌘B/Ctrl+B,
+ *   dan persistensi state (cookie) — tanpa kode buatan sendiri.
+ * - `SidebarInset` membungkus konten utama (header + main).
+ *
+ * Tinggi memakai `min-h-svh` dari provider; konten menggulir di dalam `main`.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <Sidebar />
-      <MobileNav open={mobileNavOpen} onOpenChange={setMobileNavOpen} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Header
-          onOpenCommand={() => setCommandOpen(true)}
-          onOpenMobileNav={() => setMobileNavOpen(true)}
-        />
-        <main className="flex-1 overflow-y-auto">{children}</main>
-      </div>
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-    </div>
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider className="h-svh overflow-hidden">
+        <SkipLink />
+        <AppSidebar />
+        <SidebarInset
+          id="konten-utama"
+          tabIndex={-1}
+          className="flex min-w-0 flex-col overflow-hidden outline-none"
+        >
+          <Header onOpenCommand={() => setCommandOpen(true)} />
+          <div className="flex-1 overflow-y-auto">{children}</div>
+        </SidebarInset>
+        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
