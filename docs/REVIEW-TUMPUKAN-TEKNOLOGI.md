@@ -167,14 +167,14 @@ Terpasang 9.39.5; terbaru **10.11.0**. `eslint-config-next` 16.3.6 → 16.3.7. I
 | **P1** | Bump `react`/`react-dom` → 19.3.0 | minor, compiler tak terpengaruh | Rendah |
 | **P2** | **TypeScript 5 → 7** di branch terpisah, bertahap (5→6→7), lewat `pnpm check` | versi terbaru = TS7 native; perubahan checker nyata | **Menengah–Tinggi** — wajib checkpoint user |
 | **P2** | Putuskan **react-table v8 vs v9** sebelum M4 | v9 = garis utama (9.2.4); rencana dokumen tanpa versi | Menengah (undecided) |
-| **P2** | Selesaikan **Radix UI vs Base UI** (§5) | `AGENTS.md` vs `package.json` tak sinkron | Menengah (arahan) |
+| ~~**P2**~~ | ~~Selesaikan Radix UI vs Base UI (§5)~~ → **✅ DONE** via [`ADR-0008`](ADR/0008-basis-ui-base-ui.md): `@base-ui/react` dipakai, `radix-ui` dihapus | — | — |
 | **P3** | Bump `eslint` 9 → 10 | mayor, tak mendesak | Menengah |
 | **P3** | Hapus `--turbopack` dari skrip `dev`; tambah flag `cacheComponents` bila `"use cache"` dipakai | Next 16 default Turbopack; cache components butuh flag | Rendah |
 | **P3** | Audit kode Zod: pastikan tak pakai `message`/`ZodSchema` lama | migrasi Zod v4 | Rendah |
 
 ---
 
-## 5. 🔴 Inkonsistensi Dokumentasi — Radix UI vs Base UI
+## 5. ✅ (SELESAI) Inkonsistensi Dokumentasi — Radix UI vs Base UI → **Base UI**
 
 **Temuan:** `AGENTS.md` menyatakan arsitektur UI = **"Base UI headless primitives + shadcn/ui"**, tetapi `package.json` memasang **`radix-ui@1.6.7`** dan **tidak** memasang `@base-ui/react`. `TUMPUKAN-TEKNOLOGI.md` §M3 juga menulis paket `class-variance-authority`, `clsx`, `tailwind-merge` (buildup Radix/shadcn klasik).
 

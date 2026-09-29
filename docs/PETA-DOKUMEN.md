@@ -41,7 +41,7 @@
 | B4 | `SKEMA-DB-DETAIL.md` | ✅ | sumber kebenaran skema |
 | B5 | `L7-TINJAUAN-KRITIS-DATA.md` | ✅ | |
 | B6 | `KAMUS-DATA.md` (glossary) | ✅ | **dibuat** 2026-09-29 — glosarium domain |
-| B7 | `docs/ADR/` | ✅ | **7 ADR** dibuat 2026-09-29 (0001–0007) |
+| B7 | `docs/ADR/` | ✅ | **8 ADR** dibuat 2026-09-29 (0001–0008); **0008 = basis UI Base UI** (menggantikan Radix) |
 
 ### Kategori C — Desain & UI
 

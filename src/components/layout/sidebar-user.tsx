@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -42,21 +43,21 @@ export function SidebarUser() {
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton size="lg" aria-label="Menu pengguna">
-              <Avatar className="size-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-brand/15 text-xs font-semibold text-brand">
-                  {initial(name)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-sm font-medium">{name}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {roleLabel}
-                </span>
+          <DropdownMenuTrigger
+            render={<SidebarMenuButton size="lg" aria-label="Menu pengguna" />}
+          >
+            <Avatar className="size-8 rounded-lg">
+              <AvatarFallback className="rounded-lg bg-brand/15 text-xs font-semibold text-brand">
+                {initial(name)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="grid flex-1 text-left leading-tight">
+              <span className="truncate text-sm font-medium">{name}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {roleLabel}
               </span>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
+            </span>
+            <ChevronsUpDown className="ml-auto size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
@@ -64,23 +65,21 @@ export function SidebarUser() {
             className="w-56"
             sideOffset={6}
           >
-            <DropdownMenuLabel>
-              <span className="block truncate">{name}</span>
-              <span className="block truncate text-xs font-normal text-muted-foreground">
-                {roleLabel}
-              </span>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/sistem/profil">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <span className="block truncate">{name}</span>
+                <span className="block truncate text-xs font-normal text-muted-foreground">
+                  {roleLabel}
+                </span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href="/sistem/profil" />}>
                 <User className="size-4" /> Profil
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/sistem/pengaturan">
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/sistem/pengaturan" />}>
                 <Settings className="size-4" /> Pengaturan
-              </Link>
-            </DropdownMenuItem>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"

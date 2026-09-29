@@ -41,7 +41,9 @@ describe("DesktopOnly", () => {
     );
     expect(screen.queryByText("EDITOR SOAL")).not.toBeInTheDocument();
     expect(screen.getByRole("heading")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "← Kembali" })).toHaveAttribute("href", "/");
+    // Base UI: <Link render> jadi <a role="button" href="/">
+    const back = screen.getByText("← Kembali").closest("a");
+    expect(back).toHaveAttribute("href", "/");
   });
 
   it("menerima judul, deskripsi, & tautan kembali kustom", () => {
@@ -53,6 +55,7 @@ describe("DesktopOnly", () => {
     );
     expect(screen.getByRole("heading", { name: "Judul Khusus" })).toBeInTheDocument();
     expect(screen.getByText("Deskripsi Khusus")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "← Paket" })).toHaveAttribute("href", "/paket");
+    const back = screen.getByText("← Paket").closest("a");
+    expect(back).toHaveAttribute("href", "/paket");
   });
 });

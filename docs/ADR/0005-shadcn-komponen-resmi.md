@@ -21,7 +21,7 @@ Diterapkan: shell dirombak total memakai `sidebar`, `breadcrumb`, `avatar`, `col
 |------------|----------------|
 | Tambal kode sendiri | Memelihara ulang yang sudah ada; rawan bug (mis. drawer, a11y) |
 | Tetap shadcn versi lama | Kehilangan komponen resmi terbaru |
-| UI library lain (MUI, Mantine) | Belum selaras arah visual & stack (Tailwind v4 + Radix) |
+| UI library lain (MUI, Mantine) | Belum selaras arah visual & stack (Tailwind v4 + Base UI) |
 
 ## Konsekuensi
 
@@ -38,3 +38,5 @@ Diterapkan: shell dirombak total memakai `sidebar`, `breadcrumb`, `avatar`, `col
 ## Catatan
 
 **Pertanyaan terbuka (perlu ADR terpisah):** basis primitif UI = **Radix UI** (`package.json` kini `radix-ui@1.6.7`) atau **Base UI** (disebut `AGENTS.md`)? shadcn mendukung keduanya → **ratifikasi** agar tak ambigu (`REVIEW-TUMPUKAN-TEKNOLOGI.md` §5).
+
+> **✅ Terjawab oleh [`ADR-0008`](./0008-basis-ui-base-ui.md):** basis primitif UI = **Base UI** (`@base-ui/react`). `radix-ui` telah di-uninstall; style shadcn = `base-nova`.

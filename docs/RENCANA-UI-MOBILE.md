@@ -187,7 +187,7 @@ Alasan: baris teks > ~90 karakter sulit dibaca.
 |-------|-------|---------|
 | Konten | `0` | Normal |
 | Sticky header | `sticky z-10` | Header dalam alur |
-| Dropdown/popover | `z-50` (radix default) | Menu, select |
+| Dropdown/popover | `z-50` (bawaan shadcn) | Menu, select |
 | Drawer/Sheet overlay | `z-50` | Navigasi mobile |
 | Toast | `z-[100]` | Notifikasi |
 | Command palette | `z-50` | ⌘K |
@@ -253,7 +253,7 @@ DESKTOP (≥1024)                      MOBILE (<1024)
 | **Overlay** | Gelap; klik = tutup |
 | **Tutup otomatis** | Setelah pilih menu (via `onNavigate`) |
 | **Tutup manual** | Tombol ✕, overlay, `Esc` |
-| **Fokus** | Radix `Sheet` menangani focus-trap + kembalikan fokus |
+| **Fokus** | Base UI `Sheet` menangani focus-trap + kembalikan fokus |
 | **Header drawer** | Logo + nama (Brand) |
 | **Isi** | Sama persis dengan sidebar desktop (`SidebarNav`) |
 

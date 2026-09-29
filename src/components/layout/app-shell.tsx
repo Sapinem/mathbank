@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
 
   return (
-    <TooltipProvider delayDuration={0}>
+    <TooltipProvider delay={0}>
       <SidebarProvider className="h-svh overflow-hidden">
         <SkipLink />
         <AppSidebar />

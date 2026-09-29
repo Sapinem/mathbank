@@ -9,6 +9,16 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Diubah
+- **🎨 Basis primitif UI bermigrasi penuh: Radix UI → Base UI** (`@base-ui/react` 1.8.0) — menutup ambiguitas dokumen-vs-kode (ADR-0005 → **ADR-0008**). shadcn style kini **`base-nova`**:
+  - **14 komponen `ui/**` di-regenerate** dari registry `base-nova` (button, badge, dialog, dropdown-menu, select, sheet, sidebar, tooltip, avatar, checkbox, label, separator, switch, tabs) — **nol impor `radix-ui`** di seluruh kode.
+  - **9 penggunaan `asChild` → prop `render`** (cara Base UI) di 5 file: `app-sidebar` (2), `sidebar-user` (3), `header` (1), `desktop-only` (1), `bank-soal-view` (2).
+  - **`nativeButton={false}`** pada `<Button render={<Link/>}>` — Base UI memerlukan ini saat elemen render bukan `<button>` (perbaikan peringatan a11y "expected a native `<button>`").
+  - **`DropdownMenuLabel` dibungkus `DropdownMenuGroup`** — Base UI mewajibkan `Menu.GroupLabel` berada dalam `Menu.Group` (sebelumnya crash `MenuGroupContext is missing`).
+  - **`tooltip` `delayDuration` → `delay`**; `command.tsx` `children` di-tipe ulang (`Omit<…,"children">`) karena `Dialog` Base UI menerima render-function.
+  - **`radix-ui` + 44 paket `@radix-ui/*` di-uninstall** (bekas Radix bersih: `src/`, `components.json`, `package.json`).
+  - Regresi yang dipulihkan saat regenerate: `src/hooks/use-mobile.ts` (kembali ke `useSyncExternalStore`, sesuai CONSTRAINT #6) & teks a11y Indonesia `sidebar.tsx` ("Buka/tutup sidebar").
+  - Tes disesuaikan: `desktop-only.test.tsx` — `<Link>` kini `role="button"` + `href` (semantik Base UI).
+  - Verifikasi: tsc 0 · lint 0 · unit **206** · e2e **41** · build 0 · browser bersih (nol error konsol; KaTeX + tema terang/gelap OK). Keputusan tercatat di **`docs/ADR/0008-basis-ui-base-ui.md`**.
 - **`MILESTONE.md` disinkronkan dengan kenyataan (v1.1, 2026-09-29)** — setelah 12 commit terakhir:
   - Header status: "Draft v1, menunggu ratifikasi" → **"aktif — M0–M3 ✅, M4 berjalan"**.
   - Task M1/M2/M3 dicentang `[x]` sesuai kenyataan (⌘K, submenu Referensi, halaman kosong → selesai).

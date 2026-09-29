@@ -173,11 +173,9 @@ export function BankSoalView() {
           <span className="hidden shrink-0 text-sm text-muted-foreground sm:inline">
             {total} soal
           </span>
-          <Button asChild size="sm" className="shrink-0">
-            <Link href="/bank-soal/baru">
-              <Plus className="size-4" />
-              <span className="hidden sm:inline">Buat Soal</span>
-            </Link>
+          <Button render={<Link href="/bank-soal/baru" />} nativeButton={false} size="sm" className="shrink-0">
+            <Plus className="size-4" />
+            <span className="hidden sm:inline">Buat Soal</span>
           </Button>
         </div>
 
@@ -196,10 +194,8 @@ export function BankSoalView() {
                   : "Belum ada soal. Mulai dengan membuat soal pertama."
               }
               action={
-                <Button asChild size="sm" className="mt-2">
-                  <Link href="/bank-soal/baru">
-                    <Plus className="size-4" /> Buat Soal
-                  </Link>
+                <Button render={<Link href="/bank-soal/baru" />} nativeButton={false} size="sm" className="mt-2">
+                  <Plus className="size-4" /> Buat Soal
                 </Button>
               }
             />

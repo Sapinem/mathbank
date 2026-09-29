@@ -35,20 +35,18 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/" aria-label="MathBank — Dasbor">
-                <span className="grid aspect-square size-8 place-items-center rounded-lg bg-brand font-bold text-brand-fg">
-                  ∑
+            <SidebarMenuButton size="lg" render={<Link href="/" aria-label="MathBank — Dasbor" />}>
+              <span className="grid aspect-square size-8 place-items-center rounded-lg bg-brand font-bold text-brand-fg">
+                ∑
+              </span>
+              <span className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold tracking-tight">
+                  MathBank
                 </span>
-                <span className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold tracking-tight">
-                    MathBank
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    Bank Soal Matematika
-                  </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  Bank Soal Matematika
                 </span>
-              </Link>
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -68,14 +66,12 @@ export function AppSidebar() {
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
-                        asChild
+                        render={<Link href={item.href} />}
                         isActive={active}
                         tooltip={item.label}
                       >
-                        <Link href={item.href}>
-                          <Icon />
-                          <span>{item.label}</span>
-                        </Link>
+                        <Icon />
+                        <span>{item.label}</span>
                       </SidebarMenuButton>
                       {item.badge === "telaah" && item.badgeCount ? (
                         <SidebarMenuBadge>{item.badgeCount}</SidebarMenuBadge>

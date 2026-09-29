@@ -53,8 +53,8 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
                   {isLast ? (
                     <BreadcrumbPage className="truncate">{c.label}</BreadcrumbPage>
                   ) : (
-                    <BreadcrumbLink asChild>
-                      <Link href={c.href}>{c.label}</Link>
+                    <BreadcrumbLink render={<Link href={c.href} />}>
+                      {c.label}
                     </BreadcrumbLink>
                   )}
                 </BreadcrumbItem>
