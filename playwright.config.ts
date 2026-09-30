@@ -9,14 +9,17 @@ import { defineConfig, devices } from "@playwright/test";
  *   menguji asas responsif "kelola di desktop, lihat di mobile".
  */
 export default defineConfig({
-  testDir: "./e2e",
+  // Pindah ke e2e-manual/ — TIDAK masuk gerbang `pnpm check` (rapuh di dev).
+  // Strategi utama: tes alur Vitest (L4/L5) + smoke:prod. Lihat
+  // docs/EVALUASI-STRATEGI-E2E.md. Jalankan manual: pnpm e2e:manual.
+  testDir: "./e2e-manual",
+  // Panaskan rute dulu: dev compile on-demand → hindari ERR_ABORTED saat tes.
+  globalSetup: "./e2e-manual/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  // Dev server meng-compile rute ON-DEMAND. Terlalu banyak worker paralel
-  // membanjiri satu server → API timeout acak. Batasi + beri 1 retry untuk
-  // menyerap timeout compile pertama (kegagalan berikutnya tetap terlihat).
+  // Dev server kewalahan bila 2 worker menghampar rute belum ter-compile.
   retries: 1,
-  workers: process.env.CI ? 1 : 2,
+  workers: 1,
   reporter: [["list"]],
   expect: { timeout: 20_000 },
   use: {
@@ -36,10 +39,12 @@ export default defineConfig({
     },
   ],
   webServer: {
+    // Dev server (port 3100 terpisah). Global-setup memanaskan rute lebih dulu
+    // agar compile on-demand tak menabrak tes. 1 worker → beban server stabil.
     command: "pnpm dev --port 3100",
     url: "http://localhost:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { AUTH_DEV_BYPASS: "true", AUTH_GUARD_DISABLED: "true" },
+    env: { AUTH_DEV_BYPASS: "true", AUTH_GUARD_DISABLED: "true", DEMO_LOGIN: "enabled" },
   },
 });

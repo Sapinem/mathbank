@@ -19,21 +19,28 @@
 ## 1. Piramida Tes (MathBank)
 
 ```
-         ╱╲         E2E (Playwright)          — 33 skenario, alur lintas-lapisan
-        ╱  ╲        sedikit, lambat, berharga
+         ╱╲      Smoke produksi (read-only)     — 7 pemeriksaan deploy
+        ╱  ╲     `pnpm smoke:prod` (SETIAP rilis)
        ╱────╲
-      ╱      ╲      Integrasi (Vitest + PG)   — service ↔ DB nyata
-     ╱        ╲     sedang, sedang
-    ╱──────────╲
-   ╱            ╲   Unit (Vitest)             — logika murni, cepat, banyak
+      ╱      ╲   Alur API (Vitest, handler)     — alur lintas-lapisan
+     ╱        ╲  `src/lib/api/*.db.test.ts` (resolve→izin→validasi→DB)
+    ╱──────────╲ Integrasi (Vitest + PG)       — service ↔ DB nyata
+   ╱            ╲ Unit (Vitest)                — logika murni, cepat, banyak
   ╱______________╲
 ```
+
+> **PENTING (2026-09-30):** E2E *browser* (Playwright) **dipensiunkan dari
+> gerbang** karena rapuh di dev server (compile on-demand → `net::ERR_ABORTED`).
+> Penggantinya: **tes alur API** (memanggil route handler langsung) +
+> **smoke produksi**. Skrip lama tetap ada di `e2e-manual/` untuk dijalankan
+> manual bila perlu. Lihat `docs/EVALUASI-STRATEGI-E2E.md`.
 
 | Tingkat | Alat | DB? | Kecepatan | Jumlah |
 |---------|------|-----|-----------|--------|
 | **Unit** | Vitest | tidak | milidetik | banyak |
 | **Integrasi** | Vitest + PG uji | ya | detik | sedang |
-| **E2E** | Playwright | ya (dev) | detik–menit | sedikit |
+| **Alur API** | Vitest + handler | ya | detik | sedang |
+| **Smoke produksi** | tsx + fetch | tidak | detik | 7 cek |
 
 ---
 
@@ -84,10 +91,26 @@ it("menolak transisi draft → ready", () => {
 - Query mutasi memakai **`user-event`**, bukan `fireEvent`.
 - Jangan snapshot besar — rapuh & tak bermakna.
 
-### 3.5 E2E (Playwright)
-- Satu `spec` = satu area fitur (`theme`, `responsive`, `bank-soal`, `api`).
-- Uji **alur pengguna**, bukan tiap tombol.
-- Proyek ganda: `desktop` (1280) + `mobile` (Pixel 5).
+### 3.5 E2E (dipensiunkan — lihat §1)
+
+Skrip lama ada di `e2e-manual/` (Playwright): `pnpm e2e:manual`. **Tidak** masuk
+gerbang. Pengganti utama: tes alur API (§3.6) & smoke produksi (§3.7).
+
+### 3.6 Alur API (Vitest + handler) — pengganti e2e alur
+
+- File: `src/lib/api/*.db.test.ts`. Panggil **route handler langsung**:
+  `import { POST } from "@/app/api/.../route"`, lalu `await POST(req, { params })`.
+- Mock aktor: `vi.mock("@/lib/auth/resolve", () => ({ resolveActor: async () => aktor }))`.
+- Uji **alur lintas-lapisan**: autentikasi (401) → izin (403) → validasi (400) →
+  logika service → DB → format respons (`{ data }` / `{ error }`).
+- Termasuk **rate-limit** (429) dan invarian bisnis (siklus 409).
+
+### 3.7 Smoke produksi (read-only)
+
+- `pnpm smoke:prod` (produksi sungguhan) atau `pnpm smoke:prod:demo`
+  (bila login demo sengaja aktif).
+- Menghantam domain hidup: halaman 200, guard 307→/login, CSP, pagar quick-login.
+- **Read-only** — tak pernah menyentuh data. Jalankan setiap rilis.
 
 ---
 
@@ -98,7 +121,8 @@ Sebuah milestone **selesai** hanya bila:
 - [ ] Semua **jenis tes wajib** untuk lapisan yang disentuh ada & hijau (§2).
 - [ ] `pnpm check` exit 0 (typecheck · lint · coverage · build).
 - [ ] `pnpm db:verify` hijau (bila menyentuh skema).
-- [ ] `pnpm e2e` hijau (bila menyentuh UI/alur).
+- [ ] `pnpm test:db` hijau (tes integrasi + alur API, bila menyentuh service/API).
+- [ ] `pnpm smoke:prod` hijau (bila merilis ke produksi).
 - [ ] Tak ada tes palsu / placeholder.
 
 **Milestone menyentuh service (L5) atau API (L4) → WAJIB punya tes integrasi/unit masing-masing.**
