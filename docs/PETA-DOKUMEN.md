@@ -122,6 +122,7 @@
 | G2 | `RENCANA-ENRICHMENT.md` | 🟢 | **belum** — AI embedding/tagging (M10) |
 | G1b | `ATURAN-CLEANING-KORPUS.md` | ✅ | **dibuat** 2026-09-30 — aturan general cleaning korpus (berbasis 390 file nyata); menunggu persetujuan |
 | G1c | `EVALUASI-KORPUS-KOMPREHENSIF.md` | ✅ | **dibuat** 2026-09-30 — pindai **1.081 file**; inventaris kotoran + aturan final |
+| G1d | `RENCANA-SEGMENTASI-ADAPTER.md` | ✅ | **dibuat** 2026-09-30 — M9-2: penanda soal per-sumber + aturan mutu (menunggu persetujuan) |
 | G3 | `RENCANA-TAKSONOMI.md` | 🟢 | **belum** — seed & kelola taksonomi (M5) |
 | G4 | `arsip/RENCANA-MIGRASI-DATA.md` | 📦 | **diarsipkan** (dibatalkan) 2026-09-29 |
 
