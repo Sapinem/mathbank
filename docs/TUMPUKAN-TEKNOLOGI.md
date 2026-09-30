@@ -26,7 +26,7 @@
 | Paket | Versi | Untuk |
 |-------|-------|-------|
 | `next` | 16.3.7 | Framework (App Router, Turbopack) |
-| `react` / `react-dom` | 19.3.0 | UI (React Compiler) |
+| `react` / `react-dom` | 19.3.0 | UI |
 | `typescript` | 5.9.3 | Bahasa |
 | `tailwindcss` | 4.3.3 | Styling (v4, CSS-first) |
 
@@ -136,7 +136,7 @@
 | **styled-components / Emotion** | Tailwind v4 cukup |
 | **Moment.js** | Usang; `date-fns` bila perlu |
 | **MUI / Ant Design** | Terlalu berat & tak sesuai gaya Linear/Vercel |
-| **Manual `useMemo`/`useCallback`** | React Compiler (CONSTRAINTS) |
+| **Manual `useMemo`/`useCallback`** | Konvensi proyek (CONSTRAINTS #6) — React Compiler **belum aktif** |
 
 ---
 

@@ -13,10 +13,11 @@
 4. **Build sukses** — `pnpm build` exit 0.
 5. **Install library saat perlu saja** — paket hanya dipasang saat milestonenya tiba (lihat `TUMPUKAN-TEKNOLOGI.md`). Tak menumpuk dependency di awal.
 
-## Aturan React (React Compiler aktif)
+## Aturan React (konvensi memoization)
 
-6. **Dilarang `useMemo` / `useCallback`** — serahkan pada React Compiler.
+6. **Dilarang `useMemo` / `useCallback`** — konvensi proyek demi kesederhanaan (komputasi langsung saat render).
    - **Pengecualian: `src/components/ui/**`** (komponen **vendor** shadcn — bukan kode kita). Aturan ini berlaku untuk kode yang kita tulis; vendor dibiarkan apa adanya agar mudah di-update dari registry.
+   - **Alasan jujur (dikoreksi 2026-09-30):** React Compiler **BELUM aktif** di proyek ini (tak ada `reactCompiler` di `next.config.ts`, `babel-plugin-react-compiler` tak terpasang) — jadi larangan ini **konvensi**, bukan efek compiler. Bila React Compiler diaktifkan kelak (saat terukur ada masalah performa render), alasannya jadi benar otomatis. **`useMemo` boleh dipakai bila terukur ada masalah & didokumentasikan.**
 7. **Dilarang `space-y-*`** — wajib `flex flex-col gap-*`.
 8. **Dilarang manual `z-index`** — pakai token/layer.
 9. Form wajib pakai `FieldGroup` + `Field`.
