@@ -50,6 +50,22 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   keamanan, a11y, mutu). `docs/EVALUASI-STRATEGI-E2E.md` + `EVALUASI-DESKTOPONLY.md`.
 
 ### Diperbaiki
+- **🔴 Login & rate-limit (NEW1) — diperkuat secara arsitektural** (bukan tambal):
+  - **Koreksi penting:** temuan "login tanpa rate-limit" **sebagian besar salah** —
+    rate-limit login **aktif otomatis** di produksi (rule bawaan Better Auth
+    `/sign-in` 3 req/10 s), IPv6 sudah dinormalisasi, header default jalan. Dugaan
+    "perlu `customRules`/`ipv6Subnet`" **dibatalkan** setelah verifikasi ke docs
+    resmi 1.7.6 + kode library (pelajaran: verifikasi ke sumber primer).
+  - **Yang nyata diperbaiki:**
+    - **R1** — IP asli di balik **Cloudflare** ada di `cf-connecting-ip`; set
+      `ipAddressHeaders: ["cf-connecting-ip"]` → tahan spoof (uji: `x-forwarded-for`
+      palsu → bucket `no-trusted-ip`, header CF → IP betul).
+    - **R2** — `storage: "database"` + tabel `rate_limit` (migrasi `0004`) →
+      counter **persisten** & dibagi antar-proses (default `memory` hilang saat restart).
+    - **R3** — `BETTER_AUTH_URL`/`APP_URL` = domain (systemd produksi); `.env`
+      diperbaiki dari `http://localhost:3000`.
+  - **Verifikasi:** 4 login → 3×400 lalu **429**; counter di DB; smoke 7/7; login
+    demo via domain tetap jalan. Dokumen: `docs/RENCANA-RATE-LIMIT.md`.
 - **Keamanan #33**: 3 route GET tanpa rateLimit (`auth/me`, `questions/[id]`,
   `settings`) → ditambah `rateLimit`.
 - **Duplikasi**: ekstrak `bundleColumns()` di `bundle-service.ts`.

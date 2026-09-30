@@ -4,6 +4,7 @@ import {
   timestamp,
   boolean,
   integer,
+  bigint,
   index,
   primaryKey,
 } from "drizzle-orm/pg-core";
@@ -103,6 +104,22 @@ export const apiKey = pgTable(
     index("idx_apikey_reference_id").on(t.referenceId),
     index("idx_apikey_key").on(t.key),
   ],
+);
+
+/**
+ * rate_limit — penyimpanan rate-limit Better Auth (`rateLimit.storage="database"`).
+ * Persisten & dibagi antar-proses (default `memory` hilang saat restart).
+ * Skema resmi: id, key (UQ), count, lastRequest (epoch ms, bigint).
+ */
+export const rateLimit = pgTable(
+  "rate_limit",
+  {
+    id: text("id").primaryKey(),
+    key: text("key").notNull().unique(),
+    count: integer("count").notNull(),
+    lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+  },
+  (t) => [index("idx_rate_limit_last_request").on(t.lastRequest)],
 );
 
 export type User = typeof authUser.$inferSelect;

@@ -150,7 +150,7 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 
 | # | Utang | Prioritas |
 |---|-------|-----------|
-| S1 | Token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Siap-swap ke Redis. Lihat `src/lib/api/rate-limit.ts`. **✅ sebagian** (2026-09-30): terpasang di `wrapRoute` + 3 route GET yang terlewat ditambal. **⚠️ UTANG:** `/api/auth/*` (login Better Auth) **belum** ber-rate-limit per-IP → rawan credential stuffing (NEW1, M13). | 🟠 |
+| S1 | Token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Lihat `src/lib/api/rate-limit.ts`. **✅ SELESAI** (2026-09-30): (a) 3 route GET yang terlewat ditambal; (b) rate-limit **login Better Auth** diverifikasi aktif (rule bawaan `/sign-in` 3/10 s) + **storage database** (tabel `rate_limit`, persisten) + IP asli via `cf-connecting-ip` (Cloudflare) → tahan spoof. Lihat `docs/RENCANA-RATE-LIMIT.md`. | ✅ |
 | S2 | ~~Security headers~~ **✅ SELESAI** (2026-09-29): CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS (produksi). Di `next.config.ts`. Pengerasan lanjutan: nonce/hash CSP (kini `'unsafe-inline'`). | ✅ |
 | S3 | Proyeksi kolom (`src/lib/db/projections/question.ts`); `answer_key`+`isCorrect` hanya untuk viewer berwenang; `embedding*`/`aiTagged*` **selalu** dibuang. CONSTRAINT #34. **✅ pada jalur `/questions`** (13 tes). **⚠️ UTANG:** jalur baca **paket** (`listBundleItems`) belum meneruskan `actor` → kunci selalu dibuang (under-exposure, inkonsisten — NEW4, M13). | 🟠 |
 | S4 | **Verifikasi email** — kini `requireEmailVerification: false` | 🟠 |

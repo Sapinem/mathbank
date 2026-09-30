@@ -8,6 +8,7 @@ import {
   authAccount,
   authVerification,
   apiKey as apiKeyTable,
+  rateLimit as rateLimitTable,
 } from "@/lib/db/schema/auth";
 
 /**
@@ -37,6 +38,7 @@ export const auth = betterAuth({
       account: authAccount,
       verification: authVerification,
       apikey: apiKeyTable,
+      rateLimit: rateLimitTable,
     },
   }),
   emailAndPassword: {
@@ -56,6 +58,26 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 hari
     updateAge: 60 * 60 * 24, // 1 hari
+  },
+  /**
+   * Rate limit — anti brute-force login.
+   *
+   * - Aktif otomatis bila `NODE_ENV=production`; rule bawaan Better Auth:
+   *   `/sign-in*` 3 req/10 s, `/request-password-reset` 3 req/60 s, umum 100 req/60 s.
+   *   Kita **tidak** menimpa rule bawaan (tidak tambal sulam).
+   * - `storage: "database"` → counter persisten & dibagi antar-proses (default
+   *   `memory` hilang saat restart & tak cocok multi-instance/ serverless).
+   *   Tabel `rate_limit` (lihat `db/schema/auth.ts`).
+   * - IP asli klien di balik Cloudflare ada di header `cf-connecting-ip`
+   *   (header default `x-forwarded-for` tak dapat dipercaya di sini).
+   */
+  rateLimit: {
+    storage: "database",
+  },
+  advanced: {
+    ipAddress: {
+      ipAddressHeaders: ["cf-connecting-ip"],
+    },
   },
   plugins: [
     apiKey({

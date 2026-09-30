@@ -29,6 +29,13 @@
       "when": 1790698088343,
       "tag": "0003_cloudy_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790743267920,
+      "tag": "0004_unique_shadowcat",
+      "breakpoints": true
     }
   ]
 }

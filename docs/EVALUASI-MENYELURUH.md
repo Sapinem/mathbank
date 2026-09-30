@@ -48,7 +48,7 @@ kejutan, tapi **layak dibayar lebih awal** untuk beberapa item murah.
 ### 🔴 Tinggi (keamanan)
 | # | Temuan | Lokasi | Bukti |
 |---|--------|--------|-------|
-| **NEW1** | **`/api/auth/*` (login Better Auth) TANPA rate-limit per-IP** → rawan **credential stuffing**/brute-force. Handler `toNextJsHandler(auth)` di luar `wrapRoute`. **Belum diperbaiki** (M13) | `api/auth/[...all]/route.ts:4` | subagent |
+| **NEW1** | ~~**`/api/auth/*` (login Better Auth) TANPA rate-limit per-IP**~~ → **✅ TERBUKTI SALAH sebagian besar & SUDAH DIPERKUAT.** Rate-limit login **aktif otomatis** (rule bawaan `/sign-in` 3/10 s); yang benar-benar diperbaiki: **storage** (memory→database, persisten) + **IP asli** (`cf-connecting-ip`, tahan spoof). Lihat `docs/RENCANA-RATE-LIMIT.md`. | `api/auth/[...all]/route.ts`, `auth/server.ts` | docs better-auth 1.7.6 + uji 429 |
 | **NEW2** | **`dev/quick-login` membocorkan `detail`** error mentah (`auth.handler` respons, bisa memuat pesan DB) — pagarnya `DEMO_LOGIN` yang bisa dinyalakan di produksi | `api/dev/quick-login/route.ts:60-68` | subagent |
 | S1 | **Route tanpa rateLimit** (langgar CONSTRAINTS #33) — ✅ **DIPERBAIKI** | `api/auth/me`, `api/questions/[id]` GET, `api/settings` GET | grep route |
 | S2 | `api_key` tersimpan **plaintext** di `app_settings` (jsonb) | `db/schema/system.ts` | subagent |
