@@ -3,6 +3,11 @@
 > **Perintah:** "evaluasi menyeluruh capaian kita dengan best practice."
 > **Metode:** audit berbasis bukti (kode/DB/tes nyata), 3 penyidik paralel
 > (audit otomatis + 2 subagent: a11y & keamanan). Bukan klaim dokumen.
+>
+> **Catatan kejujuran dokumen:** laporan subagent menemukan `docs/KEAMANAN.md`
+> mengklaim S1 (rate limit) & S3 "SELESAI" — padahal 4 route terlewat dari S1
+> (3 ditemukan awal + `/api/auth/*`), dan S3 tak diterapkan di jalur baca paket.
+> Klaim dokumen **diperlunak** agar utang tercatat jujur.
 
 ## 0. Ringkasan Eksekutif
 
@@ -43,24 +48,29 @@ kejutan, tapi **layak dibayar lebih awal** untuk beberapa item murah.
 ### 🔴 Tinggi (keamanan)
 | # | Temuan | Lokasi | Bukti |
 |---|--------|--------|-------|
+| **NEW1** | **`/api/auth/*` (login Better Auth) TANPA rate-limit per-IP** → rawan **credential stuffing**/brute-force. Handler `toNextJsHandler(auth)` di luar `wrapRoute`. **Belum diperbaiki** (M13) | `api/auth/[...all]/route.ts:4` | subagent |
+| **NEW2** | **`dev/quick-login` membocorkan `detail`** error mentah (`auth.handler` respons, bisa memuat pesan DB) — pagarnya `DEMO_LOGIN` yang bisa dinyalakan di produksi | `api/dev/quick-login/route.ts:60-68` | subagent |
 | S1 | **Route tanpa rateLimit** (langgar CONSTRAINTS #33) — ✅ **DIPERBAIKI** | `api/auth/me`, `api/questions/[id]` GET, `api/settings` GET | grep route |
 | S2 | `api_key` tersimpan **plaintext** di `app_settings` (jsonb) | `db/schema/system.ts` | subagent |
 | S3 | `DEMO_PASSWORD` **hardcoded** & bisa login di produksi bila `DEMO_LOGIN=enabled` — ⚠️ diperjelas (M13) | `auth/demo-users.ts:13` | grep |
 | S4 | `questions.author_id` = `text` **tanpa FK** ke `user(id)` — tak ada integritas referensial | `db/schema/question.ts:88` | subagent |
+| **NEW3** | `apikey.key` (rahasia) di-index **NON-unik** → potensi collision/duplikasi kunci; + tersimpan **plaintext** | `db/schema/auth.ts:102-105` | subagent |
 | S5 | Error API internal: diperiksa — **aman** (route-wrapper tak bocorkan stack; hanya 500 generik) | `api/route-wrapper.ts` | subagent ✅ |
-| S6 | SQL injection: diperiksa — **aman** (semua `sql\`\`` adalah DDL/index/default statis, bukan input) | schema + filters | subagent ✅ |
-| S7 | Proyeksi `answer_key`/`embedding` lewat API: diperiksa — **aman** (jalur baca pakai `questionColumns`); `listBundleItems` pakai `withAnswerKey:false` | `bundle-service.ts` | subagent ✅ |
+| S6 | SQL injection: diperiksa — **aman** (semua template `sql` = bind-param/DDL statis, bukan input) | schema + filters | subagent ✅ |
+| S7 | Proyeksi `answer_key`/`embedding` lewat API: diperiksa — **aman**; ⚠️ **NEW4**: `listBundleItems` **tak** teruskan `actor` → kunci selalu dibuang (under-exposure, tak konsisten dgn aturan S3) | `bundle-service.ts:282` | subagent |
 | S8 | Index unik email & slug: **ada** (`user_email_unique`, `uq_sources_slug`, `uq_bundles_slug_active`) | migrasi | subagent ✅ |
 
 ### 🟠 Menengah (a11y + konsistensi)
 | # | Temuan | Lokasi | Bukti |
 |---|--------|--------|-------|
-| A1 | **Kontras**: `text-gold`/`text-success`/`text-warning` dipakai sbg teks di latar putih | beberapa komponen | subagent a11y |
-| A2 | Form input tanpa label terhubung (htmlFor/id) | editor, pengaturan | subagent a11y |
-| A3 | Tabel tanpa `caption`/`scope` | 4 tabel | subagent a11y |
+| A1 | **Kontras gagal**: `text-gold` (**2.16:1**), `text-warning` (**2.25:1**), `text-success` (**3.70:1**) dipakai sbg teks/ikon di latar putih — token status dirancang sbg *latar*, bukan teks | `question-card.tsx:65,79`, `telaah-view.tsx:231`, `display/labels.ts:69-72` | subagent a11y |
+| A2 | Form input tanpa label terhubung (htmlFor/id) — 2 **input pencarian** tanpa accessible name (KRITIS: `bank-soal-view:177`, `bundle-builder:163`); label Select tak terasosiasi (`question-editor:504`, `pengaturan-view:104,137`) | editor, pengaturan, bank-soal | subagent a11y |
+| A3 | Tabel tanpa `<caption>` + `<th>` tanpa `scope` | `bundle-list-view:105`, `labels-view:94`, `sources-view:123`, `events-view:122` | subagent a11y |
 | C1 | **Audit log tak merata** — taxonomy/topic-service tak mencatat | `taxonomy-service.ts`, `topic-service.ts` | grep |
-| C2 | Blok `select` paket **duplikat** (listBundles & getBundle) | `bundle-service.ts` | grep |
+| C2 | Blok `select` paket **duplikat** (listBundles & getBundle) — ✅ **DIPERBAIKI** | `bundle-service.ts` | grep |
 | C3 | Helper `api<T>` **duplikat** di 2 hook | `use-bundles.ts`, `use-taxonomy-refs.ts` | grep |
+
+**A11y — konfirmasi negatif (bersih ✅):** tak ada `div`/`span` onClick tanpa role · tak ada tombol ikon tanpa nama · tak ada `<img>` tanpa alt · tak ada `outline-none` tanpa pengganti · tak ada tautan "klik di sini" · heading tak melompat. Sisanya hanya ikon dekoratif inline tanpa `aria-hidden` (ringan).
 
 ### 🟡 Ringan (dokumentasi + kualitas kode)
 | # | Temuan | Bukti |
@@ -70,7 +80,11 @@ kejutan, tapi **layak dibayar lebih awal** untuk beberapa item murah.
 | D3 | `bundle-service.ts` 516 baris (kandidat pecah); blok select duplikat — ✅ **duplikasi DIPERBAIKI** | wc |
 | D4 | `taxonomy-service.ts:139,235,304` pakai `sql\`questions\`` / `sql\`question_tags\`` (nama tabel mentah) — bukan injeksi, tapi hilang type-safety Drizzle | subagent keamanan |
 | D5 | `validateBundle` membaca `answerKey` mentah tanpa `canSeeAnswerKey` — **aman kini**, tapi rapuh bila diperluas | subagent keamanan |
-| D6 | **`theme:check` hanya uji token berpasangan**, bukan pemakaian nyata (mis. `text-gold` di latar putih lolos) — celah validasi kontras | subagent a11y |
+| D6 | **`theme:check` hanya uji token berpasangan**, bukan pemakaian nyata (mis. `text-gold` di latar putih lolos) — celah validasi kontras. **Saran:** tambah pasangan cek `accent`/`success`/`warning` sbg teks di `bg` | subagent a11y |
+| D7 | `reference:manage` izin **mati** (didefinisikan, tak dipakai — sources/events pakai `taxonomy:manage`) | subagent keamanan |
+| D8 | `tags.name`/`topics.slug`/`sources.slug`/`events.code` unique-violation **tak** ditangkap → 500 generik (bukan 409 ramah) | subagent keamanan |
+| D9 | `route-wrapper.ts:184` `req.json().catch(()=>({}))` **menelan** error parse JSON (tak bisa bedakan body kosong vs JSON rusak) | subagent keamanan |
+| D10 | `resolve.ts:76-86` dev-bypass → admin penuh bila `AUTH_DEV_BYPASS=true` (pagar `NODE_ENV` kuat, tapi perlu pagar kedua utk staging) | subagent keamanan |
 
 ## 3. Rencana Perbaikan
 
@@ -81,13 +95,20 @@ kejutan, tapi **layak dibayar lebih awal** untuk beberapa item murah.
 - **D2**: perbarui komentar `demo-users.ts` + beri **peringatan tegas** `DEMO_LOGIN`.
 
 ### Langkah 2 — M13 (Keamanan lanjutan)
+- **NEW1** (🔴 prioritas #1): rate-limit `/api/auth/*` (credential stuffing).
+- **NEW2**: buang field `detail` di `dev/quick-login` (log server-side saja).
+- **NEW3**: `apikey.key` → `uniqueIndex` (+ pertimbangkan hashing).
+- **NEW4**: teruskan `actor` ke `listBundleItems` (aturan S3 konsisten).
+- **D8**: tangkap unique-violation → `ConflictError` (409 ramah).
 - **S2**: enkripsi `is_secret` at-rest / secret manager.
 - **S3**: pagar `DEMO_LOGIN` agar **tidak boleh** di produksi sungguhan (env terpisah).
-- Audit izin menyeluruh + FK `author_id`.
+- **S4**: FK `author_id`; **D7**: hapus/selaraskan `reference:manage`; **D10**: pagar kedua dev-bypass.
 
 ### Langkah 3 — M15 (UI/UX polish)
-- **A1–A3**: token teks kontras, label form, caption tabel.
-- **Responsif**: ganti `DesktopOnly` editor soal → Sheet (pola sudah ada di paket).
+- **A1**: token teks kontras (`--mb-*-text` gelap) atau badge ber-latar; **D6**: perluas `theme:check`.
+- **A2**: `aria-label` 2 input pencarian + `htmlFor`/`id` label Select.
+- **A3**: `<TableCaption>` + `scope="col"` (4 tabel).
+- **C1**: audit log taksonomi/topik; **C3**: ekstrak helper `api<T>`; **D9**: 400 eksplisit JSON rusak.
 
 ## 4. Catatan metodologis
 - Angka coverage **hanya untuk scope logika murni** (bukan seluruh proyek) — sesuai

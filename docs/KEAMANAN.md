@@ -150,9 +150,9 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 
 | # | Utang | Prioritas |
 |---|-------|-----------|
-| S1 | ~~Rate limiting untuk route umum~~ **✅ SELESAI** (2026-09-29): token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Siap-swap ke Redis. Lihat `src/lib/api/rate-limit.ts`. | ✅ |
+| S1 | Token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Siap-swap ke Redis. Lihat `src/lib/api/rate-limit.ts`. **✅ sebagian** (2026-09-30): terpasang di `wrapRoute` + 3 route GET yang terlewat ditambal. **⚠️ UTANG:** `/api/auth/*` (login Better Auth) **belum** ber-rate-limit per-IP → rawan credential stuffing (NEW1, M13). | 🟠 |
 | S2 | ~~Security headers~~ **✅ SELESAI** (2026-09-29): CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS (produksi). Di `next.config.ts`. Pengerasan lanjutan: nonce/hash CSP (kini `'unsafe-inline'`). | ✅ |
-| S3 | ~~Pemisahan output `answer_key`~~ **✅ SELESAI** (2026-09-29): proyeksi kolom (`src/lib/db/projections/question.ts`); `answer_key`+`isCorrect` hanya untuk viewer berwenang (admin/teacher/reviewer); `embedding*`/`aiTagged*` **selalu** dibuang. CONSTRAINT #34. Terverifikasi live + 13 tes. | ✅ |
+| S3 | Proyeksi kolom (`src/lib/db/projections/question.ts`); `answer_key`+`isCorrect` hanya untuk viewer berwenang; `embedding*`/`aiTagged*` **selalu** dibuang. CONSTRAINT #34. **✅ pada jalur `/questions`** (13 tes). **⚠️ UTANG:** jalur baca **paket** (`listBundleItems`) belum meneruskan `actor` → kunci selalu dibuang (under-exposure, inkonsisten — NEW4, M13). | 🟠 |
 | S4 | **Verifikasi email** — kini `requireEmailVerification: false` | 🟠 |
 | S5 | **Kebijakan kata sandi kuat** + rotasi | 🟠 |
 | S6 | Pemindaian rahasia (**gitleaks**) di CI — tak tersedia | 🟠 |
