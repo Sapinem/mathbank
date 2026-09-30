@@ -250,3 +250,11 @@ Apa yang AI **boleh** usulkan? (semua = usulan, bukan tulisan final)
 - UI enrichment di halaman soal (tombol "Enrich dengan AI" + pratinjau usulan).
 - M11 MCP (tool `enrich`) memakai service yang sama.
 
+### Keputusan status enrichment (dikonfirmasi 2026-09-30)
+
+Saat AI meng-enrich soal, status berubah: **hanya `draft` → `review`**. Status lain
+(`review`/`ready`/`archived`) **tetap apa adanya** walau metadatanya diperbarui AI.
+
+Alasan: enrichment pada soal yang sudah diverifikasi tidak boleh diam-diam
+menurunkan status (memaksa telaah ulang). Guru dapat mengirim ke telaah secara
+eksplisit ("Kirim Telaah") bila ingin re-verifikasi.

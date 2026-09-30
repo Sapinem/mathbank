@@ -1,7 +1,7 @@
 # MILESTONE — MathBank (Rencana Eksekusi)
 
 > **Dokumen ini menjawab:** *Urutan pembangunan MathBank — apa dulu, apa kemudian, kapan selesai?*
-> **Status:** 🟢 aktif — M0–M3 ✅ · M4a–M4d ✅ · M5–M8 ✅ (MVP) · **M9 ✅ · M10 siap dikerjakan**.
+> **Status:** 🟢 aktif — M0–M3 ✅ · M4a–M4d ✅ · M5–M8 ✅ (MVP) · **M9 ✅ · M10 ✅ · M11 siap dikerjakan**.
 > **Versi:** 2.2 · **Tanggal:** 2026-09-30
 > **Rujukan:** `PRD.md` (ruang lingkup), `DESAIN-PER-LAPISAN-MATHBANK.md` (L1–L9), `PETA-DOKUMEN.md`, `KEAMANAN.md`, `CATATAN-PUTUSAN.md`.
 
@@ -46,7 +46,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M | Nama | Prioritas | Dependensi | Status |
 |---|------|-----------|------------|:------:|
 | M9 | Ingest Korpus (parsing data sumber) | ✅ | M8 | ✅ M9-1/2/2b/2c/3 selesai (korpus HTML, bukan PDF) |
-| M10 | AI Enrichment & Embedding | 🟡 | M9 | 🟡 **inti selesai** (client·embedding·enkripsi·enrich·semantik·UI Pengaturan); sisa: UI enrich di halaman soal |
+| M10 | AI Enrichment & Embedding | ✅ | M9 | **TUNTAS** — client·embedding·enkripsi·enrich·semantik·UI Pengaturan·UI enrich di halaman soal |
 | M11 | MCP (agen/otomasi) | 🟡 | M10 | ⬜ |
 | M12 | Ekspor Moodle | 🟢 | M8 | ⬜ |
 
@@ -340,7 +340,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [x] Embedding soal → vektor + hash + model (aktifkan **pencarian semantik M6**) ✅
 - [x] Aturan flag × status tetap (flagged ≠ `ready`) ✅ (invarian DB)
 - [x] Batas biaya/rate + log AI (`audit_logs`) ✅ (`ai.max_tokens`/timeout + rateLimit endpoint)
-- [ ] UI enrichment di **halaman soal** (tombol + pratinjau usulan) — sisa
+- [x] UI enrichment di **halaman soal** (tombol + dialog pratinjau usulan) ✅
 - 📄 **RENCANA-ENRICHMENT.md** ✅ (terimplementasi)
 
 ## M11 — MCP (agen/otomasi) 🟡

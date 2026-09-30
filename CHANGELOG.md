@@ -13,6 +13,8 @@
 - **Pencarian semantik** (M6): param `mode=semantic` → embed query & urut jarak vektor (HNSW); fallback trigram otomatis.
 - **Endpoint**: `/api/ai/{settings,models,health,enrich,embed}`.
 - **UI**: kartu **AI / Enrichment** di halaman Pengaturan (model picker dari provider + cek layanan).
+- **UI enrichment di halaman soal** (M10-f): tombol **"Enrich dengan AI"** + dialog pratinjau usulan (topik/kesulitan/kognitif/tags + catatan).
+- **Keputusan status**: enrichment hanya menaikkan `draft`→`review`; status lain tetap (tak menurunkan soal yang sudah diverifikasi).
 - **ENV**: `SETTINGS_ENC_KEY`, `BGE_M3_MODEL`; `BGE_M3_SERVICE_URL` default Ollama.
 - **Tes**: +47 unit (crypto/client/enrich/embedding) + 14 DB = unit **405** · DB **128** · coverage **91,99%**.
 
