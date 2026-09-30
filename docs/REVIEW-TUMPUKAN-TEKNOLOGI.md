@@ -1,6 +1,6 @@
 # REVIEW TUMPUKAN TEKNOLOGI — MathBank vs Versi Terbaru
 
-> **Tanggal review:** 2026-09-29
+> **Tanggal review:** 2026-09-29 · **Diverifikasi ulang:** 2026-09-30
 > **Metode:** Context7 MCP (`@upstash/context7-mcp` v4.1.1, via stdio) untuk dokumentasi versi-spesifik + npm registry (`npm view … dist-tags.latest`) untuk nomor versi rilis + pembacaan langsung `package.json`, `node_modules/`, `pnpm-lock.yaml`, `docs/TUMPUKAN-TEKNOLOGI.md`, `AGENTS.md`, `CONSTRAINTS.md`, `README.md`, `CHANGELOG.md`, `docs/AUDIT-KODE.md`.
 > **Sumber dokumen yang dibaca (bukan ringkasan):** `README.md`, `AGENTS.md`, `CONSTRAINTS.md`, `CHANGELOG.md`, `docs/TUMPUKAN-TEKNOLOGI.md`, `docs/AUDIT-KODE.md`, `package.json`, `next.config.ts`.
 
@@ -19,7 +19,7 @@ Tumpukan MathBank **sehat dan hampir seluruhnya mutakhir** untuk garis mayor yan
 
 **Tiga temuan terpenting:**
 1. **TypeScript 7.0.2 sudah rilis** (port native Go "Corsa") — proyek masih memaku `^5` (5.9.3). Ini lompatan besar dengan perubahan perilaku compiler nyata. Lihat **§4**.
-2. **Inkonsistensi dokumentasi vs kode**: `AGENTS.md` menyebut "Base UI headless primitives", tetapi `package.json` memasang **`radix-ui@1.6.7`** (bukan `@base-ui/react`). Lihat **§5**.
+2. ~~Inkonsistensi dokumentasi vs kode (Radix vs Base UI)~~ → **✅ SELESAI via ADR-0008** (`@base-ui/react@^1.8.0`; `radix-ui` dihapus). Lihat **§5**.
 3. **Rencana `@tanstack/react-table` tanpa versi** — ekosistem kini di **v9.2.4** (bukan v8). Perlu diputuskan saat M4 tiba. Lihat **§3**.
 
 ---
@@ -174,7 +174,7 @@ Terpasang 9.39.5; terbaru **10.11.0**. `eslint-config-next` 16.3.6 → 16.3.7. I
 
 ---
 
-## 5. ✅ (SELESAI) Inkonsistensi Dokumentasi — Radix UI vs Base UI → **Base UI**
+## 5. ✅ SELESAI — Inkonsistensi Dokumentasi Radix UI vs Base UI → **Base UI** (via ADR-0008)
 
 **Temuan:** `AGENTS.md` menyatakan arsitektur UI = **"Base UI headless primitives + shadcn/ui"**, tetapi `package.json` memasang **`radix-ui@1.6.7`** dan **tidak** memasang `@base-ui/react`. `TUMPUKAN-TEKNOLOGI.md` §M3 juga menulis paket `class-variance-authority`, `clsx`, `tailwind-merge` (buildup Radix/shadcn klasik).
 
@@ -182,7 +182,7 @@ Context7 mengonfirmasi **keduanya kini didukung shadcn** (varian `radix` dan `ba
 
 **Dampak:** perbedaan arahan (dokumen bilang Base UI, kode pakai Radix) berpotensi membingungkan agent/contributor berikutnya dan menggandakan dependensi (Radix + Base UI bisa hidup berdampingan saat migrasi — Context7 menyarankan keduanya boleh koeksis). Bertentangan dengan `AGENTS.md` sendiri: *"Zero Silent Assumptions."*
 
-**Aksi:** **ratifikasi satu basis.** Salah satu:
+**✅ Aksi SELESAI (ADR-0008):** basis UI diratifikasi = **Base UI** (`@base-ui/react@^1.8.0` terpasang; `radix-ui` **dihapus**). `AGENTS.md` & `TUMPUKAN-TEKNOLOGI.md` disinkronkan. Riwayat aksi (arsip):
 - (a) Tetapkan **Radix UI** sebagai basis (sesuai kode saat ini) → perbarui `AGENTS.md`.
 - (b) Rencanakan **migrasi ke Base UI** → jadwalkan eksplisit + update dokumen.
 
@@ -197,7 +197,7 @@ Context7 mengonfirmasi **keduanya kini didukung shadcn** (varian `radix` dan `ba
 | `CONSTRAINTS #5` "install saat milestonenya tiba" | ✅ dipatuhi — paket M4+ (react-hook-form, react-table, nuqs, MCP SDK) **belum** dipasang |
 | `CONSTRAINTS #6` larangan `useMemo`/`useCallback` | ✅ persis tujuan React Compiler resmi |
 | `AGENTS.md` "Next 16 + Turbopack + proxy.ts + use cache" | ✅ arah benar; `proxy.ts` & Turbopack sesuai konvensi v16 |
-| `AGENTS.md` "Base UI" | 🔴 **tidak cocok** dengan `radix-ui` terpasang (§5) |
+| `AGENTS.md` "Base UI" | ✅ **cocok** — `@base-ui/react@^1.8.0` terpasang, `radix-ui` dihapus (ADR-0008) |
 | `TUMPUKAN-TEKNOLOGI.md` "🚫 openai SDK" | ✅ tetap benar — M10 panggil endpoint via `fetch` |
 | `TUMPUKAN-TEKNOLOGI.md` "Better Auth sudah dipilih" | ✅ terbaru (1.7.6) & plugin sesuai kebutuhan multi-peran |
 
@@ -212,3 +212,42 @@ Tumpukan MathBank **secara keseluruhan kompetitif dan hampir sepenuhnya di ujung
 ---
 
 *Dihasilkan via Context7 MCP + verifikasi npm registry, 2026-09-29.*
+
+---
+
+## 8. 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek ulang klaim ke `package.json`/`node_modules` + npm registry.
+
+**Yang masih BENAR ✅:** seluruh klaim versi (per hari ini: `next` latest **16.3.7**,
+`react` **19.3.0**, `typescript` **7.0.2**, `eslint` **10.11.0**, `eslint-config-next` **16.3.7**);
+paket rencana M4+ **belum dipasang** (CONSTRAINTS #5 dipatuhi); audit Zod (tak ada alias
+lama) **bersih**.
+
+**Yang perlu DISINKRONKAN (telah diperbaiki 2026-09-30):**
+- **§5 & §6 BASI:** dokumen masih menyatakan "`radix-ui` terpasang, Base UI belum" →
+  faktanya **migrasi SUDAH selesai** (ADR-0008): `@base-ui/react@^1.8.0` terpasang,
+  `radix-ui` **dihapus**. Judul §5, tabel §6, & ringkasan §0 temuan #2 disinkronkan.
+- **§3.1 (redup `--turbopack`):** masih benar (`dev: next dev --turbopack`). **Sengaja
+  DIBIARKAN** — flag masih diterima Next 16 & berfungsi; menghapusnya kosmetik, bukan bug.
+- **§3.1 (`cacheComponents` flag):** masih benar (tak ada flag). Diuji di sesi 2026-09-30
+  lalu **dibatalkan** (lihat `docs/VERIFIKASI-CATATAN-ENTERPRISE.md`, `CONSTRAINTS #41`) —
+  jadi "belum dipasang" memang **keputusan sadar**, bukan kelalaian.
+
+**Keputusan yang BELUM diambil (butuh checkpoint user, tetap terbuka):**
+- **P2 — TypeScript 5 → 7** (lompatan mayor, port native "Corsa"). Belum dieksekusi.
+- **P2 — react-table v8 vs v9** (sebelum M4). Belum dieksekusi (M4 sudah lewat tanpa react-table).
+- **P3 — ESLint 9 → 10** (mayor). Belum dieksekusi.
+- **P1 — bump `next`/`react`/`eslint-config-next` patch/minor.** Belum dieksekusi.
+
+**Kesimpulan:** dokumen **akurat & berguna**; kesalahan tunggal = **§5/§6 basi** (kini
+disinkronkan). Dokumen ini **review/keputusan**, bukan catatan hasil eksekusi — aksi
+upgrade yang tersisa **menunggu keputusan user** (Zero Silent Assumptions).
+
+**Koreksi tambahan (verifikasi 2026-09-30):**
+- **§5 premis keliru:** dokumen menyebut *"`AGENTS.md` menyatakan Base UI headless
+  primitives"* — **`AGENTS.md` sebenarnya hanya boilerplate Next.js**, tidak menyebut UI
+  sama sekali. Sumber mismatch yang benar = `docs/TUMPUKAN-TEKNOLOGI.md` (+ ADR) vs kode.
+- **`docs/TUMPUKAN-TEKNOLOGI.md:58` diperbaiki:** dulu menulis shadcn dengan
+  `clsx`+`tailwind-merge` → kini **`cn`** (drop-in resmi shadcn; lihat
+  `docs/VERIFIKASI-AUDIT-PUSTAKA.md`) + catatan basis **Base UI** (ADR-0008).

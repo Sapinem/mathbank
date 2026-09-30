@@ -23,6 +23,15 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   - **Tes DB: 14 → 18** (+4). **Pelajaran → `CONSTRAINTS.md` #45–46.**
 
 ### Dokumentasi
+- **🔧 `REVIEW-TUMPUKAN-TEKNOLOGI.md` disinkronkan** (verifikasi ulang 2026-09-30): §5/§6
+  masih menyatakan "`radix-ui` terpasang, Base UI belum" — padahal **migrasi SUDAH selesai**
+  (ADR-0008: `@base-ui/react`, `radix-ui` dihapus) → judul §5, tabel §6, & §0 temuan #2
+  diperbarui + **§8 Catatan Verifikasi** ditambahkan. Klaim versi (next 16.3.7, react 19.3.0,
+  TS 7.0.2, eslint 10.11.0) **masih benar**; paket rencana M4+ **belum dipasang** (#5 dipatuhi).
+  Koreksi: §5 premis keliru (`AGENTS.md` = boilerplate Next, bukan sumber mismatch).
+  **`docs/TUMPUKAN-TEKNOLOGI.md:58`** diperbaiki (`clsx`+`tailwind-merge` → **`cn`** + catatan
+  Base UI). Sisa aksi upgrade (TS 7, ESLint 10, react-table v9, bump patch) **menunggu
+  keputusan user** — bukan kelalaian.
 - **📝 Catatan Verifikasi seragam di SELURUH dokumen `docs/audit/`** (CONSTRAINTS #44):
   tiap dokumen audit (M1–M7, Pustaka, Enterprise) kini punya blok **§Catatan Verifikasi**
   di akhir + status baris ditandai (✅/⚠️) — merujuk temuan nyata & perbaikannya. M6

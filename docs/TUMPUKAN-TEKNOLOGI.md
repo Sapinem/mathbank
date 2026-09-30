@@ -55,7 +55,7 @@
 
 | Paket | Untuk | Alasan |
 |-------|-------|--------|
-| **`shadcn/ui`** (+ `class-variance-authority`, `clsx`, `tailwind-merge`) | Komponen dasar | Kode milik kita (copy), Tailwind, cocok Linear/Vercel. **Sudah dipilih.** |
+| **`shadcn/ui`** (+ `class-variance-authority`, `cn`) | Komponen dasar | Kode milik kita (copy), Tailwind, cocok Linear/Vercel. **Sudah dipilih.** Basis primitif: **Base UI** (`@base-ui/react`, ADR-0008); penggabung kelas = **`cn`** (drop-in resmi shadcn untuk clsx+tailwind-merge). |
 | **`@tanstack/react-query`** | Server state | Desain **L3** (staleTime per-jenis, cache, optimistic). Standar. |
 | **`katex`** | Render rumus | **INTI** — bank soal **matematika**. Wajib. |
 | **`lucide-react`** | Ikon | Bersih, ringan, dipakai shadcn. |

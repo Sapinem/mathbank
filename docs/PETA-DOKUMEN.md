@@ -62,7 +62,7 @@
 | D3 | `AUDIT-KODE.md` | ✅ | |
 | D4 | `AUDIT-ARSITEKTUR-DAN-DATA.md` | ✅ | |
 | D5 | `AUDIT-KONSISTENSI-PERENCANAAN.md` | ✅ | |
-| D6 | `REVIEW-TUMPUKAN-TEKNOLOGI.md` | ✅ | |
+| D6 | `REVIEW-TUMPUKAN-TEKNOLOGI.md` | ✅ | diverifikasi ulang 2026-09-30 — §5/§6 disinkronkan (migrasi Base UI selesai, ADR-0008); sisa aksi upgrade menunggu keputusan |
 | D7 | `RIWAYAT-KEPUTUSAN.md` | ✅ | |
 | D10 | `RISET-BETTER-AUTH.md` | ✅ | **dibuat** 2026-09-29 — evaluasi RBAC Better Auth |
 | D8 | `CONTRIBUTING.md` | ✅ | **dibuat** 2026-09-29 — alur kontribusi |
