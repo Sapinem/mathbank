@@ -20,8 +20,8 @@ export interface EnrichContext {
 /** Field yang diminta (D3). */
 export type EnrichField = "topics" | "difficulty" | "cognitiveLevel" | "tags";
 
-const DIFFICULTY = ["easy", "medium", "hard"] as const;
-const COGNITIVE = ["C1", "C2", "C3", "C4", "C5", "C6"] as const;
+const DIFFICULTY = [1, 2, 3, 4, 5] as const;
+const COGNITIVE = ["remember", "understand", "apply", "analyze", "evaluate", "create"] as const;
 
 /** Prompt sistem (Indonesia — tugas klasifikasi, keluaran JSON ketat). */
 export function buildSystemPrompt(): string {
@@ -50,8 +50,12 @@ export function buildUserPrompt(params: {
   if (fields.includes("topics")) {
     keys.push('"topics" (array nama topik, dipilih HANYA dari daftar di bawah)');
   }
-  if (fields.includes("difficulty")) keys.push('"difficulty" (satu dari: easy|medium|hard)');
-  if (fields.includes("cognitiveLevel")) keys.push('"cognitiveLevel" (satu dari: C1|C2|C3|C4|C5|C6)');
+  if (fields.includes("difficulty")) {
+    keys.push('"difficulty" (angka 1–5: 1=sangat mudah … 5=sangat sulit)');
+  }
+  if (fields.includes("cognitiveLevel")) {
+    keys.push('"cognitiveLevel" (satu dari: remember|understand|apply|analyze|evaluate|create)');
+  }
   if (fields.includes("tags")) keys.push('"tags" (array kata kunci singkat, huruf kecil)');
   keys.push('"notes" (alasan singkat, bahasa Indonesia)');
   for (const k of keys) lines.push(`- ${k}`);
@@ -84,7 +88,10 @@ export function normalizeProposal(
         .slice(0, 8)
     : [];
 
-  const difficulty = fields.includes("difficulty") && isOneOf(o.difficulty, DIFFICULTY) ? (o.difficulty as EnrichmentProposal["difficulty"]) : null;
+  const difficulty =
+    fields.includes("difficulty") && isDifficulty(o.difficulty)
+      ? (Number(o.difficulty) as 1 | 2 | 3 | 4 | 5)
+      : null;
 
   const cognitiveLevel =
     fields.includes("cognitiveLevel") && isOneOf(o.cognitiveLevel, COGNITIVE)
@@ -104,6 +111,12 @@ function toStringArray(v: unknown): string[] {
 
 function isOneOf<T extends readonly string[]>(v: unknown, list: T): v is T[number] {
   return typeof v === "string" && (list as readonly string[]).includes(v);
+}
+
+/** difficulty valid = 1..5 (terima juga string angka). */
+function isDifficulty(v: unknown): v is 1 | 2 | 3 | 4 | 5 {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isInteger(n) && (DIFFICULTY as readonly number[]).includes(n);
 }
 
 /** Semua field yang didukung (default bila klien tak menentukan). */

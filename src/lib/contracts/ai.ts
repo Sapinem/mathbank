@@ -35,6 +35,23 @@ export const aiEnrichSchema = z.object({
 });
 export type AiEnrichInput = z.infer<typeof aiEnrichSchema>;
 
+/** Enrich: satu soal ATAU batch (union). */
+export const aiEnrichBodySchema = z.union([
+  z.object({
+    questionId: z.string().min(1),
+    fields: z
+      .array(z.enum(["topics", "difficulty", "cognitiveLevel", "tags"]))
+      .optional(),
+  }),
+  z.object({
+    questionIds: z.array(z.string().min(1)).min(1).max(200),
+    fields: z
+      .array(z.enum(["topics", "difficulty", "cognitiveLevel", "tags"]))
+      .optional(),
+  }),
+]);
+export type AiEnrichBody = z.infer<typeof aiEnrichBodySchema>;
+
 /** Batch enrichment. */
 export const aiEnrichBatchSchema = z.object({
   questionIds: z.array(z.string().min(1)).min(1).max(200),
@@ -53,8 +70,10 @@ export type AiEmbedInput = z.infer<typeof aiEmbedSchema>;
 /** Usulan enrichment (belum diterapkan ke soal). */
 export interface EnrichmentProposal {
   topics: string[];
-  difficulty: "easy" | "medium" | "hard" | null;
-  cognitiveLevel: "C1" | "C2" | "C3" | "C4" | "C5" | "C6" | null;
+  /** 1–5 (smallint), sesuai `difficulty_levels.value`. */
+  difficulty: 1 | 2 | 3 | 4 | 5 | null;
+  /** Enum Bloom (sesuai `cognitive_level`). */
+  cognitiveLevel: "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create" | null;
   tags: string[];
   notes?: string;
 }

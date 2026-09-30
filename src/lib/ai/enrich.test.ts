@@ -46,15 +46,19 @@ describe("ai/enrich — normalizeProposal", () => {
     expect(r.topics).toEqual(["Trigonometri"]);
   });
 
-  it("difficulty & cognitiveLevel divalidasi", () => {
-    expect(normalizeProposal({ difficulty: "hard", cognitiveLevel: "C4" }, ALL_FIELDS, topics)).toMatchObject({
-      difficulty: "hard",
-      cognitiveLevel: "C4",
+  it("difficulty (1-5) & cognitiveLevel (enum Bloom) divalidasi", () => {
+    expect(normalizeProposal({ difficulty: 4, cognitiveLevel: "analyze" }, ALL_FIELDS, topics)).toMatchObject({
+      difficulty: 4,
+      cognitiveLevel: "analyze",
     });
-    expect(normalizeProposal({ difficulty: "susah", cognitiveLevel: "C9" }, ALL_FIELDS, topics)).toMatchObject({
+    // string angka diterima
+    expect(normalizeProposal({ difficulty: "2" }, ALL_FIELDS, topics).difficulty).toBe(2);
+    // nilai tak sah → null
+    expect(normalizeProposal({ difficulty: 9, cognitiveLevel: "C9" }, ALL_FIELDS, topics)).toMatchObject({
       difficulty: null,
       cognitiveLevel: null,
     });
+    expect(normalizeProposal({ difficulty: "susah" }, ALL_FIELDS, topics).difficulty).toBeNull();
   });
 
   it("tags dinormalkan huruf kecil & dipotong", () => {
@@ -63,9 +67,9 @@ describe("ai/enrich — normalizeProposal", () => {
   });
 
   it("field yang TIDAK diminta diabaikan", () => {
-    const r = normalizeProposal({ topics: ["Aljabar"], difficulty: "easy" }, ["difficulty"], topics);
+    const r = normalizeProposal({ topics: ["Aljabar"], difficulty: 1 }, ["difficulty"], topics);
     expect(r.topics).toEqual([]);
-    expect(r.difficulty).toBe("easy");
+    expect(r.difficulty).toBe(1);
   });
 
   it("masukan rusak tidak melempar", () => {
