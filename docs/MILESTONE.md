@@ -317,7 +317,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 **⚙️ Arah (2026-09-30):** **bukan PDF** — fokus **parsing korpus HTML** yang sudah dicrawl
 (mathcyber · m4thlab · defantri · pusmendik). Bahan di `~/projects/qbank/data/corpora/`.
 
-- [ ] `ingest/parsers/` — fungsi murni teruji: `clean` · `segment` · `items` (dipecah, bukan monolit)
+- [ ] `ingest/parsers/` — fungsi murni teruji: `clean` ✅ · `segment` · `items` (dipecah, bukan monolit)
 - [ ] `ingest/parsers/adapters/` — penanda per-sumber (mathcyber · m4thlab · defantri)
 - [ ] `ingest/queue.ts` — enqueue artikel + status + retry + **idempotensi** (hash konten)
 - [ ] `ingest/commit.ts` — hasil parse → soal **draft** (lewat `createQuestion`, transaksi)

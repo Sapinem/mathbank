@@ -1,5 +1,14 @@
 # Changelog — MathBank
 
+## [Unreleased] — M9 Ingest Korpus (berjalan)
+
+### Ditambahkan — Aturan general cleaning korpus (M9-1)
+- `docs/ATURAN-CLEANING-KORPUS.md` — aturan general cleaning (final, keputusan user).
+- `docs/EVALUASI-KORPUS-KOMPREHENSIF.md` — evaluasi **1.081 file** korpus; inventaris kotoran + temuan kritis.
+- `src/lib/ingest/parsers/clean.ts` — fungsi murni cleaning (10 langkah) + `clean.test.ts` (22 tes).
+- Temuan kritis: `[n]`,`[m]`,`[type]` adalah **LaTeX**, bukan shortcode → shortcode pakai **daftar-hitam** (`[collapse]`,`[spoiler]`), bukan buang-semua.
+
+
 Semua perubahan penting proyek ini dicatat di sini.
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/),
 versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
