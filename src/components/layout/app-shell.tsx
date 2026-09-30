@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "./app-sidebar";
 import { Header } from "./header";
 import { CommandPalette } from "./command-palette";
+import { ShortcutsHelp } from "./shortcuts-help";
+import { useKeyboardShortcuts } from "./use-keyboard-shortcuts";
 import { SkipLink } from "./skip-link";
 
 /**
@@ -17,9 +19,16 @@ import { SkipLink } from "./skip-link";
  * - `SidebarInset` membungkus konten utama (header + main).
  *
  * Tinggi memakai `min-h-svh` dari provider; konten menggulir di dalam `main`.
+ * Pintasan global (M15): ⌘K palette, `/` cari, `g`+huruf navigasi, `?` bantuan.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  useKeyboardShortcuts({
+    onHelp: () => setHelpOpen(true),
+    onSearch: () => setCommandOpen(true),
+  });
 
   return (
     <TooltipProvider delay={0}>
@@ -37,6 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </SidebarInset>
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+        <ShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
       </SidebarProvider>
     </TooltipProvider>
   );

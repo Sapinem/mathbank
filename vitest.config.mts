@@ -68,6 +68,9 @@ export default defineConfig({
         "src/components/layout/app-shell.tsx",
         "src/components/layout/command-palette.tsx",
         "src/components/layout/nav-utils.ts",
+        "src/components/layout/use-keyboard-shortcuts.ts",
+        "src/components/layout/shortcuts-help.tsx",
+        "src/components/layout/page-state.tsx",
       ],
       // Ambang = lantai jujur saat ini; NAIKKAN bertahap, jangan turunkan.
       // (M14: dinaikkan dari 85/75/85/85 setelah coverage nyata 93/85/92/95.)
