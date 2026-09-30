@@ -1,24 +1,35 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * E2E — Login cepat demo (peran) + keluar.
+ * E2E — Login demo: form email/sandi + pil user demo.
  * Membutuhkan akun demo ter-seed (`pnpm seed:users`).
  */
-test.describe("Login demo (quick-login)", () => {
-  test("halaman login menampilkan 3 pilihan peran", async ({ page }) => {
+test.describe("Login demo (form + pil)", () => {
+  test("halaman login menampilkan form & pil akun demo", async ({ page }) => {
     await page.goto("/login");
     await expect(page.getByRole("heading", { name: "Masuk ke MathBank" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Masuk sebagai admin/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Masuk sebagai teacher/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Masuk sebagai reviewer/i })).toBeVisible();
+    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByLabel("Kata sandi")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Masuk", exact: true })).toBeVisible();
+    // Pil demo
+    await expect(page.getByRole("button", { name: "Admin", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Guru", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Penelaah", exact: true })).toBeVisible();
+  });
+
+  test("klik pil mengisi email & sandi otomatis", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByRole("button", { name: "Penelaah", exact: true }).click();
+    await expect(page.getByLabel("Email")).toHaveValue("penelaah@mathbank.local");
+    await expect(page.getByLabel("Kata sandi")).not.toHaveValue("");
   });
 
   test("masuk sebagai penelaah → identitas reviewer", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("button", { name: /Masuk sebagai reviewer/i }).click();
+    await page.getByRole("button", { name: "Penelaah", exact: true }).click();
+    await page.getByRole("button", { name: "Masuk", exact: true }).click();
     await expect(page).toHaveURL("http://localhost:3100/");
 
-    // Identitas via API mencerminkan peran reviewer.
     const me = await page.evaluate(async () => {
       const r = await fetch("/api/auth/me");
       return (await r.json()).data as { name: string; roles: string[]; via: string };
@@ -30,7 +41,8 @@ test.describe("Login demo (quick-login)", () => {
   test("menu pengguna menampilkan peran & tombol Ganti peran", async ({ page, viewport }) => {
     test.skip((viewport?.width ?? 0) < 1024, "sidebar menu pengguna tersembunyi di mobile");
     await page.goto("/login");
-    await page.getByRole("button", { name: /Masuk sebagai admin/i }).click();
+    await page.getByRole("button", { name: "Admin", exact: true }).click();
+    await page.getByRole("button", { name: "Masuk", exact: true }).click();
     await expect(page).toHaveURL("http://localhost:3100/");
 
     await page.getByRole("button", { name: /Menu pengguna/i }).click();
@@ -38,9 +50,7 @@ test.describe("Login demo (quick-login)", () => {
     await expect(page.getByRole("menuitem", { name: /Keluar/i })).toBeVisible();
   });
 
-  test("API quick-login mati di produksi (pagar keras)", async ({ request }) => {
-    // Di dev endpoint hidup; cukup pastikan balasan berbentuk data (bukan 404).
-    // Pagar produksi diverifikasi lewat unit/integration test lingkungan.
+  test("kunci demo tak dikenal → 404", async ({ request }) => {
     const res = await request.post("/api/dev/quick-login", {
       data: { key: "tidak-ada" },
     });

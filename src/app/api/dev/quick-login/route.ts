@@ -4,18 +4,26 @@ import { auth } from "@/lib/auth/server";
 import { demoUserByKey, DEMO_PASSWORD } from "@/lib/auth/demo-users";
 
 /**
- * POST /api/dev/quick-login — login cepat untuk DEMO (dev saja).
+ * POST /api/dev/quick-login — login cepat untuk DEMO.
  *
  * Menandatangani session better-auth untuk akun demo terpilih, lalu meneruskan
- * cookie sesi ke klien. **Pagar keras:** mati total di produksi (404), supaya
- * tak pernah jadi pintu belakang.
+ * cookie sesi ke klien.
+ *
+ * **Pagar:** aktif di dev. Di produksi MATI (404) kecuali `DEMO_LOGIN=enabled`
+ * diset eksplisit — jadi tak pernah jadi pintu belakang tanpa sengaja.
  *
  * Body: { key: "admin" | "guru" | "penelaah" }
  */
 const bodySchema = z.object({ key: z.string().min(1) });
 
+/** Apakah login demo diizinkan di lingkungan ini? */
+function demoLoginAllowed(): boolean {
+  if (process.env.DEMO_LOGIN === "enabled") return true;
+  return process.env.NODE_ENV !== "production";
+}
+
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === "production") {
+  if (!demoLoginAllowed()) {
     return NextResponse.json(
       { error: { code: "NOT_FOUND", message: "Tidak ditemukan." } },
       { status: 404 },

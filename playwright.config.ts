@@ -12,17 +12,18 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Dev server meng-compile rute ON-DEMAND. Terlalu banyak worker paralel
+  // membanjiri satu server → API timeout acak. Batasi + beri 1 retry untuk
+  // menyerap timeout compile pertama (kegagalan berikutnya tetap terlihat).
+  retries: 1,
+  workers: process.env.CI ? 1 : 2,
   reporter: [["list"]],
-  // Dev server meng-compile rute ON-DEMAND: permintaan pertama ke sebuah rute
-  // lambat. Beri kelonggaran agar tak jadi kegagalan palsu (flake) di mesin lokal.
-  expect: { timeout: 15_000 },
+  expect: { timeout: 20_000 },
   use: {
     baseURL: "http://localhost:3100",
     trace: "on-first-retry",
-    actionTimeout: 15_000,
-    navigationTimeout: 30_000,
+    actionTimeout: 20_000,
+    navigationTimeout: 45_000,
   },
   projects: [
     {
