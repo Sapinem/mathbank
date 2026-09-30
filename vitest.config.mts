@@ -64,6 +64,9 @@ export default defineConfig({
         "src/components/layout/skip-link.tsx",
         "src/components/layout/sidebar-user.tsx",
         "src/lib/hooks/use-media-query.ts",
+        "src/components/layout/app-shell.tsx",
+        "src/components/layout/command-palette.tsx",
+        "src/components/layout/nav-utils.ts",
       ],
       // Ambang = lantai jujur saat ini; NAIKKAN bertahap, jangan turunkan.
       thresholds: {
