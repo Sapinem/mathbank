@@ -93,6 +93,7 @@
 | D36 | `docs/audit/AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md` | ✅ | **dibuat** 2026-09-30 — audit penutup MVP & panduan arsitektur Fase 2/3 |
 | D37 | `docs/audit/M9-INGEST-KORPUS.md` | ✅ | **dibuat** 2026-09-30 — audit mesin ingest korpus (M9); §Catatan Verifikasi 2026-09-30 (koreksi: 5 sumber, 22 tes DB) |
 | D38 | `docs/audit/M10-AI-ENRICHMENT-DAN-EMBEDDING.md` | ✅ | **dibuat** 2026-09-30 — audit AI enrichment & embedding (M10); §Catatan Verifikasi 2026-09-30 (koreksi: proteksi kunci struktural, action `update`) |
+| D43 | `docs/audit/M15-UI-UX-DAN-AKSESIBILITAS.md` | ✅ | **dibuat** 2026-09-30 — audit UI/UX M15; §Catatan Verifikasi (galat/404/403, reduced-motion, axe) |
 | D42 | `docs/audit/M14-KUALITAS-KODE-DAN-TES.md` | ✅ | **dibuat** 2026-09-30 — audit kualitas M14; §Catatan Verifikasi (refactor, tes, ambang coverage) |
 | D41 | `docs/audit/M13-KEAMANAN-LANJUTAN-DAN-HARDENING.md` | ✅ | **dibuat** 2026-09-30 — audit keamanan M13; §Catatan Verifikasi (koreksi: status sebagian, bukan 100%) |
 | D40 | `docs/audit/M12-EKSPOR-MOODLE-XML-DAN-GITSYNC.md` | ✅ | **dibuat** 2026-09-30 — audit ekspor Moodle/GitSync (M12); §Catatan Verifikasi (koreksi: base64 media TIDAK ada) |
@@ -124,6 +125,7 @@
 | F5 | `RENCANA-KEAMANAN.md` | ✅ | **sebagian selesai** 2026-09-30 — M13: S5/S6/S7/S8 ✅; S9 nonce diblokir bug Turbopack |
 | F6 | `RENCANA-KUALITAS-M14.md` | ✅ | **sebagian selesai** 2026-09-30 — M14: lint #34, uji shell, refactor service, ambang coverage; TS7 ditunda |
 | F7 | `RENCANA-TS7.md` | 🔴 | **ditunda** 2026-09-30 — rencana migrasi TypeScript 7 (keputusan: tunda, risiko mayor) |
+| F8 | `RENCANA-UI-M15.md` | ✅ | **selesai** 2026-09-30 — M15: galat/404/403, reduced-motion, a11y lint+axe, pintasan keyboard |
 
 ### Kategori G — Fitur & Data Pipeline
 

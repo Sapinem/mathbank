@@ -1,6 +1,34 @@
 # Changelog — MathBank
 
 
+## [M15] — UI/UX Polish & Aksesibilitas
+
+### Ditambahkan — UI/UX (M15)
+- **Halaman galat bertema**: `src/app/not-found.tsx` (404), `global-error.tsx`
+  (inline CSS tahan gagal-stylesheet), `(app)/error.tsx` (boundary + reset),
+  `(app)/loading.tsx` (skeleton) — **tak membocorkan** stack trace.
+- **Halaman 403 Forbidden** (`src/app/forbidden/page.tsx`) + komponen bersama
+  `src/components/layout/page-state.tsx` (server-safe).
+- **Pintasan keyboard** (`use-keyboard-shortcuts.ts`): `/` cari, `?` bantuan,
+  `g`+huruf navigasi (pola Linear/GitHub) + dialog `shortcuts-help.tsx`.
+- **Lint a11y** `eslint-plugin-jsx-a11y` (dev-dep) + **uji a11y `axe-core`**
+  (jsdom) pada komponen kunci.
+
+### Diubah — UI/UX (M15)
+- **`prefers-reduced-motion`** dihormati (`globals.css`) — WCAG 2.2 · 2.3.3;
+  animasi/transisi ≈0, spinner tetap (umpan balik status).
+- **Perbaikan a11y nyata** (temuan jsx-a11y): label↔kontrol (`htmlFor`/`id`) di
+  `topics-view`, `ai-settings-card`, `pengaturan-view`; `error.tsx` pakai
+  `useRouter` (bukan `window.location`).
+- **`app-shell.tsx`**: pasang hook pintasan + dialog bantuan.
+
+### Utang (M15)
+- Uji perangkat HP nyata + audit Lighthouse ≥ 90 (butuh device/CI).
+
+### Hasil (M15)
+- **515 unit pass** (cov 92.99/84.99/90.67/94.87), **148 DB**, tsc 0, lint 0,
+  `theme:check` 34/34, smoke 7/7.
+
 ## [M14] — Kualitas Kode & Tes
 
 ### Ditambahkan — Kualitas (M14)

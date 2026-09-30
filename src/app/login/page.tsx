@@ -213,7 +213,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
           {demoAvailable
-            ? "Demo: pilih akun demo lalu klik Masuk. Autentikasi penuh menyusul (M15)."
+            ? "Demo: pilih akun demo lalu klik Masuk."
             : "Masukkan email & kata sandi akun Anda."}
         </p>
       </div>

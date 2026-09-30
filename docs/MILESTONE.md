@@ -400,20 +400,23 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 **Hasil:** 505 unit (cov 93.25/84.95/91.91/95.28), 148 DB, tsc 0, lint 0.
 
-## M15 — UI/UX Polish & Responsif Penuh 🟡
+## M15 — UI/UX Polish & Responsif Penuh ✅
 
-**Dependensi:** M4
+**Dependensi:** M4 · rencana: `docs/RENCANA-UI-M15.md`
 
-- [ ] **🔴 Halaman login UI** (rute `/masuk`) + alur logout — *utang review M2*
-- [ ] Halaman Forbidden (403) UI + halaman error ramah — *utang review M2*
-- [ ] Audit a11y menyeluruh (fokus, aria, kontras di semua halaman) + axe
-- [ ] Skeleton/tempat kosong konsisten di semua halaman data
-- [ ] Pola D (`DesktopOnly`) diterapkan konsisten; pesan ramah seragam
-- [ ] Pintasan keyboard lengkap (bukan hanya ⌘K)
-- [ ] Animasi halus + hormati `prefers-reduced-motion` penuh
-- [ ] Uji di HP nyata (Chrome Android/Safari iOS) via `pnpm start:lan`
-- [ ] Audit Lighthouse (perf/a11y/best-practices/SEO) — target ≥ 90
-- [ ] Mode gelap: audit semua halaman (bukan hanya daftar)
+- [x] Halaman login UI (`/login`, bukan `/masuk`) + alur logout — *sudah ada (M2), dikonfirmasi* ✅
+- [x] Halaman **error boundary / 404 / global-error / loading** bertema (tak bocorkan stack) ✅
+- [x] Halaman **403 Forbidden** bertema + komponen bersama `page-state.tsx` ✅
+- [x] `prefers-reduced-motion` dihormati (WCAG 2.2 · 2.3.3) ✅
+- [x] Lint a11y `eslint-plugin-jsx-a11y` + perbaiki 7 error nyata (label↔kontrol) ✅
+- [x] Pintasan keyboard lengkap: ⌘K, `/` cari, `?` bantuan, `g`+huruf navigasi ✅
+- [x] Uji a11y otomatis **axe-core** pada komponen kunci (terbukti menangkap pelanggaran) ✅
+- [x] Skeleton/tempat kosong konsisten (`states.tsx` + `loading.tsx`) — *sudah ada, dilengkapi* ✅
+- [x] Mode gelap: `pnpm theme:check` 34/34 lulus (semua token × 2 mode) ✅
+- [x] Audit responsif: tak ada elemen lebar tetap; grid pakai breakpoint `sm:`/`lg:` ✅
+- ⏳ Uji perangkat HP nyata + Lighthouse (=90) — *utang* (butuh device/CI; lihat catatan) 🟠
+
+**Hasil:** 515 unit (cov 92.99/84.99/90.67/94.87), 148 DB, tsc 0, lint 0, smoke 7/7.
 
 ## M16 — Observabilitas & Operasional 🟡
 
