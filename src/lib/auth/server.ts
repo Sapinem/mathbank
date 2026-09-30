@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { apiKey } from "@better-auth/api-key";
 import { db } from "@/lib/db";
+import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import {
   authUser,
   authSession,
@@ -54,6 +55,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
+    // S5 (M13): panjang minimal 12 (best practice Better Auth / NIST SP 800-63B).
+    minPasswordLength: MIN_PASSWORD_LENGTH,
+    maxPasswordLength: MAX_PASSWORD_LENGTH,
   },
   user: {
     additionalFields: {

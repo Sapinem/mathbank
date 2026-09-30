@@ -2,6 +2,11 @@ allowBuilds:
   esbuild: true
   sharp: false
   unrs-resolver: false
+# M13 S8: buang paket deprecated `@esbuild-kit/esm-loader` (membawa esbuild@0.18.20
+# yang rentan, GHSA-67mh-4wv8-2f99). Drizzle-kit sendiri sudah memakai `tsx`;
+# override ini mengganti loader usang dengan tsx (rekomendasi resmi drizzle-kit).
+overrides:
+  "drizzle-kit>@esbuild-kit/esm-loader": "npm:tsx@^4.20.4"
 minimumReleaseAgeExclude:
   - '@next/env@16.3.7'
   - '@next/eslint-plugin-next@16.3.7'

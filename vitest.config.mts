@@ -26,6 +26,7 @@ export default defineConfig({
         "src/lib/contracts/question.ts",
         "src/lib/display/labels.ts",
         "src/lib/auth/actor.ts",
+        "src/lib/auth/password-policy.ts",
         "src/lib/api/route-wrapper.ts",
         "src/lib/api/rate-limit.ts",
         "src/lib/db/projections/question.ts",

@@ -31,6 +31,9 @@
     "e2e:manual:ui": "playwright test --ui",
     "start:lan": "next start -H 0.0.0.0",
     "check": "pnpm theme:check && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
+    "security:secrets": "node scripts/secret-scan.mjs --all",
+    "security:advisories": "tsx scripts/security-advisories.ts",
+    "prepare": "node scripts/install-hooks.mjs",
     "mcp:stdio": "tsx src/mcp-stdio.ts"
   },
   "dependencies": {

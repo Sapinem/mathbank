@@ -39,7 +39,8 @@ Setiap dokumen audit kini terhubung dengan berkas verifikasi nyata di `docs/VERI
 10. [`docs/audit/M10-AI-ENRICHMENT-DAN-EMBEDDING.md`](M10-AI-ENRICHMENT-DAN-EMBEDDING.md) — Milestone 10 (Client AI Router AES-256-GCM, Sidecar Embedding BGE-M3 1024-dim, Distractor Rationale, & Log Audit Token).
 11. [`docs/audit/M11-MODEL-CONTEXT-PROTOCOL-MCP.md`](M11-MODEL-CONTEXT-PROTOCOL-MCP.md) — Milestone 11 (MCP Server Stdio/HTTP, 7 MCP Tools, Strict No-AnswerKey Policy S3, & UI Agent Keys).
 12. [`docs/audit/M12-EKSPOR-MOODLE-XML-DAN-GITSYNC.md`](M12-EKSPOR-MOODLE-XML-DAN-GITSYNC.md) — Milestone 12 (Moodle XML Standard v4/v5, Moodle TeX Converter, Base64 Embedded Media, & Repositori GitSync).
-13. [`docs/audit/AUDIT-PUSTAKA-DAN-DEPENDENSI.md`](AUDIT-PUSTAKA-DAN-DEPENDENSI.md) — Evaluasi Penggunaan Library & Dependensi (Next.js 16, React 19, `@base-ui/react`, Drizzle, Refactoring `cn`, & `isomorphic-dompurify`).
+13. [`docs/audit/M13-KEAMANAN-LANJUTAN-DAN-HARDENING.md`](M13-KEAMANAN-LANJUTAN-DAN-HARDENING.md) — Milestone 13 (Threat Model STRIDE, Security Headers CSP/HSTS/DENY, Dev Bypass Hardening, & Proyeksi Rahasia S3).
+14. [`docs/audit/AUDIT-PUSTAKA-DAN-DEPENDENSI.md`](AUDIT-PUSTAKA-DAN-DEPENDENSI.md) — Evaluasi Penggunaan Library & Dependensi (Next.js 16, React 19, `@base-ui/react`, Drizzle, Refactoring `cn`, & `isomorphic-dompurify`).
 10. [`docs/audit/CATATAN-PENYEMPURNAAN-ENTERPRISE.md`](CATATAN-PENYEMPURNAAN-ENTERPRISE.md) — Rekomendasi Best Practices Enterprise (DB Transaction Atomicity, Slug Length Guards, `"use cache"` Next.js 16, Idempotency-Key Header, Sanitasi TikZ SVG, & Request ID Traceability).
 11. [`docs/audit/AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md`](AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md) — Audit Komprehensif Penutup Fase 1 (MVP) & Panduan Teknis Lengkap Pengembangan Fase 2 (M9–M12) dan Fase 3.
 

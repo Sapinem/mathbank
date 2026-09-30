@@ -6,6 +6,10 @@ import { Loader2, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  checkPassword,
+  MIN_PASSWORD_LENGTH,
+} from "@/lib/auth/password-policy";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -53,8 +57,10 @@ export default function ChangePasswordPage() {
 
   async function submit() {
     setError(null);
-    if (newPassword.length < 8) {
-      setError("Kata sandi baru minimal 8 karakter.");
+    // S5 (M13): kebijakan sandi terpusat (panjang, huruf+angka, bukan sandi umum).
+    const check = checkPassword(newPassword);
+    if (!check.ok) {
+      setError(check.errors[0] ?? "Kata sandi belum memenuhi syarat.");
       return;
     }
     if (newPassword !== confirm) {
@@ -127,7 +133,21 @@ export default function ChangePasswordPage() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={checking}
               />
-              <p className="text-xs text-muted-foreground">Minimal 8 karakter.</p>
+              {/* S5 (M13): umpan balik syarat sandi secara langsung. */}
+              <p className="text-xs text-muted-foreground">
+                Minimal {MIN_PASSWORD_LENGTH} karakter, kombinasi huruf &amp; angka.
+              </p>
+              {newPassword.length > 0 && newPassword !== confirm && confirm.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Ulangi kata sandi belum cocok.
+                </p>
+              )}
+              {newPassword.length > 0 &&
+                checkPassword(newPassword).errors.map((msg) => (
+                  <p key={msg} className="text-xs text-destructive">
+                    {msg}
+                  </p>
+                ))}
             </div>
 
             <div className="flex flex-col gap-2">
