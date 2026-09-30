@@ -36,43 +36,54 @@ teks yang bersih & konsisten.
 
 ---
 
-## 3. Aturan Cleaning — Urutan Wajib
-
-Urutan **tidak boleh** ditukar (alasan di §4).
+## 3. Aturan Cleaning — Urutan Wajib (FINAL, hasil evaluasi 1-1)
 
 ```
-(0) Keamanan        : buang <script> · <style> · <noscript> · <!-- komentar --> · <iframe>
-(1) Buang blok iklan: div AdSense (class hash acak) + <ins class="adsbygoogle"> + [collapse]? (belum)
-(2) Buang boilerplate: <nav> · <footer> · <aside> · sidebar · related-posts · share · breadcrumb
-(3) Simpan media    : <img src> → ![Gambar](src)  (kumpulkan daftar URL untuk mediaManifest)
-(4) Buang sisa tag  : semua <tag …> → " "  (span/div/p/h/li/strong/em/a/table/tr/td…)
-(5) Entitas HTML    : &#nnn; · &#xhh; · &named;  → karakter sebenarnya
-(6) Rapikan spasi   : \u00a0 → spasi · spasi ganda → 1 · trim
-(7) Shortcode       : [collapse] dan sejenis → buang
-(8) Normalisasi math: $$…$$ → \[…\] · $…$ → \(…\) · perbaiki LaTeX rusak
+(0) Keamanan    : buang <script> · <style> · <noscript> · <!-- --> · <iframe> · <form>
+                  · <button> · <ins> · <nav> · <aside> · <footer> · <header>
+(1) Iklan       : buang <ins> · div class hash + adsbygoogle · googlesyndication
+(2) SVG         : buang SVG IKON (width/height≤32 / viewBox 24×24); PERTAHANKAN
+                  SVG DIAGRAM (viewBox besar / banyak <line>/<polygon>)  ← temuan
+(3) Media       : <img src> → ![alt](src) · <figcaption> → *caption*   ← temuan
+(4) Struktur    : <br>→\n (KECUALI di dalam <table>: tetap <br/>)  ← temuan
+                  <ol>/<ul>/<li> → daftar markdown + INDENTASI SARANG  ← temuan
+                  <pre>/<code>/<hr> → DIBUANG (kode/sampah, bukan soal) ← temuan
+                  <blockquote> → LEPAS TAG, ISI TETAP (9.740 = SOAL!)     ← temuan
+                  <table> → DIPERTAHANKAN HTML
+(5) Sisa tag    : buang tag, TAPI LINDUNGI MATH dulu (mis. $x<3$)      ← perbaikan bug
+(6) Entitas     : &#nnn; · &#xhh; · &named; (termasuk &ensp; &ang; &sup2; &sup3;
+                  &fnof; &ordm; &pi;) → karakter       ← SEBELUM math
+(7) Spasi       : \u00a0 → spasi · spasi ganda → 1 · baris kosong > 2 → 1 · trim
+(8) Shortcode   : DAFTAR-HITAM: [collapse] · [spoiler] saja
+(9) Math        : $$…$$ → \[…] · $…$ → \(…) · \cancelto→\overset{\cancel} · deteksi $ yatim
 ```
 
-### 3.1 Detail tiap aturan (final — keputusan user 2026-09-30)
+### 3.1 Keputusan Final (evaluasi satu-per-satu, 2026-09-30)
 
-| # | Aturan | Contoh sebelum → sesudah |
-|---|---|---|
-| 0 | Buang script/style/noscript/komentar/iframe | `<script>let lbl=[]…</script>` → *(hilang)* |
-| 1 | Buang iklan (AdSense + `div class="<hash>"`) | `<div class="fd26c469…"><script…adsbygoogle>` → *(hilang)* |
-| 3 | Gambar → markdown | `<img src="x.png">` → `![Gambar](x.png)` |
-| 4a | Struktur → markdown | `<li>`→`- `/`1. ` · `<blockquote>`→`>` · `<hr>`→`---` · `<code>`→`` ` `` |
-| 4b | `<table>` | **DIPERTAHANKAN** HTML (keputusan user) |
-| 4c | `<br>` | → `\n` |
-| 5 | Sisa tag → spasi | `<span style="color:#000">Halo</span>` → `Halo` |
-| 6 | **Entitas** (SEBELUM math) | `you&#8217;re` → `you’re` · `&nbsp;` → ` ` · `&amp;` → `&` |
-| 7 | Spasi | `A&nbsp;&nbsp;B` → `A B` · baris kosong > 2 → 1 |
-| 8 | **Shortcode (DAFTAR-HITAM)** | hanya `[collapse]`·`[/collapse]`·`[spoiler]`·`[/spoiler]` → *(hilang)* |
-| 9 | Math | `$$x$$` → `\[x\]` · `$x$` → `\(x\)` |
+| # | Aturan | Keputusan | Bukti |
+|---|---|---|---|
+| A1 | blok boilerplate | buang semua | 78% punya `<script>` |
+| A1 | **SVG** | **ikon buang, diagram simpan** | 3 SVG grafik fungsi (m4thlab) |
+| A2 | iklan AdSense | buang (apa adanya) | 0 sisa dari 419 file |
+| A3a | **`<figcaption>`** | **→ caption markdown** | 113 caption nyata |
+| A3b | **src relatif** | **adapter yang absolutkan** | 3.200 relatif (mathcyber/pusmendik) |
+| C | `<br>`, nested list | `\n` + **indentasi sarang** | 348 nested |
+| C | **`<br>` dalam `<table>`** | **tetap `<br/>`** | 713 |
+| C | **`<pre>/<code>/<hr>`** | **DIBUANG** | 42/61/0 blok |
+| C | **`<blockquote>`** | **JANGAN buang — 9.740 SOAL** | 9.728 mengandung math |
+| D1 | **stripTags** | **lindungi math (Opsi C)** | 65 file `$x>5$` |
+| D2 | **entitas** | **lengkapi 7 entitas** | `&ensp;` 2.136× |
+| E | shortcode | daftar-hitam | tepat, 0 salah-hapus |
+| F | math | apa adanya | `\cancelto` diuji gagal di KaTeX |
 
-> **⚠️ Shortcode = daftar-hitam, BUKAN buang-semua.** Evaluasi 1.081 file membuktikan
-> `[n]`,`[m]`,`[type]` dll. adalah **LaTeX** (`$\sqrt[n]{a}$`, `$[n]=\{1,\dots\}$`) —
-> pola `\[[a-z]+\]` akan **merusak matematika**. Lihat `EVALUASI-KORPUS-KOMPREHENSIF.md`.
+> **⚠️ Shortcode = daftar-hitam, BUKAN buang-semua.** `[n]`,`[m]`,`[type]`,`[abcd]` dll.
+> adalah **LaTeX / nama titik**, bukan shortcode. Hanya `[collapse]` (7.591×) +
+> `[spoiler]` (1×) shortcode asli.
 
----
+> **⚠️ `<blockquote>` JANGAN dibuang** — di korpus ia pembungkus **SOAL** (9.740 soal,
+> termasuk pilihan A–E via radio). Dibuang = kehilangan soal.
+
+> **⚠️ `stripTags` WAJIB melindungi math** — pola naif `/<[^>]+>/` merusak `$x < 3$ dan $y > 2$`.
 
 ## 4. Tiga Jebakan Nyata (WAJIB ditangani)
 
@@ -122,7 +133,7 @@ cleanHtml(rawHtml: string): {
   warnings: string[];        // mis. "delimiter rumus tak seimbang", "0 penanda soal"
 }
 
-normalizeMath(text: string): string   // $$…$$ → \[…\], $…$ → \(…\)
+normalizeMath(text: string): { text: string; imbalanced: boolean }  // + deteksi $ yatim
 decodeEntities(text: string): string  // &#nnn; / &named; → karakter
 stripTags(html: string): string       // semua tag → spasi
 ```
@@ -141,15 +152,24 @@ Ambil **potongan kecil** dari korpus nyata sebagai fixture:
 
 ---
 
-## 8. Pertanyaan Terbuka
+## 8. Status
 
-1. **Setujui urutan cleaning di §3** sebagai aturan general?
-2. **Shortcode WordPress lain** (`[su_…]`, `[caption]`, `[gallery]`) — buang semua pola `[...]`
-   pendek, atau daftar putih? (usul: buang pola `[a-z_]+` pendek, sisakan `[...]` yang jelas LaTeX/markdown)
-3. **Tabel** (`<table>` dialog/tabel) — jadikan markdown/HTML apa adanya, atau ratakan jadi teks?
-   (usul: **pertahankan sebagai HTML** agar struktur dialog terjaga)
+✅ **Semua aturan sudah dievaluasi satu-per-satu & diputuskan** (2026-09-30).
+✅ **Sudah diimplementasi** di `src/lib/ingest/parsers/clean.ts` + 31 tes unit.
+✅ Divalidasi ke **seluruh korpus (1.074 file)** — 0 sisa entitas, math aman.
+
+Belum ditangani (tugas lapisan berikutnya):
+- **Absolutkan `src` gambar relatif** → tugas **ADAPTER** per-sumber (keputusan A3b).
 
 ---
 
-*Lihat juga: `docs/STRATEGI-INGEST.md` (alur & adapter), `~/projects/qbank/src/lib/ingest/corpus-parser.ts`
-(rujukan logika lama), `docs/DESAIN-PER-LAPISAN-MATHBANK.md` (L6).*
+*Lihat juga:
+
+---
+
+## Catatan Verifikasi
+
+- 2026-09-30 — semua aturan dievaluasi satu-per-satu bersama pemilik; keputusan terkunci.
+- Implementasi `clean.ts` diverifikasi: tsc 0, lint 0, 313 unit tes, coverage 94.4% stmts/81.3% branch.
+- Validasi korpus nyata: 1.074 file, 0 sisa entitas bernama, math `$x<3$` aman.
+- Evaluasi komprehensif 1.081 file: lihat `EVALUASI-KORPUS-KOMPREHENSIF.md`.

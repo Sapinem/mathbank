@@ -8,6 +8,8 @@ import {
   normalizeWhitespace,
   extractImages,
   stripNoiseBlocks,
+  stripTags,
+  isSvgIcon,
 } from "./clean";
 
 describe("clean — entitas (decodeEntities)", () => {
@@ -44,9 +46,11 @@ describe("clean — shortcode DAFTAR-HITAM (bukan buang-semua)", () => {
 });
 
 describe("clean — struktur → markdown", () => {
-  it("<br> → newline, <hr> → ---", () => {
+  it("<br> → newline, <hr> → dibuang", () => {
     expect(structureToMarkdown("a<br/>b")).toBe("a\nb");
-    expect(structureToMarkdown("a<hr>b")).toContain("---");
+    // <hr> kini DIBUANG (temuan: 0 blok di korpus)
+    expect(structureToMarkdown("a<hr>b")).not.toContain("---");
+    expect(structureToMarkdown("a<hr>b")).toContain("a");
   });
 
   it("<ol>/<ul>/<li> → daftar markdown", () => {
@@ -58,9 +62,32 @@ describe("clean — struktur → markdown", () => {
     expect(ul).toContain("- Jeruk");
   });
 
-  it("<blockquote> → '>' dan <code> → backtick", () => {
-    expect(structureToMarkdown("<blockquote>kutipan</blockquote>")).toContain("> kutipan");
-    expect(structureToMarkdown("pakai <code>x=1</code>")).toContain("`x=1`");
+  it("daftar bersarang → indentasi 2 spasi per level", () => {
+    const nested = structureToMarkdown(
+      "<ul><li>Induk<ol><li>Anak1</li><li>Anak2</li></ol></li><li>Induk2</li></ul>",
+    );
+    expect(nested).toContain("- Induk");
+    expect(nested).toContain("  1. Anak1"); // 2 spasi indent
+    expect(nested).toContain("  2. Anak2");
+    expect(nested).toContain("- Induk2");
+  });
+
+  it("<blockquote> → tag dilepas, ISI TETAP (jangan dibuang)", () => {
+    const out = structureToMarkdown("<blockquote>Soal penting A B C</blockquote>");
+    expect(out).toContain("Soal penting A B C");
+    expect(out).not.toContain(">"); // tak diberi tanda kutipan
+  });
+
+  it("<pre>/<code> → DIBUANG (kode/sampah, bukan soal)", () => {
+    expect(structureToMarkdown("pakai <code>x=1</code>")).not.toContain("x=1");
+    expect(structureToMarkdown("<pre>If(a,b)</pre>")).not.toContain("If(a,b)");
+  });
+
+  it("<br> di dalam <table> DIBIARKAN <br>", () => {
+    const t = structureToMarkdown("<table><tr><td>A<br>B</td></tr></table>");
+    expect(t).toContain("<table>");
+    expect(t).toContain("<br");
+    expect(t).not.toContain("A\nB");
   });
 
   it("<table> DIPERTAHANKAN (tidak diubah markdown)", () => {
@@ -126,6 +153,68 @@ describe("clean — normalisasi spasi", () => {
     expect(normalizeWhitespace("a\u00a0\u00a0b")).toBe("a b");
     expect(normalizeWhitespace("a   b")).toBe("a b");
     expect(normalizeWhitespace("a\n\n\n\nb")).toBe("a\n\nb");
+  });
+});
+
+describe("clean — SVG (ikon dibuang, diagram dipertahankan)", () => {
+  it("SVG ikon kecil (viewBox 24x24) → dibuang", () => {
+    const icon = '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 16V4"/></svg>';
+    expect(stripNoiseBlocks(`a${icon}b`)).toBe("ab");
+  });
+
+  it("SVG diagram (viewBox besar, banyak line) → DIPERTAHANKAN", () => {
+    const diagram =
+      '<svg viewBox="-130 -130 260 260" width="100%"><line x1="0"/><line x1="1"/><line x1="2"/><line x1="3"/><line x1="4"/><polygon points="0,0"/></svg>';
+    expect(stripNoiseBlocks(`a${diagram}b`)).toContain("<svg");
+  });
+
+  it("isSvgIcon — klasifikasi ikon vs diagram", () => {
+    expect(isSvgIcon('<svg width="18" height="18" viewBox="0 0 24 24"><path d="M1"/></svg>')).toBe(true);
+    expect(isSvgIcon('<svg viewBox="-130 -130 260 260"><polygon/></svg>')).toBe(false);
+    expect(isSvgIcon('<svg width="200" height="200"><path d="M1"/></svg>')).toBe(false);
+    expect(isSvgIcon('<svg viewBox="0 0 100 60"><rect/></svg>')).toBe(false);
+    expect(isSvgIcon('<svg><path/><path/><path/><path/><path/></svg>')).toBe(false);
+    expect(isSvgIcon('<svg><path/></svg>')).toBe(true);
+    // viewBox 24x24 menang walau banyak elemen
+    expect(isSvgIcon('<svg viewBox="0 0 24 24"><line/><line/><line/><line/><line/><line/></svg>')).toBe(true);
+  });
+});
+
+describe("clean — figcaption → caption markdown", () => {
+  it("<figcaption> → *caption*", () => {
+    const { text } = extractImages(
+      '<figure><img src="/x.png" alt="p"><figcaption>Bendera Inggris</figcaption></figure>',
+    );
+    expect(text).toContain("![p](/x.png)");
+    expect(text).toContain("*Bendera Inggris*");
+    expect(text).not.toContain("figcaption");
+  });
+});
+
+describe("clean — stripTags melindungi math (Opsi C)", () => {
+  it("math $x>5$ / $a<b$ TIDAK rusak", () => {
+    expect(stripTags("nilai $x>5$ penting")).toContain("$x>5$");
+    expect(stripTags("$2<x<3$")).toContain("$2<x<3$");
+    // kasus lintas-math (sebelumnya rusak jadi "$0 5$")
+    expect(stripTags("$0<a<1$ dan $x>5$")).toContain("$0<a<1$ dan $x>5$");
+    expect(stripTags("$4<t<5$ jadi $y>2$")).toContain("$4<t<5$ jadi $y>2$");
+  });
+
+  it("tag asli tetap dibuang", () => {
+    expect(stripTags("<span>Halo</span>")).toContain("Halo");
+    expect(stripTags("<span>Halo</span>")).not.toContain("<span>");
+  });
+});
+
+describe("clean — entitas lengkap (D2)", () => {
+  it("&ensp; &ang; &sup2; &sup3; &fnof; &ordm; &pi; ter-decode", () => {
+    expect(decodeEntities("A&ensp;B")).toBe("A B");
+    expect(decodeEntities("&ang;ABC")).toBe("∠ABC");
+    expect(decodeEntities("x&sup2;")).toBe("x²");
+    expect(decodeEntities("x&sup3;")).toBe("x³");
+    expect(decodeEntities("&fnof;(x)")).toBe("ƒ(x)");
+    expect(decodeEntities("1&ordm;")).toBe("1º");
+    expect(decodeEntities("&pi;")).toBe("π");
   });
 });
 

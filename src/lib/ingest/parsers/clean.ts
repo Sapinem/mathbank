@@ -9,11 +9,15 @@
  *   Entitas HARUS di-decode SEBELUM normalisasi math, agar `&amp;` di dalam
  *   `\begin{aligned} … &amp; = …` menjadi `&` (perataan `&=`), bukan teks "&amp;".
  *
- * Keputusan user (2026-09-30):
+ * Keputusan user (2026-09-30, hasil evaluasi 1.081 file):
  *   - Shortcode = **daftar-hitam** ([collapse],[spoiler]) — BUKAN buang-semua `[a-z]`
  *     (mis. `[n]`,`[m]` adalah LaTeX — buang-semua akan MERUSAK matematika).
- *   - `<table>` **dipertahankan** HTML; `<ul>/<ol>/<li>`, `<blockquote>`, `<hr>`,
- *     `<code>` dikonversi ke markdown.
+ *   - `<table>` **dipertahankan** HTML (dan `<br>` di dalamnya dibiarkan `<br>`).
+ *   - `<pre>`/`<code>`/`<hr>` **dibuang** (kode fungsi/sampah JS — bukan soal).
+ *   - **`<blockquote>` JANGAN dibuang** — terbukti 9.740 = pembungkus SOAL; tag dilepas.
+ *   - `<ul>/<ol>/<li>` → daftar markdown **dengan indentasi sarang**.
+ *   - `<figcaption>` → caption markdown; `<svg>` diagram dipertahankan, ikon dibuang.
+ *   - `stripTags` **melindungi math** (mis. `$x<3$`) sebelum buang tag (Opsi C).
  */
 
 /** Nama shortcode yang dibuang (daftar-hitam). Lihat EVALUASI-KORPUS-KOMPREHENSIF. */
@@ -21,7 +25,14 @@ const DROP_SHORTCODES = ["collapse", "spoiler"] as const;
 
 /** Blok yang isinya dibuang total (beserta tag-nya). */
 const DROP_BLOCKS =
-  /<(script|style|noscript|iframe|svg|form|button|ins|nav|aside|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi;
+  /<(script|style|noscript|iframe|form|button|ins|nav|aside|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi;
+
+/**
+ * `<svg>` yang merupakan **ikon UI** (kecil, `width`/`height` ≤ 32 atau viewBox
+ * `0 0 24 24`) — dibuang. Diagram/grafik bermakna (viewBox lebar, banyak
+ * `<line>`/`<polygon>`) **dipertahankan** (temuan: 3 SVG grafik fungsi di m4thlab).
+ */
+const SVG_ICON = /<svg\b[^>]*>[\s\S]*?<\/svg>/gi;
 
 /** Blok yang isinya KOSONG (tag pembuka saja, tanpa pasangan). */
 const DROP_EMPTY_BLOCKS = /<(?:link|meta|source|track|wbr|area|col)\b[^>]*>/gi;
@@ -47,6 +58,10 @@ const NAMED_ENTITIES: Record<string, string> = {
   quot: '"',
   apos: "'",
   nbsp: " ",
+  // Spasi lebar → spasi biasa (dirapikan lagi oleh normalizeWhitespace).
+  ensp: " ",
+  emsp: " ",
+  thinsp: " ",
   hellip: "…",
   mdash: "—",
   ndash: "–",
@@ -58,6 +73,7 @@ const NAMED_ENTITIES: Record<string, string> = {
   divide: "÷",
   minus: "−",
   deg: "°",
+  ordm: "º",
   middot: "·",
   laquo: "«",
   raquo: "»",
@@ -66,6 +82,11 @@ const NAMED_ENTITIES: Record<string, string> = {
   trade: "™",
   prime: "′",
   Prime: "″",
+  sup2: "²",
+  sup3: "³",
+  fnof: "ƒ",
+  ang: "∠",
+  pi: "π",
   larr: "←",
   rarr: "→",
   harr: "↔",
@@ -107,17 +128,51 @@ function safeCodePoint(cp: number): string {
 }
 
 /**
- * Buang blok yang tak berguna: script/style/noscript/iframe/svg/form/button/ins
- * (beserta isinya), komentar HTML, iklan AdSense, dan boilerplate situs.
+ * Buang blok yang tak berguna: script/style/noscript/iframe/form/button/ins/nav/
+ * aside/footer/header (beserta isinya), komentar HTML, iklan AdSense, dan
+ * boilerplate situs. `<svg>` ikon dibuang, `<svg>` diagram **dipertahankan**.
  */
 export function stripNoiseBlocks(html: string): string {
   let s = html;
   s = s.replace(HTML_COMMENT, "");
   s = s.replace(ADSENSE_DIV, "");
   s = s.replace(ADSENSE_LEFTOVER, "");
+  // SVG: buang HANYA yang ikon kecil; diagram bermakna dibiarkan.
+  s = s.replace(SVG_ICON, (tag) => (isSvgIcon(tag) ? "" : tag));
   s = s.replace(DROP_BLOCKS, "");
   s = s.replace(DROP_EMPTY_BLOCKS, "");
   return s;
+}
+
+/**
+ * Apakah `<svg>` ini ikon UI (buang) atau diagram (pertahankan)?
+ * Ikon: dimensi kecil (≤ 32) atau viewBox kotak 24×24, sedikit elemen.
+ * Diagram: viewBox besar/tidak kotak-24, atau banyak `<line>`/`<polygon>`/`<path>`.
+ */
+export function isSvgIcon(svg: string): boolean {
+  const open = svg.slice(0, svg.indexOf(">") + 1);
+  const w = open.match(/width=["']?(\d+(?:\.\d+)?)/i);
+  const h = open.match(/height=["']?(\d+(?:\.\d+)?)/i);
+  const vb = open.match(/viewBox=["']([^"']+)["']/i);
+
+  if ((w && parseFloat(w[1]!) > 32) || (h && parseFloat(h[1]!) > 32)) return false;
+
+  if (vb) {
+    const nums = vb[1]!.trim().split(/[\s,]+/).map(Number);
+    if (nums.length === 4) {
+      const [, , vw, vh] = nums;
+      // viewBox "0 0 24 24" khas ikon → buang
+      if (vw! <= 32 && vh! <= 32) return true;
+      // viewBox besar (mis. "-130 -130 260 260") → diagram → pertahankan
+      if (vw! > 64 || vh! > 64) return false;
+    }
+  }
+
+  // Banyak elemen gambar (garis/poligon/kurva) → diagram.
+  const shapes = (svg.match(/<(line|polygon|polyline|path|circle|rect|text)\b/gi) ?? []).length;
+  if (shapes >= 5) return false;
+
+  return true;
 }
 
 /** Buang shortcode daftar-hitam: [collapse] [/collapse] [spoiler] [/spoiler]. */
@@ -131,65 +186,78 @@ export function stripShortcodes(input: string): string {
 
 /**
  * Ubah struktur HTML umum → markdown:
- *   <br> → \n · <li> → "- " / "1. " · <blockquote> → ">" · <hr> → "---" · <code> → `` ` ``
- * `<table>` DIPERTAHANKAN (dibiarkan apa adanya).
+ *   `<br>` → \n (kecuali di dalam `<table>` — dibiarkan `<br>`) · `<li>` → "- "/"1. "
+ *   (dengan **indentasi sarang**) · `<hr>`/`<pre>`/`<code>` → **dibuang** ·
+ *   `<blockquote>` → **tag dilepas, isi tetap** (temuan: 9.740 blockquote = SOAL).
+ * `<table>` DIPERTAHANKAN apa adanya.
  */
 export function structureToMarkdown(html: string): string {
   let s = html;
 
-  // <br> → newline
+  // <pre>/<code> dibuang (temuan: kode fungsi & sampah JS — bukan soal).
+  s = s.replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/gi, " ");
+  s = s.replace(/<code\b[^>]*>[\s\S]*?<\/code>/gi, " ");
+
+  // <hr> dibuang (temuan: 0 blok — tak ada di korpus).
+  s = s.replace(/<hr\b[^>]*>/gi, "\n");
+
+  // <br> → newline, KECUALI di dalam <table> (HTML: \n tak menampilkan baris baru).
+  s = s.replace(/<br\s*\/?>/gi, (br) => br.replace(/<br\s*\/?>/i, "<br/>"));
+  // Lindungi <br> di dalam <table> agar tak ikut diubah di langkah berikut.
+  s = s.replace(/<table\b[\s\S]*?<\/table>/gi, (table) => table.replace(/<br\/>/gi, "\u0001"));
+  // Sisa <br> (di luar table) → newline
   s = s.replace(/<br\s*\/?>/gi, "\n");
+  // Kembalikan <br> di dalam table
+  s = s.replace(/\u0001/g, "<br/>");
 
-  // <hr> → ---
-  s = s.replace(/<hr\b[^>]*>/gi, "\n\n---\n\n");
+  // <blockquote> → lepas tag, isi tetap (JANGAN beri ">" dan JANGAN buang).
+  s = s.replace(/<\/?blockquote\b[^>]*>/gi, "\n");
 
-  // <pre>/<code> → fenced inline code (kasar tapi aman)
-  s = s.replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/gi, (_, inner) => `\n\n\`\`\`\n${stripTags(inner).trim()}\n\`\`\`\n\n`);
-  s = s.replace(/<code\b[^>]*>([\s\S]*?)<\/code>/gi, (_, inner) => `\`${stripTags(inner).trim()}\``);
-
-  // <blockquote> → "> "
-  s = s.replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, inner) => {
-    const text = stripTags(inner).trim();
-    return (
-      "\n\n" +
-      text
-        .split(/\n+/)
-        .map((l) => `> ${l.trim()}`)
-        .join("\n") +
-      "\n\n"
-    );
-  });
-
-  // <ol> → "1. ", <ul> → "- "
-  s = s.replace(/<ol\b[^>]*>([\s\S]*?)<\/ol>/gi, (_, inner) => {
-    let i = 0;
-    return (
-      "\n" +
-      splitListItems(inner)
-        .map((item) => `${++i}. ${item}`)
-        .join("\n") +
-      "\n"
-    );
-  });
-  s = s.replace(/<ul\b[^>]*>([\s\S]*?)<\/ul>/gi, (_, inner) =>
-    "\n" + splitListItems(inner).map((item) => `- ${item}`).join("\n") + "\n",
-  );
+  // <ol> → "1. ", <ul> → "- " (dengan indentasi sarang).
+  // Proses DAFTAR TERDALAM dulu (loop) agar sarang tertangani bertahap.
+  for (let pass = 0; pass < 8; pass++) {
+    const before = s;
+    s = s.replace(/<(ol|ul)\b[^>]*>((?:(?!<(?:ol|ul)\b)[\s\S])*?)<\/\1>/gi, (full, tag: string, inner: string) => {
+      if (/<(?:ol|ul)\b/i.test(inner)) return full; // masih ada sarang → tunggu pass berikutnya
+      return renderList(inner, tag.toLowerCase() === "ol");
+    });
+    if (s === before) break;
+  }
 
   return s;
 }
 
-/** Pisah isi <ol>/<ul> menjadi item teks (tanpa tag). */
-function splitListItems(inner: string): string[] {
-  return inner
-    .split(/<\/li>/i)
-    .map((chunk) => stripTags(chunk.replace(/<li\b[^>]*>/gi, "")).trim())
-    .filter((t) => t.length > 0);
+/**
+ * Render ISI `<ol>`/`<ul>` (sarang sudah dirender jadi teks markdown oleh pass
+ * sebelumnya) menjadi daftar markdown; baris hasil sarang diberi **indentasi 2 spasi**.
+ */
+function renderList(inner: string, ordered: boolean): string {
+  let i = 0;
+  const lines: string[] = [];
+  const liRe = /<li\b[^>]*>([\s\S]*?)(?=<\/li>|<li\b|$)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = liRe.exec(inner)) !== null) {
+    const raw = m[1]!.trim();
+    if (!raw) {
+      if (ordered) i++;
+      continue;
+    }
+    // Baris pertama = teks item; baris berikutnya = daftar sarang → indent 2 spasi.
+    const parts = raw.split("\n");
+    const head = stripTags(parts[0]!).trim();
+    if (head) lines.push(`${ordered ? `${++i}. ` : "- "}${head}`);
+    else if (ordered) i++;
+    for (const extra of parts.slice(1)) {
+      if (extra.trim()) lines.push(`  ${extra.trim()}`);
+    }
+  }
+  return "\n" + lines.join("\n") + "\n";
 }
 
 /** Ubah <img> → markdown, kembalikan sekaligus daftar URL gambar. */
 export function extractImages(html: string): { text: string; media: string[] } {
   const media: string[] = [];
-  const text = html.replace(/<img\b[^>]*>/gi, (tag) => {
+  let text = html.replace(/<img\b[^>]*>/gi, (tag) => {
     const m = tag.match(/src=["']([^"']+)["']/i);
     if (!m) return "";
     const src = m[1]!.trim();
@@ -197,12 +265,38 @@ export function extractImages(html: string): { text: string; media: string[] } {
     const alt = tag.match(/alt=["']([^"']*)["']/i);
     return `\n\n![${alt ? alt[1] : "Gambar"}](${src})\n\n`;
   });
+
+  // <figcaption> → baris caption miring (temuan: 113 caption nyata).
+  text = text.replace(/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/gi, (_, inner) => {
+    const cap = stripTags(inner).trim();
+    return cap ? `\n\n*${cap}*\n\n` : "";
+  });
+
   return { text, media };
 }
 
-/** Buang SEMUA sisa tag HTML → spasi (kecuali yang sengaja dipertahankan). */
+/**
+ * Buang tag HTML yang tersisa → spasi — **tanpa merusak matematika**.
+ *
+ * Temuan (65 file): pola naif `/<[^>]+>/` merusak math seperti `$x < 3$ dan $y > 2$`
+ * (menganggap "< 3$ … $y >" sebagai tag). Solusi (Opsi C): **sembunyikan isi math**
+ * lebih dulu (placeholder), buang tag, lalu kembalikan.
+ */
 export function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, " ");
+  const store: string[] = [];
+  const hide = (m: string) => `\u0000${store.push(m) - 1}\u0000`;
+
+  let s = html;
+  // Sembunyikan blok math ($$…$$ dan \[…\]) lebih dulu, lalu inline ($…$ dan \(…\)).
+  s = s.replace(/\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]/g, hide);
+  s = s.replace(/\$[^$\n]+?\$|\\\([^)]+?\\\)/g, hide);
+
+  // Kini aman: buang semua tag.
+  s = s.replace(/<[^>]+>/g, " ");
+
+  // Kembalikan isi math.
+  s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => store[Number(i)]!);
+  return s;
 }
 
 /** Rapikan spasi: \u00a0 → spasi, spasi ganda → 1, baris kosong > 2 → 1. */
