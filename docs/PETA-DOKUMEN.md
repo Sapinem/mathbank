@@ -114,7 +114,7 @@
 | F1 | `KONTRAK-API.md` | ✅ | **dibuat** 2026-09-29 — 13 endpoint + envelope + versioning |
 | F2 | `RENCANA-MCP.md` | ✅ | **terimplementasi** 2026-09-30 — M11: 7 tool MCP, policy 1 tempat, stdio+HTTP, API key agen + UI |
 | F3 | `RENCANA-EKSPOR.md` | 🟢 | **belum** — paket/Moodle/PDF (M8, M12) |
-| F4 | `RENCANA-MOODLE.md` | 🟢 | **belum** — integrasi Moodle (M12) |
+| F4 | `RENCANA-MOODLE.md` | 🟡 | **dirancang** 2026-09-30 — M12: ekspor Moodle XML; 4 keputusan menunggu |
 
 ### Kategori G — Fitur & Data Pipeline
 

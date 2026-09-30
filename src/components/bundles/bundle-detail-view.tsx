@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { Pencil, Printer, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { MoodleExportButton } from "@/components/bundles/moodle-export-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState, LoadingState } from "@/components/ui/states";
@@ -50,6 +51,7 @@ export function BundleDetailView() {
             >
               <Printer data-icon="inline-start" /> Cetak
             </Button>
+            <MoodleExportButton bundleId={bundleId} />
           </div>
         }
       />
