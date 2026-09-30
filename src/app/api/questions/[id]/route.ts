@@ -5,6 +5,7 @@ import {
   updateQuestion,
   deleteQuestion,
 } from "@/lib/services/question-service";
+import { recordViewAudit } from "@/lib/services/audit";
 import { NotFoundError } from "@/lib/auth/guards";
 
 /** GET /api/questions/[id] — detail soal + opsi. */
@@ -14,6 +15,16 @@ export const GET = wrapRoute({
   handler: async ({ params, actor }) => {
     const q = await getQuestion(params.id, { viewer: actor });
     if (!q) throw new NotFoundError("Soal tidak ditemukan.");
+    // M13 S7: catat akses KUNCI JAWABAN (data sensitif) — hanya bila key terkirim.
+    if (q.answerKey) {
+      await recordViewAudit({
+        entityType: "question",
+        entityId: params.id,
+        action: "view",
+        actor,
+        changeSummary: "Melihat kunci jawaban soal",
+      });
+    }
     return q;
   },
 });

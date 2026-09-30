@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { resolveActor } from "@/lib/auth/resolve";
 import { exportBundleToGitsync } from "@/lib/services/moodle-export-service";
+import { recordViewAudit } from "@/lib/services/audit";
 import { ForbiddenError, NotFoundError } from "@/lib/auth/guards";
 
 /**
@@ -63,6 +64,15 @@ export async function POST(
         data: summary,
       });
     }
+
+    // M13 S7: catat EKSPOR (akses baca massal + kunci jawaban) sebagai audit.
+    await recordViewAudit({
+      entityType: "bundle",
+      entityId: id,
+      action: "export",
+      actor,
+      changeSummary: `Ekspor GitSync: ${result.exported} soal (${write?.directory ?? "-"})`,
+    });
 
     return json(200, {
       data: {

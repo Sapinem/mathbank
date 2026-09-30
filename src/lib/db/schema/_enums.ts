@@ -113,6 +113,9 @@ export const auditActionEnum = pgEnum("audit_action", [
   "delete",
   "status_change",
   "restore",
+  // M13 S7: catat AKSES BACA data sensitif (kunci jawaban, ekspor), bukan tiap GET.
+  "view",
+  "export",
 ]);
 
 /** Entitas yang diaudit. */
