@@ -134,4 +134,6 @@ export const ingestStatusEnum = pgEnum("ingest_status", [
   "processing",
   "completed",
   "failed",
+  /** Artikel sah diproses tetapi **tak menghasilkan soal** (mis. artikel teori). */
+  "skipped",
 ]);

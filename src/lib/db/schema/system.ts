@@ -5,6 +5,7 @@ import {
   varchar,
   text,
   boolean,
+  integer,
   timestamp,
   jsonb,
   index,
@@ -67,6 +68,10 @@ export const ingestQueue = pgTable(
     targetTopicId: uuid("target_topic_id"),
     status: ingestStatusEnum("status").default("pending").notNull(),
     errorMessage: text("error_message"),
+    /** Jumlah soal yang berhasil dibuat dari artikel ini (catatan hasil). */
+    importedQuestionsCount: integer("imported_questions_count").default(0).notNull(),
+    /** Catatan hasil AI/human (mis. "Artikel teori tanpa soal"). */
+    aiNotes: text("ai_notes"),
     processedAt: timestamp("processed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

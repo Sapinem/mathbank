@@ -43,6 +43,13 @@
       "when": 1790747099047,
       "tag": "0005_striped_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790775710278,
+      "tag": "0006_sloppy_sentry",
+      "breakpoints": true
     }
   ]
 }

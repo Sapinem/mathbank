@@ -89,6 +89,8 @@
 | D32 | `VERIFIKASI-AUDIT-M7.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M7 + T-M7-2 (reorder parsial), T-M7-3 (RESTRICT abadi setelah arsip), T-M7-1 (klaim stimulus) |
 | D33 | `EVALUASI-UPGRADE-TUMPUKAN.md` | ✅ | evaluasi tradeoff P1–P3; **P1 dikerjakan** 2026-09-30 (next 16.3.7/react 19.3.0) |
 | D34 | `RENCANA-EKSPOR.md` | ✅ | **dibuat** 2026-09-30 — rencana M8 (mesin PDF, opsi cetak, risiko); keputusan = Opsi A; M8b kop/kaki/watermark |
+| D35 | `docs/audit/M8-EKSPOR-CETAK.md` | ✅ | **dibuat** 2026-09-30 — audit naskah cetak & pratinjau (M8) |
+| D36 | `docs/audit/AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md` | ✅ | **dibuat** 2026-09-30 — audit penutup MVP & panduan arsitektur Fase 2/3 |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 
@@ -124,6 +126,7 @@
 | G1c | `EVALUASI-KORPUS-KOMPREHENSIF.md` | ✅ | **dibuat** 2026-09-30 — pindai **1.081 file**; inventaris kotoran + aturan final |
 | G1d | `RENCANA-SEGMENTASI-ADAPTER.md` | ✅ | **dibuat** 2026-09-30 — M9-2: penanda soal per-sumber + aturan mutu (menunggu persetujuan) |
 | G1e | `RENCANA-MEDIA.md` | ✅ | **dibuat** 2026-09-30 — M9-2b: unduh gambar korpus (srcset>src, storage lokal, dedup hash); keputusan = unduh lokal |
+| G1f | `RENCANA-INGEST.md` | ✅ | **dibuat** 2026-09-30 — M9-3: antrean + commit + endpoint `/api/v1/ingest/*`; semua hasil draft |
 | G3 | `RENCANA-TAKSONOMI.md` | 🟢 | **belum** — seed & kelola taksonomi (M5) |
 | G4 | `arsip/RENCANA-MIGRASI-DATA.md` | 📦 | **diarsipkan** (dibatalkan) 2026-09-29 |
 

@@ -1,7 +1,7 @@
 # AUDIT MILESTONE 3 — TEMA & SHELL UI (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (100% Enterprise Quality) — ✅ **DIVERIFIKASI ULANG 2026-09-30 + DIPERBAIKI** (T-M3-3 warna status; lihat §Catatan Verifikasi)  
+**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (100% Enterprise Quality) — ✅ **DIVERIFIKASI ULANG 2026-09-30 + DIPERBAIKI** (T-M3-3 warna status)  
 **Target:** Mesin Tema OKLCH, WCAG 2.2 AA Contrast, Migrasi `@base-ui/react` (Base UI `base-nova`), App Shell Layout, Command Palette ⌘K, dan Aksesibilitas (A11y).
 
 ---
@@ -30,7 +30,19 @@ Milestone 3 membangun antarmuka pengguna yang konsisten, berkinerja tinggi, dan 
 
 ---
 
-## 3. Hasil Pengujian UI & Aksesibilitas
+## 3. Catatan Evaluasi Inkonsistensi Shell UI & Tampilan (Temuan Lapangan)
+
+1. **Inkonsistensi Rute Bahasa Indonesia vs Folder Rute Inggris (Canonical Route Mismatch):**
+   * Peta navigasi di `nav-config.ts` mendefinisikan rute Indonesia (`/bank-soal`, `/referensi/topik`, `/paket`), sementara folder fisik App Router di `src/app/(app)/` menggunakan slug Inggris (`/questions`, `/references/topics`, `/bundles`).
+   * **Tindakan Disepakati:** Seluruh rute App Router & `nav-config.ts` akan diseragamkan **100% menggunakan Bahasa Inggris** (`/questions`, `/bundles`, `/references/topics`, `/references/sources`, `/references/events`, `/references/labels`).
+2. **Inkonsistensi Ukuran Padding Konten di Halaman Referensi (`topics`, `sources`, `events`, `labels`, `bundles`):**
+   * Pengamatan visual menemukan adanya perbedaan marjin/padding yang tidak seimbang antara halaman referensi (misal `topics-view.tsx` menggunakan `p-6`, sedangkan `sources-view.tsx` merender `<Card>` langsung tanpa outer wrapper `p-6`).
+   * **Penyebab:** Merupakan inkonsistensi pada pembungkus komponen tampilan (View Component Level), bukan bug dari `AppShell` utama.
+   * **Solusi Standardisasi:** Seluruh halaman tampilan akan dibungkus secara simetris menggunakan struktur `<div className="flex flex-col gap-6 p-6">` di bawah `<PageHeader>`.
+
+---
+
+## 4. Hasil Pengujian UI & Aksesibilitas
 
 Seluruh pengujian unit/komponen UI (`pnpm vitest run src/components`) lulus 100%:
 * `skip-link.test.tsx` → **Passed** (Tab keyboard ke `#konten-utama`).
@@ -40,7 +52,7 @@ Seluruh pengujian unit/komponen UI (`pnpm vitest run src/components`) lulus 100%
 
 ---
 
-## 4. Rekomendasi Enterprise
+## 5. Rekomendasi Enterprise
 
 1. **Adaptasi Kontras Dark Mode pada TikZ Diagram Engine:** Pastikan pengubah warna SVG TikZ mengadopsi *color inversion adaptation* agar diagram geometri matematika tetap nyaman dibaca saat berpindah ke Dark Mode.
 2. **Reaktifitas `badgeCount` Sidebar:** Hubungkan `badgeCount` pada menu *Kerja ➔ Telaah* dengan kueri React Query `useQuestionsCount({ status: 'review' })` agar jumlah antrean soal terbarukan secara real-time.
@@ -55,3 +67,4 @@ Seluruh pengujian unit/komponen UI (`pnpm vitest run src/components`) lulus 100%
 `tokens.ts` (sumber kebenaran tunggal); `theme:check` **34/34** lulus; kontras terang
 & gelap memenuhi ambang. Temuan **T-M3-3** (warna status) diperbaiki. Detail:
 `docs/VERIFIKASI-AUDIT-M3.md`.
+
