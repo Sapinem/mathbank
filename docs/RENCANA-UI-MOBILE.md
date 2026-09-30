@@ -334,43 +334,60 @@ Mobile                     Desktop
                            └──────┴──────┴──────┘
 ```
 
-### 7.4 Pola D — Desktop-saja
-**Dipakai:** editor soal · penyusun paket · TikZ Studio
+### 7.4 Pola D′ — Panel responsif (Sheet) — **MENGGANTIKAN "desktop-saja"**
 
-```
-┌─────────────────────────┐
-│        ┌────────┐       │
-│        │  🖥️    │       │
-│        └────────┘       │
-│  Menyunting soal paling │
-│  nyaman di layar besar. │
-│  Buka di komputer untuk │
-│  mengedit.              │
-│  [ ← Kembali ]          │
-└─────────────────────────┘
+> **Perubahan 2026-09-30:** pola lama "Desktop-saja" (`DesktopOnly`) **DIBUANG**.
+> Komponen `DesktopOnly` telah dihapus dari basis kode. Alasan: melawan praktik
+> mobile-first & best practice shadcn. Lihat `docs/EVALUASI-DESKTOPONLY.md`.
+
+**Prinsip:** semua halaman **harus** berfungsi di mobile. Bila sebuah halaman
+punya panel samping (filter, bank soal, dsb.), di layar kecil panel itu dibuka
+lewat **Sheet** — **kontennya SAMA**, hanya chrome berbeda.
+
+**Dipakai:** editor soal · penyusun paket · halaman berpanel.
+
+```tsx
+// Konten panel = SATU definisi, dipakai dua tempat.
+const panel = ( <>…</> );
+
+{/* Desktop: panel berdampingan */}
+<Card className="hidden lg:block">{panel}</Card>
+
+{/* Mobile: panel dalam Sheet (dibuka tombol) */}
+<Sheet open={open} onOpenChange={setOpen}>
+  <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+    <SheetHeader><SheetTitle>Tambah Soal</SheetTitle></SheetHeader>
+    {panel}
+  </SheetContent>
+</Sheet>
+
+{/* Tombol pembuka hanya di mobile */}
+<Button className="lg:hidden" onClick={() => setOpen(true)}>Tambah Soal</Button>
 ```
 
-**Kunci adaptasi:**
-- Deteksi: `useMediaQuery("(min-width: 1024px)")`
-- Bila mobile → **Pengalih** (bukan error). Bila punya mode lihat → tampilkan **read-only**.
-- Pesan ramah + jelas (bukan dead-end).
+**Aturan:**
+- `DesktopOnly` **dilarang** — jangan tambahkan kembali.
+- Gunakan `lg:` untuk memisah tampilan (`hidden lg:block`).
+- Konten panel didefinisikan **sekali** (variabel), dipakai di aside & Sheet.
+- Bila interaksi benar-benar hanya masuk akal dengan tetikus, tetap sediakan
+  alternatif sentuh (mis. tombol naik/turun alih-alih hanya drag).
 
 ### 7.5 Peta Halaman → Pola
 
 | Halaman | Pola | Editor/aksi di HP |
 |---------|------|-------------------|
 | Dasbor | **C** | — |
-| Bank Soal | **A** | "Buat Soal" → pengalih |
-| Detail Soal | **B** | Sunting → pengalih; telaah aktif |
-| Bank Soal Baru/Edit | **D** | Pengalih |
+| Bank Soal | **A** | "Buat Soal" → editor (responsif) |
+| Detail Soal | **B** | Sunting → editor (responsif); telaah aktif |
+| Bank Soal Baru/Edit | **D′** | Editor responsif penuh |
 | Telaah | **A** | Telaah aktif di HP |
-| Paket Soal | **A** | Susun → pengalih |
-| Detail Paket | **B** | Susun → pengalih |
-| Referensi (Topik/Sumber/Event/Label) | **A** (+**D** untuk CRUD) | Lihat; kelola → pengalih |
-| Galeri Aset | **A** | Lihat; unggah → pengalih |
-| TikZ Studio | **D** | Pengalih |
-| Ingest | **A** | Lihat antrean; unggah → pengalih |
-| Pengaturan | **A** (tabs) | Lihat; edit sensitif → desktop |
+| Paket Soal | **A** | Susun → penyusun (Sheet) |
+| Detail Paket | **B** | Susun → penyusun (Sheet) |
+| Referensi (Topik/Sumber/Event/Label) | **A** (+**D′** untuk CRUD) | Lihat; kelola → dialog responsif |
+| Galeri Aset | **A** | Lihat; unggah → dialog responsif |
+| TikZ Studio | **D′** | Kanvas gambar → butuh layar besar; sediakan pesan ramah (bukan dead-end) |
+| Ingest | **A** | Lihat antrean; unggah → dialog responsif |
+| Pengaturan | **A** (tabs) | Lihat; edit sensitif → dialog responsif |
 | Login | Tengah (kartu) | Aktif |
 
 ---

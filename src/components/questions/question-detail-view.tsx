@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Pencil, Trash2, Check, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { DesktopOnly } from "@/components/layout/desktop-only";
 import { QuestionEditor } from "@/components/questions/question-editor";
 import { MathContent } from "@/components/math/math-content";
 import { Button } from "@/components/ui/button";
@@ -69,7 +68,7 @@ export function QuestionDetailView() {
 
   if (editing) {
     return (
-      <DesktopOnly backHref={`/bank-soal/${id}`} backLabel="← Batal menyunting">
+      <>
         <PageHeader
           title="Sunting Soal"
           description="Perubahan tersimpan saat Anda menekan Simpan."
@@ -80,7 +79,7 @@ export function QuestionDetailView() {
           }
         />
         <QuestionEditor existing={q} />
-      </DesktopOnly>
+      </>
     );
   }
 

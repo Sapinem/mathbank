@@ -35,7 +35,6 @@ export default defineConfig({
         // Komponen kustom (BUKAN vendor ui/**) yang punya tes komponen.
         "src/components/questions/question-card.tsx",
         "src/components/questions/bank-soal-view.tsx",
-        "src/components/layout/desktop-only.tsx",
         "src/components/layout/page-header.tsx",
         "src/components/layout/skip-link.tsx",
         "src/components/layout/sidebar-user.tsx",
