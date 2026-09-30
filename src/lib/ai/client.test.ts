@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { chat, chatJson, listModels, health, parseJsonLoose } from "./client";
 import type { AiConfig } from "./config";
 
