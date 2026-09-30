@@ -8,9 +8,11 @@ import {
   changeQuestionStatus,
   setQuestionFlag,
   deleteQuestion,
+  hardDeleteQuestion,
+  getQuestionInternal,
   listQuestions,
 } from "./question-service";
-import { NotFoundError } from "@/lib/auth/guards";
+import { NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { buildQuestionFilter, collectTopicDescendants } from "@/lib/question/filters";
 import { createTopic } from "./topic-service";
 import { NotReadyError } from "@/lib/fsm/question-fsm";
@@ -321,5 +323,58 @@ describe("M6 — filter & pencarian", () => {
   it("buildQuestionFilter: tanpa q → byRelevance false", async () => {
     const f = await buildQuestionFilter({ limit: 20, offset: 0 } as never);
     expect(f.byRelevance).toBe(false);
+  });
+});
+
+describe("M4 — perbaikan audit (T-M4-3/4/5)", () => {
+  const reviewer: Actor = {
+    id: "test-reviewer",
+    name: "Penelaah Uji",
+    roles: ["reviewer"],
+    via: "session",
+  };
+
+  it("T-M4-3: PENELAAH bisa review → ready atas soal ORANG LAIN", async () => {
+    // Soal ditulis guru, disetujui penelaah (bukan pemiliknya).
+    const q = await createQuestion(
+      baseInput({ answerKey: { correct: ["A"] } }),
+      teacher,
+    );
+    await changeQuestionStatus(q.id, "review", admin);
+    const upd = await changeQuestionStatus(q.id, "ready", reviewer);
+    expect(upd.status).toBe("ready");
+  });
+
+  it("T-M4-3: guru (bukan pemilik) TETAP ditolak untuk ready", async () => {
+    const q = await createQuestion(
+      baseInput({ answerKey: { correct: ["A"] } }),
+      admin,
+    );
+    await changeQuestionStatus(q.id, "review", admin);
+    await expect(changeQuestionStatus(q.id, "ready", teacher)).rejects.toThrow();
+  });
+
+  it("T-M4-5: transisi tak sah ditolak FSM (sabuk pertama)", async () => {
+    const q = await createQuestion(
+      baseInput({ answerKey: { correct: ["A"] } }),
+      admin,
+    );
+    await changeQuestionStatus(q.id, "review", admin);
+    await changeQuestionStatus(q.id, "ready", admin);
+    // ready → draft TIDAK ada di TRANSITIONS → ditolak.
+    await expect(
+      changeQuestionStatus(q.id, "draft", admin),
+    ).rejects.toThrow();
+  });
+
+  it("T-M4-4: hard delete HANYA setelah soft-delete", async () => {
+    const q = await createQuestion(baseInput(), admin);
+    // Belum soft-delete → tolak.
+    await expect(hardDeleteQuestion(q.id, admin)).rejects.toThrow(ConflictError);
+    // Soft-delete dulu.
+    await deleteQuestion(q.id, admin);
+    // Baru boleh permanen.
+    await hardDeleteQuestion(q.id, admin);
+    expect(await getQuestionInternal(q.id, { includeDeleted: true })).toBeNull();
   });
 });

@@ -348,13 +348,22 @@ export async function changeQuestionStatus(
     assertCan(actor, "question:edit", { ownerId: existing.authorId });
   }
 
-  await db
+  // **T-M4-5:** penjagaan balapan (optimistic). Update HANYA bila status masih
+  // `from` — dua PATCH bersamaan tak bisa dua-duanya lolos FSM dari `from` yang
+  // sama. Bila 0 baris → status sudah berubah di antara baca & tulis → 409.
+  const updated_rows = await db
     .update(questions)
     .set({
       status: to,
       lastReviewedAt: to === "ready" ? new Date() : existing.lastReviewedAt,
     })
-    .where(eq(questions.id, id));
+    .where(and(eq(questions.id, id), eq(questions.status, from)))
+    .returning({ id: questions.id });
+  if (updated_rows.length === 0) {
+    throw new ConflictError(
+      "Status soal sudah berubah oleh permintaan lain. Muat ulang lalu coba lagi.",
+    );
+  }
 
   await recordAudit({
     entityType: "question",
@@ -428,5 +437,50 @@ export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
     action: "delete",
     actor,
     changeSummary: "Soal dihapus (lunak)",
+  });
+}
+
+/**
+ * Hapus PERMANEN (hard delete) — buang baris dari DB.
+ *
+ * **T-M4-4:** izin `question:hardDelete` (matriks: admin `yes`, guru/penelaah `own`)
+ * kini benar-benar dipakai. Aturan:
+ * - **Hanya** soal yang sudah **soft-deleted** (`deletedAt` terisi) boleh dihapus
+ *   permanen — cegah penghapusan tak sengaja atas soal aktif.
+ * - RESTRICT: soal yang dipakai paket tetap dilarang (FK `restrict` juga menjaga).
+ * - Anak (opsi/solusi/topik/label/media) di-CASCADE otomatis oleh DB.
+ */
+export async function hardDeleteQuestion(id: string, actor: Actor): Promise<void> {
+  // includeDeleted: soal yang ingin dihapus permanen PASTI ber-deletedAt (sudah soft-delete).
+  const existing = await getQuestionInternal(id, { includeDeleted: true });
+  if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
+
+  assertCan(actor, "question:hardDelete", { ownerId: existing.authorId });
+
+  if (!existing.deletedAt) {
+    throw new ConflictError(
+      "Hapus permanen hanya untuk soal yang sudah dihapus (soft-delete).",
+    );
+  }
+
+  const [dipakai] = await db
+    .select({ id: bundleItems.id })
+    .from(bundleItems)
+    .where(eq(bundleItems.questionId, id))
+    .limit(1);
+  if (dipakai) {
+    throw new ConflictError(
+      "Soal ini dipakai di paket soal — keluarkan dari paket dulu.",
+    );
+  }
+
+  await db.delete(questions).where(eq(questions.id, id));
+
+  await recordAudit({
+    entityType: "question",
+    entityId: id,
+    action: "delete",
+    actor,
+    changeSummary: "Soal dihapus PERMANEN",
   });
 }

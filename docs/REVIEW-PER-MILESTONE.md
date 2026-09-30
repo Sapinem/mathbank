@@ -349,30 +349,41 @@ kini diperluas & menutup 3 warna status + 1 bug mode gelap. **M3: ✅ LULUS.**
 
 ### Temuan
 
-#### 🟠 T-M4-1 — Dead links aktif ke `/bank-soal/baru` & `/bank-soal/[id]` (404)
+#### 🟠 T-M4-1 — Dead links aktif ke `/bank-soal/baru` & `/bank-soal/[id]` (404) — ✅ **SELESAI**
 
-**6 tautan** di UI menunjuk rute yang **belum ada** (M4c):
-- `page.tsx:91` ("Buat Soal" di dasbor), `:101` (kartu → detail)
-- `bank-soal-view.tsx:181,202` (tombol "Buat Soal"), `:210` (kartu → detail)
+**6 tautan** di UI menunjuk rute yang belum ada (M4c). **Diuji live: 404.**
+**Penyelesaian:** M4c/M4d dibangun (rute kini `/questions/new` & `/questions/[id]`,
+**ada**); T-M4-2 (konsistensi tautan) juga beres. **Menjadi bagian M4c — ✅ tuntas.**
 
-**Diuji live: 404** (`/bank-soal/baru` → 404, `/bank-soal/{id}` → 404).
-**Dampak:** tombol utama "Buat Soal" & klik kartu **mengarah ke halaman error**.
-**Bukan cacat kode** (wajar untuk milestone setengah jalan) — tapi **UX rusak** yang
-terlihat pengguna. **Perbaikan:** bangun M4c (rute + editor). Sampai itu, tombol
-"Buat Soal" sebaiknya `disabled` + tooltip "segera" ATAU diarahkan ke halaman
-placeholder ramah. → **menjadi pekerjaan M4c.**
+#### 🟡 T-M4-2 — Tautan "Buat Soal" di dasbor tak konsisten — ✅ **SELESAI**
 
-#### 🟡 T-M4-2 — Tautan "Buat Soal" di dasbor tak konsisten dgn halaman daftar
+Keduanya ke `/questions/new` (setelah rename rute); konsisten saat M4c dibangun.
 
-Keduanya ke `/bank-soal/baru` (akan benar setelah M4c), tapi perlu dipastikan
-kembali konsisten saat M4c dibangun.
+#### 🔴 T-M4-3 — GERBANG ROUTE MEMBLOKIR PENELAAH (alur telaah MATI) — ✅ **SELESAI**
 
-### Kesimpulan M4 (sejauh yang dibangun)
+**Ditemukan saat verifikasi audit M4 (2026-09-30) — TIDAK ada di dokumen audit asli.**
+Uji HTTP nyata: **penelaah `review→ready` → 403 `Tidak punya izin: question:edit`**.
+Akar: route `[id]/status` memakai `permission: "question:edit"` → `assertCan` **tanpa
+`ownerId`** → peran ber-`own` selalu ditolak. **Penelaah tak bisa approve apa pun.**
+**Perbaikan:** hapus gerbang route itu; izin per-tujuan ditegakkan di service.
+**Bukti live pasca-perbaikan:** penelaah approve → **HTTP 200, status `ready`** ✅.
 
-M4a & M4b **kokoh dan terverifikasi**: 7 endpoint, 21 tes integrasi DB lulus,
-FSM + guard bekerja, **keamanan S3 diuji tuntas** (agent/machine tak dapat kunci),
-halaman daftar responsif + e2e. **M4a/M4b: ✅ LULUS.** M4c/M4d belum dibangun →
-**pekerjaan berlanjut**, bukan temuan.
+#### 🟡 T-M4-4 — izin `question:hardDelete` MATI — ✅ **SELESAI**
+Endpoint `DELETE /api/questions/[id]/permanent` + `hardDeleteQuestion()`; hanya
+soft-deleted; RESTRICT paket. Live: 409 tanpa soft-delete, 200 setelahnya.
+
+#### 🟡 T-M4-5 — `changeQuestionStatus` tanpa penjagaan balapan — ✅ **SELESAI**
+UPDATE `WHERE id AND status=from` + `.returning()` → `ConflictError` 409.
+
+### Kesimpulan M4 — ✅ **LULUS (2026-09-30)**
+
+M4a & M4b **kokoh dan terverifikasi** (7 endpoint, FSM + guard, S3 teruji tuntas).
+M4c/M4d **kini dibangun**. **Bug kritis alur telaah (T-M4-3) yang lolos dari review
+asli sudah diperbaiki**; T-M4-4/T-M4-5 (dead permission, race) tuntas. **M4: ✅ LULUS.**
+
+> **Pelajaran:** review asli menilai **kode service** (21 tes DB memanggil service
+> langsung), bukan **jalur route nyata** → tak menangkap gerbang `assertCan` tanpa
+> `ownerId` yang memblokir peran `own`. **Wajib** uji lewat-route per peran.
 
 ---
 

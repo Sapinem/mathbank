@@ -8,6 +8,25 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ## [Belum Dirilis]
 
+### Diperbaiki
+- **🚨 Audit M4 — bug KRITIS alur telaah (T-M4-3)** — verifikasi audit M4 menemukan
+  **penelaah TIDAK BISA menyetujui/mengarsipkan soal** (`review→ready` → **403
+  `Tidak punya izin: question:edit`**). Akar: gerbang route `[id]/status` memakai
+  `permission: "question:edit"` → `assertCan` **tanpa `ownerId`** → semua peran
+  ber-`own` ditolak. **Perbaikan:** hapus gerbang route; izin per-tujuan
+  (`setReady`/`archive`/`edit`+owner) ditegakkan di service. **Terbukti live:**
+  penelaah approve → **HTTP 200, status `ready`**.
+  - **T-M4-4:** izin `question:hardDelete` (dulu MATI) kini dipakai —
+    `DELETE /api/questions/[id]/permanent` + `hardDeleteQuestion()`; hanya soal
+    soft-deleted; RESTRICT paket. Live: 409 tanpa soft-delete, 200 setelahnya.
+  - **T-M4-5:** `changeQuestionStatus` kini penjagaan balapan
+    (`WHERE id AND status=from` + `.returning()` → `ConflictError` 409).
+  - **T-M4-1/T-M4-2:** dead links `/bank-soal/*` → **selesai** (M4c/M4d dibangun;
+    rute `/questions/new`, `/questions/[id]`).
+  - **Pelajaran → `CONSTRAINTS.md` #35–#37** (jangan izin `own` di gerbang route;
+    penjagaan balapan; tes wajib lewat-route per peran).
+  - **+4 tes DB** (84 total) untuk T-M4-3/4/5.
+
 ### Ditambahkan
 - **M5 — Taksonomi (Referensi) selesai**:
   - **Topik** — pohon 3-level (`/referensi/topik`): CRUD, anti-siklus,

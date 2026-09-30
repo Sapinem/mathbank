@@ -15,6 +15,7 @@
 5. [`docs/audit/M5-TAKSONOMI-DAN-REFERENSI.md`](M5-TAKSONOMI-DAN-REFERENSI.md) — Evaluation & Manajemen Referensi untuk Milestone 5 (Pohon Topik 3-Level, Anti-Cycle Protection, Sources, Events, Tags, & RESTRICT Constraints).
 6. [`docs/audit/M6-PENCARIAN-DAN-FILTER.md`](M6-PENCARIAN-DAN-FILTER.md) — Evaluation & Engine Pencarian untuk Milestone 6 (Filter Builder, Topik Rekursif, Trigram `pg_trgm`, RRF Fusion, & Jaccard Dedup).
 7. [`docs/audit/M7-PAKET-SOAL.md`](M7-PAKET-SOAL.md) — Evaluation & Builder Paket Soal untuk Milestone 7 (Bundle Service, Drag-and-Drop Reorder, Deduplikasi Stimulus 1×, RESTRICT Protection, & Mobile Sheet UI).
+8. [`docs/audit/CATATAN-PENYEMPURNAAN-ENTERPRISE.md`](CATATAN-PENYEMPURNAAN-ENTERPRISE.md) — Rekomendasi Best Practices Enterprise (DB Transaction Atomicity, `"use cache"` Next.js 16, Idempotency-Key Header, Sanitasi TikZ SVG, & Request ID Traceability).
 
 ---
 

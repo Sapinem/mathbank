@@ -81,6 +81,7 @@
 | D24 | `VERIFIKASI-AUDIT-M2B.md` | ✅ | **dibuat** 2026-09-30 — verifikasi lanjutan M2 (#2 trustedOrigins, #3 mustChangePassword; sinkronisasi dokumen audit) |
 | D25 | `VERIFIKASI-AUDIT-M3.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M3 + T-M3-3 (celah cakupan theme:check, warna status, bug badge gelap) |
 | D26 | `RENCANA-PERBAIKAN-TEMUAN.md` | ✅ | **dibuat** 2026-09-30 — rencana & bukti perbaikan SELURUH temuan terkumpul (M2+M3+evaluasi) |
+| D27 | `VERIFIKASI-AUDIT-M4.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M4 + T-M4-3 (gerbang route blokir penelaah), T-M4-4, T-M4-5 |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 

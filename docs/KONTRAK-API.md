@@ -79,8 +79,9 @@ Validasi menambah `details`:
 | `GET` | `/api/questions/[id]` | `question:view` | 200 | Detail soal |
 | `PATCH` | `/api/questions/[id]` | `question:edit` | 200 | Perbarui soal (`own` berlaku) |
 | `DELETE` | `/api/questions/[id]` | `question:delete` | 200 | Soft-delete (`own` berlaku) |
-| `PATCH` | `/api/questions/[id]/status` | `question:edit` | 200 | Transisi status FSM |
+| `PATCH` | `/api/questions/[id]/status` | *(per-tujuan di service)* | 200 | Transisi status FSM. **T-M4-3:** TANPA gerbang route `question:edit` (izin beda per tujuan: `setReady`/`archive`/`edit`+`own`, ditegakkan di service — gerbang route tanpa `ownerId` dulu memblokir penelaah). |
 | `PATCH` | `/api/questions/[id]/flag` | `question:flag` | 200 | Tandai/lepas "perlu perhatian" |
+| `DELETE` | `/api/questions/[id]/permanent` | *(per-tujuan di service)* | 200 | **T-M4-4:** hapus PERMANEN — hanya soal soft-deleted; RESTRICT paket; anak CASCADE |
 
 **Query `GET /api/questions`** (semua opsional):
 `q`, `status`, `questionType`, `grade`, `difficulty` (1–5), `cognitiveLevel`, `topicId`, `tagId`, `sourceId`, `eventId`, `flagged`, `includeDeleted` (default `false`), `limit` (1–100, default 20), `offset` (default 0).
