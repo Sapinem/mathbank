@@ -30,6 +30,12 @@ export function finalizeItem(
   explanation: string | undefined,
   ref: { index: number; heading?: string },
   extraWarnings: string[] = [],
+  opts: {
+    /** Paksa tipe (mis. `multiple_choice_checkbox`, `matrix_grid`). */
+    type?: ParsedItem["type"];
+    /** Payload khusus tipe. */
+    dataPayload?: Record<string, unknown>;
+  } = {},
 ): ParsedItem {
   const warnings = [...extraWarnings];
   const options: ParsedOption[] = rawOptions.map((o, i) => ({
@@ -42,7 +48,7 @@ export function finalizeItem(
   const clean = options.filter((o) => o.text.length > 0);
 
   const hasOptions = clean.length >= 2;
-  const type = hasOptions ? "single_choice" : "essay";
+  const type = opts.type ?? (hasOptions ? "single_choice" : "essay");
 
   if (hasOptions && clean.length < 4) {
     warnings.push(`Opsi hanya ${clean.length} — mungkin parsing kurang`);
@@ -68,6 +74,7 @@ export function finalizeItem(
     correct: valid,
     explanation: explanation?.trim() || undefined,
     warnings,
+    ...(opts.dataPayload ? { dataPayload: opts.dataPayload } : {}),
     ref,
   };
 }

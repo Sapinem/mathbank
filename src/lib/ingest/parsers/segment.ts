@@ -5,7 +5,7 @@
  * lalu jalankan. Bila sumber tak dikenal → kembalikan hasil kosong + catatan
  * (artikel dilewati, bukan error).
  */
-import { pickAdapter, KNOWN_SOURCES } from "./adapters";
+import { pickHtmlAdapter, pickJsonAdapter, KNOWN_SOURCES } from "./adapters";
 import type { ArticleMeta, SegmentResult } from "./types";
 
 /**
@@ -19,7 +19,7 @@ export function segmentArticle(rawHtml: string, meta: ArticleMeta): SegmentResul
     return { items: [], skipped: 0, warnings: ["HTML kosong"] };
   }
 
-  const adapter = pickAdapter(meta, rawHtml);
+  const adapter = pickHtmlAdapter(meta, rawHtml);
   if (!adapter) {
     return {
       items: [],
@@ -31,4 +31,26 @@ export function segmentArticle(rawHtml: string, meta: ArticleMeta): SegmentResul
   }
 
   return adapter(rawHtml, meta);
+}
+
+/**
+ * Segmentasi data JSON terstruktur menjadi soal-soal (mis. pusmendik_dayaserap).
+ */
+export function segmentJson(data: unknown, meta: ArticleMeta): SegmentResult {
+  if (data === null || data === undefined) {
+    return { items: [], skipped: 0, warnings: ["Data JSON kosong"] };
+  }
+
+  const adapter = pickJsonAdapter(meta);
+  if (!adapter) {
+    return {
+      items: [],
+      skipped: 0,
+      warnings: [
+        `Sumber JSON tak dikenal: "${meta.source}" (dikenal: ${KNOWN_SOURCES.join(", ")}) — dilewati`,
+      ],
+    };
+  }
+
+  return adapter(data, meta);
 }

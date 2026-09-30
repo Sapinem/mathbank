@@ -134,3 +134,62 @@ describe("ingestArticleMedia (orkestrasi, mock fetch)", () => {
     expect(u[0]!.role).toBe("solution");
   });
 });
+
+describe("fetchImage — jalur TLS dilonggarkan (server lokal)", () => {
+  // Host yang di-pin relaxed = 127.0.0.1 → memakai modul https/http Node,
+  // bukan fetch global. Diuji dengan server HTTP lokal nyata.
+  async function withServer(
+    handler: (res: import("node:http").ServerResponse) => void,
+    fn: (port: number) => Promise<void>,
+  ) {
+    const { createServer } = await import("node:http");
+    const server = createServer((_req, res) => handler(res));
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    const addr = server.address();
+    const port = typeof addr === "object" && addr ? addr.port : 0;
+    try {
+      await fn(port);
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+    }
+  }
+
+  it("berhasil lewat modul http + host relaxed", async () => {
+    await withServer(
+      (res) => {
+        res.writeHead(200, { "content-type": "image/png" });
+        res.end(Buffer.from(PNG));
+      },
+      async (port) => {
+        const r = await fetchImage(`http://127.0.0.1:${port}/x.png`, {
+          retries: 0,
+          tlsRelaxedHosts: ["127.0.0.1"],
+        });
+        expect(r.ok).toBe(true);
+        expect(r.contentType).toBe("image/png");
+      },
+    );
+  });
+
+  it("mengikuti redirect lalu gagal 404 (tanpa retry)", async () => {
+    await withServer(
+      (res) => {
+        if (res.req.url === "/redirect") {
+          res.writeHead(302, { location: "/missing" });
+          res.end();
+        } else {
+          res.writeHead(404);
+          res.end("no");
+        }
+      },
+      async (port) => {
+        const r = await fetchImage(`http://127.0.0.1:${port}/redirect`, {
+          retries: 2,
+          tlsRelaxedHosts: ["127.0.0.1"],
+        });
+        expect(r.ok).toBe(false);
+        expect(r.error).toContain("404");
+      },
+    );
+  });
+});

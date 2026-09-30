@@ -23,6 +23,8 @@ export interface ParsedItem {
   explanation?: string;
   /** Catatan mutu (mis. "kunci tak ditemukan", "opsi hanya 3"). */
   warnings: string[];
+  /** Payload khusus tipe (mis. matrix_grid: pernyataan + label). */
+  dataPayload?: Record<string, unknown>;
   /** Jejak asal dalam artikel (untuk verifikasi). */
   ref: { index: number; heading?: string };
 }
@@ -54,3 +56,9 @@ export interface ArticleMeta {
  * Adapter memakai `cleanHtml` di dalam untuk membersihkan blok yang relevan.
  */
 export type ArticleAdapter = (rawHtml: string, meta: ArticleMeta) => SegmentResult;
+
+/**
+ * Adapter untuk sumber **JSON terstruktur** (mis. pusmendik_dayaserap) —
+ * tak butuh parsing HTML; data sudah terurai.
+ */
+export type JsonAdapter = (data: unknown, meta: ArticleMeta) => SegmentResult;

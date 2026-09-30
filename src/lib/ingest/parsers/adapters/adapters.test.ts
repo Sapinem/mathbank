@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { m4thlabAdapter } from "./m4thlab";
 import { mathcyberAdapter } from "./mathcyber";
 import { defantriAdapter } from "./defantri";
-import { pickAdapter, KNOWN_SOURCES } from "./index";
+import { pickHtmlAdapter, pickJsonAdapter, KNOWN_SOURCES } from "./index";
 
 // ── Fixture mini (potongan nyata dari korpus) ─────────────────
 
@@ -135,17 +135,22 @@ describe("adapter defantri", () => {
 
 describe("pemilih adapter", () => {
   it("sumber eksplisit dipakai", () => {
-    expect(pickAdapter({ source: "m4thlab" }, "")).toBe(m4thlabAdapter);
+    expect(pickHtmlAdapter({ source: "m4thlab" }, "")).toBe(m4thlabAdapter);
   });
 
   it("deteksi otomatis dari penanda HTML", () => {
-    expect(pickAdapter({ source: "?" }, M4THLAB_OK)).toBe(m4thlabAdapter);
-    expect(pickAdapter({ source: "?" }, MATHCYBER_OL)).toBe(mathcyberAdapter);
-    expect(pickAdapter({ source: "?" }, DEFANTRI_OK)).toBe(defantriAdapter);
+    expect(pickHtmlAdapter({ source: "?" }, M4THLAB_OK)).toBe(m4thlabAdapter);
+    expect(pickHtmlAdapter({ source: "?" }, MATHCYBER_OL)).toBe(mathcyberAdapter);
+    expect(pickHtmlAdapter({ source: "?" }, DEFANTRI_OK)).toBe(defantriAdapter);
   });
 
   it("sumber tak dikenal → null", () => {
-    expect(pickAdapter({ source: "unknown" }, "<p>x</p>")).toBeNull();
+    expect(pickHtmlAdapter({ source: "unknown" }, "<p>x</p>")).toBeNull();
     expect(KNOWN_SOURCES).toContain("mathcyber");
+  });
+
+  it("adapter JSON dayaserap via pickJsonAdapter", () => {
+    expect(pickJsonAdapter({ source: "pusmendik_dayaserap" })).not.toBeNull();
+    expect(pickJsonAdapter({ source: "unknown" })).toBeNull();
   });
 });
