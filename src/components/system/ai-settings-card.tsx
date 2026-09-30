@@ -116,15 +116,21 @@ export function AiSettingsCard() {
           <span className="text-sm font-medium">Aktifkan AI</span>
         </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Base URL</span>
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="ai-base-url"
+            className="text-xs font-medium text-muted-foreground"
+          >
+            Base URL
+          </label>
           <Input
+            id="ai-base-url"
             value={baseUrlValue}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder="https://9router.contoh/v1"
             disabled={isLoading}
           />
-        </label>
+        </div>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-muted-foreground">

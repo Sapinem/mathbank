@@ -292,15 +292,20 @@ function TopicDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Nama</span>
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="topic-name"
+              className="text-xs font-medium text-muted-foreground"
+            >
+              Nama
+            </label>
             <Input
+              id="topic-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="mis. Aljabar"
-              aria-label="Nama topik"
             />
-          </label>
+          </div>
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted-foreground">Induk</span>

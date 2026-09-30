@@ -92,18 +92,22 @@ export function PengaturanView() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="org-name"
+                className="text-xs font-medium text-muted-foreground"
+              >
                 Nama Organisasi
-              </span>
+              </label>
               <Input
+                id="org-name"
                 value={orgValue}
                 onChange={(e) => setOrgName(e.target.value)}
                 placeholder="mis. SMA Negeri 1"
               />
-            </label>
+            </div>
 
-            <label className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-muted-foreground">
                 Jenjang Bawaan
               </span>
@@ -134,9 +138,9 @@ export function PengaturanView() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </label>
+            </div>
 
-            <label className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-muted-foreground">
                 Kesulitan Bawaan
               </span>
@@ -157,7 +161,7 @@ export function PengaturanView() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </label>
+            </div>
 
             <div className="flex items-center gap-3">
               <Button onClick={save} disabled={update.isPending}>
