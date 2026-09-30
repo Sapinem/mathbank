@@ -117,6 +117,20 @@ describe("adapter defantri", () => {
     expect(it.correct).toEqual([]); // tak ada kunci
     expect(it.options.every((o) => !o.isCorrect)).toBe(true);
   });
+
+  it("REGRESI: stem di DALAM <div class='question'> tetap terambil", () => {
+    // Bug: stem dianggap isi sebelum div.question → kosong → soal dibuang.
+    const html = `<h4>1. Soal</h4><blockquote><div class="question">
+      Diketahui $\\log 2 = 8$. Nilai $x$ adalah ....<br>
+      <label><input type="radio" name="q1" value="corect">$(A)$ 1</label>
+      <label><input type="radio" name="q1" value="correct">$(B)$ 2</label>
+      </div></blockquote>`;
+    const r = defantriAdapter(html, { source: "defantri" });
+    expect(r.items).toHaveLength(1);
+    expect(r.skipped).toBe(0);
+    expect(r.items[0]!.stem).toContain("Diketahui");
+    expect(r.items[0]!.correct).toEqual(["B"]);
+  });
 });
 
 describe("pemilih adapter", () => {

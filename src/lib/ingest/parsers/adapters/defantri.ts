@@ -62,10 +62,11 @@ export const defantriAdapter: ArticleAdapter = (rawHtml): SegmentResult => {
       continue;
     }
 
-    // STEM = isi sebelum div.question (berisi radio pertama).
-    const qIdx = group.search(/<div class="question"/i);
-    const stemSource = qIdx === -1 ? group : group.slice(0, qIdx);
-    const stem = cleanHtml(stemSource).text.trim();
+    // STEM = isi SEBELUM radio pertama. `<div class="question">` kadang
+    // membungkus stem (bukan opsi saja) → buang TAG-nya, isi tetap.
+    const firstRadio = group.search(/<input\b[^>]*type="radio"/i);
+    const stemSource = firstRadio === -1 ? group : group.slice(0, firstRadio);
+    const stem = cleanHtml(stemSource.replace(/<\/?div\b[^>]*>/gi, "\n")).text.trim();
 
     // OPSI (hanya radio yang name-nya cocok).
     const opts: { label?: string; text: string }[] = [];
