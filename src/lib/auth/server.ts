@@ -3,6 +3,7 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { apiKey } from "@better-auth/api-key";
 import { db } from "@/lib/db";
 import { MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
+import { resolveAuthSecret, buildTrustedOrigins } from "@/lib/auth/origins";
 import {
   authUser,
   authSession,
@@ -18,24 +19,10 @@ import {
  *  - API key plugin → agen/mesin (MCP, ingest)
  *
  * Peran TIDAK disimpan di `user` — pakai tabel `user_roles` (multi-role, L1).
+ * Logika gerbang lingkungan (produksi/dev) ada di `origins.ts` (murni, teruji).
  */
 
-/**
- * Apakah runtime ini produksi (untuk memagari origin dev).
- * Produksi bila `NODE_ENV=production` ATAU `APP_ENV` `production`/`staging`.
- */
-function isProductionRuntime(): boolean {
-  if (process.env.NODE_ENV === "production") return true;
-  const appEnv = process.env.APP_ENV?.toLowerCase();
-  return appEnv === "production" || appEnv === "staging";
-}
-
-const authSecret = process.env.BETTER_AUTH_SECRET;
-if (process.env.NODE_ENV === "production" && !authSecret) {
-  throw new Error(
-    "FATAL: BETTER_AUTH_SECRET wajib di produksi. Buat: openssl rand -hex 32",
-  );
-}
+const authSecret = resolveAuthSecret(process.env);
 
 export const auth = betterAuth({
   appName: "MathBank",
@@ -106,24 +93,5 @@ export const auth = betterAuth({
       },
     }),
   ],
-  trustedOrigins: [
-    // Domain produksi (selalu) — APP_URL + domain resmi.
-    ...(process.env.APP_URL ? [process.env.APP_URL] : []),
-    "https://b.iyo.my.id",
-    // Origin dev (localhost/LAN) HANYA bila BUKAN produksi — mencegah
-    // permukaan CORS/CSRF melebar di produksi. Gerbang: NODE_ENV & APP_ENV.
-    ...(isProductionRuntime()
-      ? []
-      : [
-          "http://localhost:3000",
-          "http://localhost:3001",
-          "http://127.0.0.1:3000",
-          "http://127.0.0.1:3001",
-          ...(process.env.ALLOWED_DEV_ORIGINS ?? "192.168.18.100")
-            .split(",")
-            .map((h) => h.trim())
-            .filter(Boolean)
-            .flatMap((h) => [`http://${h}:3001`, `http://${h}:3000`]),
-        ]),
-  ],
+  trustedOrigins: buildTrustedOrigins(process.env),
 });

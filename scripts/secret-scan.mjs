@@ -38,11 +38,26 @@ const RULES = [
   // Rahasia terenkripsi MathBank (AES-GCM v1) — jangan pernah ke repo.
   { name: "Rahasia aplikasi v1:", re: /\bv1:[0-9a-f]{8,}:[0-9a-f]{8,}:[0-9a-f]{8,}\b/g },
   // Penugasan variabel rahasia dengan nilai tampak (bukan placeholder).
+  // Nilai berupa **pemanggilan fungsi / akses env** (mis. `resolveAuthSecret(...)`,
+  // `process.env.X`, berisi `(`, `.`, `[`) BUKAN rahasia literal → difilter
+  // lewat `looksLikeCode()` di `scanFile`.
   {
     name: "Penugasan rahasia",
-    re: /(?:SECRET|TOKEN|PASSWORD|API_KEY|PRIVATE_KEY|ENC_KEY)\s*[:=]\s*["']?([A-Za-z0-9+/_=-]{16,})["']?/gi,
+    re: /(?:SECRET|TOKEN|PASSWORD|API_KEY|PRIVATE_KEY|ENC_KEY)\s*[:=]\s*["']?([A-Za-z0-9+/_=.-]{12,})["']?/gi,
+    skipIfCode: true,
   },
 ];
+
+/** Nilai yang jelas-jelas potongan KODE, bukan rahasia literal. */
+function looksLikeCode(value) {
+  if (/[()[\]]/.test(value)) return true; // pemanggilan/indeks: f(...), a[b]
+  if (/\./.test(value)) return true; // akses properti: process.env.X, mod.fn
+  if (/^(process|resolve|get|load|read|build|create)/i.test(value)) return true;
+  // Identifier KONSTANTA (mis. DEMO_PASSWORD, API_KEY_ENV): huruf besar + garis
+  // bawah, tanpa huruf kecil → referensi variabel, bukan literal.
+  if (/^[A-Z][A-Z0-9_]*$/.test(value)) return true;
+  return false;
+}
 
 /** Nilai yang jelas-jelas placeholder → abaikan. */
 const PLACEHOLDERS = new Set([
@@ -56,6 +71,12 @@ const PLACEHOLDERS = new Set([
   "redacted",
   "[redacted]",
   "***",
+  // Sentinel uji (nilai sengaja buat menguji kebocoran) — bukan rahasia nyata.
+  "jangan-bocor",
+  "janganbocor",
+  "do-not-leak",
+  "test-secret",
+  "fake-secret",
 ]);
 
 /** Ekstensi/berkas yang dikecualikan dari pemindaian. */
@@ -127,8 +148,14 @@ function scanFile(file) {
         }
         const captured = m[1] ?? m[0];
         if (isPlaceholder(captured)) continue;
-        // Abaikan contoh dokumentasi bernilai (…/REDACTED/contoh).
+        if (rule.skipIfCode && looksLikeCode(captured)) continue;
+        // Abaikan contoh dokumentasi bernilai (…/REDACTED/contoh) ATAU nilai
+        // yang sengaja ditandai publik/demo oleh komentar di sekitar baris.
         if (/REDACTED|example|contoh|placeholder/i.test(line)) continue;
+        // Cek juga beberapa baris SEBELUMNYA (komentar penjelas sering di atas
+        // kode, dipisah baris kosong / docblock).
+        const context = lines.slice(Math.max(0, i - 4), i + 1).join(" ");
+        if (/sengaja publik|bukan rahasia|sengaja|demo-only|intentionally public/i.test(context)) continue;
         findings.push({ file, rule: rule.name, line: i + 1 });
       }
     }

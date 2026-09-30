@@ -120,6 +120,9 @@
 | F2 | `RENCANA-MCP.md` | ✅ | **terimplementasi** 2026-09-30 — M11: 7 tool MCP, policy 1 tempat, stdio+HTTP, API key agen + UI |
 | F3 | `RENCANA-EKSPOR.md` | 🟢 | **belum** — paket/Moodle/PDF (M8, M12) |
 | F4 | `RENCANA-MOODLE.md` | ✅ | **selesai** 2026-09-30 — M12: ekspor Moodle skema GitSync |
+| F5 | `RENCANA-KEAMANAN.md` | ✅ | **sebagian selesai** 2026-09-30 — M13: S5/S6/S7/S8 ✅; S9 nonce diblokir bug Turbopack |
+| F6 | `RENCANA-KUALITAS-M14.md` | ✅ | **sebagian selesai** 2026-09-30 — M14: lint #34, uji shell, refactor service, ambang coverage; TS7 ditunda |
+| F7 | `RENCANA-TS7.md` | 🔴 | **ditunda** 2026-09-30 — rencana migrasi TypeScript 7 (keputusan: tunda, risiko mayor) |
 
 ### Kategori G — Fitur & Data Pipeline
 
