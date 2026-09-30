@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { AiSettingsCard } from "@/components/system/ai-settings-card";
+import { AgentKeysCard } from "@/components/system/agent-keys-card";
 import { useSettings, useUpdateSettings } from "@/lib/hooks/use-settings";
 import { DIFFICULTY_LABELS } from "@/lib/display/labels";
 
@@ -180,6 +181,7 @@ export function PengaturanView() {
         </Card>
 
         <AiSettingsCard />
+        <AgentKeysCard />
         </>
         )}
       </div>
