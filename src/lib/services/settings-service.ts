@@ -8,6 +8,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { appSettings } from "@/lib/db/schema/system";
+import { decryptSecret, encryptSecret, isEncrypted, getEncryptionKey } from "@/lib/crypto/secrets";
 
 /** Nilai pengaturan umum (JSON). */
 export type SettingValue = string | number | boolean | null | object;
@@ -27,7 +28,18 @@ export const GENERAL_KEYS = [
   "general.default_difficulty",
 ] as const;
 
+/**
+ * Kunci RAHASIA yang disimpan **terenkripsi at-rest** (AES-256-GCM, M10-b / D2).
+ * Bila terdaftar di sini, nilai ditulis sebagai `v1:iv:tag:ct` dan didekripsi saat dibaca.
+ */
+export const ENCRYPTED_KEYS: readonly string[] = ["ai.api_key"];
+
 const SECRET_MASK = "***";
+
+/** TRUE bila kunci ini harus dienkripsi at-rest. */
+export function isEncryptedKey(key: string): boolean {
+  return ENCRYPTED_KEYS.includes(key);
+}
 
 /** Baca banyak pengaturan; secret dimask. */
 export async function getSettings(keys: string[]): Promise<SettingItem[]> {
@@ -56,7 +68,17 @@ export async function getSettingRaw(key: string): Promise<SettingValue | undefin
     .from(appSettings)
     .where(eq(appSettings.key, key))
     .limit(1);
-  return row?.value as SettingValue | undefined;
+  if (!row) return undefined;
+  const v = row.value;
+  // Kunci terenkripsi: dekripsi bila berbentuk ciphertext.
+  if (isEncryptedKey(key) && typeof v === "string" && isEncrypted(v)) {
+    try {
+      return decryptSecret(v, getEncryptionKey());
+    } catch {
+      return undefined; // rusak / kunci ENV berubah
+    }
+  }
+  return v as SettingValue;
 }
 
 /** Tulis banyak pengaturan (upsert). Lewati secret bernilai mask/kosong. */
@@ -71,17 +93,22 @@ export async function setSettings(
   for (const e of filtered) {
     // Jangan timpa secret dengan mask/kosong (UI mengirim balik "***").
     if (e.value === SECRET_MASK || e.value === "") continue;
+    // Kunci terenkripsi: enkripsi sebelum simpan.
+    const toStore =
+      isEncryptedKey(e.key) && typeof e.value === "string"
+        ? encryptSecret(e.value, getEncryptionKey())
+        : e.value;
     await db
       .insert(appSettings)
       .values({
         key: e.key,
-        value: e.value,
+        value: toStore,
         isSecret: e.isSecret ?? false,
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: appSettings.key,
-        set: { value: e.value, updatedAt: new Date() },
+        set: { value: toStore, updatedAt: new Date() },
       });
   }
 }
