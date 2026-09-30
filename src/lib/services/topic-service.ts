@@ -11,6 +11,8 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { topics } from "@/lib/db/schema/taxonomy";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
+import { withUniqueGuard } from "@/lib/db/errors";
+import { recordAudit } from "./audit";
 import type { Actor } from "@/lib/auth/actor";
 import { buildTree, slugify, type TopicNode, type TopicTree } from "@/lib/taxonomy/tree";
 
@@ -131,17 +133,28 @@ export async function createTopic(
 ): Promise<TopicNode> {
   assertCan(actor, "taxonomy:manage");
   const level = resolveLevelFrom(await topicSnapshot(), input.parentId);
-  const [row] = await db
-    .insert(topics)
-    .values({
-      name: input.name,
-      slug: slugify(input.name),
-      parentId: input.parentId ?? null,
-      level,
-      description: input.description ?? null,
-      sortOrder: input.sortOrder ?? 0,
-    })
-    .returning(COLS);
+  const [row] = await withUniqueGuard(
+    () =>
+      db
+        .insert(topics)
+        .values({
+          name: input.name,
+          slug: slugify(input.name),
+          parentId: input.parentId ?? null,
+          level,
+          description: input.description ?? null,
+          sortOrder: input.sortOrder ?? 0,
+        })
+        .returning(COLS),
+    "Topik dengan nama itu sudah ada.",
+  );
+  await recordAudit({
+    entityType: "topic",
+    entityId: row.id,
+    action: "create",
+    actor,
+    changeSummary: `Topik dibuat: ${row.name}`,
+  });
   return row;
 }
 
@@ -186,11 +199,22 @@ export async function updateTopic(
     }
   }
 
-  const [row] = await db
-    .update(topics)
-    .set({ ...patch, updatedAt: new Date() })
-    .where(eq(topics.id, id))
-    .returning(COLS);
+  const [row] = await withUniqueGuard(
+    () =>
+      db
+        .update(topics)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(topics.id, id))
+        .returning(COLS),
+    "Topik dengan nama itu sudah ada.",
+  );
+  await recordAudit({
+    entityType: "topic",
+    entityId: row.id,
+    action: "create",
+    actor,
+    changeSummary: `Topik dibuat: ${row.name}`,
+  });
   return row;
 }
 
@@ -224,6 +248,13 @@ export async function deleteTopic(id: string, actor: Actor): Promise<void> {
   }
 
   await db.delete(topics).where(eq(topics.id, id));
+  await recordAudit({
+    entityType: "topic",
+    entityId: id,
+    action: "delete",
+    actor,
+    changeSummary: "Topik dihapus",
+  });
 }
 
 /** Cari topik aktif berlevel tertentu (mis. untuk pemilih). */

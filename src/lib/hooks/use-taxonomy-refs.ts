@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { SourceRow, EventRow, TagRow } from "@/lib/services/taxonomy-service";
+import { api } from "@/lib/api/fetcher";
 
 /** Kunci query bersama untuk entitas taksonomi. */
 export const refKeys = {
@@ -9,16 +10,6 @@ export const refKeys = {
   events: ["events"] as const,
   tags: ["tags"] as const,
 };
-
-async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message ?? "Terjadi kesalahan.");
-  return json.data as T;
-}
 
 // ── Sumber ─────────────────────────────────────────────────────
 

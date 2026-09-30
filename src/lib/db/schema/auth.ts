@@ -6,6 +6,7 @@ import {
   integer,
   bigint,
   index,
+  uniqueIndex,
   primaryKey,
 } from "drizzle-orm/pg-core";
 import { roleEnum } from "./_enums";
@@ -102,7 +103,9 @@ export const apiKey = pgTable(
   },
   (t) => [
     index("idx_apikey_reference_id").on(t.referenceId),
-    index("idx_apikey_key").on(t.key),
+    // NEW3: `key` disimpan sebagai HASH (Better Auth default, bukan plaintext) —
+    // jadikan UNIK agar lookup `verifyApiKey` pasti & cegah anomali hash ganda.
+    uniqueIndex("uq_apikey_key").on(t.key),
   ],
 );
 

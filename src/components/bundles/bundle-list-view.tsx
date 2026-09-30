@@ -28,7 +28,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -103,6 +111,7 @@ export function BundleListView() {
             <p className="text-muted-foreground text-sm">Belum ada paket soal.</p>
           ) : (
             <Table>
+              <TableCaption>Daftar paket soal.</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead>Judul</TableHead>

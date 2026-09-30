@@ -36,6 +36,13 @@
       "when": 1790743267920,
       "tag": "0004_unique_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790747099047,
+      "tag": "0005_striped_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

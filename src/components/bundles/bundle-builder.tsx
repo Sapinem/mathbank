@@ -164,6 +164,7 @@ export function BundleBuilder() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Cari soal…"
+          aria-label="Cari soal untuk paket"
           className="pl-9 text-base sm:text-sm"
         />
       </div>

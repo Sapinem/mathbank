@@ -24,10 +24,10 @@ const patchSchema = z.object({
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
-  handler: async ({ params }) => {
+  handler: async ({ params, actor }) => {
     const b = await getBundle(params.id);
     if (!b) throw new NotFoundError("Paket tidak ditemukan.");
-    const items = await listBundleItems(params.id);
+    const items = await listBundleItems(params.id, actor);
     return { ...b, items };
   },
 });

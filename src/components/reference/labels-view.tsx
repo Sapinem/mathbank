@@ -19,7 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -92,6 +100,7 @@ export function LabelsView() {
             <p className="text-muted-foreground text-sm">Belum ada label.</p>
           ) : (
             <Table>
+              <TableCaption>Daftar label soal.</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama</TableHead>

@@ -178,6 +178,7 @@ export function BankSoalView() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari soal…"
+              aria-label="Cari soal"
               className="pl-8 text-base sm:text-sm"
             />
           </form>
@@ -273,7 +274,7 @@ function FilterSelect({
         value={value ?? "all"}
         onValueChange={(v) => onChange(v === "all" ? null : v)}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-label={label}>
           <SelectValue placeholder="Semua" />
         </SelectTrigger>
         <SelectContent>

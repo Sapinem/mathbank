@@ -20,7 +20,7 @@ export const GET = wrapRoute({
 /** POST /api/sources — buat sumber (butuh taxonomy:manage). */
 export const POST = wrapRoute({
   rateLimit: true,
-  permission: "taxonomy:manage",
+  permission: "reference:manage",
   body: createSchema,
   handler: async ({ body, actor }) => createSource(body, actor),
 });

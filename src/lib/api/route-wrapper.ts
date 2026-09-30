@@ -6,6 +6,7 @@ import {
   UnauthorizedError,
   ForbiddenError,
   PasswordChangeRequiredError,
+  InvalidJsonError,
   NotFoundError,
   ConflictError,
   assertCan,
@@ -140,6 +141,12 @@ function errorResponse(err: unknown): NextResponse {
       },
     );
   }
+  if (err instanceof InvalidJsonError) {
+    return NextResponse.json(
+      { error: { code: err.code, message: err.message } },
+      { status: 400 },
+    );
+  }
   if (err instanceof ZodError) {
     return NextResponse.json(
       {
@@ -194,7 +201,7 @@ export function wrapRoute<TQuery, TBody, TResult>(
         : (undefined as TQuery);
 
       const body = opts.body
-        ? opts.body.parse(await req.json().catch(() => ({})))
+        ? opts.body.parse(await parseJsonBody(req))
         : (undefined as TBody);
 
       const params = (await args?.params) ?? {};
@@ -210,4 +217,19 @@ export function wrapRoute<TQuery, TBody, TResult>(
 /** Respons sukses manual (bila tak lewat wrapRoute). */
 export function ok<T>(data: T, status = 200): NextResponse {
   return NextResponse.json({ data }, { status });
+}
+
+/**
+ * Baca body JSON; **D9**: bila rusak/kosong pada body wajib, lempar
+ * `InvalidJsonError` (400 `INVALID_JSON`) — BUKAN diam-diam `{}` yang lalu
+ * memicu pesan Zod menyesatkan ("Data tidak valid").
+ */
+async function parseJsonBody(req: Request): Promise<unknown> {
+  const raw = await req.text();
+  if (!raw.trim()) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new InvalidJsonError();
+  }
 }

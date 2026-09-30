@@ -16,7 +16,7 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions } from "@/lib/db/schema/question";
-import { questionColumns } from "@/lib/db/projections/question";
+import { questionColumns, canSeeAnswerKey } from "@/lib/db/projections/question";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { slugify } from "@/lib/taxonomy/tree";
@@ -259,8 +259,14 @@ export async function archiveBundle(id: string, actor: Actor): Promise<void> {
   });
 }
 
-/** Daftar item paket (berurutan), dengan soal ter-proyeksi. */
-export async function listBundleItems(id: string) {
+/**
+ * Daftar item paket (berurutan), dengan soal ter-proyeksi.
+ *
+ * **NEW4:** `actor` diteruskan agar `answerKey` hanya muncul bila viewer berwenang
+ * (`canSeeAnswerKey`) — konsisten dengan aturan S3 di `question-service`.
+ */
+export async function listBundleItems(id: string, actor?: Actor) {
+  const withAnswerKey = actor ? canSeeAnswerKey(actor) : false;
   const rows = await db
     .select({
       item: {
@@ -273,7 +279,7 @@ export async function listBundleItems(id: string) {
         itemNumber: bundleItems.itemNumber,
         notes: bundleItems.notes,
       },
-      question: questionColumns({ withAnswerKey: false }),
+      question: questionColumns({ withAnswerKey }),
     })
     .from(bundleItems)
     .innerJoin(questions, eq(questions.id, bundleItems.questionId))

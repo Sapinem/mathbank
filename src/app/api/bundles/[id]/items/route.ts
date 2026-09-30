@@ -21,7 +21,7 @@ const putSchema = z.object({
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
-  handler: async ({ params }) => listBundleItems(params.id),
+  handler: async ({ params, actor }) => listBundleItems(params.id, actor),
 });
 
 /** POST /api/bundles/[id]/items — tambah soal ke paket. */

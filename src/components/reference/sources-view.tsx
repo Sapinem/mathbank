@@ -27,7 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -121,6 +129,7 @@ export function SourcesView() {
             <p className="text-muted-foreground text-sm">Belum ada sumber.</p>
           ) : (
             <Table>
+              <TableCaption>Daftar sumber & asal soal.</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead>Label</TableHead>

@@ -13,7 +13,7 @@ const patchSchema = z.object({
 /** PATCH /api/events/[id] — ubah event. */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "taxonomy:manage",
+  permission: "reference:manage",
   body: patchSchema,
   handler: async ({ body, actor, params }) =>
     updateEvent((await params).id, body, actor),
@@ -22,7 +22,7 @@ export const PATCH = wrapRoute({
 /** DELETE /api/events/[id] — hapus event (RESTRICT bila dipakai soal). */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "taxonomy:manage",
+  permission: "reference:manage",
   handler: async ({ actor, params }) => {
     await deleteEvent((await params).id, actor);
     return { ok: true };

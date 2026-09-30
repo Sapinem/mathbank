@@ -126,6 +126,15 @@ export class UnauthorizedError extends Error {
   }
 }
 
+/** Body JSON tak bisa diurai (HTTP 400, code `INVALID_JSON`). */
+export class InvalidJsonError extends Error {
+  readonly code = "INVALID_JSON";
+  constructor(message = "Body JSON tidak valid") {
+    super(message);
+    this.name = "InvalidJsonError";
+  }
+}
+
 /** Error sumber daya tak ditemukan (HTTP 404). */
 export class NotFoundError extends Error {
   readonly code = "NOT_FOUND";

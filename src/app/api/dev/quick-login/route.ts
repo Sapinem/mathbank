@@ -11,6 +11,10 @@ import { demoUserByKey, DEMO_PASSWORD } from "@/lib/auth/demo-users";
  *
  * **Pagar:** aktif di dev. Di produksi MATI (404) kecuali `DEMO_LOGIN=enabled`
  * diset eksplisit — jadi tak pernah jadi pintu belakang tanpa sengaja.
+ * ⚠️ **Keputusan pemilik (2026-09-30):** server ini (b.iyo.my.id) **sengaja**
+ * menjalankan `DEMO_LOGIN=enabled` sebagai demo publik. Untuk produksi sungguhan,
+ * **JANGAN** set `DEMO_LOGIN`. Lindung lain: rate-limit Better Auth + `detail`
+ * tak dibocorkan (NEW2).
  *
  * Body: { key: "admin" | "guru" | "penelaah" }
  */
@@ -57,14 +61,16 @@ export async function POST(req: Request) {
   );
 
   if (!res.ok) {
+    // NEW2: JANGAN bocorkan detail respons Better Auth (bisa memuat pesan DB).
+    // Catat server-side saja; klien dapat pesan generik.
     const detail = await res.text().catch(() => "");
+    console.error("[dev/quick-login] sign-in gagal:", detail.slice(0, 500));
     return NextResponse.json(
       {
         error: {
           code: "DEMO_SIGNIN_FAILED",
           message:
             "Gagal masuk sebagai akun demo. Jalankan `pnpm seed:users` lebih dulu.",
-          detail: detail.slice(0, 300),
         },
       },
       { status: 500 },

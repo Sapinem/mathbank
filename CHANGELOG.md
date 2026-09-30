@@ -75,6 +75,20 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   tak ada kebingungan; proyek pra-rilis).
 
 ### Diperbaiki
+- **🧹 Perbaikan SELURUH temuan terkumpul (M2+M3+evaluasi)** — atas permintaan pemilik
+  ("perbaiki seluruh temuan yang terkumpul"). Rencana: `RENCANA-PERBAIKAN-TEMUAN.md`.
+  - **Keamanan:** NEW2 (`quick-login` tak bocorkan `detail`); NEW3 (`apikey.key` →
+    `uq_apikey_key` UNIQUE; **koreksi: nilai = HASH**, bukan plaintext); NEW4
+    (`listBundleItems` teruskan `actor`); D7 (`reference:manage` kini dipakai
+    sources/events); D8 (`withUniqueGuard` → 409, bukan 500); D9 (JSON rusak →
+    400 `INVALID_JSON`).
+  - **A11y:** A2 (`aria-label` 2 input pencarian + 1 Select filter); A3
+    (`TableCaption` 4 tabel + `scope="col"` default di `TableHead`).
+  - **Mutu:** C1 (audit log untuk sumber/event/label/topik); C3 (helper `api<T>`
+    diekstrak ke `src/lib/api/fetcher.ts`).
+  - **S4 FK `author_id` sengaja TIDAK dikerjakan** — `author_id` sah menyimpan
+    identitas non-user (`dev-user`, agen); FK akan memecah dev-bypass. Bukan batas
+    kepercayaan (izin dari roles). Dicatat sebagai keputusan.
 - **🎨 Warna status tema (T-M3-3) — perbaikan arsitektural** (verifikasi audit M3):
   - Warna status dipindah dari **hardcode di `build.ts`** → `tokens.ts` (`STATUS_TOKENS`,
     sumber kebenaran tunggal) → tak bisa lagi luput dari `theme:check`.

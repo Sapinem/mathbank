@@ -19,7 +19,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -120,6 +128,7 @@ export function EventsView() {
             <p className="text-muted-foreground text-sm">Belum ada event.</p>
           ) : (
             <Table>
+              <TableCaption>Daftar event/ujian (nama, kategori, cakupan).</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama</TableHead>

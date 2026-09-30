@@ -6,6 +6,7 @@ import type {
   BundleType,
   BundleValidation,
 } from "@/lib/services/bundle-service";
+import { api } from "@/lib/api/fetcher";
 
 /**
  * Hook paket soal (L3) — daftar, detail, item, mutasi.
@@ -17,16 +18,6 @@ export const bundleKeys = {
   all: ["bundles"] as const,
   detail: (id: string) => ["bundles", id] as const,
 };
-
-async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message ?? "Terjadi kesalahan.");
-  return json.data as T;
-}
 
 /** Baris item pada detail paket (soal ter-proyeksi). */
 export interface BundleItemView {

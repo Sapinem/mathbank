@@ -163,6 +163,32 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
     expect(res.status).toBe(400);
   });
 
+  it("400 INVALID_JSON saat body bukan JSON (bukan diam-diam {}) [D9]", async () => {
+    const handler = wrapRoute({
+      body: z.object({ name: z.string() }),
+      handler: async () => ({ ok: true }),
+    });
+    const res = await handler(
+      req("http://localhost/api/x", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{ bukan json",
+      }),
+    );
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: { code: string } };
+    expect(json.error.code).toBe("INVALID_JSON");
+  });
+
+  it("body kosong → {}(tanpa error) lalu Zod yang menilai", async () => {
+    const handler = wrapRoute({
+      body: z.object({ name: z.string().optional() }),
+      handler: async ({ body }) => body,
+    });
+    const res = await handler(req("http://localhost/api/x", { method: "POST" }));
+    expect(res.status).toBe(200);
+  });
+
   it("500 INTERNAL_ERROR untuk error tak terduga", async () => {
     const handler = wrapRoute({
       handler: async () => {

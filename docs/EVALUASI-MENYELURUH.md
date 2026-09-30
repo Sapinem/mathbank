@@ -121,3 +121,29 @@ kejutan, tapi **layak dibayar lebih awal** untuk beberapa item murah.
 ---
 *Evaluasi ini hidup — perbarui saat item dibayar. Lihat juga
 docs/EVALUASI-STRATEGI-E2E.md & docs/EVALUASI-DESKTOPONLY.md.*
+
+---
+
+## 5. PEMBARUAN — Seluruh temuan dibayar (2026-09-30)
+
+Atas permintaan pemilik ("perbaiki seluruh temuan yang terkumpul"), semua item di
+Langkah 1–3 **selesai**. Rencana & bukti: `docs/RENCANA-PERBAIKAN-TEMUAN.md`.
+
+| ID | Temuan | Status | Bukti |
+|----|--------|:------:|-------|
+| NEW2 | `quick-login` bocor `detail` | ✅ | detail dibuang dari respons; log server-side |
+| NEW3 | `apikey.key` non-unik | ✅ | `uq_apikey_key` UNIQUE (migrasi `0005`); **koreksi: nilai key = HASH** (Better Auth default), bukan plaintext |
+| NEW4 | `listBundleItems` tak teruskan `actor` | ✅ | param `actor` + `canSeeAnswerKey` |
+| D7 | `reference:manage` izin mati | ✅ | kini dipakai sources/events (taxonomy:manage utk topik/tag) |
+| D8 | unique-violation → 500 | ✅ | `withUniqueGuard` → 409; uji live: dup sumber → `CONFLICT` |
+| S3 | pagar `DEMO_LOGIN` | ✅ kebijakan | keputusan pemilik: server ini demo → `DEMO_LOGIN` sah; diperkuat rate-limit + NEW2 |
+| S4 | FK `author_id` | ⏸️ **tak dikerjakan (by design)** | `author_id` sah menyimpan identitas non-user (`dev-user`, agen). FK akan memecah dev-bypass. Bukan batas kepercayaan (izin dari roles). |
+| D9 | JSON rusak → pesan salah | ✅ | `INVALID_JSON` 400; uji live terbukti |
+| A2 | 2 input pencarian tanpa nama | ✅ | `aria-label` (bank-soal & bundle-builder) |
+| A2b | label Select | ✅ | **sudah** `aria-label`/`htmlFor` (temuan subagent basi) + 1 sisa diperbaiki |
+| A3 | tabel tanpa caption/scope | ✅ | `TableCaption` 4 tabel + `scope="col"` default |
+| C1 | audit taksonomi/topik absen | ✅ | `recordAudit` di semua mutasi sumber/event/label/topik (uji live) |
+| C3 | helper `api<T>` duplikat | ✅ | diekstrak ke `src/lib/api/fetcher.ts` |
+
+**Hasil:** 261 unit (+19) + 80 DB hijau; tsc 0; lint 0; `theme:check` 34/34; build OK;
+produksi sehat (smoke 7/7). Diverifikasi live: D9, D8, C1, NEW3 (index).

@@ -20,7 +20,7 @@ export const GET = wrapRoute({
 /** POST /api/events — buat event. */
 export const POST = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "taxonomy:manage",
+  permission: "reference:manage",
   body: eventSchema,
   handler: async ({ body, actor }) => createEvent(body, actor),
 });
