@@ -228,4 +228,25 @@ Apa yang AI **boleh** usulkan? (semua = usulan, bukan tulisan final)
 
 ## 9. Catatan Verifikasi
 
-*(Diisi saat implementasi — segarkan tiap langkah.)*
+**Status: ✅ TERIMPLEMENTASI (2026-09-30)** — M10-a s/d M10-f inti selesai.
+
+| Langkah | Status | Bukti |
+|---------|:------:|-------|
+| M10-a `ai/client.ts` | ✅ | `chat`/`chatJson`/`listModels`/`health`; 20 tes unit |
+| M10-b settings + UI | ✅ | enkripsi AES-256-GCM; kartu **AI/Enrichment** di Pengaturan (live) |
+| M10-c `embedding/bge-m3.ts` | ✅ | Ollama; **dim 1024 terverifikasi** |
+| M10-d `enrichment-service` | ✅ | usulan → terapkan + draft→review; jawaban utuh |
+| M10-e pencarian semantik | ✅ | query natural-language → soal relevan #1 (nyata) |
+| M10-f batch + UI | ✅ (batch) / ⏭️ UI enrich | endpoint batch jalan |
+
+**Verifikasi nyata (produksi ini):**
+- Embedding BGE-M3 (Ollama): **1024-dim**, ~296 ms/teks, RAM ~1,2 GB.
+- Enkripsi key: tersimpan `v1:…` di DB; UI baca `***` + `isSet` (tak bocor).
+- E2E: mock LLM → usulan (topik/kesulitan/kognitif/tags) diterapkan, status → `review`, `answer_key` utuh.
+- Pencarian semantik: `"bagaimana cara menurunkan fungsi berpangkat"` → soal turunan **peringkat 1**.
+- Gate: unit **405** · DB **128** · coverage **91,99%** · tsc 0 · lint 0.
+
+**Belum (menyusul):**
+- UI enrichment di halaman soal (tombol "Enrich dengan AI" + pratinjau usulan).
+- M11 MCP (tool `enrich`) memakai service yang sama.
+

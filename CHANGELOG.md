@@ -1,6 +1,21 @@
 # Changelog — MathBank
 
 
+## [Unreleased] — M10 AI Enrichment & Embedding (berjalan)
+
+### Ditambahkan — Klien AI, embedding & enrichment (M10)
+
+- **Gerbang LLM** (`src/lib/ai/client.ts`): satu tempat panggil LLM (OpenAI-compatible) — `chat` · `chatJson` · `listModels` · `health`. Provider = **setting**, bukan kode.
+- **Konfigurasi AI** (`src/lib/ai/config.ts`): baca `app_settings` `ai.*`; `ai.api_key` didekripsi.
+- **Enkripsi rahasia** (`src/lib/crypto/secrets.ts`): AES-256-GCM; kunci dari ENV `SETTINGS_ENC_KEY`. `ai.api_key` disimpan **terenkripsi at-rest**; UI hanya melihat `***`.
+- **Embedding** (`src/lib/embedding/bge-m3.ts`): BGE-M3 via **Ollama** (`/api/embed`); validasi ketat **dim 1024**.
+- **Enrichment** (`src/lib/services/enrichment-service.ts`): AI mengusulkan **topik · kesulitan(1–5) · kognitif(Bloom) · tags** → diterapkan + status `draft`→`review`. `answer_key` **tak pernah** disentuh. Manual + batch.
+- **Pencarian semantik** (M6): param `mode=semantic` → embed query & urut jarak vektor (HNSW); fallback trigram otomatis.
+- **Endpoint**: `/api/ai/{settings,models,health,enrich,embed}`.
+- **UI**: kartu **AI / Enrichment** di halaman Pengaturan (model picker dari provider + cek layanan).
+- **ENV**: `SETTINGS_ENC_KEY`, `BGE_M3_MODEL`; `BGE_M3_SERVICE_URL` default Ollama.
+- **Tes**: +47 unit (crypto/client/enrich/embedding) + 14 DB = unit **405** · DB **128** · coverage **91,99%**.
+
 ## [Unreleased] — M9 Ingest Korpus (berjalan)
 
 ### Ditambahkan — Antrean, commit & endpoint ingest (M9-3)

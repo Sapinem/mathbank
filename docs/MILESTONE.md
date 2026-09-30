@@ -46,7 +46,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M | Nama | Prioritas | Dependensi | Status |
 |---|------|-----------|------------|:------:|
 | M9 | Ingest Korpus (parsing data sumber) | ✅ | M8 | ✅ M9-1/2/2b/2c/3 selesai (korpus HTML, bukan PDF) |
-| M10 | AI Enrichment & Embedding | 🟡 | M9 | ⬜ |
+| M10 | AI Enrichment & Embedding | 🟡 | M9 | 🟡 **inti selesai** (client·embedding·enkripsi·enrich·semantik·UI Pengaturan); sisa: UI enrich di halaman soal |
 | M11 | MCP (agen/otomasi) | 🟡 | M10 | ⬜ |
 | M12 | Ekspor Moodle | 🟢 | M8 | ⬜ |
 
@@ -333,14 +333,15 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 **Dependensi:** M9 · **Perkiraan:** 4–5 hari
 
-- [ ] `ai/client.ts` — **baca setting** (base_url/api_key/model/enabled); OpenAI-compatible
-- [ ] Halaman **Pengaturan → bagian AI** (9router; key terenkripsi)
-- [ ] `embedding/bge-m3.ts` (dim 1024, validasi ketat)
-- [ ] AI tagging (enrichment) → hasil ke status `review`
-- [ ] Embedding soal → vektor (aktifkan pencarian semantik M6)
-- [ ] Dedup saat enrichment; aturan flag × status (flagged ≠ `ready`)
-- [ ] Batas biaya/rate; log panggilan AI (`audit_logs`)
-- 📄 **RENCANA-ENRICHMENT.md**
+- [x] `ai/client.ts` — baca setting (base_url/api_key/model/enabled); OpenAI-compatible ✅ (+`listModels`)
+- [x] Halaman **Pengaturan → bagian AI** (9router; key **terenkripsi AES-256-GCM**) ✅
+- [x] `embedding/bge-m3.ts` (dim 1024, validasi ketat; Ollama) ✅
+- [x] AI tagging → field + status `review` ✅ (jawaban tak disentuh)
+- [x] Embedding soal → vektor + hash + model (aktifkan **pencarian semantik M6**) ✅
+- [x] Aturan flag × status tetap (flagged ≠ `ready`) ✅ (invarian DB)
+- [x] Batas biaya/rate + log AI (`audit_logs`) ✅ (`ai.max_tokens`/timeout + rateLimit endpoint)
+- [ ] UI enrichment di **halaman soal** (tombol + pratinjau usulan) — sisa
+- 📄 **RENCANA-ENRICHMENT.md** ✅ (terimplementasi)
 
 ## M11 — MCP (agen/otomasi) 🟡
 
