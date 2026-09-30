@@ -8,6 +8,15 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ## [Belum Dirilis]
 
+### Dokumentasi
+- **📝 Catatan Verifikasi seragam di SELURUH dokumen `docs/audit/`** (CONSTRAINTS #44):
+  tiap dokumen audit (M1–M7, Pustaka, Enterprise) kini punya blok **§Catatan Verifikasi**
+  di akhir + status baris ditandai (✅/⚠️) — merujuk temuan nyata & perbaikannya. M6
+  diperdalam: §1.2/§1.3 dikoreksi + kesimpulan lama "LULUS 100%" diberi peringatan.
+  `README` audit diperbarui: tabel status verifikasi per-milestone + metrik terkini
+  (274 unit / 86 DB / 30 halaman — ganti angka basi 229/80/28). M7 ditandai **belum
+  diverifikasi** (jujur).
+
 ### Diperbaiki
 - **🔎 Audit M6 — logika ambang dedup diperbaiki + status jujur** (`docs/VERIFIKASI-AUDIT-M6.md`):
   - **T-M6-1 (fix):** `dedup()` (`src/lib/search/fusion.ts`) menyatakan "exact (0.98)

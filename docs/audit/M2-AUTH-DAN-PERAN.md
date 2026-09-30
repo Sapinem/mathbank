@@ -1,7 +1,7 @@
 # AUDIT MILESTONE 2 — AUTH & PERAN (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (95% Enterprise Ready)  
+**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (95% Enterprise Ready) — ✅ **DIVERIFIKASI ULANG 2026-09-30 + DIPERBAIKI** (T1/T2/T3, `trustedOrigins`, `mustChangePassword`; lihat §Catatan Verifikasi)  
 **Target:** Autentikasi (Better Auth), Multi-Role (5 Peran L1), Matriks Izin (75 Sel), Resolusi Aktor, Guard Otorisasi (`assertCan`), Pembungkus API (`wrapRoute`), serta Rate Limiting.
 
 ---
@@ -45,3 +45,17 @@ Seluruh pengujian unit Auth (`pnpm vitest run src/lib/auth`) lulus 100%:
 1. **Dev Bypass Guardrail:** Pastikan flag `AUTH_DEV_BYPASS` dipaksa `false` di lingkungan Staging/UAT Enterprise.
 2. **Isolasi `trustedOrigins`:** Di lingkungan produksi, batasi array `trustedOrigins` hanya untuk domain resmi (`APP_URL`) guna memblokir potensi serangan CORS/CSRF dari origin lokal.
 3. **Guardrail `mustChangePassword`:** Tambahkan validasi pada `wrapRoute` untuk memblokir endpoint mutation jika akun baru/reset belum mengganti password sementara.
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek matriks izin di kode + uji HTTP lewat-route per peran.
+
+**Status: ✅ TERVERIFIKASI + DIPERBAIKI.** Matriks izin = sumber kebenaran di kode
+(`permissions.ts`); urutan resolusi aktor (cookie → dev-bypass → API key) benar.
+Temuan yang diperbaiki: **T1/T2/T3** (rate-limit auth arsitektural; pagar `APP_ENV`
+untuk dev-bypass; `apiKeyPermissions` hanya menyempitkan), **#2 `trustedOrigins`**
+(produksi menolak origin dev — terbukti live 403), **#3 `mustChangePassword`**
+(blokir global 403 kecuali `/api/auth/me`). Detail: `docs/VERIFIKASI-AUDIT-M2.md`,
+`docs/VERIFIKASI-AUDIT-M2B.md`.

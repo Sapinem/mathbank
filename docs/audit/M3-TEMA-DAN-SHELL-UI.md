@@ -1,7 +1,7 @@
 # AUDIT MILESTONE 3 — TEMA & SHELL UI (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (100% Enterprise Quality)  
+**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (100% Enterprise Quality) — ✅ **DIVERIFIKASI ULANG 2026-09-30 + DIPERBAIKI** (T-M3-3 warna status; lihat §Catatan Verifikasi)  
 **Target:** Mesin Tema OKLCH, WCAG 2.2 AA Contrast, Migrasi `@base-ui/react` (Base UI `base-nova`), App Shell Layout, Command Palette ⌘K, dan Aksesibilitas (A11y).
 
 ---
@@ -44,3 +44,14 @@ Seluruh pengujian unit/komponen UI (`pnpm vitest run src/components`) lulus 100%
 
 1. **Adaptasi Kontras Dark Mode pada TikZ Diagram Engine:** Pastikan pengubah warna SVG TikZ mengadopsi *color inversion adaptation* agar diagram geometri matematika tetap nyaman dibaca saat berpindah ke Dark Mode.
 2. **Reaktifitas `badgeCount` Sidebar:** Hubungkan `badgeCount` pada menu *Kerja ➔ Telaah* dengan kueri React Query `useQuestionsCount({ status: 'review' })` agar jumlah antrean soal terbarukan secara real-time.
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek token warna + `theme:check`.
+
+**Status: ✅ TERVERIFIKASI + DIPERBAIKI.** Warna status = `STATUS_TOKENS` di
+`tokens.ts` (sumber kebenaran tunggal); `theme:check` **34/34** lulus; kontras terang
+& gelap memenuhi ambang. Temuan **T-M3-3** (warna status) diperbaiki. Detail:
+`docs/VERIFIKASI-AUDIT-M3.md`.

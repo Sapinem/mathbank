@@ -16,3 +16,21 @@
 | 4 | **Server-Side `"use cache"` Next.js 16** | ⛔ **Dibatalkan (Desain Sadar)** | **Reverted:** Menyebabkan efek *Stale-While-Revalidate* (lag 2-5 detik saat mutasi data) dan mengganggu *guard auth* pada `<Suspense>`. Caching UI sudah optimal di-handle oleh React Query di sisi Klien. |
 | 5 | **Transaksi Atomik (`db.transaction`)** | 🟠 **Disarankan untuk M8+** | Mutasi multi-tabel pada pembuatan soal & paket disarankan dibungkus transaksi Drizzle. |
 | 6 | **Sanitasi SVG TikZ & Strict CSP** | 🟠 **Disarankan untuk M8+** | Sanitasi DOMPurify pada luaran TikZ SVG untuk mencegah potensi XSS. |
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek kode + uji live; verifikasi ke sumber primer (docs Next.js) sebelum eksekusi.
+
+**Status: ✅ DIVERIFIKASI — diterapkan selektif (bukan asal ikut):**
+- **#2 (BUG NYATA) — diperbaiki:** `slugify` overflow → 500; `NFKD` bisa memperpanjang
+  input. Kini `slugify(name, maxLength)` dengan batas per-kolom. Terbukti live: 500 → 409.
+- **#6 — diterapkan:** `X-Request-ID` di semua respons + log.
+- **#4 — diterapkan:** `Idempotency-Key`; terbukti live (2× POST key sama → id sama).
+- **#3 `"use cache"` — DIBATALKAN (keputusan sadar):** `revalidateTag(t,'max')` = SWR →
+  data basi 2–5 dtk; `updateTag` hanya di Server Action; guard di `<Suspense>` menghilangkan
+  307 server → **nol manfaat, turunkan mutu** → revert.
+- **#1/#5** = sudah ada / belum relevan (TikZ belum dibangun).
+
+Pelajaran → `CONSTRAINTS.md` #40–41. Detail: `docs/VERIFIKASI-CATATAN-ENTERPRISE.md`.

@@ -1,7 +1,7 @@
 # AUDIT MILESTONE 4 — BANK SOAL CRUD & MANAGEMENT (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Sub-milestone M4a, M4b, M4c, M4d Selesai 100%)  
+**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Sub-milestone M4a, M4b, M4c, M4d Selesai 100%) — ⚠️ **DIVERIFIKASI ULANG 2026-09-30 + DIPERBAIKI: temuan KRITIS T-M4-3 (alur telaah mati) + T-M4-4/T-M4-5** (lihat §Catatan Verifikasi)  
 **Target:** Inti Produk — Service Layer (`question-service.ts`), Engine FSM Status (`question-fsm.ts`), Proyeksi Keamanan S3, Halaman Daftar Bank Soal, Single-Component Editor 11 Tipe Soal (`question-editor.tsx`), Halaman Detail, Halaman Telaah (`telaah-view.tsx`), dan Komparasi Arsitektural vs QBank.
 
 ---
@@ -81,3 +81,20 @@ Audit komparatif dilakukan terhadap arsitektur lama QBank (`/home/hari/projects/
 ## 📄 KESIMPULAN MILESTONE 4
 
 **MILESTONE 4 (BANK SOAL CRUD & MANAGEMENT) TELAH VERIFIED 100% LULUS. ARSITEKTUR KODE DAN TAMPILAN ANTARMUKA (UI) MATHBANK TERBUKTI JAUH LEBIH UNGGUL, STABIL, DAN BERSIH DIBANDINGKAN QBANK.**
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek 7 endpoint + FSM + uji HTTP lewat-route per peran.
+
+**Status: ✅ TERVERIFIKASI + DIPERBAIKI (temuan KRITIS).** Struktur CRUD, FSM,
+guard `assertReady`, dan proyeksi aman **akurat**. Temuan nyata yang diperbaiki:
+- **T-M4-3 (KRITIS):** gerbang route `permission: "question:edit"` (izin `own` tanpa
+  `ownerId`) → penelaah **tak bisa** approve/reject → **alur telaah MATI**. Terbukti
+  live (reviewer `review→ready` = 403). Diperbaiki: andalkan izin per-transisi di service.
+- **T-M4-4:** izin `question:hardDelete` mati → ditambah endpoint hard-delete.
+- **T-M4-5:** transisi status tanpa penjagaan balapan → `WHERE status=from` + 409.
+
+Akar masalah: tes DB memanggil service **langsung**, bukan lewat HTTP route → tak
+menangkap celah. Pelajaran → `CONSTRAINTS.md` #35–#37. Detail: `docs/VERIFIKASI-AUDIT-M4.md`.

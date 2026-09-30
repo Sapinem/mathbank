@@ -31,3 +31,17 @@ Direkomendasikan untuk menyanitasi String SVG TikZ (Studio M3) atau pratinjau wa
 ## 📄 KESIMPULAN AUDIT PUSTAKA
 
 Tumpukan pustaka MathBank **100% bersih, efisien, dan presisi**. Seluruh dependensi utama termasuk `cn` (`shadcn-ui/cn`) dan `tw-animate-css` terbukti digunakan secara aktif dan optimal dalam basis kode.
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek `package.json` + isi nyata `node_modules` + pemakaian di kode.
+
+**Status: ✅ TERVERIFIKASI (versi & kesimpulan benar) — tetapi 2 temuan "redundan" SALAH.**
+- **#A "`cn` redundan" SALAH:** paket `cn` = **`shadcn-ui/cn`** (drop-in clsx+tailwind-merge,
+  resmi shadcn, dipakai ~22 file) → **jangan** ditukar ke clsx (mundur).
+- **#B "`tw-animate-css` redundan" SALAH:** dipakai di `globals.css` → **jangan** di-prune.
+
+Kesimpulan "bersih & bebas bloatware" **BENAR**. **Tidak ada perubahan kode** dari audit
+ini. Detail: `docs/VERIFIKASI-AUDIT-PUSTAKA.md`.

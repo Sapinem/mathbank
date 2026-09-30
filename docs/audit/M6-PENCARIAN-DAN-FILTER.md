@@ -14,10 +14,10 @@ Milestone 6 berfokus pada mesin pencarian dan penyaringan butir soal matematika 
    * Meng-encapsulate seluruh logika penyaringan SQL (`status`, `questionType`, `grade`, `difficulty`, `cognitiveLevel`, `sourceId`, `eventId`, `flagged`).
    * **Penyaringan Topik Rekursif (`collectTopicDescendants`):** Memilih satu topik induk (Level 1 atau Level 2) secara otomatis mencakup seluruh soal yang terikat pada anak-anak sub-topiknya via kueri BFS/rekursif.
 2. **Pencarian Trigram & Typo-Tolerant (`pg_trgm`):**
-   * Menggunakan kombinasi kueri `word_similarity` (% operator) dan `ILIKE` pada `contentMarkdown` untuk memastikan pencarian substring maupun kesalahan eja tetap menghasilkan kandidat soal yang relevan.
+   * Menggunakan kombinasi kueri operator `%` (= `similarity()`, ambang default `pg_trgm.similarity_threshold` = 0.3) dan `ILIKE` pada `contentMarkdown` untuk memastikan pencarian substring maupun kesalahan eja tetap menghasilkan kandidat soal yang relevan. *(Koreksi verifikasi 2026-09-30: dokumen versi awal menyebut `word_similarity` — kode faktual memakai operator `%`/`similarity()`, bukan `word_similarity()`.)*
 3. **Penggabungan Hibrida RRF & Deduplikasi (`src/lib/search/fusion.ts`):**
    * **Reciprocal Rank Fusion (RRF):** Algoritma murni teruji (`rrfFuse`) dengan konstanta $k=60$ untuk menggabungkan peringkat dari beberapa mesin pencari (teks/trigram + vektor semantik di M10) tanpa terpengaruh perbedaan skala skor.
-   * **Deduplikasi Otomatis (`dedup`):** Menggunakan token kemiripan Jaccard (`similarity`) dengan ambang batas *Exact* ($0.98$) dan *Near Duplicate* ($0.85$) untuk membuang kandidat soal yang identik/hampir mirip dari hasil pencarian.
+   * **Deduplikasi Otomatis (`dedup`):** Menggunakan token kemiripan Jaccard (`similarity`) dengan ambang batas *Exact* ($0.98$) dan *Near Duplicate* ($0.85$). Zona *near* = duplikat **hanya bila penalaran kandidat sama**; penalaran berbeda → keduanya dipertahankan. *(Diperbaiki 2026-09-30 — lihat §Catatan Verifikasi.)*
 
 ---
 
@@ -55,3 +55,26 @@ Milestone 6 berfokus pada mesin pencarian dan penyaringan butir soal matematika 
 ## 📄 KESIMPULAN MILESTONE 6
 
 **MILESTONE 6 (PENCARIAN & FILTER) TELAH DIVERIFIKASI LULUS 100%. ALGORITMA RRF FUSION, DEDUPLIKASI JACCARD, SERTA FILTER TOPIK REKURSIF MATHBANK BERJALAN SESUAI STANDAR MUTU.**
+
+> ⚠️ **Kesimpulan di atas ditulis oleh auditor awal (30 Sep 2026) dan TIDAK sepenuhnya akurat.** Lihat §Catatan Verifikasi di bawah.
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek tiap klaim ke kode + uji live (HTTP).
+
+**Yang TERVERIFIKASI BENAR ✅:** jalur pencarian **live** — trigram `pg_trgm` + GIN,
+toleransi typo, pencarian multi-kata, urut relevansi (`similarity`), dan filter topik
+rekursif (subtree) — **berfungsi** (diverifikasi live).
+
+**KOREKSI atas kesimpulan "LULUS 100%":**
+
+| # | Klaim awal | Faktanya |
+|---|---|---|
+| (a) | Operator `word_similarity` | Kode memakai operator **`%`** (= `similarity()`), **bukan** `word_similarity()` |
+| (b) | "RRF & Dedup … berjalan sesuai standar" | `rrfFuse`/`dedup` di `fusion.ts` **BELUM TERINTEGRASI** — nol konsumen produksi (baru dipakai M10). Hanya lulus uji unit. |
+| (c) | Dedup ambang exact(0.98) + near(0.85) | **Logika awal salah** (ambang exact = logika mati; zona near dibuang tanpa cek penalaran). **Diperbaiki 2026-09-30** (T-M6-1) agar sesuai disain. |
+
+**Status setelah verifikasi:** M6 versi **live** = **LULUS**; klaim "dedup/ RRF berjalan
+di produksi" = **belum** (menunggu M10). Detail lengkap: `docs/VERIFIKASI-AUDIT-M6.md`.

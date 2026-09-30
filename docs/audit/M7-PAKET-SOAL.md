@@ -57,3 +57,13 @@ Milestone 7 mengelola penyusunan naskah/paket soal (`bundles` & `bundle_items`) 
 ## 📄 KESIMPULAN MILESTONE 7
 
 **MILESTONE 7 (PAKET SOAL) TELAH DIREVIEW DAN DIVERIFIKASI LULUS 100%. INVARIAN STIMULUS 1×, PROTEKSI RESTRICT HAPUS SOAL, SERTA DRAG-AND-DROP BUILDER MATHBANK BERJALAN DENGAN SANGAT PRESISI.**
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Status: ⏳ BELUM DIVERIFIKASI.**
+
+Dokumen audit M7 (Paket Soal) ada, tetapi **belum** diverifikasi ke kode dengan metode
+yang sama (uji HTTP lewat-route per peran). Verifikasi M7 dijadwalkan sebagai langkah
+audit berikutnya. Sampai itu, klaim di dokumen ini **jangan dianggap final**.

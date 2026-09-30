@@ -1,7 +1,7 @@
 # AUDIT MILESTONE 1 — SKEMA DATABASE (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Lulus Verifikasi dengan 1 Catatan Refactoring Fondasi)  
+**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Lulus Verifikasi dengan 1 Catatan Refactoring Fondasi) — ✅ **DIVERIFIKASI ULANG 2026-09-30** (lihat §Catatan Verifikasi)  
 **Target:** Skema Database v2 (Layer L7) Drizzle ORM — 27 Tabel, 14 Enum, Indexing GIN/HNSW, Triggers, Invarians, dan PG 18 `uuidv7()`.
 
 ---
@@ -55,3 +55,16 @@ Milestone 1 bertujuan membangun skema basis data utama MathBank yang tangguh, te
 1. **Separation of Roles:** Di lingkungan produksi, pisahkan role DB Provisioner (`postgres`) yang memasang ekstensi dari role Aplikasi (`mathbank`) yang beroperasi dengan hak *Least Privilege*.
 2. **Runtime Invariance Health Check:** Tambahkan pengecekan keberadaan 25 DB triggers pada startup server / endpoint `/api/health`.
 3. **Immutable Audit Log:** Kunci tabel `audit_logs` agar role aplikasi hanya memiliki akses `INSERT` dan `SELECT` (dilarang `UPDATE`/`DELETE`).
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek klaim ke skema/migrasi nyata.
+
+**Status: ✅ TERVERIFIKASI.** Skema dari nol (rantai ekstensi→tabel→invarian), PK
+`uuidv7()`, 26 trigger, index (termasuk GIN trgm & HNSW), CHECK constraint, dan
+kebijakan role non-superuser produksi (`mathbank_app`) — **sesuai** dengan migrasi
+nyata. Detail: `docs/VERIFIKASI-AUDIT-M1.md` (bila ada) / `docs/SKEMA-DB-DETAIL.md`.
+
+**Catatan konsistensi:** tidak ada temuan yang memerlukan perbaikan kode pada M1.

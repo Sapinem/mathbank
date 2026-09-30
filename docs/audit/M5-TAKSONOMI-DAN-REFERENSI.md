@@ -59,3 +59,19 @@ Milestone 5 menangani struktur referensi taksonomi dan meta-data yang mengorgani
 ## 📄 KESIMPULAN MILESTONE 5
 
 **MILESTONE 5 (TAKSONOMI & REFERENSI) TELAH DIREVIEW SECARA LENGKAP 100%. METODE PENCEGAHAN SIKLUS (ANTI-CYCLE), BATAS KEDALAMAN 3-LEVEL, SERTA ANTARMUKA MANAJEMEN REFERENSI TELAH BERJALAN SESUAI STANDAR MUTU MATHBANK.**
+
+---
+
+## 📝 CATATAN VERIFIKASI (2026-09-30)
+
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek kode + uji HTTP lewat-route.
+
+**Status: ✅ TERVERIFIKASI + DIPERBAIKI.** Struktur 3-level, anti-siklus, batas
+kedalaman, 14 endpoint CRUD, UI 4 view, trigger `usage_count` — **akurat**. Temuan:
+- **T-M5-1:** audit `updateTopic` salah label (`action:"create"`/"Topik dibuat") →
+  diperbaiki ke `"update"`/"Topik diperbarui".
+- **T-M5-2 (integritas data):** re-parent topik **tidak** mempropagasi `level` ke subtree
+  (`level` = kolom tersimpan) → diperbaiki: seluruh subtree `level += delta` dalam transaksi.
+- **T-M5-3:** klaim `/api/tags/clean-unused` **palsu** (405) → ditambah service + route.
+
+Pelajaran → `CONSTRAINTS.md` #38–39. Detail: `docs/VERIFIKASI-AUDIT-M5.md`.

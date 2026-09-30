@@ -1,8 +1,31 @@
 # AUDIT MENYELURUH MATHBANK: MILESTONE 1 HINGGA 7
 
-**Tanggal Rangkuman:** 30 September 2026  
-**Status Evaluasi Proyek:** 🟢 **VERIFIED & PASSED (ENTERPRISE READY)**  
+**Tanggal Rangkuman:** 30 September 2026  · **Diperbarui:** 30 September 2026 (verifikasi)  
+**Status Evaluasi Proyek:** 🟢 **VERIFIED & PASSED (ENTERPRISE READY)** — dengan koreksi per-milestone (lihat tabel di bawah)  
 **Direktori Dokumen Audit:** `/home/hari/projects/mathbank/docs/audit/`
+
+---
+
+## ✅ STATUS VERIFIKASI (diverifikasi ulang 2026-09-30)
+
+Pola berulang temuan audit M1–M6: klaim **struktur** umumnya akurat, tetapi **cakupan
+& kebenaran di jalur nyata** sering tidak diuji. Setiap dokumen kini punya blok
+**§Catatan Verifikasi** (temuan + status perbaikan).
+
+| Dokumen | Status verifikasi | Ringkas |
+|---|:--:|---|
+| M1 Skema DB | ✅ Benar | Skema/trigger/index sesuai kode |
+| M2 Auth & Peran | ✅ + diperbaiki | T1/T2/T3, `trustedOrigins`, `mustChangePassword` |
+| M3 Tema & Shell | ✅ + diperbaiki | T-M3-3 warna status; `theme:check` 34/34 |
+| M4 Bank Soal CRUD | ✅ + **KRITIS** diperbaiki | **T-M4-3** (alur telaah mati), T-M4-4, T-M4-5 |
+| M5 Taksonomi | ✅ + diperbaiki | T-M5-1 (audit), T-M5-2 (propagasi level), T-M5-3 (clean-unused) |
+| M6 Pencarian & Filter | ✅ + diperbaiki | T-M6-1 (logika dedup), T-M6-2 (fusion belum terintegrasi) |
+| M7 Paket Soal | ⏳ **belum diverifikasi** | Menunggu langkah audit berikutnya |
+| Pustaka & Dependensi | ✅ (2 temuan **salah**) | `cn` & `tw-animate-css` **bukan** redundan |
+| Catatan Enterprise | ✅ diterapkan selektif | #2 fix; #4/#6 diterapkan; #3 **dibatalkan** |
+
+Detail per-milestone: `docs/VERIFIKASI-AUDIT-M{1..6}.md`, `docs/VERIFIKASI-AUDIT-PUSTAKA.md`,
+`docs/VERIFIKASI-CATATAN-ENTERPRISE.md`.
 
 ---
 
@@ -22,11 +45,15 @@
 
 ## 🎯 Quality Gates & Metrik Keberhasilan Project
 
-Seluruh pengujian proyek MathBank (`/home/hari/projects/mathbank`) telah dieksekusi secara otomatis dan dinyatakan **100% Hijau**:
+**Metrik TERKINI** (diperbarui 30 September 2026 — angka lama di dokumen audit asli sudah basi):
 
-* **WCAG 2.2 AA Contrast Check (`pnpm theme:check`):** 16/16 Lulus (Mode Terang & Gelap)
-* **TypeScript Check (`pnpm typecheck`):** 0 Error
+* **WCAG 2.2 AA Contrast Check (`pnpm theme:check`):** **34/34** Lulus (Terang & Gelap)
+* **TypeScript (`npx tsc --noEmit` / `pnpm typecheck`):** 0 Error
 * **ESLint (`pnpm lint`):** 0 Error / 0 Warning
-* **Unit & Integration Tests (`pnpm test:coverage`):** 22/22 File Passed (229/229 Tests Passed, Coverage 95.15%)
-* **DB Direct Integration Tests (`pnpm test:db`):** 6/6 File Passed (80/80 Tests Passed)
-* **Production Build (`pnpm build`):** 28/28 Pages Generated Successfully
+* **Unit & Integration Tests (`pnpm test`):** **274** lulus
+* **DB Direct Integration Tests (`pnpm test:db`):** **86** lulus
+* **Production Build (`pnpm build`):** **30** halaman ter-generate
+* **Smoke produksi (`pnpm smoke:prod:demo`):** **7/7** lulus
+
+> Catatan: metrik versi awal dokumen ini (229 unit / 95.15% / 28 halaman) **sudah basi**
+> setelah pekerjaan audit M4–M6 + enterprise. Angka di atas = keadaan terverifikasi terkini.
