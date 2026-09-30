@@ -189,7 +189,7 @@ export function QuestionEditor({
         : [],
     };
 
-    const onDone = (q: PublicQuestion) => router.push(`/bank-soal/${q.id}`);
+    const onDone = (q: PublicQuestion) => router.push(`/questions/${q.id}`);
 
     if (existing) {
       // `updateQuestionSchema` = partial; kirim field yang relevan.

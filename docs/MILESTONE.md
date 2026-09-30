@@ -195,7 +195,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [x] Responsif (filter → Sheet di mobile); e2e daftar/pencarian/KaTeX
 
 ### M4c — Editor & Detail ⬜ *(fokus berikutnya)*
-- [x] Rute `/bank-soal/baru` + `/bank-soal/[id]` ✅
+- [x] Rute `/questions/new` + `/questions/[id]` ✅
 - [x] Form soal manual + pratinjau KaTeX langsung ✅
 - [x] Opsi A–E, tandai kunci (tunggal/multi), `distractor_rationale` ✅ (tambah/hapus/urut = penyempurnaan lanjutan)
 - [x] Pembahasan via `answerKey.explanation` ✅ (tabel `solutions` = lanjutan)
@@ -464,7 +464,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 **Posisi:** M0–M3 ✅ · M4a/M4b ✅ · P1–P13 ✅.
 
 **Fokus berikutnya (urut prioritas):**
-1. **M4c — Editor soal + halaman detail** 🔴 *(rute `/bank-soal/baru` & `[id]` kini 404)* — fitur inti, menutup loop CRUD.
+1. **M4c — Editor soal + halaman detail** 🔴 *(rute `/questions/new` & `[id]` kini 404)* — fitur inti, menutup loop CRUD.
 2. **M4d — Telaah + Pengaturan** 🔴 — menutup M4 penuh.
 3. **M5 — Taksonomi** 🔴 — Referensi terkelola.
 4. **M13 — Keamanan S4/S5/S6** 🟠 — bisa disisipkan kapan saja (murah, tinggi nilai).

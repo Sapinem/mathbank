@@ -5,8 +5,8 @@ const GROUPS = [
   {
     items: [
       { label: "Dasbor", href: "/" },
-      { label: "Bank Soal", href: "/bank-soal" },
-      { label: "Topik", href: "/referensi/topik" },
+      { label: "Bank Soal", href: "/questions" },
+      { label: "Topik", href: "/references/topics" },
     ],
   },
 ];
@@ -15,27 +15,27 @@ describe("nav-utils", () => {
   describe("isActive", () => {
     it("dasbor hanya aktif di tepat /", () => {
       expect(isActive("/", "/")).toBe(true);
-      expect(isActive("/bank-soal", "/")).toBe(false);
+      expect(isActive("/questions", "/")).toBe(false);
     });
     it("rute induk aktif untuk anaknya", () => {
-      expect(isActive("/bank-soal", "/bank-soal")).toBe(true);
-      expect(isActive("/bank-soal/abc", "/bank-soal")).toBe(true);
+      expect(isActive("/questions", "/questions")).toBe(true);
+      expect(isActive("/questions/abc", "/questions")).toBe(true);
     });
     it("tak salah cocokkan prefix serupa", () => {
-      expect(isActive("/bank-soal-lain", "/bank-soal")).toBe(false);
+      expect(isActive("/questions-lain", "/questions")).toBe(false);
     });
   });
 
   describe("breadcrumbFromPath", () => {
     it("halaman tingkat atas → satu crumb", () => {
-      expect(breadcrumbFromPath("/bank-soal", GROUPS)).toEqual([
-        { label: "Bank Soal", href: "/bank-soal" },
+      expect(breadcrumbFromPath("/questions", GROUPS)).toEqual([
+        { label: "Bank Soal", href: "/questions" },
       ]);
     });
     it("halaman detail → crumb bertingkat", () => {
-      expect(breadcrumbFromPath("/bank-soal/abc", GROUPS)).toEqual([
-        { label: "Bank Soal", href: "/bank-soal" },
-        { label: "abc", href: "/bank-soal/abc" },
+      expect(breadcrumbFromPath("/questions/abc", GROUPS)).toEqual([
+        { label: "Bank Soal", href: "/questions" },
+        { label: "abc", href: "/questions/abc" },
       ]);
     });
     it("rute tak dikenal → fallback Dasbor", () => {
@@ -44,7 +44,7 @@ describe("nav-utils", () => {
       ]);
     });
     it("segmen di-decode (spasi, dll)", () => {
-      const r = breadcrumbFromPath("/bank-soal/a%20b", GROUPS);
+      const r = breadcrumbFromPath("/questions/a%20b", GROUPS);
       expect(r[1].label).toBe("a b");
     });
   });

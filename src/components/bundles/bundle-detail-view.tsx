@@ -37,15 +37,15 @@ export function BundleDetailView() {
         description={`${bundle.items.length} soal · ${bundle.durationMinutes ?? 0} menit`}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" render={<Link href="/paket" />} nativeButton={false}>
+            <Button variant="outline" render={<Link href="/bundles" />} nativeButton={false}>
               ← Daftar
             </Button>
-            <Button render={<Link href={`/paket/${bundleId}/sunting`} />} nativeButton={false}>
+            <Button render={<Link href={`/bundles/${bundleId}/sunting`} />} nativeButton={false}>
               <Pencil data-icon="inline-start" /> Sunting
             </Button>
             <Button
               variant="outline"
-              render={<Link href={`/paket/${bundleId}/cetak`} />}
+              render={<Link href={`/bundles/${bundleId}/cetak`} />}
               nativeButton={false}
             >
               <Printer data-icon="inline-start" /> Cetak

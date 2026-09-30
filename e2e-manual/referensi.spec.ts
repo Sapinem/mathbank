@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Referensi — Sumber (M5)", () => {
   test("halaman sumber menampilkan tabel", async ({ page }) => {
-    await page.goto("/referensi/sumber");
+    await page.goto("/references/sources");
     await expect(page.getByRole("heading", { name: "Sumber & Asal" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sumber Baru" })).toBeVisible();
   });
@@ -24,7 +24,7 @@ test.describe("Referensi — Sumber (M5)", () => {
 
 test.describe("Referensi — Event (M5)", () => {
   test("halaman event menampilkan tabel", async ({ page }) => {
-    await page.goto("/referensi/event");
+    await page.goto("/references/event");
     await expect(page.getByRole("heading", { name: "Event" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Event Baru" })).toBeVisible();
   });
@@ -45,7 +45,7 @@ test.describe("Referensi — Event (M5)", () => {
 
 test.describe("Referensi — Label (M5)", () => {
   test("halaman label menampilkan tabel", async ({ page }) => {
-    await page.goto("/referensi/label");
+    await page.goto("/references/labels");
     await expect(page.getByRole("heading", { name: "Label" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Label Baru" })).toBeVisible();
   });

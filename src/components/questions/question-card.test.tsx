@@ -36,7 +36,7 @@ function q(over: Partial<PublicQuestion> = {}): PublicQuestion {
 
 describe("QuestionCard", () => {
   it("menampilkan status, tipe, grade, kesulitan (label manusia)", () => {
-    const { container } = render(<QuestionCard question={q()} href="/bank-soal/q1" />);
+    const { container } = render(<QuestionCard question={q()} href="/questions/q1" />);
     expect(screen.getByText("Draf")).toBeInTheDocument();
     // grade dirender sebagai "· SMA-11" dalam satu span
     expect(container.textContent).toContain("SMA-11");
@@ -44,9 +44,9 @@ describe("QuestionCard", () => {
   });
 
   it("tautan ke href yang diberikan", () => {
-    render(<QuestionCard question={q()} href="/bank-soal/q1" />);
+    render(<QuestionCard question={q()} href="/questions/q1" />);
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/bank-soal/q1");
+    expect(link).toHaveAttribute("href", "/questions/q1");
   });
 
   it("menampilkan ikon 'Ditandai' hanya saat flagged", () => {

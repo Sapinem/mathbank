@@ -44,5 +44,5 @@
 
 `src/components/questions/question-editor.tsx` — satu komponen untuk semua tipe
 (berbagi ~90% field; beda hanya kunci-opsi vs kunci-teks). Halaman:
-`/bank-soal/baru` (buat) & `/bank-soal/[id]` (detail + sunting). **Desktop-saja**
+`/questions/new` (buat) & `/questions/[id]` (detail + sunting). **Desktop-saja**
 (`DesktopOnly`) untuk menyunting; daftar tetap enak di HP.

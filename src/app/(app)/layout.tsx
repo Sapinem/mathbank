@@ -16,6 +16,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (process.env.AUTH_GUARD_DISABLED !== "true") {
     const user = await getSessionUser();
     if (!user) redirect("/login");
+    // Akun wajib ganti password tidak boleh memakai aplikasi dulu.
+    if (user.mustChangePassword) redirect("/change-password");
   }
   return <AppShell>{children}</AppShell>;
 }

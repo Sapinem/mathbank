@@ -182,13 +182,31 @@ describe("wrapRoute — autentikasi & izin", () => {
     expect((await handler(req())).status).toBe(401);
   });
 
-  it("mustChangePassword → 403", async () => {
+  it("mustChangePassword → 403 PASSWORD_CHANGE_REQUIRED", async () => {
     resolveActorMock.mockResolvedValue({
       ...adminActor(),
       mustChangePassword: true,
     });
     const handler = wrapRoute({ handler: async () => ({}) });
-    expect((await handler(req())).status).toBe(403);
+    const res = await handler(req());
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("PASSWORD_CHANGE_REQUIRED");
+  });
+
+  it("allowPasswordChangePending → tetap boleh (mis. /api/auth/me)", async () => {
+    resolveActorMock.mockResolvedValue({
+      ...adminActor(),
+      mustChangePassword: true,
+    });
+    const handler = wrapRoute({
+      allowPasswordChangePending: true,
+      handler: async ({ actor }) => ({
+        mustChangePassword: actor.mustChangePassword,
+      }),
+    });
+    const res = await handler(req());
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.mustChangePassword).toBe(true);
   });
 
   it("izin kurang → 403 (assertCan)", async () => {

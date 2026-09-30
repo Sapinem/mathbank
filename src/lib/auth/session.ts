@@ -17,6 +17,7 @@ export interface SessionUser {
   name: string;
   email: string;
   roles: Role[];
+  mustChangePassword: boolean;
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -29,11 +30,18 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       name: string;
       email: string;
       roles?: string[];
+      mustChangePassword?: boolean;
     };
     // Peran mungkin ada di sesi (bila dodat) — fallback ke kosong; guard hanya
     // butuh "ada sesi", peran detail dibaca lewat API /api/auth/me.
     const roles = Array.isArray(u.roles) ? u.roles.filter(isRole) : [];
-    return { id: u.id, name: u.name, email: u.email, roles };
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      roles,
+      mustChangePassword: u.mustChangePassword === true,
+    };
   } catch {
     return null;
   }

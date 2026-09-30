@@ -1,7 +1,7 @@
 # RENCANA-PAKET.md — M7 Paket Soal
 
 > **Status:** dikerjakan (M7). **Dependensi:** M6 (bank soal + pencarian).
-> **Tujuan:** menyusun naskah/paket dari bank soal, dengan penyusun
+> **Tujuan:** menyusun naskah/bundles dari bank soal, dengan penyusun
 > drag-and-drop (desktop) dan tampilan baca yang enak di HP.
 
 ## 1. Model Data (sudah ada sejak M1)
@@ -41,12 +41,12 @@
 - **L3 Hooks** `src/lib/hooks/use-bundles.ts`.
 - **L2 Komponen** `bundle-list-view`, `bundle-detail-view`, `bundle-builder`
   (drag-and-drop, `DesktopOnly`), `bundle-picker` (pilih soal dari bank).
-- **Rute** `/paket` (daftar), `/paket/baru` (penyusun), `/paket/[id]` (detail).
+- **Rute** `/bundles` (daftar), `/bundles/new` (penyusun), `/bundles/[id]` (detail).
 
 ## 4. UI
 
 - **Daftar paket**: tabel — judul, tipe, tahun, jumlah soal, durasi, status.
-- **Penyusun** (`/paket/baru`, `/paket/[id]/sunting`): dua kolom — kiri bank soal
+- **Penyusun** (`/bundles/new`, `/bundles/[id]/edit`): dua kolom — kiri bank soal
   (cari/filter dari M6), kanan isi paket. **Drag** untuk urut; tombol naik/turun
   sebagai alternatif aksesibel. `DesktopOnly` membungkus penyusun; di HP tampil
   pesan "kelola paket di desktop".

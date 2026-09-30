@@ -11,8 +11,8 @@ test.describe("Bank Soal — Editor (M4c)", () => {
     test.skip(testInfo.project.name === "mobile", "editor desktop-saja");
   });
 
-  test("rute /bank-soal/baru membuka editor", async ({ page }) => {
-    await page.goto("/bank-soal/baru");
+  test("rute /questions/new membuka editor", async ({ page }) => {
+    await page.goto("/questions/new");
     await expect(page.getByRole("heading", { name: "Soal Baru" })).toBeVisible();
     await expect(page.getByLabel("Isi soal")).toBeVisible();
     await expect(page.getByLabel("Tipe soal")).toBeVisible();
@@ -21,7 +21,7 @@ test.describe("Bank Soal — Editor (M4c)", () => {
   test("tombol simpan terkunci sampai pertanyaan & kunci terisi", async ({
     page,
   }) => {
-    await page.goto("/bank-soal/baru");
+    await page.goto("/questions/new");
     const simpan = page.getByRole("button", { name: "Simpan Draf" });
     await expect(simpan).toBeDisabled();
 
@@ -35,14 +35,14 @@ test.describe("Bank Soal — Editor (M4c)", () => {
     const marker = `e2e-${Date.now()}`;
     const isi = `[${marker}] Hitung $2+2$.`;
 
-    await page.goto("/bank-soal/baru");
+    await page.goto("/questions/new");
     await page.getByLabel("Isi soal").fill(isi);
     await page.getByLabel("Isi opsi A").fill("$4$");
     await page.getByRole("button", { name: "Tandai opsi A sebagai kunci" }).click();
 
     // Simpan draf → harus pindah ke halaman detail
     await page.getByRole("button", { name: "Simpan Draf" }).click();
-    await expect(page).toHaveURL(/\/bank-soal\/[0-9a-f-]{36}$/, {
+    await expect(page).toHaveURL(/\/questions\/[0-9a-f-]{36}$/, {
       timeout: 15_000,
     });
     await expect(page.getByRole("heading", { name: "Detail Soal" })).toBeVisible();
@@ -56,6 +56,6 @@ test.describe("Bank Soal — Editor (M4c)", () => {
     // Hapus (konfirmasi dialog)
     await page.getByRole("button", { name: "Hapus soal" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Hapus" }).click();
-    await expect(page).toHaveURL(/\/bank-soal$/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/questions$/, { timeout: 10_000 });
   });
 });

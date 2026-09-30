@@ -118,7 +118,7 @@ export function BundleListView() {
                 {data.map((b) => (
                   <TableRow key={b.id}>
                     <TableCell className="font-medium">
-                      <Link href={`/paket/${b.id}`} className="hover:underline">
+                      <Link href={`/bundles/${b.id}`} className="hover:underline">
                         {b.title}
                       </Link>
                     </TableCell>

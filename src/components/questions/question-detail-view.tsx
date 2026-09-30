@@ -241,7 +241,7 @@ export function QuestionDetailView() {
               disabled={del.isPending}
               onClick={() => {
                 del.mutate(id, {
-                  onSuccess: () => router.push("/bank-soal"),
+                  onSuccess: () => router.push("/questions"),
                 });
               }}
             >

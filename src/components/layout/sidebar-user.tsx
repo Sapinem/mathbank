@@ -79,10 +79,10 @@ export function SidebarUser() {
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/sistem/profil" />}>
+              <DropdownMenuItem render={<Link href="/system/profile" />}>
                 <User /> Profil
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/sistem/pengaturan" />}>
+              <DropdownMenuItem render={<Link href="/system/settings" />}>
                 <Settings /> Pengaturan
               </DropdownMenuItem>
             </DropdownMenuGroup>

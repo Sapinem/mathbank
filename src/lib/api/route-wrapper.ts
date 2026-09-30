@@ -5,6 +5,7 @@ import { InvalidTransitionError, NotReadyError } from "@/lib/fsm/question-fsm";
 import {
   UnauthorizedError,
   ForbiddenError,
+  PasswordChangeRequiredError,
   NotFoundError,
   ConflictError,
   assertCan,
@@ -57,6 +58,12 @@ export interface RouteOptions<TQuery, TBody, TResult> {
   rateLimit?: boolean | RateLimitPolicy;
   /** Nama scope (default: dari permission). */
   rateLimitScope?: string;
+  /**
+   * Izinkan akses meski `mustChangePassword=true` (mis. `GET /api/auth/me`,
+   * agar UI bisa membaca status & mengarahkan ke halaman ganti password).
+   * Default: false → diblokir 403 PASSWORD_CHANGE_REQUIRED.
+   */
+  allowPasswordChangePending?: boolean;
 }
 
 /** Ambil IP klien dari header proxy (X-Forwarded-For) atau fallback. */
@@ -85,6 +92,12 @@ function errorResponse(err: unknown): NextResponse {
     return NextResponse.json(
       { error: { code: err.code, message: err.message } },
       { status: 401 },
+    );
+  }
+  if (err instanceof PasswordChangeRequiredError) {
+    return NextResponse.json(
+      { error: { code: err.code, message: err.message } },
+      { status: 403 },
     );
   }
   if (err instanceof ForbiddenError) {
@@ -158,8 +171,8 @@ export function wrapRoute<TQuery, TBody, TResult>(
     try {
       const actor = await resolveActor(req.headers);
       if (!actor) throw new UnauthorizedError();
-      if (actor.mustChangePassword) {
-        throw new ForbiddenError("Harus ganti password lebih dulu");
+      if (actor.mustChangePassword && !opts.allowPasswordChangePending) {
+        throw new PasswordChangeRequiredError();
       }
       if (opts.permission) assertCan(actor, opts.permission);
 

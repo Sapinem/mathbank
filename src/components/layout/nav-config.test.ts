@@ -23,16 +23,16 @@ describe("nav-config", () => {
     expect(kerja.find((i) => i.label === "Telaah")?.badge).toBe("telaah");
   });
 
-  it("Referensi memakai URL berprefix /referensi/*", () => {
+  it("Referensi memakai URL berprefix /references/*", () => {
     const ref = NAV_GROUPS[1].items;
     expect(ref).toHaveLength(4);
-    expect(ref.every((i) => i.href.startsWith("/referensi/"))).toBe(true);
+    expect(ref.every((i) => i.href.startsWith("/references/"))).toBe(true);
   });
 
   it("Ingest disembunyikan sampai M9, Pengaturan tampil", () => {
     const sistem = NAV_GROUPS[3].items;
-    const ingest = sistem.find((i) => i.href === "/sistem/ingest");
-    const settings = sistem.find((i) => i.href === "/sistem/pengaturan");
+    const ingest = sistem.find((i) => i.href === "/system/ingest");
+    const settings = sistem.find((i) => i.href === "/system/settings");
     expect(ingest?.hidden).toBe(true);
     expect(settings?.hidden).toBeUndefined();
   });

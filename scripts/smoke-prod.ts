@@ -56,7 +56,7 @@ async function main() {
   // 1–3. Halaman
   await cekHalaman("/login", 200);
   await cekHalaman("/", 307, "/login");
-  await cekHalaman("/bank-soal", 307, "/login");
+  await cekHalaman("/questions", 307, "/login");
 
   // 4. API demo-status (publik, read-only)
   try {

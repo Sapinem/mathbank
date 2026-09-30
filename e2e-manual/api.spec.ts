@@ -43,6 +43,6 @@ test.describe("Navigasi", () => {
     test.skip(testInfo.project.name === "mobile", "sidebar tersembunyi di mobile");
     await page.goto("/");
     await page.getByRole("link", { name: "Bank Soal" }).first().click();
-    await expect(page).toHaveURL(/\/bank-soal/);
+    await expect(page).toHaveURL(/\/questions/);
   });
 });

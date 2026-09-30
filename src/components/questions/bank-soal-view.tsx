@@ -69,7 +69,7 @@ export function BankSoalView() {
     if (value) next.set(key, value);
     else next.delete(key);
     if (key !== "page") next.delete("page");
-    router.replace(`/bank-soal?${next.toString()}`);
+    router.replace(`/questions?${next.toString()}`);
   }
 
   function submitSearch(e: React.FormEvent) {
@@ -92,7 +92,7 @@ export function BankSoalView() {
             size="xs"
             className="text-brand"
             onClick={() => {
-              router.replace("/bank-soal");
+              router.replace("/questions");
               setFiltersOpen(false);
             }}
           >
@@ -187,7 +187,7 @@ export function BankSoalView() {
           </span>
 
           <ViewModeToggle value={mode} onChange={(m) => setParam("mode", m)} />
-          <Button render={<Link href="/bank-soal/baru" />} nativeButton={false} size="sm" className="shrink-0">
+          <Button render={<Link href="/questions/new" />} nativeButton={false} size="sm" className="shrink-0">
             <Plus data-icon="inline-start" />
             <span className="hidden sm:inline">Buat Soal</span>
           </Button>
@@ -208,7 +208,7 @@ export function BankSoalView() {
                   : "Belum ada soal. Mulai dengan membuat soal pertama."
               }
               action={
-                <Button render={<Link href="/bank-soal/baru" />} nativeButton={false} size="sm" className="mt-2">
+                <Button render={<Link href="/questions/new" />} nativeButton={false} size="sm" className="mt-2">
                   <Plus data-icon="inline-start" /> Buat Soal
                 </Button>
               }
@@ -216,7 +216,7 @@ export function BankSoalView() {
           ) : (
             <div className={modeClass(mode)}>
               {data.items.map((q) => (
-                <QuestionCard key={q.id} question={q} href={`/bank-soal/${q.id}`} />
+                <QuestionCard key={q.id} question={q} href={`/questions/${q.id}`} />
               ))}
             </div>
           )}

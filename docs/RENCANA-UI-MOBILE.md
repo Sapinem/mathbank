@@ -65,7 +65,7 @@ Antarmuka MathBank **bukan** "desktop yang diperkecil", melainkan **satu sistem*
 
 | # | Prinsip | Arti praktis |
 |---|---------|--------------|
-| 1 | **Mobile-lihat, desktop-kelola** | Prioritaskan baca/telaah di HP; kerja berat di desktop |
+| 1 | **Mobile-lihat, desktop-kelola** | Prioritaskan baca/review di HP; kerja berat di desktop |
 | 2 | **Satu sistem, bukan dua** | Satu basis kode, satu komponen — beradaptasi, bukan bercabang |
 | 3 | **Progresif, bukan terputus** | Turunkan/naikkan kapasitas halus, bukan fitur hilang mendadak |
 | 4 | **Sentuh dulu** | Target ≥44px; aksi utama selalu terjangkau jempol |
@@ -536,7 +536,7 @@ Responsif **tidak menyentuh** mesin tema (3 warna → OKLCH). Semua token `--mb-
 
 **Gejala:** dibuka dari HP lewat LAN (`http://192.168.x.x:3001`) halaman tampak "loading" dan **tak bisa dipencet apa-apa** — seolah freeze. Di `localhost`/desktop tak terasa.
 
-**Sebab (bukan bug responsif):** Next mode **dev** (Turbopack) mengirim **puluhan modul JS mentah + kompilasi on-demand serial** per request. Terukur untuk `/bank-soal` via LAN:
+**Sebab (bukan bug responsif):** Next mode **dev** (Turbopack) mengirim **puluhan modul JS mentah + kompilasi on-demand serial** per request. Terukur untuk `/questions` via LAN:
 
 | Mode | `<script>` | Total unduhan | Kompilasi |
 |------|-----------|---------------|-----------|
@@ -718,7 +718,7 @@ CARI        : kotak sm:flex ; ikon sm:hidden
 RUMUS       : overflow-x-auto (WAJIB)
 MODAL       : tengah → bottom sheet di HP
 AKSI        : w-full lg:w-auto
-PENGALIH    : halaman D (editor/paket/tikz)
+PENGALIH    : halaman D (editor/bundles/tikz)
 ```
 
 ## LAMPIRAN B — Peta Dokumen Terkait

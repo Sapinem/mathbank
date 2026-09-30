@@ -6,19 +6,19 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Bank Soal", () => {
   async function cardCount(page: import("@playwright/test").Page) {
-    return page.locator('a[href^="/bank-soal/"]:not([href="/bank-soal/baru"])').count();
+    return page.locator('a[href^="/questions/"]:not([href="/questions/new"])').count();
   }
 
   test("menampilkan daftar soal dari API", async ({ page }) => {
-    await page.goto("/bank-soal");
+    await page.goto("/questions");
     // Minimal ada beberapa kartu soal (muncul setelah fetch klien selesai)
-    const cards = page.locator('a[href^="/bank-soal/"]:not([href="/bank-soal/baru"])');
+    const cards = page.locator('a[href^="/questions/"]:not([href="/questions/new"])');
     await expect(cards.first()).toBeVisible({ timeout: 10_000 });
     expect(await cards.count()).toBeGreaterThan(0);
   });
 
   test("rumus KaTeX ter-render (bukan $ mentah)", async ({ page }) => {
-    await page.goto("/bank-soal");
+    await page.goto("/questions");
     // KaTeX menyuntik elemen .katex
     await expect(page.locator(".katex").first()).toBeVisible();
     // Tidak ada pembatas $...$ yang lolos mentah di daftar
@@ -28,8 +28,8 @@ test.describe("Bank Soal", () => {
 
   test("filter Status mengubah URL & jumlah soal", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === "mobile", "filter desktop = panel; mobile = sheet");
-    await page.goto("/bank-soal");
-    await page.locator('a[href^="/bank-soal/"]:not([href="/bank-soal/baru"])').first().waitFor();
+    await page.goto("/questions");
+    await page.locator('a[href^="/questions/"]:not([href="/questions/new"])').first().waitFor();
     const before = await cardCount(page);
 
     // Pilih filter Status = Perlu Telaah (value "review")
@@ -45,7 +45,7 @@ test.describe("Bank Soal", () => {
   });
 
   test("pencarian memperbarui query ?q=", async ({ page }) => {
-    await page.goto("/bank-soal");
+    await page.goto("/questions");
     await page.getByPlaceholder("Cari soal…").fill("persamaan");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/q=persamaan/);
@@ -53,7 +53,7 @@ test.describe("Bank Soal", () => {
 
   test("mobile: tombol filter membuka Sheet", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile", "khusus mobile");
-    await page.goto("/bank-soal");
+    await page.goto("/questions");
     await page.getByRole("button", { name: "Buka filter" }).click();
     const sheet = page.getByRole("dialog");
     await expect(sheet).toBeVisible();

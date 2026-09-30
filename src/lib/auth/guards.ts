@@ -104,6 +104,19 @@ export class ForbiddenError extends Error {
   }
 }
 
+/**
+ * Error khusus: akun wajib ganti password dulu (HTTP 403,
+ * code `PASSWORD_CHANGE_REQUIRED`). Dibedakan agar UI bisa mengarahkan ke
+ * halaman ganti password alih-alih menampilkan "tak berizin" biasa.
+ */
+export class PasswordChangeRequiredError extends Error {
+  readonly code = "PASSWORD_CHANGE_REQUIRED";
+  constructor(message = "Harus ganti password lebih dulu") {
+    super(message);
+    this.name = "PasswordChangeRequiredError";
+  }
+}
+
 /** Error belum login (HTTP 401). */
 export class UnauthorizedError extends Error {
   readonly code = "UNAUTHORIZED";

@@ -19,6 +19,16 @@ import {
  * Peran TIDAK disimpan di `user` — pakai tabel `user_roles` (multi-role, L1).
  */
 
+/**
+ * Apakah runtime ini produksi (untuk memagari origin dev).
+ * Produksi bila `NODE_ENV=production` ATAU `APP_ENV` `production`/`staging`.
+ */
+function isProductionRuntime(): boolean {
+  if (process.env.NODE_ENV === "production") return true;
+  const appEnv = process.env.APP_ENV?.toLowerCase();
+  return appEnv === "production" || appEnv === "staging";
+}
+
 const authSecret = process.env.BETTER_AUTH_SECRET;
 if (process.env.NODE_ENV === "production" && !authSecret) {
   throw new Error(
@@ -93,18 +103,23 @@ export const auth = betterAuth({
     }),
   ],
   trustedOrigins: [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-    // Domain utama (produksi) — lihat APP_URL / .env.example.
+    // Domain produksi (selalu) — APP_URL + domain resmi.
     ...(process.env.APP_URL ? [process.env.APP_URL] : []),
     "https://b.iyo.my.id",
-    // Akses dev via LAN (sesuaikan/tambah lewat ALLOWED_DEV_ORIGINS bila perlu).
-    ...(process.env.ALLOWED_DEV_ORIGINS ?? "192.168.18.100")
-      .split(",")
-      .map((h) => h.trim())
-      .filter(Boolean)
-      .flatMap((h) => [`http://${h}:3001`, `http://${h}:3000`]),
+    // Origin dev (localhost/LAN) HANYA bila BUKAN produksi — mencegah
+    // permukaan CORS/CSRF melebar di produksi. Gerbang: NODE_ENV & APP_ENV.
+    ...(isProductionRuntime()
+      ? []
+      : [
+          "http://localhost:3000",
+          "http://localhost:3001",
+          "http://127.0.0.1:3000",
+          "http://127.0.0.1:3001",
+          ...(process.env.ALLOWED_DEV_ORIGINS ?? "192.168.18.100")
+            .split(",")
+            .map((h) => h.trim())
+            .filter(Boolean)
+            .flatMap((h) => [`http://${h}:3001`, `http://${h}:3000`]),
+        ]),
   ],
 });

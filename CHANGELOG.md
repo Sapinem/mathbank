@@ -65,6 +65,15 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 - **Evaluasi menyeluruh** — `docs/EVALUASI-MENYELURUH.md` (audit arsitektur,
   keamanan, a11y, mutu). `docs/EVALUASI-STRATEGI-E2E.md` + `EVALUASI-DESKTOPONLY.md`.
 
+### Diubah
+- **🌐 Semua URL/route kini **Bahasa Inggris** (konsistensi teknis). Label UI tetap
+  Indonesia. Peta: `/bank-soal`→`/questions`, `/telaah`→`/review`, `/paket`→`/bundles`,
+  `/referensi/*`→`/references/*` (`topik`→`topics`, `sumber`→`sources`, `label`→`labels`),
+  `/studio/aset`→`/studio/assets`, `/sistem/*`→`/system/*` (`pengaturan`→`settings`),
+  sub-route `baru`→`new`, `sunting`→`edit`, `cetak`→`print`. Aturan: `CONSTRAINTS.md #28b`.
+  Halaman `/ganti-password`→`/change-password`. URL lama → 404 (belum ada redirect agar
+  tak ada kebingungan; proyek pra-rilis).
+
 ### Diperbaiki
 - **🔐 Verifikasi audit M2 (Auth & Peran) — T1–T3** — atas laporan pemilik; semua
   klaim arsitektur **diverifikasi** (75 sel matriks ✅, 5 peran ✅, guard ✅).

@@ -118,7 +118,7 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
           )}
         </div>
 
-        <Link href={`/bank-soal/${q.id}`} className="block text-sm hover:underline">
+        <Link href={`/questions/${q.id}`} className="block text-sm hover:underline">
           <span className="line-clamp-2">
             <MathContent content={q.contentMarkdown} />
           </span>
@@ -236,7 +236,7 @@ function FlaggedRow({ question: q }: { question: PublicQuestion }) {
             {STATUS_LABELS[q.status] ?? q.status}
           </Badge>
         </div>
-        <Link href={`/bank-soal/${q.id}`} className="text-sm hover:underline">
+        <Link href={`/questions/${q.id}`} className="text-sm hover:underline">
           <span className="line-clamp-2">
             <MathContent content={q.contentMarkdown} />
           </span>

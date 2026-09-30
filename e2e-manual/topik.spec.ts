@@ -6,13 +6,13 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("Referensi — Topik (M5)", () => {
   test("halaman topik menampilkan pohon", async ({ page }) => {
-    await page.goto("/referensi/topik");
+    await page.goto("/references/topics");
     await expect(page.getByRole("heading", { name: "Topik" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Kategori Baru" })).toBeVisible();
   });
 
   test("dialog buat kategori terbuka", async ({ page }) => {
-    await page.goto("/referensi/topik");
+    await page.goto("/references/topics");
     await page.getByRole("button", { name: "Kategori Baru" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(page.getByLabel("Nama topik")).toBeVisible();

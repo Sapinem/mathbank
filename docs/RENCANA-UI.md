@@ -29,23 +29,23 @@
 ├─────────────────────────────┤
 │  KERJA                      │
 │   ◻ Dasbor                  │  /
-│   ◻ Bank Soal               │  /bank-soal
-│   ◻ Telaah          (badge)  │  /telaah
-│   ◻ Paket Soal              │  /paket
+│   ◻ Bank Soal               │  /questions
+│   ◻ Telaah          (badge)  │  /review
+│   ◻ Paket Soal              │  /bundles
 ├─────────────────────────────┤
 │  REFERENSI                  │
-│   ◻ Topik                   │  /referensi/topik
-│   ◻ Sumber & Asal           │  /referensi/sumber
-│   ◻ Event                   │  /referensi/event
-│   ◻ Label                   │  /referensi/label
+│   ◻ Topik                   │  /references/topics
+│   ◻ Sumber & Asal           │  /references/sources
+│   ◻ Event                   │  /references/event
+│   ◻ Label                   │  /references/labels
 ├─────────────────────────────┤
 │  STUDIO                     │
-│   ◻ Galeri Aset             │  /studio/aset
+│   ◻ Galeri Aset             │  /studio/assets
 │   ◻ TikZ Studio             │  /studio/tikz
 ├─────────────────────────────┤
 │  SISTEM                     │
-│   ◻ Ingest & Integrasi ¹    │  /sistem/ingest
-│   ◻ Pengaturan              │  /sistem/pengaturan
+│   ◻ Ingest & Integrasi ¹    │  /system/ingest
+│   ◻ Pengaturan              │  /system/settings
 ├─────────────────────────────┤
 │  (avatar) Nama · Peran      │  ← SidebarFooter: UserMenu
 └─────────────────────────────┘
@@ -62,7 +62,7 @@
 
 **Keputusan L2 yang ditegaskan:**
 - **Referensi = link terpisah** di bawah judul grup (bukan accordion) → tiap halaman bookmarkable.
-- **URL berprefix** (`/referensi/*`, `/studio/*`, `/sistem/*`) → terkelompok rapi.
+- **URL berprefix** (`/references/*`, `/studio/*`, `/system/*`) → terkelompok rapi.
 - Menu **sama** untuk semua peran (bedanya aksi, bukan menu) — konfirmasi L2.
 - Badge "Telaah" = jumlah soal menunggu (dynamic).
 
@@ -86,14 +86,14 @@
 └─────────────────────────────────────────────────┘
 ```
 
-**3.2 Bank Soal `/bank-soal`** — inti produk
+**3.2 Bank Soal `/questions`** — inti produk
 - Daftar soal: **3 mode** (list padat / grid / masonry)
 - Filter sidebar: topik, sumber, event, status, jenjang, kesulitan, Bloom, label
 - Pencarian: teks (fuzzy) + semantik
 - Aksi: lihat detail; bulk (pilih banyak)
-- Turunan: `/bank-soal/baru`, `/bank-soal/[id]`, `/bank-soal/[id]/edit`
+- Turunan: `/questions/new`, `/questions/[id]`, `/questions/[id]/edit`
 
-**3.3 Telaah `/telaah`** — kurasi (bertab)
+**3.3 Telaah `/review`** — kurasi (bertab)
 ```
 TELAHAH
   [Perlu Telaah] [Ditandai] [Kategorisasi] [Semua]
@@ -105,27 +105,27 @@ TELAHAH
 - **Semua** — semua soal
 - Aksi: setujui (`ready`), tolak (kembali `draft`), tandai/lepas tanda, sunting
 
-**3.4 Paket Soal `/paket`**
+**3.4 Paket Soal `/bundles`**
 - Daftar paket; buat paket (`source_id`)
-- Turunan: `/paket/baru`, `/paket/[id]` (susun), `/paket/[id]/edit`
+- Turunan: `/bundles/new`, `/bundles/[id]` (susun), `/bundles/[id]/edit`
 - Di dalam: tambah soal dari bank (dengan pencarian), urutkan, section, nomor
 - Ekspor (M8): cetak/PDF
 
 ### REFERENSI
 
-**3.5 Topik `/referensi/topik`** — 3-level (Kategori›Topik›SubTopik), CRUD, pindah induk (anti-siklus)
-**3.6 Sumber & Asal `/referensi/sumber`** — pola B (buku/web/sekolah); CRUD + anak (books/institutions)
-**3.7 Event `/referensi/event`** — UTBK/OSN/SBMPTN; CRUD + subtes
-**3.8 Label `/referensi/label`** — tags; CRUD
+**3.5 Topik `/references/topics`** — 3-level (Kategori›Topik›SubTopik), CRUD, pindah induk (anti-siklus)
+**3.6 Sumber & Asal `/references/sources`** — pola B (buku/web/sekolah); CRUD + anak (books/institutions)
+**3.7 Event `/references/event`** — UTBK/OSN/SBMPTN; CRUD + subtes
+**3.8 Label `/references/labels`** — tags; CRUD
 
 ### STUDIO
 
-**3.9 Galeri Aset `/studio/aset`** — galeri media; unggah; tri-facet (gambar/svg/tikz)
+**3.9 Galeri Aset `/studio/assets`** — galeri media; unggah; tri-facet (gambar/svg/tikz)
 **3.10 TikZ Studio `/studio/tikz`** — editor TikZ → SVG
 
 ### SISTEM
 
-**3.11 Ingest & Integrasi `/sistem/ingest`** — **disembunyikan sampai M9**
+**3.11 Ingest & Integrasi `/system/ingest`** — **disembunyikan sampai M9**
 ```
 Ingest & Integrasi (bertab):
   [Unggah]    unggah naskah (PDF/LaTeX) → antrean
@@ -133,7 +133,7 @@ Ingest & Integrasi (bertab):
   [Integrasi] API key, webhook, dokumentasi endpoint mesin
 ```
 
-**3.12 Pengaturan `/sistem/pengaturan`** — bertab
+**3.12 Pengaturan `/system/settings`** — bertab
 ```
 [Umum] [AI] [Pengguna] [Sistem]
 ```
@@ -155,7 +155,7 @@ Ingest & Integrasi (bertab):
 |---|-----|-----------|
 | 1 | Sidebar | Kiri, tetap, **collapsible** |
 | 2 | Referensi | **Link terpisah** (bukan accordion) |
-| 3 | URL Referensi | `/referensi/topik` dst |
+| 3 | URL Referensi | `/references/topics` dst |
 | 4 | Nama "Telaah" | Bukan "Antrean Review" di URL |
 | 5 | Dasbor | Informatif ("ramai") |
 | 6 | **Flagged** | **Tab di "Telaah"** (pendekatan A) |
@@ -222,7 +222,7 @@ Memaksakan mobile-first = biaya besar, manfaat kecil. Jadi: **desktop untuk kerj
 | **`avatar`** (resmi) | Foto/inisial pengguna (footer sidebar) |
 | `Button` | Aksi (varian: primary/secondary/ghost/danger) |
 | `Badge` | Status, label, hitungan |
-| `Card` | Wadah soal/paket |
+| `Card` | Wadah soal/bundles |
 | `Dialog` / `Sheet` | Modal & drawer |
 | `DropdownMenu` | Menu (pengguna, aksi baris) |
 | `Collapsible` / `ScrollArea` / `Separator` / `Skeleton` | Struktur & keadaan |

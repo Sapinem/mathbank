@@ -42,7 +42,7 @@ test.describe("Shell responsif", () => {
   });
 
   test("tidak ada gulir horizontal di beranda & bank soal", async ({ page }) => {
-    for (const path of ["/", "/bank-soal"]) {
+    for (const path of ["/", "/questions"]) {
       await page.goto(path);
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth > window.innerWidth + 1,

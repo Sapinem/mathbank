@@ -78,7 +78,7 @@ export default function DashboardPage() {
                 <CardHeader className="flex-row items-center justify-between">
                   <CardTitle>Aktivitas Terbaru</CardTitle>
                   <Link
-                    href="/bank-soal"
+                    href="/questions"
                     className="flex items-center gap-1 text-sm text-brand hover:underline"
                   >
                     Bank Soal <ArrowRight className="size-3.5" />
@@ -88,7 +88,7 @@ export default function DashboardPage() {
                   {data.recent.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
                       Belum ada soal. Mulai dengan{" "}
-                      <Link href="/bank-soal/baru" className="text-brand hover:underline">
+                      <Link href="/questions/new" className="text-brand hover:underline">
                         membuat soal
                       </Link>
                       .
@@ -98,7 +98,7 @@ export default function DashboardPage() {
                       {data.recent.map((q) => (
                         <li key={q.id}>
                           <Link
-                            href={`/bank-soal/${q.id}`}
+                            href={`/questions/${q.id}`}
                             className="flex items-start justify-between gap-4 py-3 hover:bg-muted/40"
                           >
                             <span className="line-clamp-2 min-w-0 text-sm">
@@ -124,8 +124,8 @@ export default function DashboardPage() {
                   <CardTitle>Antrean Kurasi</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3 text-sm">
-                  <QueueRow label="Perlu telaah" href="/telaah?status=review" value={data.stats.review} />
-                  <QueueRow label="Ditandai" href="/telaah?flagged=1" value={data.stats.flagged} />
+                  <QueueRow label="Perlu telaah" href="/review?status=review" value={data.stats.review} />
+                  <QueueRow label="Ditandai" href="/review?flagged=1" value={data.stats.flagged} />
                   <div className="pt-2">
                     {data.stats.review === 0 && data.stats.flagged === 0 ? (
                       <Badge variant="secondary" className="text-xs">

@@ -204,7 +204,7 @@ export function BundleBuilder() {
         title={bundle.title}
         description={`Susun naskah · ${bundle.items.length} soal`}
         actions={
-          <Button variant="outline" render={<Link href="/paket" />} nativeButton={false}>
+          <Button variant="outline" render={<Link href="/bundles" />} nativeButton={false}>
             <ArrowLeft data-icon="inline-start" /> Selesai
           </Button>
         }

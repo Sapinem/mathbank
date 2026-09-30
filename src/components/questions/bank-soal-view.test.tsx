@@ -147,7 +147,7 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
     const input = screen.getByPlaceholderText("Cari soal…");
     fireEvent.change(input, { target: { value: "turunan" } });
     fireEvent.submit(input.closest("form")!);
-    expect(replace).toHaveBeenCalledWith("/bank-soal?q=turunan");
+    expect(replace).toHaveBeenCalledWith("/questions?q=turunan");
   });
 
   it("pencarian kosong → q dihapus dari URL", () => {
@@ -155,7 +155,7 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
     const input = screen.getByPlaceholderText("Cari soal…");
     fireEvent.change(input, { target: { value: "   " } });
     fireEvent.submit(input.closest("form")!);
-    expect(replace).toHaveBeenCalledWith("/bank-soal?");
+    expect(replace).toHaveBeenCalledWith("/questions?");
   });
 
   it("tombol Reset muncul HANYA saat ada filter aktif", () => {
@@ -168,11 +168,11 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
     expect(screen.getByText(/Reset \(2\)/)).toBeInTheDocument();
   });
 
-  it("klik Reset → kembali ke /bank-soal polos", () => {
+  it("klik Reset → kembali ke /questions polos", () => {
     currentSearch = "status=ready";
     render(<BankSoalView />);
     fireEvent.click(screen.getByText(/Reset/));
-    expect(replace).toHaveBeenCalledWith("/bank-soal");
+    expect(replace).toHaveBeenCalledWith("/questions");
   });
 
   it("filter dari URL diteruskan ke query hook (limit & offset)", () => {
@@ -188,7 +188,7 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
     const selects = screen.getAllByTestId("filter-select");
     // urutan: Status, Tipe Soal, Kesulitan, Topik, Sumber
     fireEvent.change(selects[0], { target: { value: "ready" } });
-    expect(replace).toHaveBeenCalledWith("/bank-soal?status=ready");
+    expect(replace).toHaveBeenCalledWith("/questions?status=ready");
   });
 
   it("memilih 'Semua' pada filter → menghapus param", () => {
@@ -196,14 +196,14 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
     render(<BankSoalView />);
     const selects = screen.getAllByTestId("filter-select");
     fireEvent.change(selects[0], { target: { value: "all" } });
-    expect(replace).toHaveBeenCalledWith("/bank-soal?");
+    expect(replace).toHaveBeenCalledWith("/questions?");
   });
 
   it("filter Kesulitan menerima nilai numerik", () => {
     render(<BankSoalView />);
     const selects = screen.getAllByTestId("filter-select");
     fireEvent.change(selects[2], { target: { value: "4" } });
-    expect(replace).toHaveBeenCalledWith("/bank-soal?difficulty=4");
+    expect(replace).toHaveBeenCalledWith("/questions?difficulty=4");
   });
 
   it("opsi Topik & Sumber berasal dari hook referensi", () => {
@@ -262,7 +262,7 @@ describe("BankSoalView — paginasi", () => {
   it("klik Berikutnya → set page=1 di URL", () => {
     render(<BankSoalView />);
     fireEvent.click(screen.getByText("Berikutnya"));
-    expect(replace).toHaveBeenCalledWith("/bank-soal?page=1");
+    expect(replace).toHaveBeenCalledWith("/questions?page=1");
   });
 
   it("di halaman terakhir: Berikutnya nonaktif, Sebelumnya aktif", () => {
@@ -280,6 +280,6 @@ describe("BankSoalView — paginasi", () => {
     fireEvent.change(input, { target: { value: "baru" } });
     fireEvent.submit(input.closest("form")!);
     // q berubah, page hilang
-    expect(replace).toHaveBeenCalledWith("/bank-soal?q=baru");
+    expect(replace).toHaveBeenCalledWith("/questions?q=baru");
   });
 });

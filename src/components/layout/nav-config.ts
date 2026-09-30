@@ -39,24 +39,24 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Kerja",
     items: [
       { label: "Dasbor", href: "/", icon: LayoutDashboard },
-      { label: "Bank Soal", href: "/bank-soal", icon: BookOpen },
-      { label: "Telaah", href: "/telaah", icon: ClipboardCheck, badge: "telaah" },
-      { label: "Paket Soal", href: "/paket", icon: Package },
+      { label: "Bank Soal", href: "/questions", icon: BookOpen },
+      { label: "Telaah", href: "/review", icon: ClipboardCheck, badge: "telaah" },
+      { label: "Paket Soal", href: "/bundles", icon: Package },
     ],
   },
   {
     label: "Referensi",
     items: [
-      { label: "Topik", href: "/referensi/topik", icon: FolderTree },
-      { label: "Sumber & Asal", href: "/referensi/sumber", icon: Database },
-      { label: "Event", href: "/referensi/event", icon: CalendarDays },
-      { label: "Label", href: "/referensi/label", icon: Tag },
+      { label: "Topik", href: "/references/topics", icon: FolderTree },
+      { label: "Sumber & Asal", href: "/references/sources", icon: Database },
+      { label: "Event", href: "/references/event", icon: CalendarDays },
+      { label: "Label", href: "/references/labels", icon: Tag },
     ],
   },
   {
     label: "Studio",
     items: [
-      { label: "Galeri Aset", href: "/studio/aset", icon: ImageIcon },
+      { label: "Galeri Aset", href: "/studio/assets", icon: ImageIcon },
       { label: "TikZ Studio", href: "/studio/tikz", icon: PenTool },
     ],
   },
@@ -64,8 +64,8 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Sistem",
     items: [
       // Disembunyikan sampai M9 (RENCANA-UI.md §4)
-      { label: "Ingest & Integrasi", href: "/sistem/ingest", icon: Upload, hidden: true },
-      { label: "Pengaturan", href: "/sistem/pengaturan", icon: Settings },
+      { label: "Ingest & Integrasi", href: "/system/ingest", icon: Upload, hidden: true },
+      { label: "Pengaturan", href: "/system/settings", icon: Settings },
     ],
   },
 ];

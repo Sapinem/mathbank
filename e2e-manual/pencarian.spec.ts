@@ -7,7 +7,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Bank Soal — mode tampilan (M6)", () => {
   test("beralih mode mengubah URL & tata letak", async ({ page, viewport }) => {
     test.skip((viewport?.width ?? 0) < 640, "toggle mode hanya tampil di ≥sm");
-    await page.goto("/bank-soal");
+    await page.goto("/questions");
     await expect(page.getByRole("button", { name: "Kisi" })).toBeVisible();
 
     await page.getByRole("button", { name: "Kisi" }).click();
@@ -20,7 +20,7 @@ test.describe("Bank Soal — mode tampilan (M6)", () => {
   });
 
   test("mode dari URL dipakai saat halaman dibuka", async ({ page }) => {
-    await page.goto("/bank-soal?mode=grid");
+    await page.goto("/questions?mode=grid");
     await expect(page.locator("div.grid.grid-cols-1")).toBeVisible();
   });
 });
