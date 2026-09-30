@@ -1,7 +1,7 @@
 # MILESTONE — MathBank (Rencana Eksekusi)
 
 > **Dokumen ini menjawab:** *Urutan pembangunan MathBank — apa dulu, apa kemudian, kapan selesai?*
-> **Status:** 🟢 aktif — M0–M3 ✅ · M4a/M4b ✅ · lintas-milestone P1–P13 ✅ · **M4c siap dikerjakan**.
+> **Status:** 🟢 aktif — M0–M3 ✅ · M4a–M4d ✅ · M5–M8 ✅ (MVP) · **M9 ✅ · M10 siap dikerjakan**.
 > **Versi:** 2.2 · **Tanggal:** 2026-09-30
 > **Rujukan:** `PRD.md` (ruang lingkup), `DESAIN-PER-LAPISAN-MATHBANK.md` (L1–L9), `PETA-DOKUMEN.md`, `KEAMANAN.md`, `CATATAN-PUTUSAN.md`.
 
@@ -32,8 +32,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M1 | Skema Database | 🔴 | M0 | ✅ **· direview (1 fix)** |
 | M2 | Auth & Peran | 🔴 | M1 | ✅ **· direview (2 temuan)** |
 | M3 | Tema & Shell | 🔴 | M2 | ✅ **· direview** |
-| M4 | Bank Soal (CRUD) | ✅ | M3 | ✅ **· M4a/b/c/d selesai** |
-| **M4** | **Bank Soal (CRUD)** | 🔴 | M3 | 🟡 **M4a/M4b ✅ · M4c/M4d ⬜** |
+| M4 | Bank Soal (CRUD) | 🔴 | M3 | ✅ **· M4a/M4b/M4c/M4d selesai** |
 | M5 | Taksonomi (Referensi) | ✅ | M4 | ✅ **· Topik/Sumber/Event/Label** |
 | M6 | Pencarian & Filter | ✅ | M5 | ✅ **· trigram, RRF+dedup, 3 mode** |
 | M7 | Paket Soal | ✅ | M6 | ✅ **· penyusun drag-and-drop, stimulus 1×, RESTRICT** |
@@ -320,15 +319,15 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [x] `ingest/parsers/` — fungsi murni teruji: `clean` ✅ · `segment`+`adapters/` ✅ · `items` ✅ (dipecah, bukan monolit)
 - [x] `ingest/media/` — unduh gambar korpus: `resolve-url`/`fetch`/`store`/`ingest-media` ✅ (srcset>src, dedup hash, storage lokal)
 - [x] adapter **pusmendik** ✅ — `pusmendik_tka` (HTML) + `pusmendik_dayaserap` (JSON); 299 soal; TLS pin
-- [ ] `ingest/parsers/adapters/` — penanda per-sumber (mathcyber · m4thlab · defantri)
-- [ ] `ingest/queue.ts` — enqueue artikel + status + retry + **idempotensi** (hash konten)
-- [ ] `ingest/commit.ts` — hasil parse → soal **draft** (lewat `createQuestion`, transaksi)
-- [ ] Endpoint `/api/v1/ingest/*` (muka mesin — L4): upload · queue · commit
-- [ ] Alur: HTML korpus → parse → soal (draft) → antre → telaah
-- [ ] Halaman **Ingest & Integrasi** (grup Sistem) — 3 tab (aktifkan dari tersembunyi)
-- [ ] Deteksi opsi/nomor/kunci + pisah pembahasan; artikel tanpa soal → `skipped`
-- [ ] Tes parser (fixture per-sumber)
-- 📄 **STRATEGI-INGEST.md** ✅ (dirombak 2026-09-30)
+- [x] `ingest/parsers/adapters/` — penanda per-sumber ✅ (mathcyber 7.643 · m4thlab 2.938 · defantri 10.365 · pusmendik 299 = **21.245 soal**)
+- [x] `ingest/queue.ts` — enqueue artikel + status + **idempotensi** (hash konten) ✅ · guard balapan status
+- [x] `ingest/commit.ts` — hasil parse → soal **draft** (idempoten, sumber website otomatis) ✅
+- [x] Endpoint `/api/v1/ingest/*` (muka mesin — L4): upload · queue · commit ✅
+- [x] Alur: HTML korpus → parse → soal (draft) → antre → telaah ✅ (e2e nyata: m4thlab 13, defantri 33+8 gambar)
+- [ ] Halaman **Ingest & Integrasi** (grup Sistem) — 3 tab (aktifkan dari tersembunyi) ← **sisa terakhir**
+- [x] Deteksi opsi/nomor/kunci + pisah pembahasan; artikel tanpa soal → `skipped` ✅
+- [x] Tes parser (fixture per-sumber) ✅ + 13 integrasi DB + 9 alur API
+- 📄 **STRATEGI-INGEST.md** ✅ (dirombak 2026-09-30) · **RENCANA-INGEST.md** ✅
 
 ## M10 — AI Enrichment & Embedding 🟡
 
@@ -467,15 +466,15 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 ## Langkah Berikutnya
 
-**Posisi:** M0–M3 ✅ · M4a/M4b ✅ · P1–P13 ✅.
+**Posisi:** M0–M3 ✅ · M4a–M4d ✅ · M5–M8 ✅ (**MVP tuntas**) · M9 ✅ · P1–P13 ✅.
 
 **Fokus berikutnya (urut prioritas):**
-1. **M4c — Editor soal + halaman detail** 🔴 *(rute `/questions/new` & `[id]` kini 404)* — fitur inti, menutup loop CRUD.
-2. **M4d — Telaah + Pengaturan** 🔴 — menutup M4 penuh.
-3. **M5 — Taksonomi** 🔴 — Referensi terkelola.
+1. **M9 — sisa terakhir**: halaman **Ingest & Integrasi** (`/system/ingest`, 3 tab) + munculkan menunya dari `hidden: true`.
+2. **M10 — AI Enrichment & Embedding** 🟡 — klien AI (9router, baca setting), embedding bge-m3 (dim 1024), AI tagging → `review`, aktifkan pencarian semantik M6. 📄 perlu `RENCANA-ENRICHMENT.md`.
+3. **M11 — MCP** 🟡 — tool `question`/`search`/`asset`/`enrich`, API key agen.
 4. **M13 — Keamanan S4/S5/S6** 🟠 — bisa disisipkan kapan saja (murah, tinggi nilai).
 
-> **Catatan:** mulai sekarang, **setiap milestone menutup dengan** `pnpm check` (typecheck·lint·coverage·build) + `pnpm test:db` + `pnpm e2e` hijau, dan entri `CHANGELOG.md`.
+> **Catatan:** mulai sekarang, **setiap milestone menutup dengan** `pnpm check` (typecheck·lint·coverage·build) + `pnpm test:db` hijau, dan entri `CHANGELOG.md`.
 
 ---
 

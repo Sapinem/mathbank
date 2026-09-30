@@ -127,6 +127,7 @@
 | G1d | `RENCANA-SEGMENTASI-ADAPTER.md` | ✅ | **dibuat** 2026-09-30 — M9-2: penanda soal per-sumber + aturan mutu (menunggu persetujuan) |
 | G1e | `RENCANA-MEDIA.md` | ✅ | **dibuat** 2026-09-30 — M9-2b: unduh gambar korpus (srcset>src, storage lokal, dedup hash); keputusan = unduh lokal |
 | G1f | `RENCANA-INGEST.md` | ✅ | **dibuat** 2026-09-30 — M9-3: antrean + commit + endpoint `/api/v1/ingest/*`; semua hasil draft |
+| G2a | `RENCANA-ENRICHMENT.md` | 🟡 | **dibuat** 2026-09-30 — M10: AI client (baca setting), embedding BGE-M3, 4 keputusan ⚠️ menunggu persetujuan |
 | G3 | `RENCANA-TAKSONOMI.md` | 🟢 | **belum** — seed & kelola taksonomi (M5) |
 | G4 | `arsip/RENCANA-MIGRASI-DATA.md` | 📦 | **diarsipkan** (dibatalkan) 2026-09-29 |
 
