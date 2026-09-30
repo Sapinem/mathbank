@@ -82,7 +82,8 @@ export async function buildQuestionFilter(
 
   // Pencarian teks: trigram typo-tolerant (pg_trgm). `word_similarity` agar
   // kata sebagian tetap cocok; ambang 0.3 cukup longgar untuk typo ringan.
-  if (query.q) {
+  // Pada mode **semantic**, filter trigram DINONAKTIFKAN (pencocokan lewat vektor).
+  if (query.q && query.mode !== "semantic") {
     const term = query.q.trim();
     conds.push(
       sql`(${questions.contentMarkdown} % ${term} OR ${questions.contentMarkdown} ILIKE ${"%" + term + "%"})`,
@@ -104,6 +105,6 @@ export async function buildQuestionFilter(
 
   return {
     where: conds.length ? and(...conds) : undefined,
-    byRelevance: !!query.q,
+    byRelevance: !!query.q && query.mode !== "semantic",
   };
 }

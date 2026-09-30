@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql, desc, asc, inArray } from "drizzle-orm";
+import { and, eq, isNull, sql, desc, asc, inArray, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   questions,
@@ -9,6 +9,7 @@ import {
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import { isQuestionUsedInBundles } from "./bundle-service";
 import { buildQuestionFilter } from "@/lib/question/filters";
+import { embedText } from "@/lib/embedding/bge-m3";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { transition, assertReady, type QuestionStatus } from "@/lib/fsm/question-fsm";
@@ -113,21 +114,43 @@ export async function listQuestions(
 ): Promise<{ items: PublicQuestion[]; total: number }> {
   const { where: finalWhere, byRelevance } = await buildQuestionFilter(query);
 
+  // Mode semantik: urutkan berdasar jarak embedding (HNSW) bila query dapat
+  // di-embed. Bila service embedding mati / tak ada hasil, JATUH ke trigram.
+  let orderBy: SQL[] | undefined;
+  let semanticWhere: SQL | undefined;
+  if (query.mode === "semantic" && query.q) {
+    const emb = await embedText(query.q.trim());
+    if (emb.ok && emb.vector) {
+      const literal = `[${emb.vector.join(",")}]`;
+      // Hanya soal yang sudah punya embedding.
+      semanticWhere = sql`${questions.embedding} IS NOT NULL`;
+      orderBy = [asc(sql`${questions.embedding} <=> ${literal}::vector`)];
+    }
+  }
+
+  const combined = semanticWhere
+    ? finalWhere
+      ? and(finalWhere, semanticWhere)
+      : semanticWhere
+    : finalWhere;
+
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(questions)
-    .where(finalWhere);
+    .where(combined);
 
-  // Urutkan: relevansi trigram bila ada pencarian, selain itu terbaru dulu.
-  const orderBy = byRelevance && query.q
-    ? [desc(sql`similarity(${questions.contentMarkdown}, ${query.q.trim()})`), desc(questions.createdAt)]
-    : [desc(questions.createdAt)];
+  // Urutkan: semantik (bila aktif) > relevansi trigram > terbaru dulu.
+  const finalOrder: SQL[] =
+    orderBy ??
+    (byRelevance && query.q
+      ? [desc(sql`similarity(${questions.contentMarkdown}, ${query.q.trim()})`), desc(questions.createdAt)]
+      : [desc(questions.createdAt)]);
 
   const rows = await db
     .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
     .from(questions)
-    .where(finalWhere)
-    .orderBy(...orderBy)
+    .where(combined)
+    .orderBy(...finalOrder)
     .limit(query.limit)
     .offset(query.offset);
 

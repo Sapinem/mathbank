@@ -114,6 +114,8 @@ export const listQuestionsQuerySchema = z.object({
   eventId: z.string().uuid().optional(),
   flagged: z.coerce.boolean().optional(),
   includeDeleted: z.coerce.boolean().default(false),
+  /** Mode pencarian: `text` (trigram, default) atau `semantic` (embedding HNSW). */
+  mode: z.enum(["text", "semantic"]).default("text"),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 });

@@ -157,7 +157,7 @@ describe("getQuestion & listQuestions", () => {
   it("listQuestions mengembalikan item + total", async () => {
     await createQuestion(baseInput({ contentMarkdown: "Soal A" }), teacher);
     await createQuestion(baseInput({ contentMarkdown: "Soal B" }), teacher);
-    const res = await listQuestions({ includeDeleted: false, limit: 10, offset: 0 });
+    const res = await listQuestions({ includeDeleted: false, mode: "text", limit: 10, offset: 0 });
     expect(res.total).toBeGreaterThanOrEqual(2);
     expect(res.items.length).toBeGreaterThanOrEqual(2);
   });
@@ -323,6 +323,16 @@ describe("M6 — filter & pencarian", () => {
   it("buildQuestionFilter: tanpa q → byRelevance false", async () => {
     const f = await buildQuestionFilter({ limit: 20, offset: 0 } as never);
     expect(f.byRelevance).toBe(false);
+  });
+
+  it("mode semantic: fallback ke trigram saat embedding gagal", async () => {
+    await createQuestion(baseInput({ contentMarkdown: "Soal semantik limit" }), teacher);
+    // embedText tak tersedia (service mati) → tak melempar, tetap mengembalikan hasil.
+    const res = await listQuestions(
+      { q: "limit", mode: "semantic", limit: 20, offset: 0 } as never,
+      teacher,
+    );
+    expect(Array.isArray(res.items)).toBe(true);
   });
 });
 
