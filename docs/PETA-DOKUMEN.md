@@ -91,6 +91,10 @@
 | D34 | `RENCANA-EKSPOR.md` | ✅ | **dibuat** 2026-09-30 — rencana M8 (mesin PDF, opsi cetak, risiko); keputusan = Opsi A; M8b kop/kaki/watermark |
 | D35 | `docs/audit/M8-EKSPOR-CETAK.md` | ✅ | **dibuat** 2026-09-30 — audit naskah cetak & pratinjau (M8) |
 | D36 | `docs/audit/AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md` | ✅ | **dibuat** 2026-09-30 — audit penutup MVP & panduan arsitektur Fase 2/3 |
+| D37 | `docs/audit/M9-INGEST-KORPUS.md` | ✅ | **dibuat** 2026-09-30 — audit mesin ingest korpus (M9); §Catatan Verifikasi 2026-09-30 (koreksi: 5 sumber, 22 tes DB) |
+| D38 | `docs/audit/M10-AI-ENRICHMENT-DAN-EMBEDDING.md` | ✅ | **dibuat** 2026-09-30 — audit AI enrichment & embedding (M10); §Catatan Verifikasi 2026-09-30 (koreksi: proteksi kunci struktural, action `update`) |
+| D40 | `docs/audit/M12-EKSPOR-MOODLE-XML-DAN-GITSYNC.md` | ✅ | **dibuat** 2026-09-30 — audit ekspor Moodle/GitSync (M12); §Catatan Verifikasi (koreksi: base64 media TIDAK ada) |
+| D39 | `docs/audit/M11-MODEL-CONTEXT-PROTOCOL-MCP.md` | ✅ | **dibuat** 2026-09-30 — audit MCP (M11); §Catatan Verifikasi 2026-09-30 (koreksi: "Streamable HTTP" bukan SSE; gerbang `assertMcp`/`MCP_CAPABILITIES`) |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 

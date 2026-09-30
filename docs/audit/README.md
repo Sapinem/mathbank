@@ -35,7 +35,11 @@ Setiap dokumen audit kini terhubung dengan berkas verifikasi nyata di `docs/VERI
 6. [`docs/audit/M6-PENCARIAN-DAN-FILTER.md`](M6-PENCARIAN-DAN-FILTER.md) — Milestone 6 (Filter Builder, Topik Rekursif, Trigram `pg_trgm`, RRF Fusion, & Jaccard Dedup).
 7. [`docs/audit/M7-PAKET-SOAL.md`](M7-PAKET-SOAL.md) — Milestone 7 (Bundle Service, Drag-and-Drop Reorder, Deduplikasi Stimulus 1×, RESTRICT Protection, & Mobile Sheet UI).
 8. [`docs/audit/M8-EKSPOR-DAN-LAYOUT-CETAK.md`](M8-EKSPOR-DAN-LAYOUT-CETAK.md) — Milestone 8 (Browser-native Print Direct Engine, `@media print`, 1/2 Kolom, Kunci Jawaban S3 Guard, Lembar Jawaban Siswa, & KaTeX).
-9. [`docs/audit/AUDIT-PUSTAKA-DAN-DEPENDENSI.md`](AUDIT-PUSTAKA-DAN-DEPENDENSI.md) — Evaluasi Penggunaan Library & Dependensi (Next.js 16, React 19, `@base-ui/react`, Drizzle, Refactoring `cn`, & `isomorphic-dompurify`).
+9. [`docs/audit/M9-INGEST-KORPUS.md`](M9-INGEST-KORPUS.md) — Milestone 9 (Mesin Ingest Korpus 21.245 Soal, Parser Modular, Media SHA-256 Dedup, Queue Idempotent, & REST API v1).
+10. [`docs/audit/M10-AI-ENRICHMENT-DAN-EMBEDDING.md`](M10-AI-ENRICHMENT-DAN-EMBEDDING.md) — Milestone 10 (Client AI Router AES-256-GCM, Sidecar Embedding BGE-M3 1024-dim, Distractor Rationale, & Log Audit Token).
+11. [`docs/audit/M11-MODEL-CONTEXT-PROTOCOL-MCP.md`](M11-MODEL-CONTEXT-PROTOCOL-MCP.md) — Milestone 11 (MCP Server Stdio/HTTP, 7 MCP Tools, Strict No-AnswerKey Policy S3, & UI Agent Keys).
+12. [`docs/audit/M12-EKSPOR-MOODLE-XML-DAN-GITSYNC.md`](M12-EKSPOR-MOODLE-XML-DAN-GITSYNC.md) — Milestone 12 (Moodle XML Standard v4/v5, Moodle TeX Converter, Base64 Embedded Media, & Repositori GitSync).
+13. [`docs/audit/AUDIT-PUSTAKA-DAN-DEPENDENSI.md`](AUDIT-PUSTAKA-DAN-DEPENDENSI.md) — Evaluasi Penggunaan Library & Dependensi (Next.js 16, React 19, `@base-ui/react`, Drizzle, Refactoring `cn`, & `isomorphic-dompurify`).
 10. [`docs/audit/CATATAN-PENYEMPURNAAN-ENTERPRISE.md`](CATATAN-PENYEMPURNAAN-ENTERPRISE.md) — Rekomendasi Best Practices Enterprise (DB Transaction Atomicity, Slug Length Guards, `"use cache"` Next.js 16, Idempotency-Key Header, Sanitasi TikZ SVG, & Request ID Traceability).
 11. [`docs/audit/AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md`](AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md) — Audit Komprehensif Penutup Fase 1 (MVP) & Panduan Teknis Lengkap Pengembangan Fase 2 (M9–M12) dan Fase 3.
 

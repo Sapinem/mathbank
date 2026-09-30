@@ -34,3 +34,23 @@
 - **#1/#5** = sudah ada / belum relevan (TikZ belum dibangun).
 
 Pelajaran → `CONSTRAINTS.md` #40–41. Detail: `docs/VERIFIKASI-CATATAN-ENTERPRISE.md`.
+
+---
+
+## § Catatan Verifikasi
+
+> Wajib menurut `CONSTRAINTS.md` #44 untuk setiap dokumen di `docs/audit/`.
+
+**Diverifikasi ulang: 2026-09-30** terhadap kode nyata:
+
+> Dokumen ini **rekomendasi**, bukan audit milestone. Verifikasi status implementasinya:
+
+| No | Rekomendasi | Status terverifikasi |
+|---|---|---|
+| 1 | Batas panjang slug | ✅ Ada — `CONSTRAINTS.md` #40 |
+| 2 | Header `X-Request-ID` | ✅ Ada di `wrapRoute` |
+| 3 | `Idempotency-Key` | ✅ Ada (opsi `idempotent` di `wrapRoute`) |
+| 4 | Server-side `"use cache"` | ⛔ Dibatalkan (sesuai keputusan; `CONSTRAINTS.md` #41 mengatur pemakaiannya) |
+| 5 | Transaksi atomik | ✅ Dipakai (mis. re-parent topik #38, `reorderItems` #45) |
+
+**Sumber bukti:** `CONSTRAINTS.md` (#38–#45), `src/lib/api/route-wrapper.ts`.

@@ -68,3 +68,18 @@ Seluruh pengujian unit/komponen UI (`pnpm vitest run src/components`) lulus 100%
 & gelap memenuhi ambang. Temuan **T-M3-3** (warna status) diperbaiki. Detail:
 `docs/VERIFIKASI-AUDIT-M3.md`.
 
+---
+
+## § Catatan Verifikasi
+
+> Wajib menurut `CONSTRAINTS.md` #44 untuk setiap dokumen di `docs/audit/`.
+
+**Diverifikasi ulang: 2026-09-30** terhadap kode nyata:
+
+| Klaim | Hasil verifikasi |
+|---|---|
+| `scripts/theme/{build,check}.ts` | ✅ **Ada** (juga `tokens.ts`) |
+| `@base-ui/react` dipakai, Radix dihapus | ✅ `@base-ui/react ^1.8.0`; **0 kemunculan `radix`** di `package.json` |
+| `@media print`/shell & a11y | ✅ Tidak ada regresi (theme:check lolos di `pnpm check`) |
+
+**Sumber bukti:** `ls scripts/theme/`, `grep radix package.json` (0), `pnpm check` (theme:check hijau).

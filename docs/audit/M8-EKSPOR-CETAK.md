@@ -14,7 +14,7 @@ Milestone 8 merupakan penutup alur utama MVP (**Cari → Susun Paket → Cetak N
    * Antarmuka pratinjau naskah bersih dengan bilah kontrol interaktif (otomatis disembunyikan saat mencetak via kelas `.no-print`).
    * Tombol cetak memanggil fungsi bawaan `window.print()`.
 2. **Tata Letak & Tipografi Cetak (`src/styles/print.css`):**
-   * Mengatur ukuran halaman standar `@page { size: A4 portrait; margin: 15mm 12mm 15mm 12mm; }`.
+   * Mengatur ukuran halaman standar `@page { size: A4; margin: 18mm 16mm; }`.
    * Pilihan mode tata letak **1 Kolom** atau **2 Kolom** (`column-count: 2`, `column-gap: 8mm`, `column-rule: 0.5pt solid`).
    * Pencegahan pemotongan liar antar halaman (`break-inside: avoid` pada item soal dan wacana).
    * KaTeX ter-render presisi dalam media cetak hitam-putih kontras tinggi.
@@ -79,3 +79,21 @@ Item berikut dijadwalkan untuk disempurnakan pada sub-milestone **M8b** sesuai k
 * Seluruh elemen antarmuka non-naskah (sidebar, header, tombol navigasi) terbukti disembunyikan saat `media === "print"`.
 * Pencegahan *page-break* di tengah formula matematis KaTeX bekerja dengan baik melalui styling `break-inside: avoid`.
 * Hak akses proteksi S3 terintegrasi utuh: opsi cetak kunci otomatis nonaktif bagi aktor tanpa wewenang `canSeeAnswerKey`.
+
+---
+
+## § Catatan Verifikasi
+
+> Wajib menurut `CONSTRAINTS.md` #44 untuk setiap dokumen di `docs/audit/`.
+
+**Diverifikasi ulang: 2026-09-30** terhadap kode nyata:
+
+| Klaim | Hasil verifikasi |
+|---|---|
+| `bundle-print-view.tsx` & `src/styles/print.css` | ✅ **Ada** |
+| Keputusan **Opsi A (Browser Print)** | ✅ Sesuai `docs/RENCANA-EKSPOR.md` §Keputusan |
+| `@page` margin **"15mm 12mm"** | ❌ **Keliru** → nyatanya `@page { size: A4; margin: 18mm 16mm; }` di `print.css` |
+
+**Koreksi:** margin halaman sebenarnya **`18mm 16mm`** (dokumen lama menulis `15mm 12mm`).
+
+**Sumber bukti:** `sed -n '11,16p' src/styles/print.css`.

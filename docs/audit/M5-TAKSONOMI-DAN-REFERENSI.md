@@ -75,3 +75,19 @@ kedalaman, 14 endpoint CRUD, UI 4 view, trigger `usage_count` — **akurat**. Te
 - **T-M5-3:** klaim `/api/tags/clean-unused` **palsu** (405) → ditambah service + route.
 
 Pelajaran → `CONSTRAINTS.md` #38–39. Detail: `docs/VERIFIKASI-AUDIT-M5.md`.
+
+---
+
+## § Catatan Verifikasi
+
+> Wajib menurut `CONSTRAINTS.md` #44 untuk setiap dokumen di `docs/audit/`.
+
+**Diverifikasi ulang: 2026-09-30** terhadap kode nyata:
+
+| Klaim | Hasil verifikasi |
+|---|---|
+| `topic-service.ts` & `taxonomy-service.ts` | ✅ **Ada** |
+| Anti-siklus in-memory + batas 3 level | ✅ Ada (`isSelfOrDescendantFrom`, `resolveLevelFrom`) |
+| Verifikasi T-M5-1/T-M5-2/T-M5-3 | ✅ Tercatat di `docs/VERIFIKASI-AUDIT-M5.md` |
+
+**Sumber bukti:** keberadaan service + `docs/VERIFIKASI-AUDIT-M5.md`.

@@ -60,3 +60,22 @@ Milestone 8 mengelola proses pengeluaran (*output generation*) paket soal ke dal
 ## 📄 KESIMPULAN MILESTONE 8
 
 **MILESTONE 8 (EKSPOR & LAYOUT CETAK) TELAH VERIFIED LULUS 100%. SYSTEM A4 BROWSER PRINT ENGINE MATHBANK BERJALAN SANGAT PRESISI, RAPI, DAN BEBAS DARI KEBOCORAN KUNCI JAWABAN.**
+
+---
+
+## § Catatan Verifikasi
+
+> Wajib menurut `CONSTRAINTS.md` #44 untuk setiap dokumen di `docs/audit/`.
+
+**Diverifikasi ulang: 2026-09-30** terhadap kode nyata:
+
+| Klaim | Hasil verifikasi |
+|---|---|
+| `@page { size: A4; margin: 18mm 16mm; }` | ✅ **Cocok** dengan `src/styles/print.css` |
+| Opsi A tanpa Puppeteer/Playwright | ✅ Sesuai keputusan |
+| Mode 1/2 kolom + gerbang kunci S3 | ✅ Ada di `bundle-print-view.tsx` |
+
+> **Catatan:** dokumen ini **tumpang-tindih** dengan `M8-EKSPOR-CETAK.md` (dua audit M8).
+> Disarankan kelak dikonsolidasi menjadi satu.
+
+**Sumber bukti:** `src/styles/print.css`, `bundle-print-view.tsx`.
