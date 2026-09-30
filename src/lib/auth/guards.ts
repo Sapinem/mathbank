@@ -22,18 +22,56 @@ export function effectiveAccess(actor: Actor, permission: Permission): Access {
   return best;
 }
 
-/** Apakah aktor punya izin (dengan mempertimbangkan `own`). */
+/**
+ * Apakah aktor punya izin (dengan mempertimbangkan `own`).
+ *
+ * Bila aktor berasal dari **API key** dengan pembatasan eksplisit
+ * (`apiKeyPermissions`), pembatasan itu **menyempitkan** izin peran — tak pernah
+ * memperluas. `{ question: ["create","read"] }` → hanya `question:create` &
+ * `question:view` yang lolos (peta: `read`→`view`).
+ */
 export function can(
   actor: Actor,
   permission: Permission,
   opts?: { ownerId?: string | null },
 ): boolean {
   const access = effectiveAccess(actor, permission);
-  if (access === "yes") return true;
-  if (access === "own") {
-    return Boolean(opts?.ownerId) && opts?.ownerId === actor.id;
-  }
-  return false;
+  let allowed: boolean;
+  if (access === "yes") allowed = true;
+  else if (access === "own") {
+    allowed = Boolean(opts?.ownerId) && opts?.ownerId === actor.id;
+  } else allowed = false;
+
+  if (!allowed) return false;
+  return apiKeyAllows(actor, permission);
+}
+
+/** Pemetaan aksi API-key plugin → nama izin MathBank. */
+const API_KEY_ACTION_ALIAS: Record<string, string> = {
+  read: "view",
+  view: "view",
+  create: "create",
+  update: "edit",
+  edit: "edit",
+  delete: "delete",
+};
+
+/**
+ * Batasan API key: bila `apiKeyPermissions` diisi, izin dibatasi padanya.
+ * Bila tak diisi (undefined) → tak membatasi (perilaku lama, kompatibel).
+ */
+function apiKeyAllows(actor: Actor, permission: Permission): boolean {
+  const perms = actor.apiKeyPermissions;
+  if (!perms) return true; // tak dibatasi
+
+  const [resource, action] = permission.split(":") as [string, string];
+  const allowedActions = perms[resource];
+  if (!allowedActions || allowedActions.length === 0) return false;
+
+  const normalized = allowedActions.map(
+    (a) => API_KEY_ACTION_ALIAS[a.toLowerCase()] ?? a.toLowerCase(),
+  );
+  return normalized.includes(action);
 }
 
 /** Aktor punya peran tertentu? */

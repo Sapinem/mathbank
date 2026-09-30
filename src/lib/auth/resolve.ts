@@ -7,7 +7,7 @@ import type { Actor } from "./actor";
 
 /**
  * Identifikasi aktor dari request (L1 + L4).
- * Prioritas: session cookie (manusia) → API key (agen/mesin).
+ * Prioritas: session cookie (manusia) → dev bypass (dev saja) → API key (agen/mesin).
  */
 
 /** Ambil peran dari DB (multi-role). */
@@ -72,10 +72,23 @@ export async function actorFromApiKey(headers: Headers): Promise<Actor | null> {
   }
 }
 
-/** Aktor dev (hanya bila AUTH_DEV_BYPASS=true DAN bukan produksi). */
+/**
+ * Aktor dev (hanya bila AUTH_DEV_BYPASS=true DAN lingkungan benar-benar dev).
+ *
+ * Pagar BERLAPIS (enterprise guardrail — cegah kebocoran hak admin di UAT/staging):
+ *  1. `NODE_ENV` TIDAK boleh `production`.
+ *  2. `APP_ENV` (bila diset) TIDAK boleh `production`/`staging` — pagar keras
+ *     kedua, karena di UAT/staging `NODE_ENV` sering dibiarkan non-production.
+ *  3. `AUTH_DEV_BYPASS` harus literal `"true"`.
+ */
 function actorFromDevBypass(): Actor | null {
-  // Pagar keras: JANGAN pernah aktif di produksi, terlepas dari nilai env.
+  // Pagar 1: JANGAN pernah aktif di produksi, terlepas dari nilai env.
   if (process.env.NODE_ENV === "production") return null;
+  // Pagar 2: tolak lingkungan staging/UAT (di sana bypass HARUS mati agar
+  // pengujian matriks peran murni tak bocor hak admin).
+  const appEnv = process.env.APP_ENV?.toLowerCase();
+  if (appEnv === "production" || appEnv === "staging") return null;
+  // Pagar 3: opt-in eksplisit.
   if (process.env.AUTH_DEV_BYPASS !== "true") return null;
   return {
     id: "dev-user",

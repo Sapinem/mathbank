@@ -52,6 +52,7 @@ describe("resolve.ts — identitas aktor (L1)", () => {
     vi.clearAllMocks();
     process.env = { ...OLD_ENV };
     delete process.env.AUTH_DEV_BYPASS;
+    delete process.env.APP_ENV;
     mockRoles([]);
   });
 
@@ -87,6 +88,29 @@ describe("resolve.ts — identitas aktor (L1)", () => {
       getSession.mockResolvedValue(null);
       verifyApiKey.mockResolvedValue({ valid: false });
       expect(await resolveActor(H())).toBeNull();
+    });
+
+    it("MATI di staging meski AUTH_DEV_BYPASS=true (pagar kedua, T2)", async () => {
+      process.env.AUTH_DEV_BYPASS = "true";
+      process.env.APP_ENV = "staging";
+      getSession.mockResolvedValue(null);
+      verifyApiKey.mockResolvedValue({ valid: false });
+      expect(await resolveActor(H())).toBeNull();
+    });
+
+    it("MATI bila APP_ENV=production meski NODE_ENV bukan production", async () => {
+      process.env.AUTH_DEV_BYPASS = "true";
+      process.env.APP_ENV = "production";
+      getSession.mockResolvedValue(null);
+      verifyApiKey.mockResolvedValue({ valid: false });
+      expect(await resolveActor(H())).toBeNull();
+    });
+
+    it("AKTIF bila APP_ENV=development (dev eksplisit)", async () => {
+      process.env.AUTH_DEV_BYPASS = "true";
+      process.env.APP_ENV = "development";
+      const a = await resolveActor(H());
+      expect(a?.id).toBe("dev-user");
     });
   });
 

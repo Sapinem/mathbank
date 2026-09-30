@@ -66,7 +66,17 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   keamanan, a11y, mutu). `docs/EVALUASI-STRATEGI-E2E.md` + `EVALUASI-DESKTOPONLY.md`.
 
 ### Diperbaiki
-- **🔴 Login & rate-limit (NEW1) — diperkuat secara arsitektural** (bukan tambal):
+- **🔐 Verifikasi audit M2 (Auth & Peran) — T1–T3** — atas laporan pemilik; semua
+  klaim arsitektur **diverifikasi** (75 sel matriks ✅, 5 peran ✅, guard ✅).
+  - **T1**: komentar `resolve.ts:10` basi ("session → API key", 2 jalur) → dikoreksi
+    jadi 3 jalur (session → dev bypass → API key).
+  - **T2**: dev bypass kini **3 pagar** — tambah gerbang **`APP_ENV`** (tolak
+    `production`/`staging`). Menutup kebocoran hak admin di UAT/staging (NODE_ENV
+    sering dibiarkan non-production).
+  - **T3 (paling penting)**: `apiKeyPermissions` **dulu disimpan tapi TAK ditegakkan**
+    → `can()` kini **menyempitkan** izin API key (tak pernah memperluas). Sebelumnya
+    API key "berizin terbatas" tetap dapat seluruh izin peran = pembatasan kosmetik.
+  - **+9 tes** (auth total **72**, dari 63).
   - **Koreksi penting:** temuan "login tanpa rate-limit" **sebagian besar salah** —
     rate-limit login **aktif otomatis** di produksi (rule bawaan Better Auth
     `/sign-in` 3 req/10 s), IPv6 sudah dinormalisasi, header default jalan. Dugaan

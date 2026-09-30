@@ -92,3 +92,55 @@ describe("matriks izin (L1)", () => {
     }
   });
 });
+
+describe("batasan API key (permission menyempitkan, T3)", () => {
+  function apiActor(
+    perms: Record<string, string[]> | undefined,
+    roles: Role[] = ["agent"],
+  ): Actor {
+    return {
+      id: "u9",
+      name: "Agen",
+      roles,
+      via: "apikey",
+      apiKeyPermissions: perms,
+    };
+  }
+
+  it("tanpa apiKeyPermissions → perilaku peran biasa (tak dibatasi)", () => {
+    const a = apiActor(undefined);
+    expect(can(a, "question:view")).toBe(true);
+    expect(can(a, "question:create")).toBe(true);
+  });
+
+  it("dengan apiKeyPermissions → izin dibatasi padanya", () => {
+    const a = apiActor({ question: ["read"] });
+    expect(can(a, "question:view")).toBe(true); // read → view
+    expect(can(a, "question:create")).toBe(false); // tak tercantum
+  });
+
+  it("memetakan update→edit & delete→delete", () => {
+    // teacher boleh edit/delete SOAL SENDIRI (own) → batas atas izin peran.
+    const a = apiActor({ question: ["update", "delete"] }, ["teacher"]);
+    expect(can(a, "question:edit", { ownerId: "u9" })).toBe(true);
+    expect(can(a, "question:delete", { ownerId: "u9" })).toBe(true);
+    expect(can(a, "question:view")).toBe(false);
+  });
+
+  it("resource lain di luar daftar → ditolak", () => {
+    const a = apiActor({ question: ["read"] });
+    expect(can(a, "bundle:manage")).toBe(false);
+    expect(can(a, "settings:manage")).toBe(false);
+  });
+
+  it("tak pernah MEMPERLUAS: izin peran tetap jadi batas atas", () => {
+    // agent tak boleh bundle:manage; apiKey tak bisa memberikannya.
+    const a = apiActor({ bundle: ["read"] }, ["agent"]);
+    expect(can(a, "bundle:manage")).toBe(false);
+  });
+
+  it("daftar aksi kosong → menolak", () => {
+    const a = apiActor({ question: [] });
+    expect(can(a, "question:view")).toBe(false);
+  });
+});
