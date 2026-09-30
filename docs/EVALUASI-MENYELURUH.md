@@ -62,12 +62,15 @@ kejutan, tapi **layak dibayar lebih awal** untuk beberapa item murah.
 | C2 | Blok `select` paket **duplikat** (listBundles & getBundle) | `bundle-service.ts` | grep |
 | C3 | Helper `api<T>` **duplikat** di 2 hook | `use-bundles.ts`, `use-taxonomy-refs.ts` | grep |
 
-### 🟡 Ringan (dokumentasi)
+### 🟡 Ringan (dokumentasi + kualitas kode)
 | # | Temuan | Bukti |
 |---|--------|-------|
-| D1 | **7 dokumen belum terdaftar** di PETA-DOKUMEN (langgar #31) | file compare |
-| D2 | Komentar `demo-users.ts` basi ("mati di produksi" — kini `DEMO_LOGIN`) | read file |
-| D3 | `bundle-service.ts` 516 baris (kandidat pecah) | wc |
+| D1 | **7 dokumen belum terdaftar** di PETA-DOKUMEN (langgar #31) — ✅ **DIPERBAIKI** | file compare |
+| D2 | Komentar `demo-users.ts` basi ("mati di produksi" — kini `DEMO_LOGIN`) — ✅ **DIPERBAIKI** | read file |
+| D3 | `bundle-service.ts` 516 baris (kandidat pecah); blok select duplikat — ✅ **duplikasi DIPERBAIKI** | wc |
+| D4 | `taxonomy-service.ts:139,235,304` pakai `sql\`questions\`` / `sql\`question_tags\`` (nama tabel mentah) — bukan injeksi, tapi hilang type-safety Drizzle | subagent keamanan |
+| D5 | `validateBundle` membaca `answerKey` mentah tanpa `canSeeAnswerKey` — **aman kini**, tapi rapuh bila diperluas | subagent keamanan |
+| D6 | **`theme:check` hanya uji token berpasangan**, bukan pemakaian nyata (mis. `text-gold` di latar putih lolos) — celah validasi kontras | subagent a11y |
 
 ## 3. Rencana Perbaikan
 
