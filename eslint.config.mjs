@@ -2,6 +2,31 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+/**
+ * Aturan kustom MathBank.
+ *
+ * CONSTRAINT #34: **jangan `.select()` tanpa kolom di jalur baca API** — itu
+ * `SELECT *` yang membocorkan `answer_key`, `embedding*`, `aiTagged*`. Pakai
+ * proyeksi `questionColumns()`/`optionColumns()` (`src/lib/db/projections/question.ts`).
+ *
+ * Cakupan: hanya **`src/app/api/**`** (jalur yang menghasilkan respons API).
+ * Jalur internal (FSM, audit, worker ingest) boleh `selectAll()` dengan alasan
+ * terdokumentasi (lihat `projections/question.ts`).
+ */
+const noBareSelectInApi = {
+  rules: {
+    "no-restricted-syntax": [
+      "error",
+      {
+        selector:
+          "CallExpression[callee.property.name='select'][arguments.length=0]",
+        message:
+          "CONSTRAINT #34: jangan `.select()` tanpa kolom di jalur baca API — bisa bocorkan answer_key/embedding. Pakai proyeksi (questionColumns()/optionColumns()).",
+      },
+    ],
+  },
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -17,6 +42,11 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
   ]),
+  // CONSTRAINT #34 — berlaku khusus jalur API.
+  {
+    files: ["src/app/api/**/*.ts"],
+    ...noBareSelectInApi,
+  },
 ]);
 
 export default eslintConfig;
