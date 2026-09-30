@@ -20,7 +20,7 @@ Pola berulang temuan audit M1–M6: klaim **struktur** umumnya akurat, tetapi **
 | M4 Bank Soal CRUD | ✅ + **KRITIS** diperbaiki | **T-M4-3** (alur telaah mati), T-M4-4, T-M4-5 |
 | M5 Taksonomi | ✅ + diperbaiki | T-M5-1 (audit), T-M5-2 (propagasi level), T-M5-3 (clean-unused) |
 | M6 Pencarian & Filter | ✅ + diperbaiki | T-M6-1 (logika dedup), T-M6-2 (fusion belum terintegrasi) |
-| M7 Paket Soal | ⏳ **belum diverifikasi** | Menunggu langkah audit berikutnya |
+| M7 Paket Soal | ✅ + diperbaiki | T-M7-2 (reorder parsial), T-M7-3 (RESTRICT abadi setelah arsip), T-M7-1 (klaim) |
 | Pustaka & Dependensi | ✅ (2 temuan **salah**) | `cn` & `tw-animate-css` **bukan** redundan |
 | Catatan Enterprise | ✅ diterapkan selektif | #2 fix; #4/#6 diterapkan; #3 **dibatalkan** |
 

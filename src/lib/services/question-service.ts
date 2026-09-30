@@ -7,7 +7,7 @@ import {
   type QuestionOption,
 } from "@/lib/db/schema/question";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
-import { bundleItems } from "@/lib/db/schema/bundle";
+import { isQuestionUsedInBundles } from "./bundle-service";
 import { buildQuestionFilter } from "@/lib/question/filters";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
@@ -414,13 +414,10 @@ export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
 
   assertCan(actor, "question:delete", { ownerId: existing.authorId });
 
-  // RESTRICT: soal yang dipakai paket (M7) tak boleh dihapus.
-  const [dipakai] = await db
-    .select({ id: bundleItems.id })
-    .from(bundleItems)
-    .where(eq(bundleItems.questionId, id))
-    .limit(1);
-  if (dipakai) {
+  // RESTRICT: soal yang dipakai paket AKTIF (M7) tak boleh dihapus.
+  // T-M7-3: paket TERARSIP tidak memblokir — jika tidak, soal mustahil dihapus
+  // setelah paket yang memakainya diarsipkan (dead-end).
+  if (await isQuestionUsedInBundles(id)) {
     throw new ConflictError(
       "Soal ini dipakai di paket soal — keluarkan dari paket dulu.",
     );
@@ -463,12 +460,8 @@ export async function hardDeleteQuestion(id: string, actor: Actor): Promise<void
     );
   }
 
-  const [dipakai] = await db
-    .select({ id: bundleItems.id })
-    .from(bundleItems)
-    .where(eq(bundleItems.questionId, id))
-    .limit(1);
-  if (dipakai) {
+  // T-M7-3: hanya paket AKTIF yang memblokir hapus permanen.
+  if (await isQuestionUsedInBundles(id)) {
     throw new ConflictError(
       "Soal ini dipakai di paket soal — keluarkan dari paket dulu.",
     );

@@ -1,7 +1,7 @@
 # AUDIT MILESTONE 7 — PAKET SOAL (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Selesai 100%)  
+**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Selesai 100%) — ⚠️ **DIVERIFIKASI ULANG 2026-09-30 + DIPERBAIKI: T-M7-2 (reorder parsial) & T-M7-3 (RESTRICT abadi setelah arsip); klaim stimulus (T-M7-1) dikoreksi** (lihat §Catatan Verifikasi)  
 **Target:** Penyusunan Naskah & Paket Soal — Bundle Service (`bundle-service.ts`), Item Reordering (Drag-and-Drop), Deduplikasi Stimulus 1×, Restriksi Hapus Soal Terpakai (`RESTRICT`), Duplikasi Paket, dan Mobile Responsive Builder (`bundle-builder.tsx`).
 
 ---
@@ -15,7 +15,7 @@ Milestone 7 mengelola penyusunan naskah/paket soal (`bundles` & `bundle_items`) 
    * Manajemen Slug Unik: Pembuatan slug otomatis dengan penanganan konflik duplikasi nama paket (`-2`, `-3`, dst.).
 2. **Invariansi Item Paket (`bundle_items`):**
    * **Pengurutan Drag-and-Drop (`reorderItems`):** Pengurutan item soal dalam paket diperbarui secara efisien berbasis `orderIndex`.
-   * **Deduplikasi Stimulus 1×:** Jika sebuah soal anak dimasukkan ke dalam paket, baris wacana/stimulus induknya (`role = 'stimulus'`) disimpan **tepat 1 kali** untuk mencegah pengulangan wacana yang sama saat dicetak.
+   * **Deduplikasi Stimulus 1×:** Baris wacana/stimulus (`role = 'stimulus'`) **paling banyak muncul 1 kali** dalam paket — ditegakkan oleh constraint `UNIQUE(bundle_id, question_id)` + konvensi `role`. *(Koreksi verifikasi 2026-09-30: TIDAK ada otomasi "memasukkan soal anak otomatis menambah stimulus induk" — pemanggil yang menyertakan `role:'stimulus'`.)*
    * **Restriksi Hapus Soal (`RESTRICT`):** Butir soal yang sudah digunakan dalam paket soal **dilarang dihapus** (HTTP 409 `ConflictError`).
 3. **Penyusun Paket Responsif (`src/components/bundles/bundle-builder.tsx`):**
    * Menggunakan `@dnd-kit/react` untuk pengurutan interaktif.
@@ -29,8 +29,8 @@ Milestone 7 mengelola penyusunan naskah/paket soal (`bundles` & `bundle_items`) 
 | :--- | :--- | :--- | :---: |
 | **Service Paket Soal** | `bundle-service.ts` (CRUD, Metadata, Slug Unik) | `src/lib/services/bundle-service.ts` | ✅ Lulus |
 | **Manajemen Item Paket** | `bundle_items` (Tambah/Hapus, Section, Urutan) | `addItem()`, `removeItem()`, `reorderItems()` | ✅ Lulus |
-| **Deduplikasi Stimulus** | Stimulus induk tampil 1× saja di naskah paket | Ditegakkan & diuji di `bundle-service.ts` | ✅ Lulus |
-| **Proteksi RESTRICT FK** | Soal terpakai di paket ditolak saat dihapus | Disinkronkan dengan `deleteQuestion()` | ✅ Lulus |
+| **Deduplikasi Stimulus** | Stimulus induk tampil 1× saja di naskah paket | `role='stimulus'` + `UNIQUE(bundle_id,question_id)` (bukan otomasi) | ✅ Lulus (klaim dikoreksi) |
+| **Proteksi RESTRICT FK** | Soal terpakai di paket ditolak saat dihapus | `isQuestionUsedInBundles()` (hanya paket AKTIF) | ✅ Lulus (T-M7-3 diperbaiki) |
 | **Validasi & Duplikasi** | Duplikasi paket & Peringatan Soal Tanpa Kunci | `duplicateBundle()`, `validateBundle()` | ✅ Lulus |
 | **UI Builder Paket** | Penyusun Drag-and-Drop + Sheet Mobile Responsive | `src/components/bundles/bundle-builder.tsx` | ✅ Lulus |
 | **DB Integration Tests** | 14 Test Suite DB Uji Nyata Paket Soal | `src/lib/services/bundle-service.db.test.ts` (Passed) | ✅ Lulus |
@@ -58,12 +58,25 @@ Milestone 7 mengelola penyusunan naskah/paket soal (`bundles` & `bundle_items`) 
 
 **MILESTONE 7 (PAKET SOAL) TELAH DIREVIEW DAN DIVERIFIKASI LULUS 100%. INVARIAN STIMULUS 1×, PROTEKSI RESTRICT HAPUS SOAL, SERTA DRAG-AND-DROP BUILDER MATHBANK BERJALAN DENGAN SANGAT PRESISI.**
 
+> ⚠️ **Kesimpulan di atas ditulis auditor awal.** Verifikasi ulang (2026-09-30) menemukan
+> **2 bug nyata** (T-M7-2 reorder parsial, T-M7-3 RESTRICT abadi setelah arsip) — **keduanya
+> sudah diperbaiki** — dan **1 klaim berlebihan** (T-M7-1 stimulus). Lihat §Catatan Verifikasi.
+
 ---
 
 ## 📝 CATATAN VERIFIKASI (2026-09-30)
 
-**Verifikator:** agen pembangun (MathBank) · **Status: ⏳ BELUM DIVERIFIKASI.**
+**Verifikator:** agen pembangun (MathBank) · **Metode:** cek kode + uji HTTP lewat-route per peran.
 
-Dokumen audit M7 (Paket Soal) ada, tetapi **belum** diverifikasi ke kode dengan metode
-yang sama (uji HTTP lewat-route per peran). Verifikasi M7 dijadwalkan sebagai langkah
-audit berikutnya. Sampai itu, klaim di dokumen ini **jangan dianggap final**.
+**Status: ✅ TERVERIFIKASI + DIPERBAIKI.** Struktur & fitur inti nyata: CRUD, slug unik,
+RESTRICT, duplikasi paket, validasi (14→**18** tes DB). Temuan:
+- **T-M7-1 (klaim berlebihan):** "Deduplikasi Stimulus 1×" **bukan otomasi** — hanya efek
+  `UNIQUE` + konvensi `role`. Dikoreksi di §1.2.
+- **T-M7-2 (BUG):** `reorderItems` menerima daftar **parsial** → terbukti live
+  `orderIndex` jadi **`[1,1,2,2]`** (bentrok). Diperbaiki: wajib daftar **lengkap**,
+  tolak duplikat, + **transaksi**.
+- **T-M7-3 (BUG):** RESTRICT **tak sadar arsip** → terbukti live, setelah paket diarsip
+  hapus soal **tetap 409** (dead-end, soal mustahil dihapus). Diperbaiki: RESTRICT hanya
+  paket **AKTIF**; enforcement nyata ada di `question-service` (dipakai `isQuestionUsedInBundles`).
+
+Pelajaran → `CONSTRAINTS.md` #45–46. Detail: `docs/VERIFIKASI-AUDIT-M7.md`.

@@ -8,6 +8,20 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ## [Belum Dirilis]
 
+### Diperbaiki
+- **📦 Audit M7 (Paket Soal) — 2 bug nyata diperbaiki + 1 klaim dikoreksi** (`docs/VERIFIKASI-AUDIT-M7.md`):
+  - **T-M7-2 (bug):** `reorderItems` menerima daftar **parsial** → terbukti live
+    `orderIndex` jadi **`[1,1,2,2]`** (bentrok, urutan ambigu). Kini **wajib daftar
+    lengkap** (tolak subset & id duplikat, `ConflictError`) + penulisan urutan dalam
+    **transaksi**.
+  - **T-M7-3 (bug):** RESTRICT hapus soal **tak sadar arsip** → setelah paket diarsip,
+    hapus soal **tetap 409** (dead-end). Kini `isQuestionUsedInBundles`/
+    `bundlesUsingQuestions` + enforcement di `question-service` (delete & hard-delete)
+    **hanya paket AKTIF** (`innerJoin bundles + isNull(deletedAt)`).
+  - **T-M7-1 (dokumen):** klaim "Deduplikasi Stimulus 1× otomatis" **berlebihan** —
+    faktanya efek `UNIQUE` + konvensi `role`, bukan otomasi. Dikoreksi.
+  - **Tes DB: 14 → 18** (+4). **Pelajaran → `CONSTRAINTS.md` #45–46.**
+
 ### Dokumentasi
 - **📝 Catatan Verifikasi seragam di SELURUH dokumen `docs/audit/`** (CONSTRAINTS #44):
   tiap dokumen audit (M1–M7, Pustaka, Enterprise) kini punya blok **§Catatan Verifikasi**

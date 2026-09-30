@@ -376,17 +376,30 @@ export async function reorderItems(
   if (itemIds.some((id) => !ids.has(id))) {
     throw new NotFoundError("Ada item yang bukan milik paket ini.");
   }
-  // Perbarui order_index sesuai posisi.
-  for (let i = 0; i < itemIds.length; i++) {
-    await db
-      .update(bundleItems)
-      .set({ orderIndex: i + 1 })
-      .where(eq(bundleItems.id, itemIds[i]!));
+  // T-M7-2: WAJIB daftar LENGKAP — tolak subset/duplikat agar `order_index`
+  // tidak bentrok (mis. [1,1,2,2]) & urutan tetap deterministik.
+  const unique = new Set(itemIds);
+  if (unique.size !== itemIds.length) {
+    throw new ConflictError("Daftar urutan memuat id duplikat.");
   }
-  await db
-    .update(bundles)
-    .set({ updatedAt: new Date() })
-    .where(eq(bundles.id, bundleId));
+  if (itemIds.length !== existing.length) {
+    throw new ConflictError(
+      "Daftar urutan harus memuat SELURUH item paket (tidak boleh sebagian).",
+    );
+  }
+  // Transaksi: perbarui seluruh urutan secara atomik (gagal parsial → rollback).
+  await db.transaction(async (tx) => {
+    for (let i = 0; i < itemIds.length; i++) {
+      await tx
+        .update(bundleItems)
+        .set({ orderIndex: i + 1 })
+        .where(eq(bundleItems.id, itemIds[i]!));
+    }
+    await tx
+      .update(bundles)
+      .set({ updatedAt: new Date() })
+      .where(eq(bundles.id, bundleId));
+  });
 }
 
 export interface BundleValidation {
@@ -491,19 +504,24 @@ export async function duplicateBundle(
   return (await getBundle(copy.id))!;
 }
 
-/** Apakah sebuah soal dipakai di paket mana pun? (untuk RESTRICT hapus soal) */
+/** Apakah sebuah soal dipakai di paket AKTIF mana pun? (untuk RESTRICT hapus soal) */
 export async function isQuestionUsedInBundles(
   questionId: string,
 ): Promise<boolean> {
+  // T-M7-3: hanya paket AKTIF yang memblokir — paket terarsip tak boleh
+  // menyandera soal (jika tidak, soal mustahil dihapus setelah paket diarsip).
   const [row] = await db
     .select({ id: bundleItems.id })
     .from(bundleItems)
-    .where(eq(bundleItems.questionId, questionId))
+    .innerJoin(bundles, eq(bundles.id, bundleItems.bundleId))
+    .where(
+      and(eq(bundleItems.questionId, questionId), isNull(bundles.deletedAt)),
+    )
     .limit(1);
   return Boolean(row);
 }
 
-/** ID paket (aktif) yang memakai sekumpulan soal. */
+/** ID paket AKTIF yang memakai sekumpulan soal. */
 export async function bundlesUsingQuestions(
   questionIds: string[],
 ): Promise<string[]> {
@@ -511,6 +529,12 @@ export async function bundlesUsingQuestions(
   const rows = await db
     .selectDistinct({ bundleId: bundleItems.bundleId })
     .from(bundleItems)
-    .where(inArray(bundleItems.questionId, questionIds));
+    .innerJoin(bundles, eq(bundles.id, bundleItems.bundleId))
+    .where(
+      and(
+        inArray(bundleItems.questionId, questionIds),
+        isNull(bundles.deletedAt),
+      ),
+    );
   return rows.map((r) => r.bundleId);
 }

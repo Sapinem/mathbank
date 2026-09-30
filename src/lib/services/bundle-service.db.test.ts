@@ -187,6 +187,59 @@ describe("RESTRICT: soal terpakai tak bisa dihapus", () => {
     const after = await getQuestionInternal(q.id, { includeDeleted: true });
     expect(after!.deletedAt).not.toBeNull();
   });
+
+  // T-M7-3: paket TERARSIP tidak boleh menyandera soal (dead-end).
+  it("T-M7-3: paket terarsip tidak lagi memblokir hapus soal", async () => {
+    const b = await createBundle({ title: "Paket Arsip", bundleType: "exam" }, admin);
+    const q = await mkQuestion();
+    await addItem(b.id, q.id, admin);
+    // selama paket AKTIF → tetap terblokir
+    await expect(deleteQuestion(q.id, admin)).rejects.toBeInstanceOf(ConflictError);
+    // arsipkan paket → soal harus bisa dihapus
+    await archiveBundle(b.id, admin);
+    await expect(deleteQuestion(q.id, admin)).resolves.toBeUndefined();
+    const after = await getQuestionInternal(q.id, { includeDeleted: true });
+    expect(after!.deletedAt).not.toBeNull();
+  });
+});
+
+describe("reorderItems — urutan item (T-M7-2)", () => {
+  it("menerima daftar LENGKAP & menerapkan urutan baru", async () => {
+    const b = await createBundle({ title: "Paket Urut", bundleType: "exam" }, admin);
+    const qs: Awaited<ReturnType<typeof addItem>>[] = [];
+    for (let i = 0; i < 3; i++) {
+      const q = await mkQuestion(`Soal urut ${i}`);
+      qs.push(await addItem(b.id, q.id, admin));
+    }
+    const reversed = [qs[2]!.id, qs[1]!.id, qs[0]!.id];
+    await reorderItems(b.id, reversed, admin);
+    const items = await listBundleItems(b.id);
+    expect(items.map((i) => i.item.id)).toEqual(reversed);
+    expect(items.map((i) => i.item.orderIndex)).toEqual([1, 2, 3]);
+  });
+
+  it("T-M7-2: menolak daftar PARSIAL (cegah orderIndex bentrok)", async () => {
+    const b = await createBundle({ title: "Paket Parsial", bundleType: "exam" }, admin);
+    const q1 = await mkQuestion("S1");
+    const q2 = await mkQuestion("S2");
+    const it1 = await addItem(b.id, q1.id, admin);
+    await addItem(b.id, q2.id, admin);
+    // hanya 1 dari 2 → ditolak (dulu diterima → orderIndex duplikat [1,1])
+    await expect(reorderItems(b.id, [it1.id], admin)).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    const items = await listBundleItems(b.id);
+    expect(items.map((i) => i.item.orderIndex)).toEqual([1, 2]); // tak rusak
+  });
+
+  it("T-M7-2: menolak daftar ber-DUPLIKAT id", async () => {
+    const b = await createBundle({ title: "Paket Dup", bundleType: "exam" }, admin);
+    const q = await mkQuestion("S1");
+    const it = await addItem(b.id, q.id, admin);
+    await expect(reorderItems(b.id, [it.id, it.id], admin)).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+  });
 });
 
 describe("duplikasi paket", () => {
