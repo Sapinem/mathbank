@@ -265,22 +265,23 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 ---
 
-## M7 — Paket Soal 🔴
+## M7 — Paket Soal ✅
 
 **Tujuan:** susun naskah dari bank soal.
 
-**Dependensi:** M6 · **Perkiraan:** 4–5 hari
+**Dependensi:** M6 · **Perkiraan:** 4–5 hari · **Status:** ✅ selesai 2026-09-30
 
-- [ ] Service `bundle/` (buat, metadata: judul, petunjuk, durasi, grade, `source_id`)
-- [ ] `bundle_items`: tambah/hapus soal, urutkan (drag), section, `item_number` nullable
-- [ ] Stimulus tampil **1×** di paket; anak merujuk (uji)
-- [ ] Soal terpakai di paket → **RESTRICT** (tak bisa dihapus)
-- [ ] Validasi paket (soal tanpa kunci → peringatan, boleh tapi ditandai)
-- [ ] Duplikasi paket; arsip paket (soft-delete)
-- [ ] Halaman: daftar paket · detail · penyusun (drag-and-drop) · edit
-- [ ] **Desktop-saja** untuk penyusun (`DesktopOnly`); lihat paket enak di HP
-- [ ] Tes: urutan item, stimulus 1×, RESTRICT
-- 📄 **RENCANA-PAKET.md**
+- [x] Service `bundle/` (buat, metadata: judul, petunjuk, durasi, grade, `source_id`)
+- [x] `bundle_items`: tambah/hapus soal, urutkan (drag), section, `item_number` nullable
+- [x] Stimulus tampil **1×** di paket; anak merujuk (uji)
+- [x] Soal terpakai di paket → **RESTRICT** (409 saat dihapus)
+- [x] Validasi paket (soal tanpa kunci → peringatan, boleh tapi ditandai)
+- [x] Duplikasi paket; arsip paket (soft-delete)
+- [x] Halaman: daftar paket · detail · penyusun (drag-and-drop) · edit
+- [x] **Responsif**: penyusun pakai **Sheet** di mobile (2 kolom di desktop) —
+      `DesktopOnly` **DIBUANG** atas permintaan pemilik
+- [x] Tes: urutan item, stimulus 1×, RESTRICT (14 service + 8 API)
+- 📄 **RENCANA-PAKET.md** ✅
 
 **Kriteria:** ✅ susun paket dari bank soal · ✅ stimulus 1× diuji · ✅ gate hijau
 
@@ -441,7 +442,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 | **M4** | `RENCANA-SOAL.md` (11 tipe + answer_key) | 📄 **perlu** |
 | **M5** | `RENCANA-TAKSONOMI.md` | 📄 perlu |
 | **M6** | `RENCANA-PENCARIAN.md` | 📄 perlu |
-| **M7** | `RENCANA-PAKET.md` | 📄 perlu |
+| **M7** | `RENCANA-PAKET.md` | ✅ dibuat |
 | **M8** | `RENCANA-EKSPOR.md` | 📄 perlu |
 | M9 | `STRATEGI-INGEST.md` | 📄 perlu |
 | M10 | `RENCANA-ENRICHMENT.md` | 📄 perlu |

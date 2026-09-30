@@ -30,11 +30,31 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 - **Skrip `pnpm start:lan`** (`next start -H 0.0.0.0`) — untuk menguji aplikasi dari HP/perangkat lain lewat LAN. Mode **dev** (Turbopack) mengirim ~8,8 MB JS + kompilasi on-demand → HP tampak "freeze" saat memuat; produksi hanya ~1,4 MB (6,3× lebih kecil). Didokumentasikan di `RENCANA-UI-MOBILE.md` §11.4.
 
 ### Ditambahkan
-- **M4c — Editor soal & halaman detail** — rute `/bank-soal/baru` (buat) & `/bank-soal/[id]` (detail + sunting). Editor satu-komponen untuk **11 tipe** (kunci opsi vs teks), pratinjau KaTeX langsung, penandaan kunci (tunggal/multi), `distractor_rationale`, metadata (tipe/jenjang/kesulitan/kognitif), simpan draf atau kirim telaah. Detail: FSM (Kirim Telaah), hapus lunak + konfirmasi. Desktop-saja (`DesktopOnly`). e2e alur CRUD (3 lulus). **Menutup dead-link T-M4-1** (`/bank-soal/baru` & `/[id]` kini 200).
+- **M4c — Editor soal & halaman detail** — rute `/bank-soal/baru` (buat) & `/bank-soal/[id]` (detail + sunting). Editor satu-komponen untuk **11 tipe** (kunci opsi vs teks), pratinjau KaTeX langsung, penandaan kunci (tunggal/multi), `distractor_rationale`, metadata (tipe/jenjang/kesulitan/kognitif), simpan draf atau kirim telaah. Detail: FSM (Kirim Telaah), hapus lunak + konfirmasi. **(Dahulu desktop-saja; kini responsif penuh — lihat M7.)** Menutup dead-link T-M4-1 (`/bank-soal/baru` & `/[id]` kini 200).
 - **`docs/RENCANA-SOAL.md`** — 11 tipe final + pemetaan `answer_key`/`data_payload`.
 - **Perbaikan tipe**: `PublicQuestion.answerKey` kini `AnswerKey` (dulu `Record<string, unknown>` longgar) — menutup ~15 error tipe tersembunyi.
+- **M7 — Paket Soal selesai** 🎉:
+  - **Service** `bundle-service.ts` — CRUD paket + item (tambah/hapus/urut),
+    validasi (soal tanpa kunci = peringatan), duplikasi, arsip (soft-delete),
+    **RESTRICT** (soal dipakai paket → 409 saat dihapus). **Stimulus 1×**.
+  - **API** `/api/bundles/**` (7 route) — semua ber-`rateLimit` + izin.
+  - **UI responsif** (`/paket`, `/paket/[id]`, `/paket/[id]/sunting`) — daftar,
+    detail + pratinjau KaTeX, **penyusun drag-and-drop** (`@dnd-kit/react`,
+    keyboard-accessible). Panel bank soal: 2 kolom (desktop) / **Sheet** (mobile).
+  - Tes: `bundle-service.db.test.ts` (14) + `bundle-api.db.test.ts` (8).
+  - Dokumen: **`docs/RENCANA-PAKET.md`**.
+- **Perubahan kebijakan responsif**: **`DesktopOnly` DIBUANG** (keputusan pemilik)
+  — pola "desktop-saja" diganti **"Pola D′ — panel responsif (Sheet)"**.
+  Editor soal & penyusun paket kini **berfungsi penuh di mobile**.
+- **Evaluasi menyeluruh** — `docs/EVALUASI-MENYELURUH.md` (audit arsitektur,
+  keamanan, a11y, mutu). `docs/EVALUASI-STRATEGI-E2E.md` + `EVALUASI-DESKTOPONLY.md`.
 
 ### Diperbaiki
+- **Keamanan #33**: 3 route GET tanpa rateLimit (`auth/me`, `questions/[id]`,
+  `settings`) → ditambah `rateLimit`.
+- **Duplikasi**: ekstrak `bundleColumns()` di `bundle-service.ts`.
+- **Dokumen**: 7 dokumen didaftarkan di `PETA-DOKUMEN.md` (langgar #31); perjelas
+  pagar `DEMO_LOGIN` di `demo-users.ts`.
 - **🔴 Review M3 — klaim "Verifikasi WCAG otomatis" palsu (tak ada kode)** — `A11Y.md` mencentang "kontras terverifikasi mesin" padahal `scripts/theme/` hanya konversi OKLCH. **Dibangun:** `src/lib/theme/color.ts` (konversi OKLCH↔sRGB + `contrastRatio` WCAG), `scripts/theme/tokens.ts`, `scripts/theme/check.ts` (`pnpm theme:check`, 16 pasangan × 2 mode, exit 1 bila gagal), tes `color.test.ts` (9), masuk gate `pnpm check`. **Hasil 16/16 lulus.**
 - **🟢 Review M3 — optimasi shadcn** — audit aturan resmi: `SelectGroup` (bank-soal-view), `space-y-*`→`gap-*`, `dark:text-gold`→token, `<button>` kustom→`Button` resmi, buang `size-*` manual ikon, `role="img"` ikon Flag. e2e tema 10/10 + responsif 6/6.
 - **🟡 Review M3 — nama variabel font** `--font-geist-mono` → `--font-roboto-mono`.
