@@ -1,6 +1,20 @@
 # Changelog — MathBank
 
+
 ## [Unreleased] — M9 Ingest Korpus (berjalan)
+
+### Ditambahkan — Unduh gambar korpus (M9-2b)
+- `src/lib/ingest/media/` (`resolve-url`, `fetch`, `store`, `ingest-media`). Prioritas
+  `srcset` > `src` (mathcyber `src` = path crawler rusak/404, URL asli di `srcset`);
+  simpan ke `MEDIA_STORAGE_PATH` dengan nama `contentHash` (dedup) + sharding 2 huruf;
+  batas ukuran & whitelist mime; gagal → flag.
+- `clean.ts`: `bestImageSrc` (pilih URL gambar terbaik dari `<img>`).
+- `docs/RENCANA-MEDIA.md` — rencana penanganan gambar korpus.
+
+### Ditambahkan — Segmentasi + adapter per-sumber (M9-2)
+- `src/lib/ingest/parsers/{segment,items,types}.ts` + `adapters/{m4thlab,mathcyber,defantri,index}.ts`.
+- Temuan: `value="corect"` (defantri) = **PENGECOH**, bukan kunci; mathcyber punya opsi
+  **INLINE 2-kolom**; defantri dipisah `name="qN"`. Validasi 1.069 file → **20.946 soal**.
 
 ### Ditambahkan — Aturan general cleaning korpus (M9-1)
 - `docs/ATURAN-CLEANING-KORPUS.md` — aturan general cleaning (final, keputusan user).
