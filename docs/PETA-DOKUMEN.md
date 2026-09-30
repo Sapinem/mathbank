@@ -76,6 +76,7 @@
 | D17 | `RENCANA-SOAL.md` | ✅ | **dibuat** 2026-09-30 — 11 tipe soal (M4c) |
 | D18 | `RENCANA-PAKET.md` | ✅ | **dibuat** 2026-09-30 — paket soal & penyusun (M7) |
 | D21 | `RENCANA-RATE-LIMIT.md` | ✅ | **dibuat** 2026-09-30 — rate-limit auth: koreksi NEW1 + R1/R2/R3 (selesai) |
+| D22 | `RENCANA-ENTERPRISE.md` | ✅ | **dibuat** 2026-09-30 — pengerasan enterprise P1–P5 (selesai) |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 

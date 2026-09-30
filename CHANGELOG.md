@@ -33,6 +33,22 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 - **M4c — Editor soal & halaman detail** — rute `/bank-soal/baru` (buat) & `/bank-soal/[id]` (detail + sunting). Editor satu-komponen untuk **11 tipe** (kunci opsi vs teks), pratinjau KaTeX langsung, penandaan kunci (tunggal/multi), `distractor_rationale`, metadata (tipe/jenjang/kesulitan/kognitif), simpan draf atau kirim telaah. Detail: FSM (Kirim Telaah), hapus lunak + konfirmasi. **(Dahulu desktop-saja; kini responsif penuh — lihat M7.)** Menutup dead-link T-M4-1 (`/bank-soal/baru` & `/[id]` kini 200).
 - **`docs/RENCANA-SOAL.md`** — 11 tipe final + pemetaan `answer_key`/`data_payload`.
 - **Perbaikan tipe**: `PublicQuestion.answerKey` kini `AnswerKey` (dulu `Record<string, unknown>` longgar) — menutup ~15 error tipe tersembunyi.
+- **🛡 Pengerasan Enterprise (P1–P5)** — atas analisis pemilik; **semua klaim
+  diverifikasi ke codebase nyata** (semuanya valid):
+  - **P1 — `/api/health`**: lapor koneksi DB + invarian (trigger/CHECK/HNSW/uuidv7);
+    `200` sehat / `503` rusak. Modul `src/lib/db/invariants.ts` (sumber tunggal).
+  - **P2 — Guard startup** (`src/instrumentation.ts`): saat server menyala, invarian
+    diverifikasi → log ERROR bila hilang; `STRICT_INVARIANTS=true` menggagalkan startup.
+  - **P3 — `audit_logs` append-only** (trigger DB `reject_audit_mutation`): UPDATE/DELETE
+    ditolak di level DB (uji: INSERT ok, UPDATE/DELETE → error). Tahan manipulasi via
+    DBeaver/pgAdmin, bukan hanya lewat app.
+  - **P4 — `drizzle/manual/provision-prod.sql`**: provisioning 2-tahap (admin:
+    ekstensi; app: role NOSUPERUSER + GRANT CRUD + audit append-only) — menutup S10.
+  - **P5 — `docs/RENCANA-DEPLOY.md`**: langkah rilis dua-tahap + §5b guard/health.
+  - **P6 (audit trigger DB di `questions`) DITUNDA** — butuh mekanisme aktor
+    (`SET LOCAL app.actor`); lihat `RENCANA-ENTERPRISE.md` §E2.
+  - Bukti: log `[invarian] OK — 26 trigger, 2 CHECK, 1 HNSW, uuidv7 ✓`; `/api/health` 200;
+    immutability diuji; `db:verify` hijau. Tes: +3 (`health/route.test.ts`).
 - **M7 — Paket Soal selesai** 🎉:
   - **Service** `bundle-service.ts` — CRUD paket + item (tambah/hapus/urut),
     validasi (soal tanpa kunci = peringatan), duplikasi, arsip (soft-delete),

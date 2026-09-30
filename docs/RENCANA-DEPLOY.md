@@ -61,24 +61,46 @@ Opsional (per fitur): `BGE_M3_SERVICE_URL`, `MEDIA_STORAGE_PATH`, `TIKZ_TMP_ROOT
 
 ---
 
-## 5. Langkah Rilis (rencana)
+## 5. Langkah Rilis — **dua tahap** (least privilege)
 
+Sesuai **S10** (`KEAMANAN.md`): role aplikasi produksi **bukan** superuser.
+Migrasi dipisah: **admin** membuat privilese tinggi sekali, **app** menjalankan sisanya.
+
+### Tahap 1 — Provisioning (ADMIN DB, sekali)
 ```bash
-# 1. Bangun
+# Ekstensi butuh superuser → hanya admin.
+psql "$ADMIN_DATABASE_URL" -v app_role=mathbank_app -f drizzle/manual/provision-prod.sql
+# (skrip ini: CREATE EXTENSION vector/pg_trgm, buat role app NOSUPERUSER,
+#  GRANT CRUD, audit_logs append-only)
+```
+
+### Tahap 2 — Migrasi & rilis (ROLE APP, berulang)
+```bash
 pnpm install --frozen-lockfile
 pnpm check                 # gate: typecheck+lint+coverage+build
 
-# 2. Siapkan DB (sekali, DB kosong)
-psql ... -c "CREATE EXTENSION IF NOT EXISTS vector; ...pg_trgm...; ...pgcrypto;"
-pnpm db:migrate            # skema penuh dari file (+ safety SQL)
-pnpm db:verify             # pastikan 27 tabel, 2 CHECK, 1 HNSW, 25 trigger
+# Skema: TANPA ekstensi (sudah dibuat admin), pakai role app least-privilege.
+pnpm db:migrate            # skema + safety SQL (trigger/CHECK/HNSW)
+pnpm db:verify             # pastikan 27 tabel, 2 CHECK, 1 HNSW, 26 trigger
 pnpm seed:taxonomy         # grade/difficulty/cognitive
 
-# 3. Jalankan
 pnpm build && pnpm start
 ```
 
+> **Dev lokal** tetap memakai role superuser (agar `CREATE EXTENSION` mudah);
+> least-privilege **hanya relevan untuk produksi**. Lihat `docs/RENCANA-ENTERPRISE.md` §E1.
+
 **Rollback:** simpan versi `.env` + **backup DB sebelum migrasi**; rollback aplikasi = deploy commit sebelumnya; rollback DB = pulihkan backup (lihat `BACKUP-RECOVERY.md`).
+
+---
+
+## 5b. Guard Invarian & Health Check
+
+- **Startup** (`src/instrumentation.ts`): saat server menyala, invarian DB
+  diverifikasi (26 trigger, 2 CHECK, 1 HNSW, uuidv7). Hilang → **log ERROR**;
+  dengan `STRICT_INVARIANTS=true` → **gagalkan startup** (CI/staging sensitif).
+- **Runtime** (`GET /api/health`): lapor status + invarian; `200` sehat, `503` rusak.
+  Pakai untuk probe uptime/monitoring.
 
 ---
 
@@ -106,6 +128,8 @@ jobs:
 - [ ] Rahasia di secret manager (bukan `.env` di repo)
 - [x] ~~Security headers (utang **S2**)~~ **✅ selesai** (`next.config.ts`); sisa: HTTPS/TLS di reverse proxy
 - [x] ~~Rate limiting (utang **S1**)~~ **✅ selesai**
+- [x] ~~Health check invarian~~ **✅ selesai** (`/api/health` + `instrumentation.ts`)
+- [ ] Role DB produksi = **least-privilege** (jalankan `drizzle/manual/provision-prod.sql` sebagai admin; S10)
 - [ ] Backup terjadwal + **uji restore** (`BACKUP-RECOVERY.md`)
 - [ ] Observabilitas: logging + health check (`OBSERVABILITAS.md`)
 - [ ] `db:verify` hijau di DB produksi

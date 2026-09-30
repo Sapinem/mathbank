@@ -13,12 +13,12 @@ import postgres from "postgres";
 
 config({ path: ".env" });
 
-/** Harapan minimum skema (rata-rata setelah 0000..0003). */
+/** Harapan minimum skema (rata-rata setelah 0000..0004). */
 const EXPECTED = {
-  tables: 27,
+  tables: 28, // 27 awal + rate_limit (Better Auth, migrasi 0004)
   checkConstraints: 2,
   hnswIndexes: 1,
-  triggers: 25, // 21 updated_at + 1 stimulus + 1 cycle + 2 usage_count
+  triggers: 26, // 21 updated_at + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
 } as const;
 
 /** Nama constraint/trigger kritis yang WAJIB ada. */
@@ -32,6 +32,7 @@ const REQUIRED_TRIGGERS = [
   "trg_topics_cycle",
   "trg_question_topics_usage",
   "trg_question_tags_usage",
+  "trg_audit_logs_immutable",
 ];
 
 type Row = Record<string, unknown>;
