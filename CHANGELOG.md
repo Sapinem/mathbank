@@ -1,6 +1,18 @@
 # Changelog — MathBank
 
 
+## [Unreleased] — M11 MCP (berjalan)
+
+### Ditambahkan — MCP: agen AI on-demand (M11)
+
+- **Server MCP** (`@modelcontextprotocol/sdk` 1.30.1, spec 2025-11-25): `McpServer` per-actor.
+- **Transport**: **stdio** (`pnpm mcp:stdio`, klien desktop) + **Streamable HTTP** (`/api/mcp`, stateless, API key).
+- **7 tool**: `search_questions` · `get_question` · `create_question` · `list_topics` · `list_sources` · `enrich_question` · `embed_questions`.
+- **Kebijakan tulis 1 tempat** (`mcp/policy.ts`): kapabilitas → izin L1. Agen **tak pernah** melihat `answer_key`; tak ada tool status/hapus/bundle.
+- **API key agen** (`/api/system/agent-keys` + kartu "Akses Agen" di Pengaturan): buat (tampil sekali) · daftar · cabut. Tersimpan **hash**.
+- **Perbaikan**: `enrichment-service` cek izin **sebelum** kerja AI (fail-closed).
+- **Tes**: +10 unit (policy) + 11 DB (MCP 6 · agent-key 5) → unit **419** · DB **139** · coverage **92,01%**.
+
 ## [Unreleased] — M10 AI Enrichment & Embedding (berjalan)
 
 ### Ditambahkan — Klien AI, embedding & enrichment (M10)

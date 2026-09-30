@@ -1,7 +1,7 @@
 # MILESTONE — MathBank (Rencana Eksekusi)
 
 > **Dokumen ini menjawab:** *Urutan pembangunan MathBank — apa dulu, apa kemudian, kapan selesai?*
-> **Status:** 🟢 aktif — M0–M3 ✅ · M4a–M4d ✅ · M5–M8 ✅ (MVP) · **M9 ✅ · M10 ✅ · M11 siap dikerjakan**.
+> **Status:** 🟢 aktif — M0–M3 ✅ · M4a–M4d ✅ · M5–M8 ✅ (MVP) · **M9 ✅ · M10 ✅ · M11 ✅ · M12 siap dikerjakan**.
 > **Versi:** 2.2 · **Tanggal:** 2026-09-30
 > **Rujukan:** `PRD.md` (ruang lingkup), `DESAIN-PER-LAPISAN-MATHBANK.md` (L1–L9), `PETA-DOKUMEN.md`, `KEAMANAN.md`, `CATATAN-PUTUSAN.md`.
 
@@ -47,7 +47,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 |---|------|-----------|------------|:------:|
 | M9 | Ingest Korpus (parsing data sumber) | ✅ | M8 | ✅ M9-1/2/2b/2c/3 selesai (korpus HTML, bukan PDF) |
 | M10 | AI Enrichment & Embedding | ✅ | M9 | **TUNTAS** — client·embedding·enkripsi·enrich·semantik·UI Pengaturan·UI enrich di halaman soal |
-| M11 | MCP (agen/otomasi) | 🟡 | M10 | ⬜ |
+| M11 | MCP (agen/otomasi) | 🟡 | M10 | ✅ **TUNTAS** |
 | M12 | Ekspor Moodle | 🟢 | M8 | ⬜ |
 
 ### Fase 3 — Operasional & Hardening (BARU di v2.0)
@@ -347,12 +347,12 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 **Dependensi:** M10 · **Perkiraan:** 3–4 hari
 
-- [ ] `mcp/server.ts`
-- [ ] `mcp/policy.ts` — kebijakan tulis **1 tempat**
-- [ ] Tool: `question` (create/bulk), `search`, `asset`, `enrich`
-- [ ] Izin peran `agent`/`machine` (L1) — **tak pernah** lihat `answer_key`
-- [ ] API key untuk agen (manajemen + cabut)
-- 📄 **RENCANA-MCP.md**
+- [x] `mcp/server.ts` ✅ (+ stdio `src/mcp-stdio.ts` + HTTP `/api/mcp`)
+- [x] `mcp/policy.ts` — kebijakan tulis **1 tempat** ✅
+- [x] Tool: `search_questions`·`get_question`·`create_question`·`list_topics`·`list_sources`·`enrich_question`·`embed_questions` ✅
+- [x] Izin peran `agent`/`machine` (L1) — **tak pernah** lihat `answer_key` ✅ (diuji)
+- [x] API key untuk agen (manajemen + cabut) + UI "Akses Agen" ✅
+- 📄 **RENCANA-MCP.md** ✅ (terimplementasi)
 
 ## M12 — Ekspor Moodle 🟢
 

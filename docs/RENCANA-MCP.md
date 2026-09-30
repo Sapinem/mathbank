@@ -100,4 +100,22 @@ src/lib/mcp/
 
 ## 9. Catatan Verifikasi
 
-*(Diisi saat implementasi — bukti nyata tiap langkah: perintah, keluaran, tes.)*
+**Status: ✅ TERIMPLEMENTASI (2026-09-30)** — M11-a..e selesai.
+
+| Langkah | Status | Bukti |
+|---------|:------:|-------|
+| M11-a `policy.ts` (+`actor.ts`) | ✅ | kapabilitas → izin L1; 10 tes unit |
+| M11-b `tools.ts` | ✅ | 7 tool tipis; tanpa answer_key |
+| M11-c `server.ts` + stdio + HTTP | ✅ | handshake nyata (init → tools/list) |
+| M11-d route `/api/mcp` | ✅ | WebStandard Streamable HTTP, stateless |
+| M11-e API key (service+API+UI) | ✅ | create/list/revoke; kartu "Akses Agen" |
+
+**Bukti nyata:**
+- Stdio: pipe `initialize`+`tools/list` → serverInfo `{mathbank, 0.1.0}`, 7 tool; stdout murni protokol.
+- Keselamatan kunci: `get_question`/`search_questions` pada soal ber-kunci → keluaran **tanpa** `answerKey`/`answer_key`/nilai rahasia (diuji).
+- Izin: `machine` ditolak baca soal; agent edit soal orang lain ditolak (`own`).
+- Tool tak dibuka: tak ada tool status/hapus/bundle (L1).
+- API key tersimpan **hash**; revoke terverifikasi.
+- Gate: unit **419** · DB **139** · coverage **92,01%** · tsc 0 · lint 0.
+
+**Keputusan (2026-09-30):** D1 stdio+HTTP · D2 SDK resmi 1.30.1 · D3 izin=L1 apa adanya.
