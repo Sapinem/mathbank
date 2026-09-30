@@ -91,3 +91,36 @@
 ## 4. Urutan pengerjaan
 1. S5 (kebijakan sandi) → 2. S6 (pre-commit scan) → 3. S7 (audit baca) →
 4. S8 (advisory) → 5. S9 (CSP hash) → 6. Redis (interface) → 7. 2FA → 8. S4 (email).
+
+### S9 — Hasil (2026-09-30): nonce TIDAK BISA di stack ini
+
+**Dicoba**: pola resmi Next 16 — `src/proxy.ts` membuat nonce per-request +
+`script-src 'nonce-…' 'strict-dynamic'`, `style-src` tetap `'unsafe-inline'`.
+
+**Hasil: GAGAL & DIREVERT.** Temuan terverifikasi:
+
+| Bukti | Hasil |
+|---|---|
+| Header CSP | ✅ muncul: `script-src 'self' 'nonce-…' 'strict-dynamic'` |
+| `<meta name="csp-nonce">` | ✅ nonce ter-propagasi |
+| `<script src="/_next/static/chunks/*">` ber-nonce | ❌ **0 dari 15** |
+| React menghidrasi? | ❌ **tidak** — tombol form tak merespons (JS diblokir `strict-dynamic`) |
+
+**Akar**: bug **vercel/next.js#93094** — di produksi dengan **Turbopack** (bundler
+default Next 16), Next TIDAK menempelkan nonce ke tag `<script>` yang disuntik
+framework (`getRequiredScripts` → `bootstrapScript` tanpa field `nonce`). Hanya
+dev-mode yang diperbaiki. Pada 16.x produksi masih bermasalah.
+
+**Dicoba alternatif**: `next build --webpack` → **gagal type-check** (route typing
+Next 16 spesifik Turbopack) → tak layak.
+
+**Keputusan akhir (Opsi 1)**: kembalikan CSP statis (`script-src 'self'
+'unsafe-inline'`, semua directive ketat lain dipertahankan) di `next.config.ts`.
+**Namun** `src/proxy.ts` **DIPERTAHANKAN** untuk: **membuang header
+`Content-Security-Policy` dari request masuk** — pertahanan terhadap
+**CVE-2026-44581 / GHSA-ffhc-5mcf-pf4q** (App Router membaca nonce dari header CSP
+request → injeksi atribut XSS bila header klien dipercaya). Ini nilai keamanan
+nyata yang tetap kita peroleh walau nonce belum bisa dipakai.
+
+**Utang tercatat**: aktifkan kembali nonce bila bug #93094 ditutup di rilis Next
+berikutnya (kode nonce tersimpan di riwayat git commit M13).

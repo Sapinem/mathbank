@@ -71,7 +71,6 @@ function securityHeaders(isDev: boolean, isHttps: boolean) {
     cspValue = `${cspValue}; upgrade-insecure-requests`;
   }
   const headers = [
-    { key: "Content-Security-Policy", value: cspValue },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "X-Frame-Options", value: "DENY" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -88,7 +87,7 @@ function securityHeaders(isDev: boolean, isHttps: boolean) {
       value: "max-age=63072000; includeSubDomains; preload",
     });
   }
-  return headers;
+  return { headers, cspValue };
 }
 
 const nextConfig: NextConfig = {
@@ -115,10 +114,14 @@ const nextConfig: NextConfig = {
     // di lingkungan produksi. Default: HTTP polos → directive tidak dikirim,
     // agar uji produksi via LAN (`http://<ip>:3001`) tetap memuat CSS/aset.
     const isHttps = process.env.APP_HTTPS === "true";
+    const { headers, cspValue } = securityHeaders(isDev, isHttps);
     return [
       {
+        // CSP statis + header keamanan untuk SEMUA rute.
+        // (Nonce per-request TIDAK dipakai — bug Turbopack #93094; lihat src/proxy.ts
+        //  yang kini hanya membuang header CSP kiriman klien.)
         source: "/:path*",
-        headers: securityHeaders(isDev, isHttps),
+        headers: [{ key: "Content-Security-Policy", value: cspValue }, ...headers],
       },
     ];
   },
