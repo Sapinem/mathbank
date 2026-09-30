@@ -112,7 +112,7 @@
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
 | F1 | `KONTRAK-API.md` | ✅ | **dibuat** 2026-09-29 — 13 endpoint + envelope + versioning |
-| F2 | `RENCANA-MCP.md` | 🟢 | **belum** — kontrak tool MCP + kebijakan tulis (M11) |
+| F2 | `RENCANA-MCP.md` | 🟡 | **dirancang** 2026-09-30 — M11: tool MCP + kebijakan tulis 1 tempat; 3 keputusan ✅ (stdio+HTTP, SDK resmi 1.29.x, izin=L1) |
 | F3 | `RENCANA-EKSPOR.md` | 🟢 | **belum** — paket/Moodle/PDF (M8, M12) |
 | F4 | `RENCANA-MOODLE.md` | 🟢 | **belum** — integrasi Moodle (M12) |
 

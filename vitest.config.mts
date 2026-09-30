@@ -36,6 +36,7 @@ export default defineConfig({
         "src/lib/crypto/secrets.ts",
         "src/lib/ai/client.ts",
         "src/lib/ai/enrich.ts",
+        "src/lib/mcp/policy.ts",
         "src/lib/embedding/bge-m3.ts",
         "src/lib/ingest/parsers/segment.ts",
         "src/lib/ingest/parsers/items.ts",

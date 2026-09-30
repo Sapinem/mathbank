@@ -30,13 +30,15 @@
     "e2e:manual": "playwright test",
     "e2e:manual:ui": "playwright test --ui",
     "start:lan": "next start -H 0.0.0.0",
-    "check": "pnpm theme:check && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build"
+    "check": "pnpm theme:check && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
+    "mcp:stdio": "tsx src/mcp-stdio.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@better-auth/api-key": "^1.7.6",
     "@better-auth/drizzle-adapter": "^1.7.6",
     "@dnd-kit/react": "^0.5.0",
+    "@modelcontextprotocol/sdk": "^1.30.1",
     "@tanstack/react-query": "^5.104.0",
     "better-auth": "^1.7.6",
     "class-variance-authority": "^0.7.1",

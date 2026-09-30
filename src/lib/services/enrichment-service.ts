@@ -117,11 +117,6 @@ export async function enrichQuestion(
   actor: Actor,
   fields: EnrichField[] = ALL_FIELDS,
 ): Promise<EnrichOutcome> {
-  const cfg = await getAiConfig();
-  if (!isAiReady(cfg)) {
-    return { questionId, ok: false, error: "AI belum siap (cek Pengaturan → AI)." };
-  }
-
   const [q] = await db
     .select({
       id: questions.id,
@@ -134,8 +129,14 @@ export async function enrichQuestion(
     .limit(1);
   if (!q) throw new NotFoundError("Soal tidak ditemukan.");
 
-  // Izin per-soal: `own` untuk teacher/reviewer (ownerId). Admin = yes.
+  // Izin per-soal DULU (fail-closed): jangan lakukan kerja AI sebelum lolos izin.
+  // `own` untuk teacher/reviewer/agent (ownerId); admin = yes.
   assertCan(actor, "question:edit", { ownerId: q.authorId });
+
+  const cfg = await getAiConfig();
+  if (!isAiReady(cfg)) {
+    return { questionId, ok: false, error: "AI belum siap (cek Pengaturan → AI)." };
+  }
 
   const [topicNames, tagNames] = await Promise.all([listTopicNames(), listTagNames()]);
   const prompt = buildUserPrompt({
