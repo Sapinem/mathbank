@@ -43,6 +43,10 @@
 
 **Rekomendasi: ✅ LAKUKAN** — murah, aman, dan **memang praktik terbaik** menjaga patch terbaru. Wajib lewat gate penuh (tsc/lint/test/build/smoke) sebagai jaring.
 
+**✅ SUDAH DIKERJAKAN (2026-09-30, branch `chore/bump-p1-patch`):** `next` 16.3.7 ·
+`react`/`react-dom` 19.3.0 · `eslint-config-next` 16.3.7. **Gate penuh HIJAU:** tsc 0,
+lint 0, 274 unit, 90 DB, build 0 (30/30), health 200, smoke ✅.
+
 ---
 
 ## 2. P2 — TypeScript 5 → 7 (Project Corsa, native Go)
@@ -117,7 +121,7 @@ Tak ada biaya/risiko sekarang (belum dipakai). **Keputusan sebaiknya ditunda ke 
 
 | Prio | Aksi | Verdict | Alasan inti |
 |---|---|---|---|
-| **P1** | Bump `next`/`react`/`eslint-config-next` patch/minor | ✅ **LAKUKAN** | Murah, aman, praktik terbaik |
+| **P1** | Bump `next`/`react`/`eslint-config-next` patch/minor | ✅ **SELESAI** (2026-09-30) | Murah, aman, praktik terbaik |
 | **P2** | TypeScript 5 → 7 | ⛔ **TUNDA** | Untung kecil (repo kecil), risiko lint/editor/Next; tunggu 7.1 |
 | **P3** | ESLint 9 → 10 | 🟡 **TUNDA** | Tunggu `eslint-config-next` dukung ESLint 10 |
 | **P2b** | react-table v8/v9 | ⏸️ **NANTI** | Belum dipakai; pilih **v9** saat M8/M9 |

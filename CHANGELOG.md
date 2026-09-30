@@ -22,6 +22,13 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
     faktanya efek `UNIQUE` + konvensi `role`, bukan otomasi. Dikoreksi.
   - **Tes DB: 14 → 18** (+4). **Pelajaran → `CONSTRAINTS.md` #45–46.**
 
+### Diubah
+- **⬆️ P1 — bump patch/minor tumpukan** (`docs/EVALUASI-UPGRADE-TUMPUKAN.md`):
+  `next` **16.3.6 → 16.3.7**, `react`/`react-dom` **19.2.8 → 19.3.0**,
+  `eslint-config-next` **16.3.6 → 16.3.7**. **Gate penuh HIJAU:** tsc 0, lint 0,
+  274 unit, 90 DB, build 0 (30/30), health 200, smoke ✅. TS 7 & ESLint 10 tetap
+  **ditunda** (alasan di dokumen evaluasi).
+
 ### Dokumentasi
 - **🔧 `REVIEW-TUMPUKAN-TEKNOLOGI.md` disinkronkan** (verifikasi ulang 2026-09-30): §5/§6
   masih menyatakan "`radix-ui` terpasang, Base UI belum" — padahal **migrasi SUDAH selesai**

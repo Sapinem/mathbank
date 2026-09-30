@@ -25,8 +25,8 @@
 ### Fondasi
 | Paket | Versi | Untuk |
 |-------|-------|-------|
-| `next` | 16.3.6 | Framework (App Router, Turbopack) |
-| `react` / `react-dom` | 19.2.8 | UI (React Compiler) |
+| `next` | 16.3.7 | Framework (App Router, Turbopack) |
+| `react` / `react-dom` | 19.3.0 | UI (React Compiler) |
 | `typescript` | 5.9.3 | Bahasa |
 | `tailwindcss` | 4.3.3 | Styling (v4, CSS-first) |
 
