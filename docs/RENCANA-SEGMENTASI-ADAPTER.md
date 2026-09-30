@@ -1,6 +1,6 @@
 # RENCANA SEGMENTASI & ADAPTER — M9-2
 
-> **Status:** 📋 rencana (butuh persetujuan) · **Milestone:** M9 · **Tanggal:** 2026-09-30
+> **Status:** ✅ **TERIMPLEMENTASI** (3 adapter HTML; pusmendik menyusul M9-2b) · **Milestone:** M9 · **Tanggal:** 2026-09-30
 > **Lapisan:** SETELAH cleaning (`clean.ts`). Lapisan ini **tahu soal & sumber**.
 > Berbasis pemeriksaan langsung struktur HTML korpus (bukan dugaan).
 
@@ -188,3 +188,38 @@ pilihAdapter(meta) →
 
 *Lihat juga: `docs/STRATEGI-INGEST.md`, `docs/ATURAN-CLEANING-KORPUS.md`,
 `~/projects/qbank/src/lib/ingest/corpus-parser.ts` (rujukan lama — monolit, kita pecah).*
+
+---
+
+## 9. Hasil Implementasi & Validasi (2026-09-30)
+
+### Adapter yang dibangun
+- `segment.ts` — titik masuk + pemilih adapter
+- `adapters/{m4thlab,mathcyber,defantri}.ts` + `adapters/index.ts`
+- `items.ts` — aturan mutu bersama; `types.ts` — kontrak
+
+### Validasi SELURUH korpus (1.069 file)
+
+| Sumber | File | Kosong | Soal | PG | Essay | Ada Kunci | Tanpa Kunci |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| mathcyber | 406 | 64 | 7.643 | 4.595 | 3.048 | 3.778 | 817 |
+| m4thlab | 249 | 28 | 2.938 | 2.219 | 719 | **2.219** | 0 |
+| defantri | 414 | 144 | 10.284 | 10.254 | 30 | 8.609 | 1.645 |
+| **TOTAL** | 1.069 | 236 | **20.865** | 17.068 | 3.797 | **14.606** (70%) | 2.462 |
+
+### Aturan kunci (final, terbukti data)
+- **m4thlab**: `pilihJawaban(this, true)` → kunci pasti (2.219/2.219).
+- **defantri**: `value="correct"` = KUNCI; **`value="corect"` = PENGECOH** (bukan typo!).
+  Hanya varian `correct` yang tidak sengaja salah ketik (`crorect`,`corrrect`,`crrect`) ditoleransi.
+- **mathcyber**: `(Jawaban X)` → kunci; tanpa itu → kosong + catatan (817 PG).
+
+### Temuan penting
+1. **`corect` ≠ typo** — itu pengecoh sengaja (32.752×). Memasukkannya sebagai "kunci"
+   akan menandai SEMUA opsi benar (bug yang sempat terjadi & diperbaiki).
+2. **mathcyber punya opsi INLINE** (bukan `<ol>`): `A. … D. … B. … E. …` (2-kolom) —
+   +1.796 soal PG yang tadinya dianggap essay.
+3. **defantri**: pemisah andal = `name="qN"` (bukan `<blockquote>`, yang menggabungkan soal).
+
+### Belum (M9-2b)
+- **pusmendik**: `pusmendik_dayaserap` = **JSON terstruktur** (`questions[].question_data`
+  dengan `pertanyaan/pilihan/kunci_jawaban`) — butuh masukan non-HTML; `pusmendik_tka` = HTML.
