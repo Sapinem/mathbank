@@ -46,7 +46,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 
 | M | Nama | Prioritas | Dependensi | Status |
 |---|------|-----------|------------|:------:|
-| M9 | Ingest PDF | 🟡 | M8 | ⬜ |
+| M9 | Ingest Korpus (parsing data sumber) | 🟡 | M8 | ⬜ **· arah baru: korpus HTML, bukan PDF** |
 | M10 | AI Enrichment & Embedding | 🟡 | M9 | ⬜ |
 | M11 | MCP (agen/otomasi) | 🟡 | M10 | ⬜ |
 | M12 | Ekspor Moodle | 🟢 | M8 | ⬜ |
@@ -311,19 +311,22 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 # FASE 2 — LANJUT
 
-## M9 — Ingest PDF 🟡
+## M9 — Ingest Korpus (parsing data sumber) 🟡
 
 **Dependensi:** M8 · **Perkiraan:** 5–7 hari
+**⚙️ Arah (2026-09-30):** **bukan PDF** — fokus **parsing korpus HTML** yang sudah dicrawl
+(mathcyber · m4thlab · defantri · pusmendik). Bahan di `~/projects/qbank/data/corpora/`.
 
-- [ ] `ingest/parsers/` (fungsi murni teruji: unescape, clean, normalize)
-- [ ] `ingest/extract.ts` (ekstraksi teks/layout PDF)
-- [ ] `ingest_queue`: target_type, status, retry, idempotensi
-- [ ] Endpoint `/api/v1/ingest/*` (muka mesin — L4)
-- [ ] Alur: PDF → parse → soal (draft) → antre → telaah
+- [ ] `ingest/parsers/` — fungsi murni teruji: `clean` · `segment` · `items` (dipecah, bukan monolit)
+- [ ] `ingest/parsers/adapters/` — penanda per-sumber (mathcyber · m4thlab · defantri)
+- [ ] `ingest/queue.ts` — enqueue artikel + status + retry + **idempotensi** (hash konten)
+- [ ] `ingest/commit.ts` — hasil parse → soal **draft** (lewat `createQuestion`, transaksi)
+- [ ] Endpoint `/api/v1/ingest/*` (muka mesin — L4): upload · queue · commit
+- [ ] Alur: HTML korpus → parse → soal (draft) → antre → telaah
 - [ ] Halaman **Ingest & Integrasi** (grup Sistem) — 3 tab (aktifkan dari tersembunyi)
-- [ ] Pemisahan soal & stimulus; deteksi nomor/opsi
-- [ ] Tes parser (fixture PDF)
-- 📄 **STRATEGI-INGEST.md**
+- [ ] Deteksi opsi/nomor/kunci + pisah pembahasan; artikel tanpa soal → `skipped`
+- [ ] Tes parser (fixture per-sumber)
+- 📄 **STRATEGI-INGEST.md** ✅ (dirombak 2026-09-30)
 
 ## M10 — AI Enrichment & Embedding 🟡
 
@@ -445,7 +448,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 | **M6** | `RENCANA-PENCARIAN.md` | 📄 perlu |
 | **M7** | `RENCANA-PAKET.md` | ✅ dibuat |
 | **M8** | `RENCANA-EKSPOR.md` | ✅ dibuat |
-| M9 | `STRATEGI-INGEST.md` | 📄 perlu |
+| M9 | `STRATEGI-INGEST.md` | ✅ dibuat |
 | M10 | `RENCANA-ENRICHMENT.md` | 📄 perlu |
 | M11 | `RENCANA-MCP.md` | 📄 perlu |
 | M12 | `RENCANA-MOODLE.md` | 📄 perlu |

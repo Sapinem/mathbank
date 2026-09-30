@@ -118,7 +118,7 @@
 
 | # | Dokumen | Status | Catatan |
 |---|---------|:------:|---------|
-| G1 | `STRATEGI-INGEST.md` | 🟢 | **belum** — PDF → soal (M9) |
+| G1 | `STRATEGI-INGEST.md` | ✅ | **dirombak** 2026-09-30 — M9 = parsing **korpus HTML** (mathcyber/m4thlab/defantri), bukan PDF; aturan global + adapter per-sumber |
 | G2 | `RENCANA-ENRICHMENT.md` | 🟢 | **belum** — AI embedding/tagging (M10) |
 | G3 | `RENCANA-TAKSONOMI.md` | 🟢 | **belum** — seed & kelola taksonomi (M5) |
 | G4 | `arsip/RENCANA-MIGRASI-DATA.md` | 📦 | **diarsipkan** (dibatalkan) 2026-09-29 |

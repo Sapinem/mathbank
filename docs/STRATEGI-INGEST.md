@@ -1,97 +1,130 @@
-# STRATEGI INGEST — M9 (PDF → Bank Soal)
+# STRATEGI INGEST — M9: Parsing Korpus (mathcyber · m4thlab · defantri)
 
-> **Status:** 📋 rencana (butuh persetujuan — menambah dependency) · **Milestone:** M9 (Fase 2) · **Tanggal:** 2026-09-30
-> **Sifat:** keputusan arsitektural (CONSTRAINTS #2 — Zero Silent Assumptions). **Belum ada kode ditulis.**
+> **Status:** 📋 rencana (butuh persetujuan) · **Milestone:** M9 (Fase 2) · **Tanggal:** 2026-09-30
+> **Perubahan arah:** M9 **BUKAN** PDF. Fokus: **parsing korpus HTML** yang sudah dicrawl
+> (mathcyber, m4thlab, defantri, pusmendik). Keputusan pemilik produk 2026-09-30.
 
 ---
 
 ## 1. Tujuan
 
-Menutup alur **naskah → bank soal**: unggah PDF naskah/ujian → ekstrak teks →
-pisahkan soal & stimulus → deteksi nomor + opsi → buat soal **draft** → antre telaah.
+Membangun **aturan global** untuk mengolah korpus (HTML artikel hasil crawl) menjadi
+**soal draft** di MathBank, beserta **endpoint**-nya — menggantikan skrip ad-hoc
+per-sumber di QBank menjadi satu mesin yang:
 
-Pelengkap MVP: setelah M8 (ekspor cetak), M9 melengkapi arah **masuk** (import).
-
----
-
-## 2. Keputusan yang Butuh Persetujuan
-
-### 2.1 Library ekstraksi PDF
-
-Riset 2026-09-30. Ekstraksi teks PDF di Node/Next memerlukan *render engine* PDF.js.
-
-| Kandidat | Dep | Runtime | Layout (x/y/font) | OCR | Catatan |
-|---|---|---|---|---|---|
-| **`unpdf`** ⭐ | **0 (zero-dep)** | Node+edge+serverless | ✅ `extractTextItems` (x,y,fontSize,dir) | ❌ | unjs collective; bundel PDF.js **v5.6** serverless; aktif dipelihara; pengganti modern `pdf-parse` |
-| `pdfjs-dist` langsung | ± besar | Node (butuh `canvas` utk worker) | ✅ | ❌ | resmi Mozilla, tapi lebih berat di Next; worker & `canvas` merepotkan |
-| `pdf-parse` | 1 | Node | ❌ (teks saja) | ❌ | **tak dipelihara**; kelas lama |
-| `pdf2json` | beberapa | Node | ✅ (AcroForm) | ❌ | untuk form; berat |
-| OCR (tesseract.js / Unstructured) | besar | WASM/Python | — | ✅ | **berat**, untuk PDF hasil pindai; **di luar M9** |
-
-**Rekomendasi: `unpdf`.**
-- **Zero dependency** → sesuai CONSTRAINTS #5 ("install saat perlu").
-- `extractTextItems` memberi **koordinat** (x/y/fontSize) → **wajib** untuk merekonstruksi
-  urutan baca PDF berkolom (lihat §3).
-- Satu paket kecil, API bersih, aktif dipelihara.
-
-> **Catatan jujur:** ini **tetap menambah 1 dependency**. Karena #2 melarang menambah
-> dependency tanpa persetujuan, keputusan ini **menunggu user**.
-
-### 2.2 Cakupan PDF (batasan jujur)
-
-| Jenis PDF | Status M9 |
-|---|---|
-| PDF **digital** (punya lapisan teks) | ✅ didukung |
-| PDF **hasil pindai** (gambar saja, 0 item teks) | ❌ **tak didukung** → **dideteksi & diberi pesan jelas** ("perlu OCR, belum tersedia") |
-| PDF **berkolom** (2 kolom) | ✅ rekonstruksi via Y-grouping |
-| PDF dengan **rumus sebagai gambar** | ⚠️ rumus tak terekstrak sebagai teks → tetap gambar (catat) |
+- **satu jalur** untuk semua sumber (adapter per-sumber di dalamnya),
+- **teruji** (fungsi murni, fixture),
+- **idempoten** (ulang impor tak menggandakan),
+- **aman** (hanya buat `draft`; manusia menelaah).
 
 ---
 
-## 3. Masalah Inti: Urutan Baca
+## 2. Bahan Baku yang Dipelajari (2026-09-30)
 
-PDF.js mengembalikan teks dalam **urutan render**, bukan urutan baca. Halaman 2 kolom
-bisa jadi: `Kol1-kata1 → Kol2-kata1 → Kol1-kata2 …` (berselang-seling).
+Lokasi: **`~/projects/qbank/data/corpora/`** (proyek lama).
 
-**Solusi (algoritma murni, teruji):**
-1. Ambil item berkoordinat (`extractTextItems`).
-2. **Kelompokkan per baris** dengan toleransi Y (±3 pt).
-3. Urutkan tiap baris dengan **X** (kiri→kanan); urutkan baris dengan **Y** (atas→bawah).
-4. Deteksi kolom bila ada **celah X besar** yang konsisten (kandidat 2 kolom) → pecah.
+| Sumber | File | Ukuran | Bentuk | Penanda soal |
+|---|---|---|---|---|
+| **mathcyber** | 407 | 25 MB | HTML artikel | `Problem Number` / `Soal Nomor` + `sp-wrap`/`sp-head`/`sp-body` (pembahasan) |
+| **m4thlab** | 249 | 8.2 MB | HTML terstruktur | `class="contoh-soal"` · `cs-header` · `cs-opt` (+`pilihJawaban(this,true/false)`) · `cs-pem-body` |
+| **defantri** | 414 | 24 MB | HTML blog (prosa) | umumnya **bukan soal** (`Pembahasan` sesekali) |
+| **pusmendik_tka** | 8 | 1.6 MB | JSON terstruktur | (bentuk khusus — perlu dipelajari) |
+| **pusmendik_dayaserap** | 4 | 352 KB | JSON terstruktur | (bentuk khusus — perlu dipelajari) |
 
-Ini **fungsi murni** (L6) — paling rawan bug → **dipecah & teruji** (keputusan L6 #3).
+**Bentuk file seragam:** `{ url, slug, title, crawledAt, imageCount, rawHtml }`
+(+ m4thlab menambah `type/level/grade`). **Manifest** per-sumber: `data/corpora/<src>_manifest.json`
+(`articles[]` dengan `status/imported_questions_count`).
+
+### 2.1 Temuan penting (hasil pemeriksaan langsung)
+
+1. **Tiap sumber punya penanda berbeda** → butuh **adapter per-sumber**, bukan satu regex.
+2. **Bahasa campur**: mathcyber kadang **Inggris** (`Problem Number` — IMSO/Beaver), lainnya
+   **Indonesia** (`Soal Nomor`) → penanda harus **dua bahasa**.
+3. **Banyak file bukan soal** (artikel murni, 0 penanda) → **lewati dengan sopan** (`skipped`).
+4. **Logika lama sudah ada** di QBank: `src/lib/ingest/corpus-parser.ts` (290 baris,
+   `parseRawArticleHtml` + `parseSingleItem`). **Ini "aturan global" yang diminta** — tapi
+   menumpuk dalam monolit (disebut **641 baris** di desain).
+5. **Desain MathBank melarang monolit** (L6 #3): *"Parser dipecah jadi fungsi kecil teruji"*.
 
 ---
 
-## 4. Keputusan L6/L5 yang sudah terkunci
+## 3. Aturan Global (usulan — inti M9)
 
-| # | Keputusan | Sumber |
+Jalur: **`HTML mentah → bersihkan → segmen per-soal → bedah soal → normalisasi → draft`**
+
+```
+rawHtml
+  │
+  ├─(1) cleanHtmlBasic     : buang <script>/<style>/iklan, entitas → unicode, img → markdown
+  ├─(2) pilih adapter      : mathcyber | m4thlab | defantri | pusmendik  (deteksi otomatis)
+  ├─(3) segmentasi         : pisah artikel → blok per-soal (penanda sumber)
+  ├─(4) bedah soal         : stem · opsi A–E · kunci · pembahasan
+  ├─(5) normalisasi math   : $…$ → \(…\), $$…$$ → \[…\], perbaiki LaTeX rusak
+  ├─(6) klasifikasi        : single_choice (≥2 opsi) | essay (tanpa opsi)
+  └─(7) tandai "perlu dicek": opsi<5, kunci tak ketemu, dst → isFlagged (tetap draft)
+```
+
+### 3.1 Adapter per-sumber
+
+| Sumber | Segmentasi | Opsi | Kunci | Pembahasan |
+|---|---|---|---|---|
+| **mathcyber** | `<h_>… (Soal Nomor\|Problem Number) N …</h_>`; pisah MC vs `Bagian Uraian`/`Essay Section` | baris `A. … B. …` atau radio | `(Jawaban X)` / `option X` | blok `sp-wrap`/`sp-head`/`sp-body` |
+| **m4thlab** | `class="contoh-soal"` → `cs-header` (+nomor) | `cs-opt` + `pilihJawaban(this,true/false)` | `true` → kunci | `cs-pem-body` |
+| **defantri** | `<h_>/<b>/<p> N. …` | radio `<input value=…>` atau `A. …` | radio `correct` | blok `Pembahasan` |
+| **pusmendik** | (JSON — perlu dipelajari lebih dalam) | — | — | — |
+
+### 3.2 Aturan mutu (menuai pengalaman QBank)
+
+- **Opsi < 5 → `isFlagged`** (tetap draft + catatan) — bukan dibuang.
+- **Kunci tak terdeteksi** → `isFlagged` + catatan; **jangan menebak** sebagai A.
+- **0 penanda soal** → status `skipped` (artikel murni), bukan error.
+- **Pembahasan dipisah** dari stem (potong di penanda pembahasan).
+- **Gambar** → tautan markdown `![Gambar](url)` + catat di `mediaManifest`.
+- **Idempotensi**: hash `sha256(url + rawHtml)`; impor ulang → **perbarui**, bukan gandakan.
+
+---
+
+## 4. Ruang Lingkup Teknis M9
+
+### 4.1 Lapisan murni (L6 — teruji)
+- `ingest/parsers/clean.ts` — `cleanHtmlBasic`, `normalizeMathBasic` (dari QBank, ditulis ulang)
+- `ingest/parsers/segment.ts` — pisah artikel → blok soal (per-adapter)
+- `ingest/parsers/items.ts` — bedah blok → `{ stem, options, answerKey, explanation }`
+- `ingest/parsers/adapters/{mathcyber,m4thlab,defantri}.ts` — penanda per-sumber
+- Semua **fungsi murni** (string → objek) → mudah diuji + fixture
+
+### 4.2 Lapisan DB (L5)
+- `ingest/queue.ts` — enqueue artikel + status (`pending→processing→done|failed|skipped`) + retry
+- `ingest/commit.ts` — hasil parse → soal `draft` (lewat `createQuestion`, transaksi) + sumber + pembahasan
+- **Sumber korpus** didaftarkan ke `sources` (mis. "MathCyber1997", "m4th-lab.net")
+
+### 4.3 Endpoint (L4) — **dua wajah**
+| Endpoint | Auth | Untuk |
 |---|---|---|
-| 1 | **Parser dipecah** jadi fungsi kecil teruji (bukan monolit 641 baris) | L6 #3 |
-| 2 | **`extract.ts`** dinamai jujur (bukan `document-processor`); dikembangkan hanya saat perlu | L6 #5 |
-| 3 | `ingest_queue` = **antrean FILE**, bukan hasil | T16 |
-| 4 | Struktur: `ingest/parsers/` (unescape·clean·normalize·parseArticle) + `extract.ts` | L6 |
+| `POST /api/v1/ingest/upload` | **machine** | Kirim artikel (JSON `{url,title,rawHtml,source}`) → antrean |
+| `GET /api/v1/ingest/queue` | session | Lihat antrean (UI) |
+| `POST /api/v1/ingest/commit` | **machine** | Proses antrean → soal draft |
+| `GET /api/ingest/sources` | session | Daftar sumber korpus |
+
+### 4.4 Halaman Ingest & Integrasi (aktifkan dari tersembunyi)
+3 tab: **Unggah** (tempel/unggah HTML/JSON) · **Antrean** (status + retry) · **Integrasi** (sumber + machine key).
+
+### 4.5 Tes
+Fixture: potongan kecil tiap sumber (mathcyber MC+essay, m4thlab, defantri) — uji
+segmentasi, deteksi opsi/kunci, normalisasi, dan **"lewati artikel murni"**.
+
+**Non-tujuan M9:** PDF (ditunda) · OCR · AI tagging (M10) · crawl situs (sudah ada di QBank).
 
 ---
 
-## 5. Ruang Lingkup Teknis M9
+## 5. Keputusan yang Butuh Persetujuan
 
-- [ ] **`ingest/extract.ts`** — bungkus `unpdf`: PDF → teks ber-layout (item koordinat)
-- [ ] **`ingest/parsers/`** (fungsi murni teruji):
-  - `lines.ts` — item → baris (Y-grouping) + urut X
-  - `columns.ts` — deteksi & pisah kolom
-  - `questions.ts` — deteksi **nomor soal** (1. / 1) / **Soal No. 1**), opsi (**A. B. C. D. E.**)
-  - `stimulus.ts` — deteksi pembuka stimulus (narasi panjang sebelum soal bernomor)
-  - `clean.ts` — unescape, normalisasi spasi/Unicode, buang header/footer berulang
-- [ ] **`ingest/queue.ts`** — enqueue + retry + **idempotensi** (jangan proses 2× file sama)
-- [ ] **`ingest/commit.ts`** — hasil parse → soal `draft` (transaksi; pakai `createQuestion`)
-- [ ] **Endpoint `/api/v1/ingest/*`** (peran **`machine`**, L4): `POST /upload`, `GET /queue`, `POST /commit`
-- [ ] **Halaman Ingest & Integrasi** (grup Sistem, aktifkan dari tersembunyi) — 3 tab: Unggah · Antrean · Integrasi
-- [ ] **Deteksi PDF pindai** → status `failed` + pesan "perlu OCR"
-- [ ] **Tes parser** dengan **fixture** (PDF digital, 1 & 2 kolom; JSON item koordinat)
-- 📄 `STRATEGI-INGEST.md` (dokumen ini)
-
-**Non-tujuan M9:** OCR PDF pindai · AI enrichment (M10) · MCP (M11).
+1. **Sumber korpus disalin ke MathBank?** — data ada di `~/projects/qbank/data/corpora/`
+   (~58 MB). Opsi: (a) salin ke `~/projects/mathbank/data/corpora/`, (b) baca dari lokasi
+   QBank, (c) impor lewat endpoint saja (tanpa file lokal).
+2. **Adapter otomatis atau eksplisit?** — deteksi sumber dari `url`/penanda (otomatis) vs
+   parameternya disebut saat impor (eksplisit). **Usul: otomatis dengan fallback eksplisit.**
+3. **Cakupan awal**: mulai **mathcyber + m4thlab** dulu (paling terstruktur), defantri & pusmendik menyusul?
 
 ---
 
@@ -99,29 +132,23 @@ Ini **fungsi murni** (L6) — paling rawan bug → **dipecah & teruji** (keputus
 
 | Risiko | Mitigasi |
 |---|---|
-| Variasi layout PDF (paling tak pasti) | Parser teruji + fixture; **kegagalan di-warn, bukan crash**; hasil tetap `draft` untuk ditinjau manusia |
-| PDF pindai → teks kosong | Deteksi (item teks < ambang) → `failed` + pesan jelas |
-| PDF besar → memory/timeout | Batas ukuran + jumlah halaman; timeout; proses sinkron (volume rendah) |
-| Idempotensi (unggah dobel) | Hash konten (`sha256`) di `ingest_queue` → tolak duplikat |
-| Rumus hilang dari teks | Catat sebagai batasan; stimulus/rumus tetap bisa disunting manual setelah import |
+| Variasi HTML antar artikel | Adapter teruji + fixture; gagal → `failed` dengan pesan, bukan crash |
+| Bahasa campur (ID/EN) | Penanda dua bahasa di tiap adapter |
+| Banyak artikel bukan soal | Deteksi 0 penanda → `skipped` |
+| Duplikat saat impor ulang | Hash konten `sha256` + `UNIQUE` |
+| Rumus rusak/tak standar | `normalizeMathBasic` + `isFlagged` bila mencurigakan |
 
 ---
 
-## 7. Prinsip yang dipatuhi
-- **CONSTRAINTS #2** — keputusan library **disetujui user** dulu.
-- **CONSTRAINTS #5** — `unpdf` **zero-dependency**; tak ada paket menganggur.
-- **L6 #3/#5** — parser dipecah, `extract.ts` dinamai jujur.
-- **T16** — `ingest_queue` = antrean file, bukan hasil.
-- **CONSTRAINTS #33/#34** — rate limit + proyeksi kolom eksplisit pada endpoint.
+## 7. Prinsip yang Dipatuhi
+- **L6 #3** — parser **dipecah** jadi fungsi kecil teruji (bukan monolit `corpus-parser`).
+- **L6 #5** — `extract.ts`/`parsers/` dinamai jujur sesuai isi.
+- **T16** — `ingest_queue` = antrean **file/artikel**, bukan hasil.
+- **CONSTRAINTS #2** — keputusan (sumber, cakupan) **disetujui user** dulu.
+- **CONSTRAINTS #33/#34** — rate limit + proyeksi kolom eksplisit.
+- Semua hasil = **draft** (manusia menelaah) — tak ada `ready` otomatis dari ingest.
 
 ---
 
-## 8. Pertanyaan Terbuka (untuk user)
-
-1. **Setujui `unpdf`** sebagai library ekstraksi PDF? (menambah 1 dependency)
-2. **Cakupan**: cukup PDF **digital** (pindai ditolak dengan pesan)? Atau perlu OCR juga (jauh lebih berat, disarankan milestone terpisah)?
-3. **Sumber unggah**: unggah **file** saja, atau juga **tempel teks** (paste)? (paste = jauh lebih mudah & andal, bisa jadi jalur pertama)
-
----
-
-*Lihat juga: `docs/MILESTONE.md` §M9, `docs/DESAIN-PER-LAPISAN-MATHBANK.md` (L4/L6), `CONSTRAINTS.md`.*
+*Lihat juga: `docs/MILESTONE.md` §M9, `docs/DESAIN-PER-LAPISAN-MATHBANK.md` (L4/L5/L6),
+`CONSTRAINTS.md`, `~/projects/qbank/src/lib/ingest/corpus-parser.ts` (rujukan logika lama).*
