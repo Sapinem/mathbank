@@ -69,11 +69,12 @@ export default defineConfig({
         "src/components/layout/nav-utils.ts",
       ],
       // Ambang = lantai jujur saat ini; NAIKKAN bertahap, jangan turunkan.
+      // (M14: dinaikkan dari 85/75/85/85 setelah coverage nyata 93/85/92/95.)
       thresholds: {
-        statements: 85,
-        branches: 75,
-        functions: 85,
-        lines: 85,
+        statements: 90,
+        branches: 80,
+        functions: 88,
+        lines: 92,
       },
     },
   },
