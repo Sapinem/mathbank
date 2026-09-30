@@ -1,16 +1,23 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import postgres from "postgres";
-import { inflateRawSync } from "node:zlib";
+import { readFile, rm, readdir } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import type { Actor } from "@/lib/auth/actor";
 
 /**
- * Tes INTEGRASI ekspor Moodle/GitSync (M12) — DB uji nyata.
- * Menyentuh JALUR NYATA: service → bundle-service → taxonomy → ZIP.
+ * Tes INTEGRASI ekspor Moodle/GitSync (M12) — DB uji + **disk nyata**.
+ * Menyentuh JALUR NYATA: service → bundle-service → taxonomy → tulis folder + Git.
+ *
+ * Folder ekspor dialihkan ke direktori sementara via `MATHBANK_EXPORT_DIR`.
  */
 
 const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
 if (!url) throw new Error("TEST_DATABASE_URL wajib untuk tes integrasi (DB uji).");
 const sql = postgres(url, { max: 4 });
+
+const EXPORT_DIR = join(tmpdir(), `mathbank-export-test-${process.pid}`);
+process.env.MATHBANK_EXPORT_DIR = EXPORT_DIR;
 
 const { exportBundleToGitsync } = await import("@/lib/services/moodle-export-service");
 const { createBundle, addItem } = await import("@/lib/services/bundle-service");
@@ -29,41 +36,22 @@ async function clean() {
   await sql`DELETE FROM topics`;
 }
 
+async function cleanDisk() {
+  await rm(EXPORT_DIR, { recursive: true, force: true });
+}
+
 beforeAll(async () => {
   await sql`SELECT 1`;
 });
-beforeEach(clean);
+beforeEach(async () => {
+  await clean();
+  await cleanDisk();
+});
 afterAll(async () => {
   await clean();
+  await cleanDisk();
   await sql.end();
 });
-
-/** Baca nama entri dari buffer ZIP. */
-function zipNames(buf: Buffer): string[] {
-  const out: string[] = [];
-  for (let i = 0; i + 46 <= buf.length; i++) {
-    if (buf.readUInt32LE(i) === 0x02014b50) {
-      const len = buf.readUInt16LE(i + 28);
-      out.push(buf.subarray(i + 46, i + 46 + len).toString("utf8"));
-    }
-  }
-  return out;
-}
-
-function zipRead(buf: Buffer, want: string): Buffer | null {
-  for (let i = 0; i + 30 <= buf.length; i++) {
-    if (buf.readUInt32LE(i) !== 0x04034b50) continue;
-    const method = buf.readUInt16LE(i + 8);
-    const compSize = buf.readUInt32LE(i + 18);
-    const nameLen = buf.readUInt16LE(i + 26);
-    const extraLen = buf.readUInt16LE(i + 28);
-    if (buf.subarray(i + 30, i + 30 + nameLen).toString("utf8") !== want) continue;
-    const start = i + 30 + nameLen + extraLen;
-    const data = buf.subarray(start, start + compSize);
-    return method === 8 ? inflateRawSync(data) : Buffer.from(data);
-  }
-  return null;
-}
 
 async function mkQuestion(content: string, withKey = true, topicIds: string[] = []) {
   return createQuestion(
@@ -88,47 +76,77 @@ async function mkQuestion(content: string, withKey = true, topicIds: string[] = 
   );
 }
 
-describe("M12 — ekspor GitSync", () => {
+/** Kumpulkan semua jalur berkas (relatif) di bawah sebuah direktori. */
+async function walk(dir: string, base = ""): Promise<string[]> {
+  const out: string[] = [];
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    if (e.name === ".git") continue;
+    const rel = base ? `${base}/${e.name}` : e.name;
+    if (e.isDirectory()) out.push(...(await walk(join(dir, e.name), rel)));
+    else out.push(rel);
+  }
+  return out;
+}
+
+describe("M12 — ekspor GitSync ke disk", () => {
   it("agent TIDAK boleh ekspor (bundle:manage: no untuk agent)", async () => {
     const b = await createBundle({ title: "P", bundleType: "exam" }, admin);
     await expect(exportBundleToGitsync(b.id, agent)).rejects.toThrow(ForbiddenError);
   });
 
-  it("menghasilkan ZIP dengan struktur folder topik + LaTeX \\( \\)", async () => {
+  it("menulis folder topik + berkas soal ber-LaTeX \\( \\) ke disk", async () => {
     const topic = await createTopic({ name: "Aljabar" }, admin);
     const q = await mkQuestion("Hitung $2+2$", true, [topic.id]);
     const b = await createBundle({ title: "Paket Uji", bundleType: "exam" }, admin);
     await addItem(b.id, q.id, admin, { role: "question" });
 
-    const { summary, result } = await exportBundleToGitsync(b.id, admin);
+    const { summary, result, write } = await exportBundleToGitsync(b.id, admin);
     expect(summary.ok).toBe(true);
     expect(result.exported).toBe(1);
+    expect(write).not.toBeNull();
+    expect(write!.written).toBeGreaterThan(0);
 
-    const names = zipNames(result.zip!);
-    expect(names.some((n) => n.startsWith("top/Aljabar/") && n.endsWith(".xml"))).toBe(true);
+    // Berkas NYATA di disk.
+    const paths = await walk(write!.directory);
+    expect(paths.some((p) => p.startsWith("top/Aljabar/") && p.endsWith(".xml"))).toBe(true);
+    expect(paths).toContain("top/Aljabar/gitsync_category.xml");
 
-    const soalName = names.find((n) => n.endsWith(".xml") && !n.includes("gitsync_category"))!;
-    const xml = zipRead(result.zip!, soalName)!.toString("utf8");
+    const soalRel = paths.find((p) => p.endsWith(".xml") && !p.includes("gitsync_category"))!;
+    const xml = await readFile(join(write!.directory, soalRel), "utf8");
     expect(xml).toContain("<quiz>");
     expect(xml).toContain("\\(2+2\\)"); // $ → \( \)
     expect(xml).toContain('fraction="100"');
+
+    // Kategori memakai bentuk <question><category><text>.
+    const cat = await readFile(join(write!.directory, "top/Aljabar/gitsync_category.xml"), "utf8");
+    expect(cat).toContain("<text>top/Aljabar</text>");
+  });
+
+  it("D8: folder otomatis jadi repo Git + commit", async () => {
+    const q = await mkQuestion("Soal commit", true, []);
+    const b = await createBundle({ title: "Repo Uji", bundleType: "exam" }, admin);
+    await addItem(b.id, q.id, admin, { role: "question" });
+    const { write } = await exportBundleToGitsync(b.id, admin);
+    expect(write!.committed).toBe(true);
+    expect(write!.commitHash).toMatch(/^[0-9a-f]{7,}$/);
   });
 
   it("soal tanpa topik → folder 'Tanpa Topik'", async () => {
     const q = await mkQuestion("Soal tanpa topik", true, []);
     const b = await createBundle({ title: "P2", bundleType: "exam" }, admin);
     await addItem(b.id, q.id, admin, { role: "question" });
-    const { result } = await exportBundleToGitsync(b.id, admin);
-    expect(zipNames(result.zip!).some((n) => n.startsWith("top/Tanpa-Topik/"))).toBe(true);
+    const { write } = await exportBundleToGitsync(b.id, admin);
+    const paths = await walk(write!.directory);
+    expect(paths.some((p) => p.startsWith("top/Tanpa-Topik/"))).toBe(true);
   });
 
-  it("D4: soal tanpa kunci → ekspor DITOLAK (ok=false, zip=null)", async () => {
+  it("D4: soal tanpa kunci → ekspor DITOLAK (ok=false, tak menulis)", async () => {
     const q = await mkQuestion("Soal tanpa kunci", false, []);
     const b = await createBundle({ title: "P3", bundleType: "exam" }, admin);
     await addItem(b.id, q.id, admin, { role: "question" });
-    const { summary, result } = await exportBundleToGitsync(b.id, admin);
+    const { summary, result, write } = await exportBundleToGitsync(b.id, admin);
     expect(result.ok).toBe(false);
-    expect(result.zip).toBeNull();
+    expect(write).toBeNull();
     expect(summary.withoutAnswerKey.length).toBe(1);
   });
 });

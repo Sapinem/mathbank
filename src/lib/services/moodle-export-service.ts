@@ -5,14 +5,15 @@ import { listBundleItems, getBundle } from "@/lib/services/bundle-service";
 import { assertCan } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { canSeeAnswerKey } from "@/lib/db/projections/question";
-import { buildGitsyncZip, type GitsyncQuestion, type GitsyncResult } from "@/lib/export/gitsync";
+import { buildGitsyncFiles, type GitsyncQuestion, type GitsyncResult } from "@/lib/export/gitsync";
+import { writeGitsyncFolder, type WriteResult } from "@/lib/export/gitsync-writer";
 import type { QuestionType } from "@/lib/export/moodle-map";
 
 /**
  * Susun ekspor GitSync dari sebuah PAKET soal (M12).
  *
  * Alur: ambil paket + itemnya → ambil jalur topik tiap soal → rakit soal siap
- * ekspor → `buildGitsyncZip`.
+ * ekspor → `buildGitsyncFiles` → tulis ke disk (`writeGitsyncFolder`).
  *
  * **Izin**: `bundle:manage` (baca paket). Kunci jawaban hanya bila aktor
  * berwenang (`canSeeAnswerKey`); tanpa kunci, mutichoice tak bisa diekspor (D4).
@@ -64,11 +65,14 @@ export interface MoodleExportSummary {
   withoutAnswerKey: string[];
 }
 
-/** Bangun ZIP GitSync untuk paket. Kembalikan ringkasan + buffer. */
+/**
+ * Ekspor paket ke folder GitSync di disk + auto-commit Git (D7/D8).
+ * Kembalikan ringkasan + hasil tulis.
+ */
 export async function exportBundleToGitsync(
   bundleId: string,
   actor: Actor,
-): Promise<{ summary: MoodleExportSummary; result: GitsyncResult }> {
+): Promise<{ summary: MoodleExportSummary; result: GitsyncResult; write: WriteResult | null }> {
   assertCan(actor, "bundle:manage");
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new Error("Paket tidak ditemukan.");
@@ -115,7 +119,7 @@ export async function exportBundleToGitsync(
     };
   });
 
-  const result = buildGitsyncZip(gq);
+  const result = buildGitsyncFiles(gq);
   const summary: MoodleExportSummary = {
     ok: result.ok,
     bundleTitle: bundle.title,
@@ -123,5 +127,8 @@ export async function exportBundleToGitsync(
     skipped: result.skipped.map((s) => ({ name: s.name, type: s.type, reason: s.reason })),
     withoutAnswerKey: result.withoutAnswerKey,
   };
-  return { summary, result };
+
+  // D7/D8: tulis ke disk + auto-commit Git — hanya bila ekspor lolos (D4).
+  const write = result.ok ? await writeGitsyncFolder(bundle.title, result.files) : null;
+  return { summary, result, write };
 }

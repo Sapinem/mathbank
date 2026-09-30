@@ -206,8 +206,8 @@ Tujuan: patuh CONSTRAINTS #5 (install hanya bila perlu).
 |---|---|
 | Unit (`src/lib/export/*`) | **33 pass** (xml-escape, latex-to-moodle, moodle-xml, gitsync, zip) |
 | DB integrasi (`moodle-export.db.test.ts`) | **4 pass** (agent ditolak; ZIP struktur; Tanpa-Topik; D4 tolak) |
-| Endpoint live `/api/bundles/[id]/export/moodle` | 200, `application/zip`, magic `PK\x03\x04`, `filename="Test-gitsync.zip"`, exported=2 |
-| Struktur ZIP produksi | `top/Tanpa-Topik/{gitsync_category.xml, 1-….xml, 2-….xml}` ✓ |
+| Endpoint live `POST /api/bundles/[id]/export/moodle` | 200, JSON: folder `/home/hari/mathbank-export/test`, 3 berkas, commit `5f7045d` |
+| Folder produksi di disk | `top/Tanpa-Topik/{gitsync_category.xml, Tentukan-….xml, UJI-M7-….xml}` ✓ |
 | Validasi XML | semua berkas **well-formed** (parser) ✓ |
 | Normalisasi LaTeX | `$2+2$` → `\(2+2\)` ✓ |
 | **Temuan penting** | 2/16 soal produksi punya `answerKey.correct` ≠ `options.isCorrect` → ekspor memakai **`answerKey.correct`** sebagai sumber kebenaran (bukan `isCorrect`) |
@@ -219,3 +219,84 @@ Tujuan: patuh CONSTRAINTS #5 (install hanya bila perlu).
 - Mode **satu berkas** (`buildMoodleXml`) tetap ada untuk keperluan unduh cepat;
   jalur produksi memakai **GitSync** (banyak berkas).
 - Manifest `*_question_manifest.json` **tidak** dibuat (milik CLI GitSync).
+
+---
+
+## 10. SPESIFIKASI GITSYNC TERVERIFIKASI (sumber primer 2026-09-30)
+
+Diverifikasi langsung dari sumber: `classes/cli_helper.php`, `classes/export_trait.php`,
+`doc/processdetails.md`, `doc/createrepo.md`, `doc/exportrepofrommoodle.md`
+(repo `maths/moodle-qbank_gitsync`).
+
+### 10.1 Struktur direktori
+- Akar repo berisi folder **`top/`**. `top` = subkategori default (tanpa berkas kategori).
+- Tiap kategori **di bawah `top`** punya berkas **`gitsync_category.xml`**.
+- Konstanta: `CATEGORY_FILE = 'gitsync_category'`, `MANIFEST_FILE = '_question_manifest.json'`.
+
+### 10.2 Isi `gitsync_category.xml` (PENTING — berbeda dari dugaan awal)
+Pembaca: `$categoryxml->question->category->text`. Jadi bentuk **wajib**:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<question>
+  <category>
+    <text>top/Aljabar/Operasi</text>
+  </category>
+</question>
+```
+
+`<text>` = **jalur kategori penuh** (mulai `top`, dipisah `/`), **bukan** nama daun.
+
+### 10.3 Sanitasi nama (WAJIB sama persis)
+`BAD_CHARACTERS = /[\/\\\?\%\'*:|"<> .$!\`&\t]+/` → diganti `-`.
+Artinya **spasi juga** jadi `-`, plus: `/ \ ? % ' * : | " < > . $ ! \` & TAB`.
+- Kategori: `preg_replace(BAD, '-', substr(dir, 0, 200))` — potong 200 **lalu** sanitasi.
+- Nama soal: `preg_replace(BAD, '-', substr(name, 0, 230))` — potong 230 **lalu** sanitasi.
+
+### 10.4 Nama berkas soal
+- = **nama soal tersanitasi** + `.xml` (bukan prefiks nomor).
+- Bila bentrok dalam satu folder → tambah `_2`, `_3`, … (`{$holder}_{$i}`).
+
+### 10.5 Batas tanggung jawab
+- **Manifest** (`_question_manifest.json`) & hashes Git **dibuat CLI GitSync**, bukan kita.
+- Kita menghasilkan **pohon berkas** yang valid; GitSync yang menghubungkan ke bank soal.
+
+### 10.6 Konsekuensi untuk implementasi kita
+Fungsi `sanitizeName` & `categoryXml` **harus** disesuaikan dengan §10.2–§10.4.
+
+---
+
+## 11. REVISI BESAR — Tulis LANGSUNG ke folder (keputusan user 2026-09-30)
+
+**Pertanyaan user:** *"Emang kita butuh zip yang gitsync?"* dan *"Satu folder yang nanti
+langsung disinkron dengan gitsync gimana?"*
+
+**Kesimpulan:** GitSync **tidak** membutuhkan arsip apa pun — ia hanya membaca **isi
+folder**. Karena MathBank & user berada di **mesin yang sama** (`debian`, user `hari`),
+kita **menulis folder GitSync langsung ke disk**, bukan menyediakan unduhan ZIP.
+
+### 11.1 Keputusan (terkunci)
+- **D7**: Ekspor menulis berkas soal LANGSUNG ke **`~/mathbank-export/<paket-slug>/`**
+  (folder `top/...` + `gitsync_category.xml`). **ZIP/tar.gz DIBATALKAN.**
+- **D8**: MathBank **auto-commit** Git: bila folder bukan repo → `git init`; lalu
+  `git add -A` + `git commit -m "…"`. Anda yang mengelola remote/push selanjutnya.
+
+### 11.2 Yang dibuang
+- `src/lib/export/zip.ts` (penulis ZIP) — **dihapus**.
+- Endpoint `…/export/moodle` yang mengembalikan `application/zip` → diganti endpoint
+  yang **menulis ke disk** dan mengembalikan **ringkasan JSON**.
+
+### 11.3 Yang ditambah
+- `src/lib/export/gitsync-writer.ts` — tulis pohon berkas ke disk + Git.
+- Konfigurasi folder tujuan (default `~/mathbank-export`; dapat dioverride via env
+  `MATHBANK_EXPORT_DIR`).
+
+### 11.4 Alur user
+1. Di MathBank: klik **Ekspor Moodle** pada sebuah paket.
+2. MathBank menulis `~/mathbank-export/<paket>/top/...` + `git commit`.
+3. Anda: `cd ~/mathbank-export/<paket>` → `git remote add …` → `git push`
+   (atau pindahkan folder ini menjadi repo GitSync Anda).
+
+> **Catatan**: `git init`/`commit` dijalankan pada **folder paket**, bukan `~` (agar
+> tak meng-commit hal lain). Commit memakai `--allow-empty` tidak dipakai;
+> bila tak ada perubahan, commit dilewati (dilaporkan "tidak ada perubahan").

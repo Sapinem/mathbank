@@ -1,18 +1,20 @@
 import { buildMoodleXml, type MoodleQuestion, type BuildMoodleResult } from "@/lib/export/moodle-xml";
-import { cdata } from "@/lib/export/xml-escape";
-import { createZip, type ZipEntry } from "@/lib/export/zip";
+import { escapeXmlText } from "@/lib/export/xml-escape";
 
 /**
- * Ekspor GitSync (M12, keputusan user 2026-09-30).
+ * Ekspor GitSync (M12) — sesuai spesifikasi **`maths/moodle-qbank_gitsync`**
+ * (terverifikasi dari sumber primer 2026-09-30; lihat `docs/RENCANA-MOODLE.md` §10).
  *
- * Skema `qbank_gitsync` mengharapkan **struktur folder**, bukan satu berkas:
- *   top/<Topik>/<Subtopik>/<NamaSoal>.xml
- * Tiap `.xml` = satu soal (`<quiz>` berisi tepat satu `<question>`).
+ * Struktur (persis seperti yang dihasilkan CLI `createrepo.php`/`exportrepofrommoodle.php`):
+ *   <repo>/top/<Kategori>/<Subkategori>/<NamaSoal>.xml
+ *   <repo>/top/<Kategori>/<Subkategori>/gitsync_category.xml
+ * Tiap berkas soal = satu `<quiz>` berisi tepat satu `<question>`.
  *
  * **D5**: kategori diambil dari **TOPIK** soal; tanpa topik → folder `Tanpa Topik`.
- * **D6**: dibungkus ZIP tanpa dependency (lihat `zip.ts`).
+ * **D7**: keluaran = **daftar berkas** (nama + isi), ditulis ke disk oleh `gitsync-writer`.
+ *         **Tidak ada ZIP/tar** — GitSync hanya membaca isi folder.
  *
- * Manifest `*_question_manifest.json` **tidak** dibuat di sini — itu milik CLI GitSync.
+ * Manifest `*_question_manifest.json` **tidak** dibuat — itu milik CLI GitSync.
  */
 
 /** Soal + topik (untuk penempatan folder). */
@@ -21,61 +23,79 @@ export interface GitsyncQuestion extends MoodleQuestion {
   topicPath: string[];
 }
 
+/** Satu berkas hasil ekspor (nama relatif + isi). */
+export interface GitsyncFile {
+  /** Jalur relatif dari akar repo, mis. `top/Aljabar/Soal.xml`. */
+  path: string;
+  /** Isi berkas (UTF-8). */
+  content: string;
+}
+
 export interface GitsyncResult extends Omit<BuildMoodleResult, "xml"> {
-  /** Isi ZIP (hanya bila `ok`). */
-  zip: Buffer | null;
-  /** Daftar berkas yang dibuat (untuk ringkasan/uji). */
-  files: string[];
+  /** Berkas-berkas yang akan ditulis (hanya bila `ok`). */
+  files: GitsyncFile[];
+  /** Daftar jalur saja (untuk ringkasan/uji). */
+  paths: string[];
 }
 
 const NO_TOPIC = "Tanpa Topik";
 
 /**
- * Sanitasi satu segmen nama folder/berkas agar aman di semua OS & Git.
- * Hanya `A–Z a–z 0–9 . _ -` yang dipertahankan; sisanya → `-`.
+ * `BAD_CHARACTERS` GitSync (disalin persis dari `cli_helper.php`):
+ *   /[\/\\\?\%\'\*:|\"<> .$!\`&\t]+/  → diganti `-`
+ * Termasuk **spasi**, titik, `$`, `!`, `` ` ``, `&`, TAB, dll.
  */
-export function sanitizeName(name: string, maxLength = 100): string {
-  const cleaned = name
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "") // buang diakritik
-    .replace(/[^A-Za-z0-9._-]+/g, "-") // apa pun di luar himpunan aman → "-"
-    .replace(/-+/g, "-")
-    .replace(/^[-.]+|[-.]+$/g, "")
-    .trim();
-  const safe = cleaned || "soal";
-  return safe.slice(0, maxLength);
+const BAD_CHARACTERS = /[\/\\?%'*:|"<> .$!`&\t]+/g;
+
+/** Batas panjang bawaan GitSync (`export_trait.php`). */
+export const MAX_CAT_LENGTH = 200;
+export const MAX_Q_LENGTH = 230;
+
+/**
+ * Sanitasi satu segmen nama ala GitSync.
+ *
+ * GitSync memotong dulu (`substr`) **lalu** mengganti `BAD_CHARACTERS` dengan `-`.
+ * Kita meniru urutan itu agar nama folder/berkas identik.
+ */
+export function sanitizeName(name: string, maxLength = MAX_CAT_LENGTH): string {
+  const truncated = name.slice(0, maxLength);
+  const replaced = truncated.replace(BAD_CHARACTERS, "-");
+  // Bila seluruhnya karakter buruk (mis. "   " → "-") → nama cadangan.
+  return /^[-]+$/.test(replaced) || !replaced ? "soal" : replaced;
 }
 
-/** Nama berkas soal: `<nomor?>-<slug>-<idpendek>.xml` (id menjamin unik). */
-function questionFileName(q: GitsyncQuestion, index: number): string {
-  const base = sanitizeName(q.name || "soal", 80);
-  const num = q.itemNumber ? `${sanitizeName(q.itemNumber, 12)}-` : `${index + 1}-`;
-  return `${num}${base}.xml`;
-}
-
-/** `gitsync_category.xml` — info kategori (dibaca GitSync; opsional tapi dianjurkan). */
-function categoryXml(name: string): string {
+/** `gitsync_category.xml` — bentuk WAJIB: `<question><category><text>top/Path</text>…` */
+function categoryXml(categoryPath: string): string {
   return (
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<category>\n` +
-    `  <name>${cdata(name)}</name>\n` +
-    `</category>\n`
+    `<question>\n` +
+    `  <category>\n` +
+    `    <text>${escapeXmlText(categoryPath)}</text>\n` +
+    `  </category>\n` +
+    `</question>\n`
   );
 }
 
+/** Nama berkas soal = nama tersanitasi + `.xml` (GitSync; tanpa prefiks nomor). */
+function questionFileName(q: GitsyncQuestion): string {
+  const raw = q.name?.trim() || "soal";
+  return `${sanitizeName(raw, MAX_Q_LENGTH)}.xml`;
+}
+
 /**
- * Bangun ZIP GitSync dari daftar soal bertopik.
- * Bila ada soal tanpa kunci ⇒ `ok:false`, `zip:null` (D4 — tolak).
+ * Bangun daftar berkas GitSync dari daftar soal bertopik.
+ * Bila ada soal tanpa kunci ⇒ `ok:false`, `files:[]` (D4 — tolak).
  */
-export function buildGitsyncZip(questions: GitsyncQuestion[]): GitsyncResult {
-  const entries: ZipEntry[] = [];
+export function buildGitsyncFiles(questions: GitsyncQuestion[]): GitsyncResult {
+  const entries: GitsyncFile[] = [];
   const skipped: BuildMoodleResult["skipped"] = [];
   const withoutAnswerKey: string[] = [];
-  const files: string[] = [];
   const categoriesSeen = new Set<string>();
+  /** Nama berkas terpakai per folder (untuk penomoran `_2`, `_3` ala GitSync). */
+  const usedNames = new Set<string>();
 
   let exported = 0;
-  questions.forEach((q, i) => {
+  for (const q of questions) {
     // Satu soal per berkas → pakai buildMoodleXml per soal.
     const single = buildMoodleXml([q]);
     if (!single.ok) {
@@ -83,43 +103,48 @@ export function buildGitsyncZip(questions: GitsyncQuestion[]): GitsyncResult {
     }
     if (single.skipped.length) {
       skipped.push(...single.skipped);
-      return;
+      continue;
     }
-    // Folder = jalur topik (sanitasi tiap segmen). Kosong → "Tanpa Topik".
-    const segments = (q.topicPath.length ? q.topicPath : [NO_TOPIC]).map((s) =>
-      sanitizeName(s),
-    );
-    // Nama kategori (untuk gitsync_category.xml) = teks asli, bukan folder.
-    const names = q.topicPath.length ? q.topicPath : [NO_TOPIC];
-    // Catat kategori (buat gitsync_category.xml sekali per folder unik).
+
+    // Segmen folder = tiap bagian topik disanitasi; kosong → "Tanpa Topik".
+    const rawPath: string[] = q.topicPath.length ? q.topicPath : [NO_TOPIC];
+    const segments = rawPath.map((s) => sanitizeName(s, MAX_CAT_LENGTH));
+
+    // Tulis gitsync_category.xml untuk tiap level (kecuali `top`), sekali per folder.
     let acc = "top";
-    let depth = 0;
-    for (const seg of segments) {
-      acc = `${acc}/${seg}`;
+    for (let d = 0; d < segments.length; d++) {
+      acc = `${acc}/${segments[d]}`;
       if (!categoriesSeen.has(acc)) {
         categoriesSeen.add(acc);
-        entries.push({
-          name: `${acc}/gitsync_category.xml`,
-          data: Buffer.from(categoryXml(names[depth] ?? seg), "utf8"),
-        });
-        files.push(`${acc}/gitsync_category.xml`);
+        // Jalur kategori penuh (mulai `top`) — komponen asli, bukan tersanitasi.
+        const fullPath = ["top", ...rawPath.slice(0, d + 1)].join("/");
+        entries.push({ path: `${acc}/gitsync_category.xml`, content: categoryXml(fullPath) });
       }
-      depth++;
     }
+
+    // Berkas soal: nama tersanitasi; bentrok → `_2`, `_3`, … (ala GitSync).
     const dir = `top/${segments.join("/")}`;
-    const file = `${dir}/${questionFileName(q, i)}`;
-    entries.push({ name: file, data: Buffer.from(single.xml, "utf8") });
-    files.push(file);
+    const baseName = questionFileName(q);
+    const stem = baseName.slice(0, -4); // buang ".xml"
+    let fileName = baseName;
+    let i = 2;
+    while (usedNames.has(`${dir}/${fileName}`)) {
+      fileName = `${stem}_${i}.xml`;
+      i++;
+    }
+    usedNames.add(`${dir}/${fileName}`);
+
+    entries.push({ path: `${dir}/${fileName}`, content: single.xml });
     exported++;
-  });
+  }
 
   const ok = withoutAnswerKey.length === 0;
   return {
     ok,
-    zip: ok ? createZip(entries) : null,
+    files: ok ? entries : [],
+    paths: ok ? entries.map((e) => e.path) : [],
     exported,
     skipped,
     withoutAnswerKey,
-    files,
   };
 }

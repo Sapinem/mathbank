@@ -42,7 +42,6 @@ export default defineConfig({
         "src/lib/export/moodle-map.ts",
         "src/lib/export/moodle-xml.ts",
         "src/lib/export/gitsync.ts",
-        "src/lib/export/zip.ts",
         "src/lib/embedding/bge-m3.ts",
         "src/lib/ingest/parsers/segment.ts",
         "src/lib/ingest/parsers/items.ts",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Loader2, AlertTriangle } from "lucide-react";
+import { FolderGit2, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,75 +13,49 @@ import {
 } from "@/components/ui/dialog";
 
 /**
- * Tombol "Ekspor Moodle" (M12) — unduh paket sebagai ZIP skema GitSync.
+ * Tombol "Ekspor ke GitSync" (M12) — tulis paket ke folder GitSync di disk.
  *
- * Alur: tekan → `GET /api/bundles/[id]/export/moodle`.
- *  - 200 `application/zip` → unduh berkas.
- *  - 422 (ada soal tanpa kunci / tak ada yang bisa diekspor) → dialog peringatan.
- *  - lainnya → dialog error.
- *
- * Unduhan dilakukan via `<a>` sementara + object URL (agar header Content-Disposition
- * tetap dipakai, tapi kita bisa menangani galat JSON dengan rapi).
+ * `POST /api/bundles/[id]/export/moodle` → MathBank menulis
+ * `<MATHBANK_EXPORT_DIR>/<paket>/top/...` + git commit, lalu mengembalikan
+ * ringkasan (folder tujuan + hash commit). **Tak ada unduhan ZIP** — GitSync
+ * membaca isi folder, bukan arsip.
  */
 
+interface ExportOk {
+  directory: string;
+  written: number;
+  committed: boolean;
+  commitHash: string | null;
+  note: string;
+}
+
 interface ExportBlocked {
-  code: string;
   message: string;
   withoutAnswerKey: string[];
-  skipped: { name: string; type: string; reason: string }[];
 }
 
 export function MoodleExportButton({ bundleId }: { bundleId: string }) {
   const [busy, setBusy] = useState(false);
+  const [ok, setOk] = useState<ExportOk | null>(null);
   const [blocked, setBlocked] = useState<ExportBlocked | null>(null);
-  const [skipped, setSkipped] = useState<ExportBlocked["skipped"]>([]);
 
   async function exportMoodle() {
     setBusy(true);
+    setOk(null);
     setBlocked(null);
     try {
-      const res = await fetch(`/api/bundles/${bundleId}/export/moodle`);
-      if (res.ok && res.headers.get("content-type")?.includes("zip")) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const name =
-          /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ??
-          "paket-gitsync.zip";
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = name;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-
-        // Bila sebagian soal dilewati, beri tahu lewat dialog ringan.
-        const skippedCount = Number(res.headers.get("x-export-skipped") ?? "0");
-        if (skippedCount > 0) {
-          setSkipped([
-            {
-              name: `${skippedCount} soal`,
-              type: "—",
-              reason: "Tipe soal tak punya padanan Moodle langsung (lihat ringkasan).",
-            },
-          ]);
-        }
+      const res = await fetch(`/api/bundles/${bundleId}/export/moodle`, { method: "POST" });
+      const body = await res.json().catch(() => null);
+      if (res.ok && body?.data) {
+        setOk(body.data as ExportOk);
       } else {
-        const body = await res.json().catch(() => null);
         setBlocked({
-          code: body?.error?.code ?? "ERROR",
           message: body?.error?.message ?? "Gagal menyusun ekspor.",
           withoutAnswerKey: body?.data?.withoutAnswerKey ?? [],
-          skipped: body?.data?.skipped ?? [],
         });
       }
     } catch (err) {
-      setBlocked({
-        code: "NETWORK",
-        message: (err as Error).message,
-        withoutAnswerKey: [],
-        skipped: [],
-      });
+      setBlocked({ message: (err as Error).message, withoutAnswerKey: [] });
     } finally {
       setBusy(false);
     }
@@ -93,11 +67,51 @@ export function MoodleExportButton({ bundleId }: { bundleId: string }) {
         {busy ? (
           <Loader2 data-icon="inline-start" className="animate-spin" />
         ) : (
-          <Download data-icon="inline-start" />
+          <FolderGit2 data-icon="inline-start" />
         )}
-        Ekspor Moodle
+        Ekspor ke GitSync
       </Button>
 
+      {/* Berhasil */}
+      <Dialog open={!!ok} onOpenChange={(o) => !o && setOk(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="size-5 text-emerald-600" /> Ekspor selesai
+            </DialogTitle>
+            <DialogDescription>
+              {ok?.written} berkas ditulis ke folder GitSync.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <div>
+              <span className="text-muted-foreground">Folder tujuan: </span>
+              <code className="rounded bg-muted px-1.5 py-0.5">{ok?.directory}</code>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Git: </span>
+              {ok?.committed ? (
+                <span>
+                  commit <code className="rounded bg-muted px-1.5 py-0.5">{ok.commitHash}</code>
+                </span>
+              ) : (
+                <span>{ok?.note || "tidak ada perubahan"}</span>
+              )}
+            </div>
+            <p className="text-muted-foreground">
+              Selanjutnya: <code>cd</code> ke folder itu →{" "}
+              <code>git remote add … &amp;&amp; git push</code>, atau jadikan repo GitSync Anda.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOk(null)}>
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ditolak */}
       <Dialog open={!!blocked} onOpenChange={(o) => !o && setBlocked(null)}>
         <DialogContent>
           <DialogHeader>
@@ -118,31 +132,6 @@ export function MoodleExportButton({ bundleId }: { bundleId: string }) {
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setBlocked(null)}>
-              Tutup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={skipped.length > 0} onOpenChange={(o) => !o && setSkipped([])}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-amber-600" /> Ekspor selesai dengan catatan
-            </DialogTitle>
-            <DialogDescription>
-              Berkas ZIP terunduh, tetapi sebagian soal dilewati.
-            </DialogDescription>
-          </DialogHeader>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            {skipped.slice(0, 12).map((s, i) => (
-              <li key={i}>
-                {s.name} — {s.reason}
-              </li>
-            ))}
-          </ul>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSkipped([])}>
               Tutup
             </Button>
           </DialogFooter>

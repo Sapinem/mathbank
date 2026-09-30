@@ -5,20 +5,22 @@
 
 ### Ditambahkan — Ekspor Moodle skema GitSync (M12)
 
-- **Ekspor GitSync** (`src/lib/export/*`): ZIP berisi **1 berkas XML per soal**,
-  struktur folder `top/<Topik>/<Subtopik>/` + `gitsync_category.xml`.
+- **Ekspor GitSync** (`src/lib/export/*`): **tulis folder** `top/<Topik>/<Subtopik>/`
+  **langsung ke disk** (`~/mathbank-export/<paket>/`) — 1 berkas XML per soal +
+  `gitsync_category.xml` (format `<question><category><text>top/Path</text>`).
 - **Normalisasi LaTeX**: `$…$` → `\(…\)`, `$$…$$` → `\[…\]` (filter TeX Moodle).
-- **Penulis ZIP tanpa dependency** (`node:zlib` + CRC-32 sendiri).
+- **Auto-commit Git** (D8): `git init` bila perlu → `add` → `commit` per ekspor.
+- **Nama berkas & sanitasi meniru GitSync** (`BAD_CHARACTERS`, `maxcatlength=200`, `maxqlength=230`).
 - **Service** `moodle-export-service`: rakit dari paket + topik soal; memakai
   **`answerKey.correct`** sebagai sumber kebenaran (bukan `options.isCorrect`).
-- **Endpoint** `GET /api/bundles/[id]/export/moodle` (`application/zip`).
+- **Endpoint** `POST /api/bundles/[id]/export/moodle` (JSON: folder tujuan + hash commit).
 - **UI** tombol "Ekspor Moodle" di detail paket + dialog blokir/catatan.
 
 ### Keputusan (terkunci 2026-09-30)
 
 - D1 stimulus **inline** per-item · D2 tipe kompleks **dilewati + dilaporkan**
 - D3 LaTeX `\( \)`/`\[ \]` · D4 **tolak** bila ada soal tanpa kunci
-- D5 kategori = **topik** soal · D6 ZIP **tanpa dependency**
+- D5 kategori = **topik** soal · ~~D6 ZIP~~ → **D7 tulis folder langsung** · **D8 auto-commit Git**
 
 
 ### Ditambahkan — MCP: agen AI on-demand (M11)
