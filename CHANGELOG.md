@@ -9,6 +9,20 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Diperbaiki
+- **🌳 Audit M5 — integritas data pohon taksonomi (T-M5-2)** — verifikasi audit M5
+  menemukan **re-parent topik TIDAK mempropagasi `level` ke keturunan**: memindah
+  Kategori (L1) berisi Topik (L2) → induk jadi L2 tapi **anak tetap L2** (harus 3) →
+  `listTopicsByLevel` & pemilih topik salah. **Perbaikan:** `updateTopic` kini
+  menghitung `delta` dan meng-update **seluruh subtree** `level = level + delta`
+  dalam **satu transaksi**. Terbukti live: A→L2, A1→L3.
+  - **T-M5-1:** audit `updateTopic` salah label `create` → kini `update`
+    ("Topik diperbarui"). Live: entri audit benar.
+  - **T-M5-3:** endpoint `POST /api/tags/clean-unused` (diklaim dokumen audit tapi
+    405) → **diimplementasikan** (`cleanUnusedTags`), hapus label `usage_count=0`.
+    Live: `200 {removed:1}`.
+  - **Pelajaran → `CONSTRAINTS.md` #38–39** (propagasi turunan hierarki + transaksi;
+    audit `update` ≠ `create`).
+  - **+2 tes DB** (86 total).
 - **🚨 Audit M4 — bug KRITIS alur telaah (T-M4-3)** — verifikasi audit M4 menemukan
   **penelaah TIDAK BISA menyetujui/mengarsipkan soal** (`review→ready` → **403
   `Tidak punya izin: question:edit`**). Akar: gerbang route `[id]/status` memakai

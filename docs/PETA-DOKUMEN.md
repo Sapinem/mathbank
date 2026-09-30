@@ -82,6 +82,7 @@
 | D25 | `VERIFIKASI-AUDIT-M3.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M3 + T-M3-3 (celah cakupan theme:check, warna status, bug badge gelap) |
 | D26 | `RENCANA-PERBAIKAN-TEMUAN.md` | ✅ | **dibuat** 2026-09-30 — rencana & bukti perbaikan SELURUH temuan terkumpul (M2+M3+evaluasi) |
 | D27 | `VERIFIKASI-AUDIT-M4.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M4 + T-M4-3 (gerbang route blokir penelaah), T-M4-4, T-M4-5 |
+| D28 | `VERIFIKASI-AUDIT-M5.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M5 + T-M5-1 (audit salah label), T-M5-2 (propagasi level), T-M5-3 (clean-unused) |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 

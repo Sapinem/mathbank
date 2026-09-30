@@ -7,7 +7,7 @@
  *   karena FK RESTRICT hanya melarang hapus, bukan siklus).
  * - Hapus: RESTRICT FK DB menolak bila masih ada anak / dipakai soal → pesan jelas.
  */
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { topics } from "@/lib/db/schema/taxonomy";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
@@ -94,6 +94,32 @@ function isSelfOrDescendantFrom(
     cursor = parentOf.get(cursor) ?? null;
   }
   return false;
+}
+
+/** Kumpulkan id SELURUH keturunan `id` (tak termasuk dirinya) dari snapshot. */
+function descendantIdsFrom(
+  rows: { id: string; parentId: string | null }[],
+  id: string,
+): string[] {
+  const childrenOf = new Map<string, string[]>();
+  for (const r of rows) {
+    if (r.parentId) {
+      const arr = childrenOf.get(r.parentId) ?? [];
+      arr.push(r.id);
+      childrenOf.set(r.parentId, arr);
+    }
+  }
+  const out: string[] = [];
+  const stack = [...(childrenOf.get(id) ?? [])];
+  const seen = new Set<string>();
+  while (stack.length > 0) {
+    const cur = stack.pop()!;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    out.push(cur);
+    stack.push(...(childrenOf.get(cur) ?? []));
+  }
+  return out;
 }
 
 /** Kedalaman maksimum subtree di bawah `id` dari snapshot (0 = tanpa anak). */
@@ -199,21 +225,44 @@ export async function updateTopic(
     }
   }
 
+  // **T-M5-2:** bila node dipindah, SELURUH subtree harus ikut bergeser levelnya.
+  // Hitung delta & kumpulkan id keturunan dari snapshot (in-memory), lalu tulis
+  // atomik: node sendiri + keturunan dalam SATU transaksi.
+  const delta =
+    patch.level !== undefined ? patch.level - existingRow.level : 0;
+  const descendantIds =
+    delta !== 0 ? descendantIdsFrom(snapshot, id) : [];
+
   const [row] = await withUniqueGuard(
     () =>
-      db
-        .update(topics)
-        .set({ ...patch, updatedAt: new Date() })
-        .where(eq(topics.id, id))
-        .returning(COLS),
+      db.transaction(async (tx) => {
+        const updated = await tx
+          .update(topics)
+          .set({ ...patch, updatedAt: new Date() })
+          .where(eq(topics.id, id))
+          .returning(COLS);
+        if (descendantIds.length > 0) {
+          // level + delta untuk SEMUA keturunan (tetap konsisten dgn induk baru).
+          await tx
+            .update(topics)
+            .set({
+              level: sql`${topics.level} + ${delta}`,
+              updatedAt: new Date(),
+            })
+            .where(inArray(topics.id, descendantIds));
+        }
+        return updated;
+      }),
     "Topik dengan nama itu sudah ada.",
   );
   await recordAudit({
     entityType: "topic",
     entityId: row.id,
-    action: "create",
+    action: "update", // T-M5-1: dulu salah "create"
     actor,
-    changeSummary: `Topik dibuat: ${row.name}`,
+    changeSummary: `Topik diperbarui: ${row.name}${
+      delta !== 0 ? ` (subtree ${descendantIds.length} ikut bergeser ${delta})` : ""
+    }`,
   });
   return row;
 }

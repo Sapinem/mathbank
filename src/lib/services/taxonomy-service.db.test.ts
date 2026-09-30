@@ -12,6 +12,7 @@ import {
   createTag,
   listTags,
   deleteTag,
+  cleanUnusedTags,
 } from "./taxonomy-service";
 import { ForbiddenError, NotFoundError } from "@/lib/auth/guards";
 
@@ -109,5 +110,15 @@ describe("label", () => {
     const t = await createTag({ name: "Hapus Aku" }, admin);
     await deleteTag(t.id, admin);
     expect((await listTags()).find((x) => x.id === t.id)).toBeUndefined();
+  });
+
+  it("T-M5-3: cleanUnusedTags hanya hapus label usage_count=0", async () => {
+    await createTag({ name: "Tak Terpakai 1" }, admin);
+    await createTag({ name: "Tak Terpakai 2" }, admin);
+    const removed = await cleanUnusedTags(admin);
+    expect(removed).toBeGreaterThanOrEqual(2);
+    // setelah bersih, tak ada tag usage_count=0
+    const sisa = (await listTags()).filter((x) => x.usageCount === 0);
+    expect(sisa).toHaveLength(0);
   });
 });

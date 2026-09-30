@@ -1,7 +1,8 @@
 # AUDIT MILESTONE 5 — TAKSONOMI & REFERENSI (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Selesai 100%)  
+**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Selesai 100%) — **✅ DIVERIFIKASI ULANG &
+DIPERBAIKI 2026-09-30** (lihat `docs/VERIFIKASI-AUDIT-M5.md`: T-M5-1/T-M5-2/T-M5-3)  
 **Target:** Manajemen Referensi Taksonomi — Pohon Topik 3-Level (`topic-service.ts`), Sumber & Asal (`sources`), Event & Subtes (`events`), Label/Tags (`tags`), Anti-Siklus, dan RESTRICT Constraints.
 
 ---

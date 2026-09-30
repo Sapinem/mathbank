@@ -6,7 +6,7 @@
 
 ---
 
-## 🚀 5 Best Practices Enterprise untuk Diadopsi
+## 🚀 6 Best Practices Enterprise untuk Diadopsi
 
 ### 1. Transaksi Basis Data Atomik (`db.transaction`) pada Mutasi Multi-Tabel
 - **Konteks:** Pada operasi mutasi yang menyentuh beberapa tabel berurutan (seperti `createQuestion` yang menulis ke `questions`, `question_options`, `question_topics`, dan `question_tags`).
@@ -22,7 +22,16 @@
 
 ---
 
-### 2. Strategi Caching Referensi Taksonomi dengan `"use cache"` Next.js 16
+### 2. Penegakan Batasan Panjang & Pemotongan Safe Slug (`slugify`)
+- **Konteks:** Fungsi `slugify()` pada `src/lib/taxonomy/tree.ts` saat ini memotong string hingga panjang maksimum 255 karakter (`.slice(0, 255)`). Namun pada skema DB, tabel `tags` mendefinisikan `slug: varchar("slug", { length: 100 })`.
+- **Rekomendasi:** 
+  * Perbarui fungsi `slugify(name, maxLength = 255)` agar menerima parameter `maxLength` yang disesuaikan dengan batasan tabel (`100` untuk `tags`, `255` untuk `topics`, `sources`, dan `bundles`).
+  * Pastikan pemotongan slug tidak berhenti di tengah tanda hubung (misal: membuang trailing `-` setelah `.slice()`).
+- **Manfaat:** Mencegah terjadinya error database `value too long for type character varying(100)` saat tag atau nama referensi yang sangat panjang di-slugify.
+
+---
+
+### 3. Strategi Caching Referensi Taksonomi dengan `"use cache"` Next.js 16
 - **Konteks:** Data referensi statis (Pohon Topik, Sumber, Event, Grade, Kesulitan) diakses pada hampir seluruh halaman UI tetapi sangat jarang berubah.
 - **Rekomendasi:** Manfaatkan direktif `"use cache"` dan `cacheTag` Next.js 16 pada `taxonomy-service.ts`:
   ```ts
@@ -37,7 +46,7 @@
 
 ---
 
-### 3. Proteksi Idempotensi Request (`Idempotency-Key` Header)
+### 4. Proteksi Idempotensi Request (`Idempotency-Key` Header)
 - **Konteks:** Penulis atau penguji yang menyimpan soal/paket dalam kondisi jaringan lambat berisiko menekan tombol *Simpan* berkali-kali (*double-submit*).
 - **Rekomendasi:** Tambahkan opsi penanganan header `Idempotency-Key` (UUID) pada `wrapRoute` untuk endpoint mutasi `POST` / `PUT`:
   * Simpan status request yang sedang diproses dalam Memory Cache / Redis selama 60 detik.
@@ -46,7 +55,7 @@
 
 ---
 
-### 4. Sanitasi SVG TikZ & Strict Content Security Policy (CSP)
+### 5. Sanitasi SVG TikZ & Strict Content Security Policy (CSP)
 - **Konteks:** MathBank mendukung rendering KaTeX dan diagram geometri TikZ (SVG).
 - **Rekomendasi:**
   * Sanitasi seluruh luaran SVG TikZ menggunakan pustaka seperti `DOMPurify` / `sanitize-svg` untuk membuang tag berbahaya (`<script>` atau atribut `onload=...`).
@@ -55,7 +64,7 @@
 
 ---
 
-### 5. Structured Logging & Trace ID Tracking (`requestId`)
+### 6. Structured Logging & Trace ID Tracking (`requestId`)
 - **Konteks:** Penanganan error saat ini ditangani oleh `wrapRoute` dan dicatat ke `console.error` atau `audit_logs`.
 - **Rekomendasi:** Bangun `requestId` unik (UUIDv7 / shortid) di awal setiap request API pada `wrapRoute`:
   * Sertakan `requestId` pada header respons HTTP (`X-Request-ID`).

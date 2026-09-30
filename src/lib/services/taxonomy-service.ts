@@ -393,3 +393,26 @@ export async function deleteTag(id: string, actor: Actor): Promise<void> {
     changeSummary: "Label dihapus",
   });
 }
+
+/**
+ * **T-M5-3:** Hapus SEMUA label tak terpakai (`usage_count = 0`) sekaligus.
+ * Aman: hanya menyentuh tag tanpa relasi soal (usage_count dijaga trigger DB).
+ * Mengembalikan jumlah yang dihapus + mendaftarkan satu entri audit ringkas.
+ */
+export async function cleanUnusedTags(actor: Actor): Promise<number> {
+  assertCan(actor, "taxonomy:manage");
+  const removed = await db
+    .delete(tags)
+    .where(eq(tags.usageCount, 0))
+    .returning({ id: tags.id });
+  if (removed.length > 0) {
+    await recordAudit({
+      entityType: "tag",
+      entityId: "bulk",
+      action: "delete",
+      actor,
+      changeSummary: `Bersihkan ${removed.length} label tak terpakai`,
+    });
+  }
+  return removed.length;
+}

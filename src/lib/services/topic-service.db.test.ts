@@ -108,6 +108,29 @@ describe("updateTopic — anti-siklus", () => {
     expect(moved.level).toBe(2);
   });
 
+  it("T-M5-2: memindah subtree → level SELURUH keturunan ikut bergeser", async () => {
+    // A (L1) → A1 (L2) → A2 (L3).
+    const a = await createTopic({ name: "A" }, admin);
+    const a1 = await createTopic({ name: "A1", parentId: a.id }, admin);
+    const a2 = await createTopic({ name: "A2", parentId: a1.id }, admin);
+    expect((await getTopic(a1.id))!.level).toBe(2);
+    expect((await getTopic(a2.id))!.level).toBe(3);
+
+    // Pindah A ke bawah B (L1) → A=L2, A1=L3, A2=L4 → DITOLAK (melebihi kedalaman).
+    const b = await createTopic({ name: "B" }, admin);
+    await expect(
+      updateTopic(a.id, { parentId: b.id }, admin),
+    ).rejects.toThrow(ConflictError);
+
+    // Kasus sah: hapus A2 dulu (subtree jadi A→A1, kedalaman 1), lalu pindah A
+    // ke bawah D (L1) → A=L2, dan ★ anak A1 HARUS ikut jadi L3 (dulu STALE L2).
+    await deleteTopic(a2.id, admin);
+    const d = await createTopic({ name: "D" }, admin);
+    const moved = await updateTopic(a.id, { parentId: d.id }, admin);
+    expect(moved.level).toBe(2);
+    expect((await getTopic(a1.id))!.level).toBe(3);
+  });
+
   it("pemindahan yang membuat keturunan > level 3 DITOLAK", async () => {
     // Pindahkan subtree ber-kedalaman-2 (A→A1) ke bawah induk level-2 (B),
     // sehingga A jadi level 3 dan A1 jadi level 4 → tolak.

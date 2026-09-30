@@ -96,6 +96,8 @@ Validasi menambah `details`:
 | Method | Path | Izin | Keterangan |
 |--------|------|:----:|------------|
 | `GET` | `/api/topics` | `question:view` | Daftar topik (taksonomi) |
+| `PATCH` | `/api/topics/[id]` | `taxonomy:manage` | **T-M5-2:** ubah/pindah topik — re-parent **mempropagasi `level` ke seluruh subtree** (transaksi) |
+| `POST` | `/api/tags/clean-unused` | `taxonomy:manage` | **T-M5-3:** hapus semua label `usage_count=0`; balikan `{ removed }` |
 | `GET` | `/api/sources` | `question:view` | Daftar sumber |
 | `GET` | `/api/events` | `question:view` | Daftar event ujian |
 | `GET` | `/api/stats` | `question:view` | Statistik dasbor |
