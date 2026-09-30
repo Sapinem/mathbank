@@ -3,6 +3,15 @@
 
 ## [Unreleased] — M9 Ingest Korpus (berjalan)
 
+### Ditambahkan — Antrean, commit & endpoint ingest (M9-3)
+
+- **Antrean** (`src/lib/ingest/queue.ts`): `enqueue` (dedup artikel via hash isi), guard balapan status (`pending → processing → completed/failed/skipped`), `listPending`.
+- **Commit** (`src/lib/ingest/commit.ts`): `ParsedItem` → **soal `draft`** (semua hasil draft; jangan menebak kunci), sumber `website` otomatis per `source_origin`, idempoten (hash per-butir).
+- **Orkestrasi** (`src/lib/ingest/service.ts`): segmentasi → unduh media → commit.
+- **Endpoint wajah mesin** `/api/v1/ingest/{upload,queue,commit}` + kontrak Zod (`src/lib/contracts/ingest.ts`). Izin: `question:create` (upload/commit), `question:view` (queue).
+- **Skema**: enum `ingest_status` += **`skipped`** (artikel tanpa soal); `ingest_queue` += `imported_questions_count`, `ai_notes`. Migrasi `drizzle/0006`.
+- **Tes**: 13 integrasi DB + 9 alur API (114 DB total). E2E korpus nyata: m4thlab 13 soal; defantri 33 soal + 8 gambar.
+
 ### Ditambahkan — Adapter pusmendik (M9-2c)
 - `pusmendik_dayaserap` (JSON terstruktur) → `JsonAdapter` + `segmentJson`; tipe
   PG/MCMA/Kategori → `single_choice`/`multiple_choice_checkbox`/`matrix_grid`.

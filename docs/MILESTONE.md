@@ -46,7 +46,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 
 | M | Nama | Prioritas | Dependensi | Status |
 |---|------|-----------|------------|:------:|
-| M9 | Ingest Korpus (parsing data sumber) | 🟡 | M8 | ⬜ **· arah baru: korpus HTML, bukan PDF** |
+| M9 | Ingest Korpus (parsing data sumber) | ✅ | M8 | ✅ M9-1/2/2b/2c/3 selesai (korpus HTML, bukan PDF) |
 | M10 | AI Enrichment & Embedding | 🟡 | M9 | ⬜ |
 | M11 | MCP (agen/otomasi) | 🟡 | M10 | ⬜ |
 | M12 | Ekspor Moodle | 🟢 | M8 | ⬜ |

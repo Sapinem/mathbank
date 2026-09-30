@@ -1,6 +1,6 @@
 # RENCANA INGEST — Antrean, Commit & Endpoint (M9-3)
 
-> **Status:** 🟡 rencana → implementasi
+> **Status:** ✅ TERIMPLEMENTASI (2026-09-30)
 > **Dibuat:** 2026-09-30
 > **Milestone:** M9-3 (bagian akhir M9 Ingest Korpus)
 > **Bergantung pada:** `segment.ts`/`adapters` (M9-2), `ingest/media` (M9-2b), `ingest_queue` (M1), `createQuestion` (M5)
@@ -90,3 +90,13 @@ POST /api/v1/ingest/commit  { ids? | all }
 - `createQuestion(input, actor)`: `src/lib/services/question-service.ts:162`.
 - Machine auth via API key: `src/lib/auth/resolve.ts:actorFromApiKey`.
 - Endpoint mesin `/api/v1/ingest/*`: `DESAIN-PER-LAPISAN-MATHBANK.md:249-252`.
+
+---
+
+## 7. Catatan Verifikasi
+
+- **Migrasi** `drizzle/0006_sloppy_sentry.sql` — 3 pernyataan non-destruktif (ADD VALUE + 2 ADD COLUMN). Diterapkan ke **DB dev** dan **DB uji**.
+- **Gate**: `tsc` 0 · `eslint` 0 · unit **358** · DB **114** · coverage unit **92,22%**.
+- **E2E korpus nyata**: artikel `m4thlab/…pertidaksamaan-linear…` → **13 soal draft**; artikel `defantri/2012-08-pembahasan-turunan-fungsi-aljabar` → **33 soal draft + 8 gambar** (0 gagal).
+- **Izin**: `upload`/`commit` butuh `question:create`; `queue` (daftar) butuh `question:view`. Peran `machine` tak punya `question:view` → 403 (benar).
+- **Semua soal = `draft`** (keputusan user 2026-09-30) — dibuktikan tes.
