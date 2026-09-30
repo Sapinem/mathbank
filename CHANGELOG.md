@@ -75,6 +75,18 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   tak ada kebingungan; proyek pra-rilis).
 
 ### Diperbaiki
+- **🎨 Warna status tema (T-M3-3) — perbaikan arsitektural** (verifikasi audit M3):
+  - Warna status dipindah dari **hardcode di `build.ts`** → `tokens.ts` (`STATUS_TOKENS`,
+    sumber kebenaran tunggal) → tak bisa lagi luput dari `theme:check`.
+  - `theme:check` diperluas **16 → 34 pasangan** (kini mencakup `success/warning/error/info`
+    & aksen di latar+kartu, 2 mode).
+  - Nilai digelapkan agar **≥4.5:1 (AA)** di mode terang: success 3.70→**4.91**,
+    warning 2.25→**4.92**, gold 2.47→**4.88**, info 3.94→**4.90**.
+  - **Bug mode gelap**: `text-gold-fg` di atas `bg-gold/15` = **1.27:1** (badge "perlu
+    perhatian" tak terbaca) → `accent-fg` gelap dibalik jadi terang (**lolos**).
+  - Tes regresi `src/lib/theme/tokens-contrast.test.ts` (**+11 tes**).
+  - Pasangan teoretis `accent-fg`-di-`accent` (tak dipakai UI) dihapus — verifikasi
+    nyata, bukan teoretis.
 - **🔐 Verifikasi audit M2 (Auth & Peran) — T1–T3** — atas laporan pemilik; semua
   klaim arsitektur **diverifikasi** (75 sel matriks ✅, 5 peran ✅, guard ✅).
   - **T1**: komentar `resolve.ts:10` basi ("session → API key", 2 jalur) → dikoreksi

@@ -31,11 +31,11 @@ function block(mode: "light" | "dark"): string {
   --mb-accent: ${n(t.accent)};
   --mb-accent-fg: ${n(t["accent-fg"])};
 
-  /* Status — UNIVERSAL (tak ikut brand) */
-  --mb-success: ${mode === "dark" ? "oklch(0.7 0.15 150)" : "oklch(0.6 0.15 150)"};
-  --mb-error: ${mode === "dark" ? "oklch(0.704 0.191 22.216)" : "oklch(0.577 0.245 27.325)"};
-  --mb-warning: ${mode === "dark" ? "oklch(0.8 0.15 85)" : "oklch(0.75 0.15 85)"};
-  --mb-info: ${mode === "dark" ? "oklch(0.7 0.15 250)" : "oklch(0.6 0.15 250)"};`;
+  /* Status — UNIVERSAL (tak ikut brand); sumber: tokens.ts */
+  --mb-success: ${n(t.success)};
+  --mb-error: ${n(t.error)};
+  --mb-warning: ${n(t.warning)};
+  --mb-info: ${n(t.info)};`;
 }
 
 const css = `/* GENERATED — jangan sunting manual. Jalankan: pnpm theme:build */

@@ -15,14 +15,14 @@
   --mb-brand-fg: oklch(0.985 0 0);
 
   /* Brand — aksen (emas, "perlu perhatian") */
-  --mb-accent: oklch(0.76 0.149 90.578);
+  --mb-accent: oklch(0.548 0.149 90.578);
   --mb-accent-fg: oklch(0.205 0 0);
 
-  /* Status — UNIVERSAL (tak ikut brand) */
-  --mb-success: oklch(0.6 0.15 150);
+  /* Status — UNIVERSAL (tak ikut brand); sumber: tokens.ts */
+  --mb-success: oklch(0.53 0.15 150);
   --mb-error: oklch(0.577 0.245 27.325);
-  --mb-warning: oklch(0.75 0.15 85);
-  --mb-info: oklch(0.6 0.15 250);
+  --mb-warning: oklch(0.548 0.15 85);
+  --mb-info: oklch(0.548 0.15 250);
 }
 
 .dark {
@@ -40,11 +40,11 @@
 
   /* Brand — aksen (emas, "perlu perhatian") */
   --mb-accent: oklch(0.76 0.149 90.578);
-  --mb-accent-fg: oklch(0.13 0 0);
+  --mb-accent-fg: oklch(0.985 0 0);
 
-  /* Status — UNIVERSAL (tak ikut brand) */
-  --mb-success: oklch(0.7 0.15 150);
-  --mb-error: oklch(0.704 0.191 22.216);
-  --mb-warning: oklch(0.8 0.15 85);
-  --mb-info: oklch(0.7 0.15 250);
+  /* Status — UNIVERSAL (tak ikut brand); sumber: tokens.ts */
+  --mb-success: oklch(0.602 0.15 150);
+  --mb-error: oklch(0.648 0.191 22.216);
+  --mb-warning: oklch(0.62 0.15 85);
+  --mb-info: oklch(0.618 0.15 250);
 }

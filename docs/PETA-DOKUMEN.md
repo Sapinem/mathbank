@@ -79,6 +79,7 @@
 | D22 | `RENCANA-ENTERPRISE.md` | ✅ | **dibuat** 2026-09-30 — pengerasan enterprise P1–P5 (selesai) |
 | D23 | `VERIFIKASI-AUDIT-M2.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M2 (T1–T3 selesai) |
 | D24 | `VERIFIKASI-AUDIT-M2B.md` | ✅ | **dibuat** 2026-09-30 — verifikasi lanjutan M2 (#2 trustedOrigins, #3 mustChangePassword; sinkronisasi dokumen audit) |
+| D25 | `VERIFIKASI-AUDIT-M3.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M3 + T-M3-3 (celah cakupan theme:check, warna status, bug badge gelap) |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 

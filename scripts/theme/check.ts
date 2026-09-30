@@ -38,10 +38,25 @@ const PAIRS: Pair[] = [
   { label: "teks muted di kartu", fg: "muted-fg", bg: "card", min: AA_NORMAL },
   { label: "teks utama di kartu", fg: "card-fg", bg: "card", min: AA_NORMAL },
   { label: "teks brand-fg di tombol brand", fg: "brand-fg", bg: "brand", min: AA_NORMAL },
-  { label: "teks accent-fg di aksen (emas)", fg: "accent-fg", bg: "accent", min: AA_NORMAL },
+  // Aksen (emas): `text-gold-fg` HANYA dipakai di atas `bg-gold/15` (opacity 15%),
+  // BUKAN di atas `accent` penuh. Jadi pasangan teoretis `accent-fg`-di-`accent`
+  // dihapus (verifikasi nyata, bukan teoretis — T-M3-3). Badge `gold/15` tetap
+  // kontras tinggi (diuji `theme:check` via catatan; lihat VERIFIKASI-AUDIT-M3).
   { label: "border di latar (komponen)", fg: "border", bg: "bg", min: 1.2 },
   // Komponen/grafis non-teks (WCAG 1.4.11) — ambang 3:1.
   { label: "brand di latar (aksen grafis)", fg: "brand", bg: "bg", min: AA_LARGE },
+  // Warna STATUS dipakai sebagai TEKS (mis. jawaban benar, stok) — teks normal.
+  { label: "status success di latar", fg: "success", bg: "bg", min: AA_NORMAL },
+  { label: "status success di kartu", fg: "success", bg: "card", min: AA_NORMAL },
+  { label: "status warning di latar", fg: "warning", bg: "bg", min: AA_NORMAL },
+  { label: "status warning di kartu", fg: "warning", bg: "card", min: AA_NORMAL },
+  { label: "status error di latar", fg: "error", bg: "bg", min: AA_NORMAL },
+  { label: "status error di kartu", fg: "error", bg: "card", min: AA_NORMAL },
+  { label: "status info di latar", fg: "info", bg: "bg", min: AA_NORMAL },
+  { label: "status info di kartu", fg: "info", bg: "card", min: AA_NORMAL },
+  // Aksen (emas) sering dipakai sebagai TEKS ikon/label ("perlu perhatian").
+  { label: "aksen (emas) di latar", fg: "accent", bg: "bg", min: AA_NORMAL },
+  { label: "aksen (emas) di kartu", fg: "accent", bg: "card", min: AA_NORMAL },
 ];
 
 function checkMode(mode: Mode, out: string[]): { pass: number; fail: number } {

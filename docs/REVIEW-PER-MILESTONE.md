@@ -281,12 +281,29 @@ pola yang sama dengan temuan M1/M2.
 `layout.tsx` menamai variabel font Roboto Mono sebagai `--font-geist-mono`
 (warisan template Geist). Membingungkan. **Diperbaiki** → `--font-roboto-mono`.
 
+#### 🟠 T-M3-3 — `theme:check` luput warna status (CACAT CAKUPAN) — ✅ **SELESAI**
+
+> **Ditemukan saat verifikasi lanjutan (2026-09-30)**, lihat `VERIFIKASI-AUDIT-M3.md`.
+
+Klaim "verifikasi WCAG otomatis ✅" **benar kodenya, salah cakupannya**: `theme:check`
+memeriksa **8 pasangan × 2 mode = 16** — **nol** menyentuh warna **status**. Sebab
+arsitektural: warna status **hardcoded di `build.ts:35-38`**, bukan di `tokens.ts`.
+
+**Kontras NYATA (mode terang) — 3 gagal AA:** `text-success` **3.70:1** (jawaban
+benar!), `text-warning` **2.25:1**, `text-gold` **2.47:1**, `text-info` 3.94:1.
+Bonus temuan mode gelap: `text-gold-fg` di `bg-gold/15` = **1.27:1** (badge tak terbaca).
+
+**Perbaikan arsitektural (selesai):** status dipindah ke `tokens.ts`; `theme:check`
+diperluas **16→34** pasangan; nilai digelapkan ≥4.5:1; `accent-fg` gelap dibalik jadi
+terang; tes regresi `tokens-contrast.test.ts` (+11). **34/34 lulus.**
+
 ### Kesimpulan M3
 
 Mesin tema & shell **kokoh dan terbukti**: migrasi Base UI bersih total, responsif
 satu-kode (menuntaskan masalah freeze mobile lama), e2e tema+responsif lulus di
 desktop & mobile. **Cacat: klaim WCAG palsu → kini benar-benar diimplementasikan &
-diuji (16/16).** **M3: ✅ LULUS.**
+diuji.** Verifikasi lanjutan menemukan **celah cakupan `theme:check`** (T-M3-3) →
+kini diperluas & menutup 3 warna status + 1 bug mode gelap. **M3: ✅ LULUS.**
 
 ---
 
