@@ -1,6 +1,6 @@
 # RENCANA — Kualitas Kode & Tes (M14)
 
-> **Status:** 🟡 dirancang · **Milestone:** M14 · **Dependensi:** M4 · **Tanggal:** 2026-09-30
+> **Status:** ✅ selesai · **Milestone:** M14 · **Dependensi:** M4 · **Tanggal:** 2026-09-30
 > **Rujukan:** `docs/MILESTONE.md` §M14, `CONSTRAINTS.md` (#3 tsc 0, #34 select kolom,
 > #37 tes jalur nyata), `docs/STRATEGI-TES.md`.
 

@@ -158,6 +158,10 @@ Coverage **tidak** diukur sebagai satu angka global. Dua scope:
 
 **Aturan:** **jangan turunkan ambang**. Menaikkan bertahap saat cakupan bertambah. Lapisan tanpa tes = **0%** dan tercatat sebagai utang (§2).
 
+**Ambang gerbang global** (`vitest.config.mts`, diukur atas berkas `include`):
+kini **statements 90 · branches 80 · functions 88 · lines 92** (dinaikkan di M14
+dari 85/75/85/85). Cakupan nyata M14: **93.25 / 84.95 / 91.91 / 95.28**.
+
 ---
 
 ## 7. Yang TIDAK perlu dites

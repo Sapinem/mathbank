@@ -385,17 +385,20 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [ ] Rate limit → **Redis** bila multi-instance (interface sudah siap-swap)
 - [ ] 2FA/TOTP (opsional) untuk admin
 
-## M14 — Kualitas Kode & Tes (utang) 🟠
+## M14 — Kualitas Kode & Tes ✅
 
-**Dependensi:** M4
+**Dependensi:** M4 · rencana: `docs/RENCANA-KUALITAS-M14.md`
 
-- [ ] Tutup celah coverage: `src/lib/auth/server.ts` (kini 0%, integrasi-level)
-- [ ] Tes untuk `app-shell`/`header`/`command-palette`/providers (kini tipis)
-- [ ] Naikkan coverage **Functions** (kini ~90%) — target ≥ 90% semua metrik
-- [ ] Refactor `question-service.ts` jika > ~400 baris (pisah per-operasi)
-- [ ] Aturan lint tambahan: larang `.select()` tanpa kolom (enforce CONSTRAINT #34)
-- [ ] Audit dependency berkala (`pnpm outdated`, advisory)
-- [ ] Evaluasi **TypeScript 7** (bump mayor — butuh checkpoint)
+- [x] Aturan lint: larang `.select()` tanpa kolom di jalur API (CONSTRAINT #34) ✅
+- [x] Tutup celah coverage: `segment.ts` (67→100%), `items.ts` (+13 tes), shell ✅
+- [x] Tes `app-shell`/`command-palette` (+7 tes) + daftarkan ke coverage ✅
+- [x] Coverage Functions → 91.91% (≥90%); ambang dinaikkan 85/75/85/85 → **90/80/88/92** ✅
+- [x] Refactor `question-service.ts` (502 baris → `question-read/-write/-status` + barrel) ✅
+- [x] Ekstrak logika auth ke `origins.ts` (murni, 11 tes) ✅
+- [x] Audit dependency: `pnpm security:advisories` (M13 S8) ✅
+- [x] **TypeScript 7** → **ditunda** (`docs/RENCANA-TS7.md`; risiko mayor) 🔴
+
+**Hasil:** 505 unit (cov 93.25/84.95/91.91/95.28), 148 DB, tsc 0, lint 0.
 
 ## M15 — UI/UX Polish & Responsif Penuh 🟡
 

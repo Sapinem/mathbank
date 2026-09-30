@@ -1,6 +1,30 @@
 # Changelog — MathBank
 
 
+## [M14] — Kualitas Kode & Tes
+
+### Ditambahkan — Kualitas (M14)
+- **Aturan lint CONSTRAINT #34** (`eslint.config.mjs`): `no-restricted-syntax`
+  khusus `src/app/api/**` — larang `.select()` tanpa kolom di jalur baca API.
+- **Tes baru**: `segment.test.ts` (8), `items.test.ts` (13), `app-shell.test.tsx` (7),
+  `origins.test.ts` (11) — menutup celah coverage (segment 67%→100%).
+- **`src/lib/auth/origins.ts`**: logika gerbang origin/lingkungan auth (murni):
+  `isProductionRuntime`, `buildTrustedOrigins`, `resolveAuthSecret`.
+
+### Diubah — Kualitas (M14)
+- **Refactor `question-service.ts`** (502 baris → 3 modul + barrel izin-impor):
+  `question-read.ts` (180), `question-write.ts` (279), `question-status.ts` (76).
+  Nol perubahan call-site; perilaku identik (148 DB test tetap hijau).
+- **Ambang coverage dinaikkan** 85/75/85/85 → **90/80/88/92** (`vitest.config.mts`).
+- **`scripts/secret-scan.mjs`**: kalibrasi positif-palsu (skip kode/konstanta/sentinel).
+- **`src/lib/auth/server.ts`**: memakai `origins.ts` (perilaku identik).
+
+### Ditunda — Kualitas (M14)
+- **TypeScript 7** (7.0.2, port Go) — ditunda; rencana di `docs/RENCANA-TS7.md`.
+
+### Hasil (M14)
+- **505 unit pass** (cov 93.25/84.95/91.91/95.28), **148 DB**, tsc 0, lint 0.
+
 ## [M13] — Keamanan Lanjutan (S5–S9)
 
 ### Ditambahkan — Keamanan (M13)

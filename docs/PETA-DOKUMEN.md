@@ -93,6 +93,7 @@
 | D36 | `docs/audit/AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md` | ✅ | **dibuat** 2026-09-30 — audit penutup MVP & panduan arsitektur Fase 2/3 |
 | D37 | `docs/audit/M9-INGEST-KORPUS.md` | ✅ | **dibuat** 2026-09-30 — audit mesin ingest korpus (M9); §Catatan Verifikasi 2026-09-30 (koreksi: 5 sumber, 22 tes DB) |
 | D38 | `docs/audit/M10-AI-ENRICHMENT-DAN-EMBEDDING.md` | ✅ | **dibuat** 2026-09-30 — audit AI enrichment & embedding (M10); §Catatan Verifikasi 2026-09-30 (koreksi: proteksi kunci struktural, action `update`) |
+| D42 | `docs/audit/M14-KUALITAS-KODE-DAN-TES.md` | ✅ | **dibuat** 2026-09-30 — audit kualitas M14; §Catatan Verifikasi (refactor, tes, ambang coverage) |
 | D41 | `docs/audit/M13-KEAMANAN-LANJUTAN-DAN-HARDENING.md` | ✅ | **dibuat** 2026-09-30 — audit keamanan M13; §Catatan Verifikasi (koreksi: status sebagian, bukan 100%) |
 | D40 | `docs/audit/M12-EKSPOR-MOODLE-XML-DAN-GITSYNC.md` | ✅ | **dibuat** 2026-09-30 — audit ekspor Moodle/GitSync (M12); §Catatan Verifikasi (koreksi: base64 media TIDAK ada) |
 | D39 | `docs/audit/M11-MODEL-CONTEXT-PROTOCOL-MCP.md` | ✅ | **dibuat** 2026-09-30 — audit MCP (M11); §Catatan Verifikasi 2026-09-30 (koreksi: "Streamable HTTP" bukan SSE; gerbang `assertMcp`/`MCP_CAPABILITIES`) |
