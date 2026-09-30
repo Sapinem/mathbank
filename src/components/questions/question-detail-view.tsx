@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Pencil, Trash2, Check, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { QuestionEditor } from "@/components/questions/question-editor";
+import { EnrichButton } from "@/components/questions/enrich-button";
 import { MathContent } from "@/components/math/math-content";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,7 @@ export function QuestionDetailView() {
         description={TYPE_LABELS[q.questionType] ?? q.questionType}
         actions={
           <>
+            <EnrichButton questionId={id} />
             <Button
               variant="outline"
               size="sm"

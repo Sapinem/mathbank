@@ -51,6 +51,7 @@ export default defineConfig({
         "src/lib/ingest/media/ingest-media.ts",
         // Komponen kustom (BUKAN vendor ui/**) yang punya tes komponen.
         "src/components/questions/question-card.tsx",
+        "src/components/questions/enrich-button.tsx",
         "src/components/questions/bank-soal-view.tsx",
         "src/components/layout/page-header.tsx",
         "src/components/layout/skip-link.tsx",

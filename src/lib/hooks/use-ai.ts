@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { SettingItem } from "@/lib/services/settings-service";
+import { questionKeys } from "@/lib/hooks/use-questions";
 
 /**
  * Hook Pengaturan AI (M10) — React Query.
@@ -82,5 +83,43 @@ export function useAiHealth(enabled = true) {
     enabled,
     staleTime: 30_000,
     retry: false,
+  });
+}
+
+/** Usulan enrichment (bentuk dari service). */
+export interface EnrichmentProposal {
+  topics: string[];
+  difficulty: number | null;
+  cognitiveLevel: string | null;
+  tags: string[];
+  notes?: string;
+}
+
+export interface EnrichResult {
+  mode: "single";
+  result: {
+    questionId: string;
+    ok: boolean;
+    proposal?: EnrichmentProposal;
+    error?: string;
+    status?: string;
+  };
+}
+
+/**
+ * Enrich SATU soal dengan AI (usulan → diterapkan + status → review).
+ * `onSuccess` di hook pemanggil untuk invalidasi daftar/detail.
+ */
+export function useEnrichQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (questionId: string) =>
+      apiFetch<EnrichResult>("/api/ai/enrich", {
+        method: "POST",
+        body: JSON.stringify({ questionId }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: questionKeys.all });
+    },
   });
 }
