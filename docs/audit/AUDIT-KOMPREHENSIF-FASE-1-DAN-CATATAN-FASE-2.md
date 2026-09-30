@@ -50,11 +50,11 @@ Pembangunan ulang MathBank dari nol ([ADR-0001](../ADR/0001-bangun-ulang-mathban
 
 Fase 2 membawa MathBank dari sekadar Bank Soal manual menjadi platform otomatis berbasis AI & Agen.
 
-### Status Implementasi Fase 2:
-* **M9 (Ingest Korpus - 90% Selesai):** Modul parser HTML terisolasi (`clean.ts`, `adapters/`), unduh media dengan hash SHA-256 deduplikasi, dan antrean idempotensi. Berhasil memposting 21.245 soal dari 4 korpus utama (*pusmendik*, *mathcyber*, *m4thlab*, *defantri*).
-* **M10 (AI Enrichment & Vector Embedding - 90% Selesai):** Klien AI terenkripsi AES-256-GCM, embedding vektor BGE-M3 (1024 dim via Ollama), AI tagging otomatis, dan audit log AI.
-* **M11 (Model Context Protocol / MCP - 95% Selesai):** 7 MCP Tools terpasang (`search_questions`, `get_question`, `create_question`, `list_topics`, `list_sources`, `enrich_question`, `embed_questions`) dengan proteksi hak akses `agent`/`machine` (L1) yang melarang pembacaan `answer_key`.
-* **M12 (Ekspor LMS Moodle XML - Pending):** Disiapkan untuk mengekspor kuis Moodle XML per-butir soal dengan wacana tertaut.
+### Status Implementasi Fase 2 (diperbarui 2026-09-30):
+* **M9 (Ingest Korpus - ✅ BACKEND SELESAI):** Modul parser HTML terisolasi (`clean.ts`, `adapters/`), unduh media (hash SHA-256, tanpa atribusi), antrean idempotensi + status `skipped`. **21.245 soal** dari **5 korpus** (*mathcyber*, *m4thlab*, *defantri*, *pusmendik_tka*, *pusmendik_dayaserap*). Sisa: halaman UI `/system/ingest`.
+* **M10 (AI Enrichment & Vector Embedding - ✅ SELESAI):** Klien AI terenkripsi AES-256-GCM, embedding **BGE-M3 (1024 dim, Ollama lokal)**, pencarian semantik (`mode=semantic`), UI pengaturan AI + tombol "Enrich dengan AI". Enrichment hanya `draft`→`review`; `answer_key` **tak pernah** disentuh AI.
+* **M11 (Model Context Protocol / MCP - ✅ SELESAI):** 7 MCP Tool (`search_questions`, `get_question`, `create_question`, `list_topics`, `list_sources`, `enrich_question`, `embed_questions`), transport **stdio + Streamable HTTP** (`/api/mcp`), API key agen + UI "Akses Agen". Kebijakan tulis **satu tempat** (`policy.ts`); `agent` **tak pernah** melihat `answer_key`.
+* **M12 (Ekspor Moodle - ✅ SELESAI):** Skema **`qbank_gitsync`** — ZIP berisi **1 berkas XML/soal**, folder = kategori **topik** (`top/<Topik>/`), `gitsync_category.xml`. LaTeX dinormalisasi `$…$`→`\(…\)` (filter TeX Moodle). Stimulus **inline**; **tolak** ekspor bila ada soal tanpa kunci.
 
 ---
 
@@ -63,7 +63,7 @@ Fase 2 membawa MathBank dari sekadar Bank Soal manual menjadi platform otomatis 
 1. **Strict Ingest Rules (M9):** Ekstraksi non-AI hanya menghasilkan status `draft`, `is_flagged: false`, dan melewati komputasi vector embedding.
 2. **Pedagogical Standards (M10):** Dilarang mempromosikan soal dari `draft` ke `ready` tanpa `distractor_rationale` pada seluruh opsi salah dan scoring rubric terukur untuk esai.
 3. **One-Place Policy (M11):** Agen AI dilarang menghapus soal, mempromosikan ke status `ready`, atau memodifikasi paket soal secara sepihak.
-4. **Moodle Standards (M12):** Gunakan `@@PLUGINFILE@@` untuk aset gambar internal dan ekspansi sintaks KaTeX ke MathML.
+4. **Moodle Standards (M12) — DIPERBARUI:** Ekspor memakai **skema GitSync** (banyak berkas, bukan satu). Rumus dikirim sebagai **LaTeX mentah** dengan separator `\(…\)`/`\[…\]` (dipahami filter TeX Moodle) — **bukan** MathML/KaTeX-HTML, agar tak perlu menyertakan CSS/aset tambahan. Kunci jawaban = **`answerKey.correct`** (sumber kebenaran; `options.isCorrect` terbukti tak sinkron di data nyata).
 
 ---
 
@@ -76,3 +76,21 @@ Fase 2 membawa MathBank dari sekadar Bank Soal manual menjadi platform otomatis 
 ## 📄 KESIMPULAN ARSITEK
 
 **FASE 1 (MVP) MATHBANK TELAH BERHASIL DISELESAIKAN DENGAN DISIPLIN MUTU KELAS TINGGI. SELURUH ARTEFAK KODE, PENGUJIAN OTOMATIS, DAN SKEMA DATABASE BERSIFAT REPRODUKTIF DAN ZERO-DRIFT. SISTEM BERADA DALAM KONDISI SEMPURNA UNTUK MELANJUTKAN EKSEKUSI FASE 2 DENGAN LANDASAN ARSITEKTURAL YANG SANGAT KOKOH.**
+
+---
+
+## § Catatan Verifikasi
+
+> Wajib menurut `CONSTRAINTS.md` #44 untuk setiap dokumen di `docs/audit/`.
+
+**Diverifikasi ulang: 2026-09-30.** Revisi dokumen ini menyelaraskan status dengan kenyataan terkini:
+
+| Klaim lama | Koreksi (terverifikasi) |
+|---|---|
+| M9 "90%" | ✅ backend **selesai** (21.245 soal, 5 sumber); sisa UI Ingest |
+| M10 "90%" | ✅ **selesai** (UI AI + semantic search live) |
+| M11 "95%" | ✅ **selesai** (stdio + HTTP + API key + UI) |
+| M12 "Pending" | ✅ **selesai** (GitSync ZIP, endpoint, UI) |
+| M12 sarankan MathML + `@@PLUGINFILE@@` | **Dibatalkan** → LaTeX `\( \)` + ZIP GitSync |
+
+**Sumber bukti:** `pnpm check` (452 unit, coverage 92,9%), `pnpm test:db` (143), ekspor live `/api/bundles/[id]/export/moodle` (200, ZIP valid), tsc 0, lint 0.
