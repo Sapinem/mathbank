@@ -69,6 +69,14 @@
 | D9 | `GOVERNANCE.md` | ✅ | **dibuat** 2026-09-29 — kepemilikan & wewenang |
 | D11 | `AUDIT-MUTU-M0-M4B.md` | ✅ | **dibuat** 2026-09-29 — audit mutu menyeluruh M0–M4b |
 | D12 | `REVIEW-PER-MILESTONE.md` | ✅ | **dibuat** 2026-09-30 — review berurutan M1→…; temuan + perbaikan per milestone |
+| D13 | `EVALUASI-STRATEGI-E2E.md` | ✅ | **dibuat** 2026-09-30 — keputusan pensiunkan e2e browser → tes alur API + smoke |
+| D14 | `EVALUASI-DESKTOPONLY.md` | ✅ | **dibuat** 2026-09-30 — tinjauan `DesktopOnly` vs best practice shadcn |
+| D15 | `EVALUASI-MENYELURUH.md` | ✅ | **dibuat** 2026-09-30 — audit menyeluruh (arsitektur, keamanan, a11y, mutu) |
+| D16 | `PROGRES-OTONOM.md` | ✅ | **dibuat** 2026-09-30 — log pembangunan otonom M1→M12 |
+| D17 | `RENCANA-SOAL.md` | ✅ | **dibuat** 2026-09-30 — 11 tipe soal (M4c) |
+| D18 | `RENCANA-PAKET.md` | ✅ | **dibuat** 2026-09-30 — paket soal & penyusun (M7) |
+| D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
+| D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 
 ### Kategori E — Keamanan, Operasi & Kepatuhan
 

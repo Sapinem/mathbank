@@ -7,6 +7,7 @@ import {
   type QuestionOption,
 } from "@/lib/db/schema/question";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
+import { bundleItems } from "@/lib/db/schema/bundle";
 import { buildQuestionFilter } from "@/lib/question/filters";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
@@ -403,6 +404,18 @@ export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   assertCan(actor, "question:delete", { ownerId: existing.authorId });
+
+  // RESTRICT: soal yang dipakai paket (M7) tak boleh dihapus.
+  const [dipakai] = await db
+    .select({ id: bundleItems.id })
+    .from(bundleItems)
+    .where(eq(bundleItems.questionId, id))
+    .limit(1);
+  if (dipakai) {
+    throw new ConflictError(
+      "Soal ini dipakai di paket soal — keluarkan dari paket dulu.",
+    );
+  }
 
   await db
     .update(questions)

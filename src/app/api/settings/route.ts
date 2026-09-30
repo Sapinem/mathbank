@@ -30,6 +30,7 @@ const patchSchema = z.object({
  * Hanya `settings:manage` (admin).
  */
 export const GET = wrapRoute({
+  rateLimit: true,
   permission: "settings:manage",
   handler: async () => {
     const items = await getSettings([...GENERAL_KEYS]);

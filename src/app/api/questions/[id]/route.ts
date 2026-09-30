@@ -9,6 +9,7 @@ import { NotFoundError } from "@/lib/auth/guards";
 
 /** GET /api/questions/[id] — detail soal + opsi. */
 export const GET = wrapRoute({
+  rateLimit: true,
   permission: "question:view",
   handler: async ({ params, actor }) => {
     const q = await getQuestion(params.id, { viewer: actor });

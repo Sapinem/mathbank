@@ -36,7 +36,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | **M4** | **Bank Soal (CRUD)** | 🔴 | M3 | 🟡 **M4a/M4b ✅ · M4c/M4d ⬜** |
 | M5 | Taksonomi (Referensi) | ✅ | M4 | ✅ **· Topik/Sumber/Event/Label** |
 | M6 | Pencarian & Filter | ✅ | M5 | ✅ **· trigram, RRF+dedup, 3 mode** |
-| M7 | Paket Soal | 🔴 | M6 | ⬜ |
+| M7 | Paket Soal | ✅ | M6 | ✅ **· penyusun drag-and-drop, stimulus 1×, RESTRICT** |
 | M8 | Ekspor Cetak/PDF | 🔴 | M7 | ⬜ |
 | | **🎉 MVP SELESAI** | | | ⬜ |
 

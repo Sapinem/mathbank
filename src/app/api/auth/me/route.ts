@@ -5,6 +5,7 @@ import { wrapRoute } from "@/lib/api/route-wrapper";
  * QBank salah memanggil /api/auth/change-password).
  */
 export const GET = wrapRoute({
+  rateLimit: true,
   handler: async ({ actor }) => ({
     id: actor.id,
     name: actor.name,

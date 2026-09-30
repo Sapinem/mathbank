@@ -1,11 +1,7 @@
-import { PageHeader } from "@/components/layout/page-header";
-import { ComingSoon } from "@/components/ui/states";
+import { BundleListView } from "@/components/bundles/bundle-list-view";
+
+export const metadata = { title: "Paket Soal — MathBank" };
 
 export default function PaketPage() {
-  return (
-    <>
-      <PageHeader title="Paket Soal" description="Susun paket soal untuk ujian, latihan, atau sumber." />
-      <ComingSoon milestone="M7" />
-    </>
-  );
+  return <BundleListView />;
 }
