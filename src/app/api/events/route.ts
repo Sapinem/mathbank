@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
-import { createEvent, listEvents } from "@/lib/services/taxonomy-service";
+import { createEvent } from "@/lib/services/taxonomy-service";
+import { listEvents } from "@/lib/services/taxonomy-service";
 
 const eventSchema = z.object({
   name: z.string().trim().min(1).max(150),

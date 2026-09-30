@@ -19,5 +19,6 @@ export const POST = wrapRoute({
   permission: "question:create",
   body: createQuestionSchema,
   status: 201,
+  idempotent: true, // #4: dukung Idempotency-Key (anti double-submit)
   handler: async ({ body, actor }) => createQuestion(body, actor),
 });

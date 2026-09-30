@@ -18,6 +18,11 @@ import {
   DEFAULT_POLICY,
   type RateLimitPolicy,
 } from "./rate-limit";
+import {
+  checkIdempotency,
+  rememberResponse,
+  getIdempotencyStore,
+} from "./idempotency";
 import type { Actor } from "@/lib/auth/actor";
 import type { Permission } from "@/lib/auth/permissions";
 
@@ -65,6 +70,12 @@ export interface RouteOptions<TQuery, TBody, TResult> {
    * Default: false → diblokir 403 PASSWORD_CHANGE_REQUIRED.
    */
   allowPasswordChangePending?: boolean;
+  /**
+   * **#4 (enterprise):** aktifkan proteksi idempotensi via header
+   * `Idempotency-Key` untuk endpoint mutasi. Bila diaktifkan & klien mengirim
+   * key, permintaan ulang dgn key sama → di-replay dari cache (anti double-submit).
+   */
+  idempotent?: boolean;
 }
 
 /** Ambil IP klien dari header proxy (X-Forwarded-For) atau fallback. */
@@ -87,82 +98,108 @@ function searchParamsToObject(url: string): Record<string, string> {
 /** Argumen kedua handler Next.js (params rute dinamis, async di Next 15+). */
 type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
 
-/** Petakan error → respons terformat. */
-function errorResponse(err: unknown): NextResponse {
+/** Petakan error → respons terformat. `requestId` disertakan pada log 500. */
+function errorResponse(err: unknown, requestId: string): NextResponse {
+  const withRid = (res: NextResponse) => {
+    res.headers.set("X-Request-ID", requestId);
+    return res;
+  };
   if (err instanceof UnauthorizedError) {
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      { status: 401 },
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 401 },
+      ),
     );
   }
   if (err instanceof PasswordChangeRequiredError) {
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      { status: 403 },
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 403 },
+      ),
     );
   }
   if (err instanceof ForbiddenError) {
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      { status: 403 },
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 403 },
+      ),
     );
   }
   if (err instanceof NotFoundError) {
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      { status: 404 },
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 404 },
+      ),
     );
   }
   if (err instanceof ConflictError) {
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      { status: 409 },
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 409 },
+      ),
     );
   }
   if (err instanceof InvalidTransitionError) {
-    return NextResponse.json(
-      { error: { code: "INVALID_TRANSITION", message: err.message } },
-      { status: 409 },
+    return withRid(
+      NextResponse.json(
+        { error: { code: "INVALID_TRANSITION", message: err.message } },
+        { status: 409 },
+      ),
     );
   }
   if (err instanceof NotReadyError) {
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      { status: 422 },
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 422 },
+      ),
     );
   }
   if (err instanceof RateLimitError) {
     const retryAfterSec = Math.ceil(err.retryAfterMs / 1000);
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      {
-        status: 429,
-        headers: { "Retry-After": String(retryAfterSec) },
-      },
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        {
+          status: 429,
+          headers: { "Retry-After": String(retryAfterSec) },
+        },
+      ),
     );
   }
   if (err instanceof InvalidJsonError) {
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      { status: 400 },
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 400 },
+      ),
     );
   }
   if (err instanceof ZodError) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Data tidak valid",
-          details: err.issues,
+    return withRid(
+      NextResponse.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Data tidak valid",
+            details: err.issues,
+          },
         },
-      },
-      { status: 400 },
+        { status: 400 },
+      ),
     );
   }
-  console.error("[API] error tak terduga:", err);
-  return NextResponse.json(
-    { error: { code: "INTERNAL_ERROR", message: "Kesalahan server" } },
-    { status: 500 },
+  console.error(`[API] error tak terduga (rid=${requestId}):`, err);
+  return withRid(
+    NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: "Kesalahan server" } },
+      { status: 500 },
+    ),
   );
 }
 
@@ -175,8 +212,14 @@ export function wrapRoute<TQuery, TBody, TResult>(
   opts: RouteOptions<TQuery, TBody, TResult>,
 ) {
   return async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
+    // **#6 (enterprise):** ID permintaan untuk traceability. Pakai header dari
+    // proxy bila ada (agar korelasi dgn log eksternal), jika tidak buat baru.
+    const requestId =
+      req.headers.get("x-request-id")?.slice(0, 64) || crypto.randomUUID();
+    let actorIdForCleanup: string | null = null;
     try {
       const actor = await resolveActor(req.headers);
+      actorIdForCleanup = actor?.id ?? null;
       if (!actor) throw new UnauthorizedError();
       if (actor.mustChangePassword && !opts.allowPasswordChangePending) {
         throw new PasswordChangeRequiredError();
@@ -206,10 +249,54 @@ export function wrapRoute<TQuery, TBody, TResult>(
 
       const params = (await args?.params) ?? {};
 
+      // **#4:** idempotensi (opsional) — hanya bila diaktifkan & klien kirim key.
+      const idemKey = opts.idempotent
+        ? req.headers.get("idempotency-key")?.slice(0, 128)
+        : null;
+      if (idemKey) {
+        const state = checkIdempotency(`${actor.id}:${idemKey}`);
+        if (state.kind === "replay") {
+          const replay = NextResponse.json(state.body, { status: state.status });
+          replay.headers.set("X-Request-ID", requestId);
+          replay.headers.set("Idempotent-Replay", "true");
+          return replay;
+        }
+        if (state.kind === "in-flight") {
+          const busy = NextResponse.json(
+            {
+              error: {
+                code: "IDEMPOTENCY_IN_PROGRESS",
+                message: "Permintaan dengan key ini sedang diproses.",
+              },
+            },
+            { status: 409 },
+          );
+          busy.headers.set("X-Request-ID", requestId);
+          return busy;
+        }
+      }
+
       const data = await opts.handler({ actor, query, body, req, params });
-      return NextResponse.json({ data }, { status: opts.status ?? 200 });
+      const res = NextResponse.json({ data }, { status: opts.status ?? 200 });
+      res.headers.set("X-Request-ID", requestId);
+      if (idemKey) {
+        rememberResponse(
+          `${actor.id}:${idemKey}`,
+          opts.status ?? 200,
+          { data },
+        );
+        res.headers.set("Idempotency-Key", idemKey);
+      }
+      return res;
     } catch (err) {
-      return errorResponse(err);
+      // **#4:** bila gagal, buang penanda in-flight agar percobaan berikutnya
+      // (key sama) tidak terjebak 409 — kesalahan bukan hasil yang di-cache.
+      if (opts.idempotent) {
+        const k = req.headers.get("idempotency-key")?.slice(0, 128);
+        const actorId = actorIdForCleanup; // diisi sesudah resolve (lihat di bawah)
+        if (k && actorId) getIdempotencyStore().forget(`${actorId}:${k}`);
+      }
+      return errorResponse(err, requestId);
     }
   };
 }

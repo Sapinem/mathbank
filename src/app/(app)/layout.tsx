@@ -11,6 +11,10 @@ import { getSessionUser } from "@/lib/auth/session";
  *
  * `AUTH_GUARD_DISABLED=true` menonaktifkan guard (dipakai e2e yang menguji
  * halaman tanpa alur login).
+ *
+ * Guard sengaja **tidak** dibungkus `<Suspense>`: agar pengalihan terjadi
+ * sebagai **HTTP 307** di server (dicek smoke test & lebih tegas), bukan
+ * navigasi klien. (Konsekuensi #3 — lihat `docs/VERIFIKASI-CATATAN-ENTERPRISE.md`.)
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (process.env.AUTH_GUARD_DISABLED !== "true") {

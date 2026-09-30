@@ -15,8 +15,7 @@ export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
   permission: "reference:manage",
   body: patchSchema,
-  handler: async ({ body, actor, params }) =>
-    updateSource((await params).id, body, actor),
+  handler: async ({ body, actor, params }) => updateSource((await params).id, body, actor),
 });
 
 /** DELETE /api/sources/[id] — hapus sumber (RESTRICT bila dipakai soal). */

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
-import { createTag, listTags } from "@/lib/services/taxonomy-service";
+import { createTag } from "@/lib/services/taxonomy-service";
+import { listTags } from "@/lib/services/taxonomy-service";
 
 const createSchema = z.object({ name: z.string().trim().min(1).max(100) });
 

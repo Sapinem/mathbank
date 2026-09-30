@@ -205,7 +205,7 @@ export async function createEvent(
   actor: Actor,
 ): Promise<EventRow> {
   assertCan(actor, "reference:manage");
-  const code = slugify(`${input.category}-${input.shortname}`);
+  const code = slugify(`${input.category}-${input.shortname}`, 50);
   const [row] = await withUniqueGuard(
     () =>
       db
@@ -324,7 +324,7 @@ export async function createTag(
     () =>
       db
         .insert(tags)
-        .values({ name: input.name, slug: slugify(input.name) })
+        .values({ name: input.name, slug: slugify(input.name, 100) })
         .returning({
           id: tags.id,
           name: tags.name,
@@ -353,7 +353,7 @@ export async function updateTag(
     () =>
       db
         .update(tags)
-        .set({ name: input.name, slug: slugify(input.name), updatedAt: new Date() })
+        .set({ name: input.name, slug: slugify(input.name, 100), updatedAt: new Date() })
         .where(eq(tags.id, id))
         .returning({
           id: tags.id,

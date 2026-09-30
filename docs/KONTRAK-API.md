@@ -23,6 +23,8 @@
 | Format | JSON (`application/json`) |
 | Autentikasi | **Session cookie** (Better Auth) **atau** header `x-api-key` (agen/mesin) |
 | Izin | Dicek via matriks peran×aksi (`permissions.ts`) |
+| **Traceability** | Setiap respons menyertakan header `X-Request-ID` (diteruskan dari header masuk bila ada). Log error 500 memuat `rid=<id>`. |
+| **Idempotensi** | Endpoint mutasi tertentu (`POST /api/questions`, `POST /api/bundles`) mendukung header **`Idempotency-Key`** — permintaan ulang dgn key sama (≤60 dtk) di-*replay* (respons sama, header `Idempotent-Replay: true`), mencegah *double-submit*. |
 | Ganti password | Bila `mustChangePassword`, semua endpoint diblokir **403 `PASSWORD_CHANGE_REQUIRED`** — **kecuali** `/api/auth/me` (agar UI bisa baca status) & endpoint auth Better Auth (ganti password). UI dialihkan ke `/change-password`. |
 | Versi | Saat ini **v0** (prefix `/api`); versioning eksplisit menyusul (lihat §8) |
 

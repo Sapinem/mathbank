@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
-import { createSource, listSources } from "@/lib/services/taxonomy-service";
+import { createSource } from "@/lib/services/taxonomy-service";
+import { listSources } from "@/lib/services/taxonomy-service";
 
 const sourceKind = z.enum(["book", "website", "school", "competition"]);
 

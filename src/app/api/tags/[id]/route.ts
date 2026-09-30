@@ -9,8 +9,7 @@ export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
   permission: "taxonomy:manage",
   body: patchSchema,
-  handler: async ({ body, actor, params }) =>
-    updateTag((await params).id, body, actor),
+  handler: async ({ body, actor, params }) => updateTag((await params).id, body, actor),
 });
 
 /** DELETE /api/tags/[id] — hapus label (RESTRICT bila dipakai soal). */

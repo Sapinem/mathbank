@@ -28,6 +28,15 @@ describe("slugify", () => {
   it("batas 255 karakter", () => {
     expect(slugify("a".repeat(300)).length).toBe(255);
   });
+  it("#2: maxLength khusus (tags=100) — ligatur NFKD tak melebihi batas", () => {
+    // 'ﬃ' ×60 → NFKD 'ffi' ×60 = 180 char; dipotong ke 100.
+    expect(slugify("ﬃ".repeat(60), 100).length).toBeLessThanOrEqual(100);
+    expect(slugify("a".repeat(300), 100).length).toBe(100);
+  });
+  it("#2: '-' ekor dibuang SESUDAH pemotongan", () => {
+    // 5 'a' + '-' + 5 'b' → pada maxLength 6 hasil 'aaaaa-' → harus jadi 'aaaaa'.
+    expect(slugify("aaaaa bbbbb", 6)).toBe("aaaaa");
+  });
 });
 
 describe("buildTree", () => {

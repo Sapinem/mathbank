@@ -38,12 +38,20 @@ export function buildTree(flat: TopicNode[]): TopicTree[] {
   return roots;
 }
 
-/** Slug dari nama: huruf kecil, non-alfanumerik → tanda hubung. */
-export function slugify(name: string): string {
+/**
+ * Slug dari nama: huruf kecil, non-alfanumerik → tanda hubung.
+ *
+ * **#2 (enterprise):** `maxLength` **wajib** disesuaikan dengan batas kolom DB.
+ * Nama bisa MEMPERPANJANG saat `normalize("NFKD")` (ligatur `ﬃ`→`ffi`, `ǅ`→`Dž`),
+ * sehingga `slice(0,255)` bisa menulis 255 char ke kolom `varchar(100)` → error
+ * PG `value too long` (500). Buang trailing `-` **sesudah** potong, bukan sebelum.
+ */
+export function slugify(name: string, maxLength = 255): string {
   return name
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 255);
+    .slice(0, maxLength)
+    .replace(/-+$/g, ""); // buang '-' ekor yang tersisa setelah pemotongan
 }

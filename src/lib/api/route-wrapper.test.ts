@@ -26,6 +26,10 @@ import {
 } from "@/lib/auth/guards";
 import { InvalidTransitionError, NotReadyError } from "@/lib/fsm/question-fsm";
 import { MemoryStore, setStore } from "./rate-limit";
+import {
+  MemoryStore as IdemMemoryStore,
+  setIdempotencyStore,
+} from "./idempotency";
 
 /** Aktor admin (punya semua izin). */
 function adminActor(): Actor {
@@ -41,6 +45,7 @@ beforeEach(() => {
   resolveActorMock.mockReset();
   resolveActorMock.mockResolvedValue(adminActor());
   setStore(new MemoryStore()); // reset rate limiter antar-tes
+  setIdempotencyStore(new IdemMemoryStore()); // reset idempotensi antar-tes
 });
 
 describe("wrapRoute — alur sukses", () => {
@@ -299,5 +304,67 @@ describe("ok() — respons sukses manual", () => {
     const res = ok({ a: 1 }, 202);
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({ data: { a: 1 } });
+  });
+});
+
+describe("#6 — X-Request-ID (traceability)", () => {
+  it("menyertakan X-Request-ID pada respons sukses", async () => {
+    const handler = wrapRoute({ handler: async () => ({ ok: true }) });
+    const res = await handler(req());
+    expect(res.headers.get("x-request-id")).toBeTruthy();
+  });
+
+  it("meneruskan X-Request-ID dari header masuk", async () => {
+    const handler = wrapRoute({ handler: async () => ({ ok: true }) });
+    const res = await handler(
+      req("http://localhost/api/x", { headers: { "x-request-id": "trace-abc-123" } }),
+    );
+    expect(res.headers.get("x-request-id")).toBe("trace-abc-123");
+  });
+
+  it("menyertakan X-Request-ID pada respons error (401)", async () => {
+    resolveActorMock.mockResolvedValue(null);
+    const handler = wrapRoute({ handler: async () => ({}) });
+    const res = await handler(req());
+    expect(res.status).toBe(401);
+    expect(res.headers.get("x-request-id")).toBeTruthy();
+  });
+});
+
+describe("#4 — Idempotency-Key (anti double-submit)", () => {
+  it("permintaan kedua dgn key sama → replay (handler TAK jalan 2×)", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      idempotent: true,
+      handler: async () => ({ n: ++calls }),
+    });
+    const h = { "idempotency-key": "k-1" };
+    const r1 = await handler(req("http://localhost/api/x", { headers: h }));
+    const r2 = await handler(req("http://localhost/api/x", { headers: h }));
+    expect(calls).toBe(1); // handler hanya sekali
+    expect(r2.headers.get("idempotent-replay")).toBe("true");
+    expect(await r1.json()).toEqual(await r2.json());
+  });
+
+  it("key berbeda → handler jalan lagi", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      idempotent: true,
+      handler: async () => ({ n: ++calls }),
+    });
+    await handler(req("http://localhost/api/x", { headers: { "idempotency-key": "a" } }));
+    await handler(req("http://localhost/api/x", { headers: { "idempotency-key": "b" } }));
+    expect(calls).toBe(2);
+  });
+
+  it("tanpa header key → tak ada efek samping idempotensi", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      idempotent: true,
+      handler: async () => ({ n: ++calls }),
+    });
+    await handler(req());
+    await handler(req());
+    expect(calls).toBe(2);
   });
 });

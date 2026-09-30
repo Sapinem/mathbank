@@ -25,5 +25,6 @@ export const POST = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
   permission: "bundle:manage",
   body: createSchema,
+  idempotent: true, // #4: anti double-submit pembuatan paket
   handler: async ({ body, actor }) => createBundle(body, actor),
 });

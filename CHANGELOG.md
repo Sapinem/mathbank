@@ -9,6 +9,24 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Diperbaiki
+- **🏢 Catatan Enterprise — penerapan selektif (verifikasi dulu, bukan asal ikut)**
+  (`docs/VERIFIKASI-CATATAN-ENTERPRISE.md`):
+  - **#2 (fix nyata):** `slugify(name, maxLength=255)` — NFKD bisa **memperpanjang**
+    nama (ligatur `ﬃ`→`ffi`) sehingga `slice(0,255)` menulis ke kolom `varchar(100)`
+    → **500**. Batas per-kolom (`tags`=100, `events.code`=50) + buang `-` ekor sesudah potong.
+    **Terbukti live: 500 → 409/201.**
+  - **#6:** `X-Request-ID` di semua respons `wrapRoute` (sukses/error) + log 500.
+  - **#4:** `Idempotency-Key` (modul `src/lib/api/idempotency.ts`, siap-swap Redis) +
+    opsi `idempotent: true` di `wrapRoute`; aktif di `POST /api/questions` & `/api/bundles`.
+    **Terbukti live:** 2× POST key sama → id sama + `Idempotent-Replay`.
+  - **#3 `"use cache"` DIBATALKAN** (keputusan sadar): `revalidateTag(t,'max')` = SWR →
+    **data basi ~2–5 dtk** (terbukti live); `updateTag` hanya di Server Action;
+    guard di `<Suspense>` menghilangkan **307 server**. **Revert** — dicatat kandidat M8+.
+  - **Pelajaran → `CONSTRAINTS.md` #40–41.**
+- **📚 Audit Pustaka — kedua temuan "redundan" SALAH** (`docs/VERIFIKASI-AUDIT-PUSTAKA.md`):
+  paket `cn` = `shadcn-ui/cn` (drop-in clsx+tailwind-merge, ~22 file) → jangan ditukar;
+  `tw-animate-css` dipakai (`globals.css`) → jangan di-prune. Versi & kesimpulan "bersih"
+  akurat. **Tak ada perubahan kode.**
 - **🌳 Audit M5 — integritas data pohon taksonomi (T-M5-2)** — verifikasi audit M5
   menemukan **re-parent topik TIDAK mempropagasi `level` ke keturunan**: memindah
   Kategori (L1) berisi Topik (L2) → induk jadi L2 tapi **anak tetap L2** (harus 3) →
