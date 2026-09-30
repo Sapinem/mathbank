@@ -207,6 +207,8 @@ Context7 mengonfirmasi **keduanya kini didukung shadcn** (varian `radix` dan `ba
 
 Tumpukan MathBank **secara keseluruhan kompetitif dan hampir sepenuhnya di ujung terbaru**. Tidak ada dependency usang/EOL. Yang perlu perhatian hanyalah **(1) lompatan TS 7** (keputusan besar, butuh checkpoint), **(2) ambiguitas Radix vs Base UI**, dan **(3) beberapa bump patch/minor** yang mudah. Prinsip "pasang saat perlu" di `CONSTRAINTS #5` terbukti **dipatuhi** — tidak ada dependency bloat.
 
+> **Evaluasi tradeoff lanjutan:** lihat `docs/EVALUASI-UPGRADE-TUMPUKAN.md`.
+>
 > **Status:** laporan ini **review**, bukan eksekusi upgrade. Sesuai `AGENTS.md` (Zero Silent Assumptions), bump mayor (TS 7, ESLint 10, react-table 9, Radix→Base UI) **wajib dikonfirmasi user lebih dulu**.
 
 ---

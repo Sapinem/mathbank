@@ -87,6 +87,7 @@
 | D30 | `VERIFIKASI-AUDIT-PUSTAKA.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit pustaka: kedua temuan "redundan" (cn, tw-animate-css) SALAH |
 | D31 | `VERIFIKASI-AUDIT-M6.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M6 + T-M6-1 (logika ambang dedup), T-M6-2 (fusion belum terintegrasi) |
 | D32 | `VERIFIKASI-AUDIT-M7.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M7 + T-M7-2 (reorder parsial), T-M7-3 (RESTRICT abadi setelah arsip), T-M7-1 (klaim stimulus) |
+| D33 | `EVALUASI-UPGRADE-TUMPUKAN.md` | ✅ | **dibuat** 2026-09-30 — evaluasi tradeoff P1–P3 (patch=LAKUKAN, TS7=TUNDA, ESLint10=TUNDA) |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 
