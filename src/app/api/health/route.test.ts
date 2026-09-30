@@ -16,6 +16,9 @@ import { GET } from "./route";
 
 const mockCheck = vi.mocked(checkDbInvariants);
 
+/** Request tiruan untuk handler yang menerima `req`. */
+const req = (url = "http://localhost/api/health") => new Request(url);
+
 const healthy = {
   ok: true,
   counts: { tables: 27, checkConstraints: 2, hnswIndexes: 1, triggers: 26 },
@@ -32,7 +35,7 @@ beforeEach(() => {
 describe("GET /api/health", () => {
   it("200 & status ok bila invarian utuh", async () => {
     mockCheck.mockResolvedValue(healthy);
-    const res = await GET();
+    const res = await GET(req());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.status).toBe("ok");
@@ -48,7 +51,7 @@ describe("GET /api/health", () => {
       missingTriggers: ["trg_topics_cycle"],
       problems: ["triggers: 10 < 26", "TRIGGER hilang: trg_topics_cycle"],
     });
-    const res = await GET();
+    const res = await GET(req());
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body.data.status).toBe("degraded");
@@ -57,10 +60,19 @@ describe("GET /api/health", () => {
 
   it("503 & status down bila DB tak terjangkau", async () => {
     mockCheck.mockRejectedValue(new Error("connection refused"));
-    const res = await GET();
+    const res = await GET(req());
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body.data.status).toBe("down");
     expect(body.data.db).toBe("down");
+  });
+
+  it("?probe=liveness → 200 cepat TANPA menyentuh DB", async () => {
+    const res = await GET(req("http://localhost/api/health?probe=liveness"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.status).toBe("ok");
+    expect(typeof body.data.uptimeSec).toBe("number");
+    expect(mockCheck).not.toHaveBeenCalled();
   });
 });

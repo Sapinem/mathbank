@@ -25,6 +25,8 @@ import {
 } from "./idempotency";
 import type { Actor } from "@/lib/auth/actor";
 import type { Permission } from "@/lib/auth/permissions";
+import { log } from "@/lib/telemetry/logger";
+import { recordRequest } from "@/lib/telemetry/metrics";
 
 /**
  * Pembungkus route (L4) — menghapus boilerplate yang di QBank ditulis
@@ -98,10 +100,43 @@ function searchParamsToObject(url: string): Record<string, string> {
 /** Argumen kedua handler Next.js (params rute dinamis, async di Next 15+). */
 type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
 
+/** Ambil kode error stabil (bila ada) untuk field log. */
+function extractCode(err: unknown): string {
+  if (err && typeof err === "object") {
+    const e = err as { code?: unknown; name?: unknown };
+    if (typeof e.code === "string") return e.code;
+    if (typeof e.name === "string" && e.name.endsWith("Error")) {
+      // camelCase → CONSTANT_CASE (mis. InvalidTransitionError → INVALID_TRANSITION)
+      return e.name
+        .replace(/Error$/, "")
+        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .toUpperCase();
+    }
+  }
+  if (err instanceof ZodError) return "VALIDATION_ERROR";
+  return "INTERNAL_ERROR";
+}
+
 /** Petakan error → respons terformat. `requestId` disertakan pada log 500. */
-function errorResponse(err: unknown, requestId: string): NextResponse {
+function errorResponse(
+  err: unknown,
+  requestId: string,
+  ctx: { route?: string; method?: string; actorId?: string } = {},
+): NextResponse {
   const withRid = (res: NextResponse) => {
     res.headers.set("X-Request-ID", requestId);
+    // Semua respons galat → log terstruktur (level sesuai kelas status).
+    const status = res.status;
+    log[status >= 500 ? "error" : "warn"]({
+      msg: "permintaan gagal",
+      requestId,
+      route: ctx.route,
+      method: ctx.method,
+      actorId: ctx.actorId,
+      status,
+      code: extractCode(err),
+      err,
+    });
     return res;
   };
   if (err instanceof UnauthorizedError) {
@@ -194,7 +229,7 @@ function errorResponse(err: unknown, requestId: string): NextResponse {
       ),
     );
   }
-  console.error(`[API] error tak terduga (rid=${requestId}):`, err);
+  // Galat tak terduga (500) — detail sudah di-log terstruktur oleh errorResponse.
   return withRid(
     NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Kesalahan server" } },
@@ -216,7 +251,20 @@ export function wrapRoute<TQuery, TBody, TResult>(
     // proxy bila ada (agar korelasi dgn log eksternal), jika tidak buat baru.
     const requestId =
       req.headers.get("x-request-id")?.slice(0, 64) || crypto.randomUUID();
+    // M16: label route utk metrik (path tanpa query) + waktu mulai.
+    const routePath = new URL(req.url).pathname;
+    const method = req.method;
+    const startedAt = Date.now();
     let actorIdForCleanup: string | null = null;
+    // Catat hasil akhir (sukses/error) ke metrik — satu tempat, apa pun jalannya.
+    const finish = (res: NextResponse): NextResponse => {
+      try {
+        recordRequest(method, routePath, res.status, Date.now() - startedAt);
+      } catch {
+        // metrik tak boleh menjatuhkan permintaan
+      }
+      return res;
+    };
     try {
       const actor = await resolveActor(req.headers);
       actorIdForCleanup = actor?.id ?? null;
@@ -259,7 +307,7 @@ export function wrapRoute<TQuery, TBody, TResult>(
           const replay = NextResponse.json(state.body, { status: state.status });
           replay.headers.set("X-Request-ID", requestId);
           replay.headers.set("Idempotent-Replay", "true");
-          return replay;
+          return finish(replay);
         }
         if (state.kind === "in-flight") {
           const busy = NextResponse.json(
@@ -272,7 +320,7 @@ export function wrapRoute<TQuery, TBody, TResult>(
             { status: 409 },
           );
           busy.headers.set("X-Request-ID", requestId);
-          return busy;
+          return finish(busy);
         }
       }
 
@@ -287,7 +335,7 @@ export function wrapRoute<TQuery, TBody, TResult>(
         );
         res.headers.set("Idempotency-Key", idemKey);
       }
-      return res;
+      return finish(res);
     } catch (err) {
       // **#4:** bila gagal, buang penanda in-flight agar percobaan berikutnya
       // (key sama) tidak terjebak 409 — kesalahan bukan hasil yang di-cache.
@@ -296,7 +344,13 @@ export function wrapRoute<TQuery, TBody, TResult>(
         const actorId = actorIdForCleanup; // diisi sesudah resolve (lihat di bawah)
         if (k && actorId) getIdempotencyStore().forget(`${actorId}:${k}`);
       }
-      return errorResponse(err, requestId);
+      return finish(
+        errorResponse(err, requestId, {
+          route: routePath,
+          method,
+          actorId: actorIdForCleanup ?? undefined,
+        }),
+      );
     }
   };
 }

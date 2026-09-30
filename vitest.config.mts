@@ -29,6 +29,8 @@ export default defineConfig({
         "src/lib/auth/password-policy.ts",
         "src/lib/auth/origins.ts",
         "src/lib/api/route-wrapper.ts",
+        "src/lib/telemetry/logger.ts",
+        "src/lib/telemetry/metrics.ts",
         "src/lib/api/rate-limit.ts",
         "src/lib/db/projections/question.ts",
         "src/lib/theme/color.ts",
