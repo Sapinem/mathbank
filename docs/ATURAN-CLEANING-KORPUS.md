@@ -173,3 +173,10 @@ Belum ditangani (tugas lapisan berikutnya):
 - Implementasi `clean.ts` diverifikasi: tsc 0, lint 0, 313 unit tes, coverage 94.4% stmts/81.3% branch.
 - Validasi korpus nyata: 1.074 file, 0 sisa entitas bernama, math `$x<3$` aman.
 - Evaluasi komprehensif 1.081 file: lihat `EVALUASI-KORPUS-KOMPREHENSIF.md`.
+
+### Pembaruan 2026-09-30 (M9-2b) — `bestImageSrc`
+
+`extractImages` kini memilih URL gambar **terbaik**: `srcset` (kandidat terbesar)
+> `data-src`/`data-lazy-src` > `src`. Alasan: `src` mathcyber = path crawler lama
+(**404**), URL asli hidup ada di `srcset` (87% dari 2.763 gambar). Teruji di
+`clean.test.ts`. Detail: `docs/RENCANA-MEDIA.md`.

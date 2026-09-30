@@ -254,14 +254,50 @@ function renderList(inner: string, ordered: boolean): string {
   return "\n" + lines.join("\n") + "\n";
 }
 
+/**
+ * Pilih URL gambar terbaik dari tag `<img>` **tanpa** absolutisasi.
+ *
+ * `srcset` (kandidat terbesar) > `data-src`/`data-lazy-src` > `src`.
+ * Alasan: `src` mathcyber = path crawler lama (**404**), URL asli ada di `srcset`.
+ */
+export function bestImageSrc(tag: string): string | undefined {
+  const attr = (name: string): string | undefined => {
+    const m = tag.match(new RegExp(`\\b${name}=["']([^"']*)["']`, "i"));
+    return m ? m[1]!.trim() : undefined;
+  };
+
+  const srcset = attr("srcset");
+  if (srcset) {
+    let best: string | undefined;
+    let bestScore = -1;
+    for (const part of srcset.split(",")) {
+      const m = part.trim().match(/^(\S+)\s*(?:(\d+)w|(\d+(?:\.\d+)?)x)?$/);
+      if (!m) continue;
+      const score = m[2] ? parseInt(m[2], 10) : m[3] ? Math.round(parseFloat(m[3]) * 1000) : 1;
+      if (score > bestScore) {
+        bestScore = score;
+        best = m[1]!;
+      }
+    }
+    if (best) return best;
+  }
+  for (const name of ["data-src", "data-lazy-src", "data-original"]) {
+    const v = attr(name);
+    if (v) return v;
+  }
+  return attr("src");
+}
+
 /** Ubah <img> → markdown, kembalikan sekaligus daftar URL gambar. */
 export function extractImages(html: string): { text: string; media: string[] } {
   const media: string[] = [];
   let text = html.replace(/<img\b[^>]*>/gi, (tag) => {
-    const m = tag.match(/src=["']([^"']+)["']/i);
-    if (!m) return "";
-    const src = m[1]!.trim();
-    if (src && !media.includes(src)) media.push(src);
+    // Pilih URL terbaik: `srcset` (URL asli hidup) > lazy > `src`.
+    // Absolutisasi dilakukan lapisan media (butuh URL artikel); di sini cukup
+    // ambil kandidat mentahnya yang benar.
+    const src = bestImageSrc(tag);
+    if (!src) return "";
+    if (!media.includes(src)) media.push(src);
     const alt = tag.match(/alt=["']([^"']*)["']/i);
     return `\n\n![${alt ? alt[1] : "Gambar"}](${src})\n\n`;
   });

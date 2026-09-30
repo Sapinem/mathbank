@@ -33,6 +33,10 @@ export default defineConfig({
         "src/lib/search/fusion.ts",
         "src/lib/taxonomy/tree.ts",
         "src/lib/ingest/parsers/clean.ts",
+        "src/lib/ingest/media/resolve-url.ts",
+        "src/lib/ingest/media/fetch.ts",
+        "src/lib/ingest/media/store.ts",
+        "src/lib/ingest/media/ingest-media.ts",
         // Komponen kustom (BUKAN vendor ui/**) yang punya tes komponen.
         "src/components/questions/question-card.tsx",
         "src/components/questions/bank-soal-view.tsx",
