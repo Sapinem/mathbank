@@ -13,7 +13,7 @@ const ROUTES = [
   "/review",
   "/references/topics",
   "/references/sources",
-  "/references/event",
+  "/references/events",
   "/references/labels",
   "/system/settings",
   "/api/auth/me",

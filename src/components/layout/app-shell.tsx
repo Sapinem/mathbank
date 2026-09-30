@@ -23,7 +23,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider delay={0}>
-      <SidebarProvider className="h-svh overflow-hidden">
+      <SidebarProvider className="h-svh overflow-hidden" data-app-shell>
         <SkipLink />
         <AppSidebar />
         <SidebarInset
@@ -32,7 +32,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="flex min-w-0 flex-col overflow-hidden outline-none"
         >
           <Header onOpenCommand={() => setCommandOpen(true)} />
-          <div className="flex-1 overflow-y-auto">{children}</div>
+          <div className="flex-1 overflow-y-auto" data-app-scroll>
+            {children}
+          </div>
         </SidebarInset>
         <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       </SidebarProvider>

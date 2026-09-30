@@ -49,7 +49,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Topik", href: "/references/topics", icon: FolderTree },
       { label: "Sumber & Asal", href: "/references/sources", icon: Database },
-      { label: "Event", href: "/references/event", icon: CalendarDays },
+      { label: "Event", href: "/references/events", icon: CalendarDays },
       { label: "Label", href: "/references/labels", icon: Tag },
     ],
   },

@@ -20,6 +20,16 @@ export const bundleKeys = {
 };
 
 /** Baris item pada detail paket (soal ter-proyeksi). */
+export interface BundleOptionView {
+  id: string;
+  label: string;
+  contentMarkdown: string;
+  orderIndex: number;
+  /** Hanya ada bila aktor boleh melihat kunci. */
+  isCorrect?: boolean;
+  distractorRationale?: string | null;
+}
+
 export interface BundleItemView {
   item: {
     id: string;
@@ -36,6 +46,14 @@ export interface BundleItemView {
     contentMarkdown: string;
     questionType: string;
     status: string;
+    dataPayload?: unknown;
+    /** Hanya ada bila aktor boleh melihat kunci. */
+    answerKey?: {
+      correct?: string[];
+      text?: string;
+      explanation?: string;
+    } | null;
+    options: BundleOptionView[];
   };
 }
 

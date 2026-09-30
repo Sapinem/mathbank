@@ -1,0 +1,73 @@
+/*
+ * Gaya cetak (M8) — naskah paket soal.
+ *
+ * Prinsip (lihat docs/RENCANA-EKSPOR.md):
+ *  - Opsi A: cetak lewat browser (`window.print()`), TANPA dependency baru.
+ *  - Ukuran kertas lewat CSS `@page` (Chromium menghormati; Firefox mengabaikan `size`).
+ *  - Sembunyikan shell aplikasi (sidebar/header) & elemen `.no-print`.
+ *  - Naskah = `.print-sheet`; hanya ini yang tampil saat mencetak.
+ */
+
+@page {
+  size: A4;
+  /* Margin fisik halaman. Chrome/Firefox punya opsi "margin: default" di dialog
+   * yang menimpa ini — arahkan pengguna pilih "Margins: Default/None". */
+  margin: 18mm 16mm;
+}
+
+/* Hanya berlaku saat mencetak. */
+@media print {
+  /* Netralkan tinggi terkurung shell (h-svh/overflow) agar dokumen mengalir penuh. */
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  /* Sembunyikan shell + kontrol yang tak perlu dicetak. */
+  [data-app-shell],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Area konten yang tergulung harus mengalir (bukan terpotong tinggi layar). */
+  [data-app-scroll] {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Naskah mengalir bebas. */
+  .print-sheet {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    color: #000 !important;
+  }
+
+  /* Warna dikunci hitam-putih agar hemat tinta & konsisten. */
+  .print-sheet * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Jangan pisahkan soal antar halaman bila bisa dihindari. */
+  .print-question {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Lembar kunci/pembahasan selalu mulai di halaman baru. */
+  .print-sheet-answerkey,
+  .print-sheet-answers {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  a {
+    text-decoration: none;
+    color: #000;
+  }
+}

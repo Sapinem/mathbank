@@ -36,7 +36,7 @@
 │  REFERENSI                  │
 │   ◻ Topik                   │  /references/topics
 │   ◻ Sumber & Asal           │  /references/sources
-│   ◻ Event                   │  /references/event
+│   ◻ Event                   │  /references/events
 │   ◻ Label                   │  /references/labels
 ├─────────────────────────────┤
 │  STUDIO                     │
@@ -115,7 +115,7 @@ TELAHAH
 
 **3.5 Topik `/references/topics`** — 3-level (Kategori›Topik›SubTopik), CRUD, pindah induk (anti-siklus)
 **3.6 Sumber & Asal `/references/sources`** — pola B (buku/web/sekolah); CRUD + anak (books/institutions)
-**3.7 Event `/references/event`** — UTBK/OSN/SBMPTN; CRUD + subtes
+**3.7 Event `/references/events`** — UTBK/OSN/SBMPTN; CRUD + subtes
 **3.8 Label `/references/labels`** — tags; CRUD
 
 ### STUDIO

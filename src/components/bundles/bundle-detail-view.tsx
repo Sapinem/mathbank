@@ -40,12 +40,12 @@ export function BundleDetailView() {
             <Button variant="outline" render={<Link href="/bundles" />} nativeButton={false}>
               ← Daftar
             </Button>
-            <Button render={<Link href={`/bundles/${bundleId}/sunting`} />} nativeButton={false}>
+            <Button render={<Link href={`/bundles/${bundleId}/edit`} />} nativeButton={false}>
               <Pencil data-icon="inline-start" /> Sunting
             </Button>
             <Button
               variant="outline"
-              render={<Link href={`/bundles/${bundleId}/cetak`} />}
+              render={<Link href={`/bundles/${bundleId}/print`} />}
               nativeButton={false}
             >
               <Printer data-icon="inline-start" /> Cetak

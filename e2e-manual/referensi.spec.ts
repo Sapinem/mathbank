@@ -24,7 +24,7 @@ test.describe("Referensi — Sumber (M5)", () => {
 
 test.describe("Referensi — Event (M5)", () => {
   test("halaman event menampilkan tabel", async ({ page }) => {
-    await page.goto("/references/event");
+    await page.goto("/references/events");
     await expect(page.getByRole("heading", { name: "Event" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Event Baru" })).toBeVisible();
   });

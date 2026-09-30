@@ -15,8 +15,8 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
-import { questions } from "@/lib/db/schema/question";
-import { questionColumns, canSeeAnswerKey } from "@/lib/db/projections/question";
+import { questions, questionOptions } from "@/lib/db/schema/question";
+import { questionColumns, optionColumns, canSeeAnswerKey } from "@/lib/db/projections/question";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { slugify } from "@/lib/taxonomy/tree";
@@ -285,7 +285,25 @@ export async function listBundleItems(id: string, actor?: Actor) {
     .innerJoin(questions, eq(questions.id, bundleItems.questionId))
     .where(eq(bundleItems.bundleId, id))
     .orderBy(asc(bundleItems.orderIndex));
-  return rows;
+
+  // Lampirkan opsi (M8: naskah cetak butuh pilihan jawaban). Batch agar tak N+1.
+  if (rows.length === 0) return rows;
+  const ids = rows.map((r) => r.question.id);
+  const opts = await db
+    .select(optionColumns({ withAnswerKey }))
+    .from(questionOptions)
+    .where(inArray(questionOptions.questionId, ids))
+    .orderBy(asc(questionOptions.orderIndex));
+  const byQuestion = new Map<string, typeof opts>();
+  for (const o of opts) {
+    const arr = byQuestion.get(o.questionId) ?? [];
+    arr.push(o);
+    byQuestion.set(o.questionId, arr);
+  }
+  return rows.map((r) => ({
+    ...r,
+    question: { ...r.question, options: byQuestion.get(r.question.id) ?? [] },
+  }));
 }
 
 /** Tambah soal ke paket (di akhir). Tolak duplikat. */
