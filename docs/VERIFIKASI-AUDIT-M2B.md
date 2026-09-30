@@ -16,7 +16,10 @@
 (gerbang `NODE_ENV`/`APP_ENV`), sama seperti pola pagar yang sudah kita pakai.
 Produksi selalu menerima `APP_URL` + domain resmi.
 
-**Status:** ⬜ belum — menunggu keputusan.
+**Status: ✅ SELESAI** (2026-09-30) — origin dev dipagari `isProductionRuntime()`
+(`NODE_ENV` produksi ATAU `APP_ENV` `production`/`staging`). Produksi hanya menerima
+`APP_URL` + `https://b.iyo.my.id`. Terbukti runtime: `Origin: localhost:3000` → **403**,
+origin resmi → 400 (bukan 403).
 
 ## Temuan #3 — `mustChangePassword` guard → ❌ **SALAH, tapi menyingkap isu lain**
 
@@ -48,12 +51,24 @@ perbaikan password ada di lapisan API. Yang hilang adalah **UI-nya**.
   status; (b) bangun **halaman ganti password** + arahkan ke sana. → sederhananya:
   jangan kirim `ForbiddenError` global, tapi **redirect ke halaman wajib ganti password**.
 
-**Status:** ⬜ belum — butuh keputusan (menyentuh alur UI, bukan sekadar guard).
+**Status: ✅ SELESAI** (2026-09-30) — (a) `/api/auth/me` dikecualikan via
+`allowPasswordChangePending`; (b) halaman `/change-password` dibangun; (c) app-layout
+mengalihkan akun ber-flag ke sana; (d) error diubah ke `PasswordChangeRequiredError`
+(`PASSWORD_CHANGE_REQUIRED`) agar UI bisa bereaksi. Utang kecil tercatat: halaman
+403 generik belum dibuat (lihat T-M2-2).
 
 ## Kesimpulan
-- Temuan #2: **valid**, perbaikan murah & jelas.
+- Temuan #2: **valid**, perbaikan murah & jelas → ✅ selesai.
 - Temuan #3: **klaim salah** (guard sudah ada) — tetapi investigasi menemukan
-  **dead-end UX nyata** yang lebih penting daripada yang dilaporkan.
+  **dead-end UX nyata** yang lebih penting daripada yang dilaporkan → ✅ selesai.
+
+## Sinkronisasi dokumen audit (2026-09-30)
+Temuan #2 & #3 di atas mengekspos bahwa **dokumen audit lama memuat klaim basi**.
+Berikut yang disinkronkan:
+- `docs/REVIEW-PER-MILESTONE.md` §M2 — baris `mustChangePassword` (pesan error),
+  T-M2-1 (login ✅), T-M2-2 (403 🟡), kesimpulan M2 diperbarui.
+- `docs/KEAMANAN.md:48-49` — pagar dev-bypass (3 pagar) + `mustChangePassword` (code & pengecualian).
+- `docs/KONTRAK-API.md:26` — aturan `mustChangePassword` diperjelas.
 
 ---
 *Lihat juga: docs/VERIFIKASI-AUDIT-M2.md, docs/KEAMANAN.md.*

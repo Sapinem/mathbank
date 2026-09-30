@@ -45,8 +45,8 @@ Dua kelas kredensial, satu sistem:
 | **API key** | Agen/mesin (MCP, ingest) | Plugin `@better-auth/api-key`, rate limit bawaan |
 
 - **Rahasia:** `BETTER_AUTH_SECRET` wajib di produksi — **aplikasi menolak start tanpa itu** (`server.ts`).
-- **Pagar dev bypass:** `AUTH_DEV_BYPASS` mengaktifkan aktor admin palsu, TETAPI **mati total bila `NODE_ENV === "production"`** (`resolve.ts`).
-- **mustChangePassword:** aktor dengan flag ini **diblokir 403** di semua route (wrapper).
+- **Pagar dev bypass:** `AUTH_DEV_BYPASS` mengaktifkan aktor admin palsu, TETAPI **mati total bila `NODE_ENV === "production"`** — kini **3 pagar**: `NODE_ENV` produksi, `APP_ENV` (`production`/`staging`), dan nilai harus `= "true"` literal (`resolve.ts`).
+- **mustChangePassword:** aktor dengan flag ini **diblokir 403 `PASSWORD_CHANGE_REQUIRED`** di semua route domain (wrapper), **kecuali** `/api/auth/me` (`allowPasswordChangePending`) & endpoint auth Better Auth. UI mengalihkan ke `/change-password`.
 
 ### 3.1 Aturan Wajib
 1. **Jangan pernah** mengaktifkan `AUTH_DEV_BYPASS` di produksi.

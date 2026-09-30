@@ -144,8 +144,8 @@ migrasi **identik** dengan DB asli di 8 metrik). **M1: ✅ LULUS.**
 | Matriks izin L1 (5 peran) | 15 permission × 5 peran = **75 sel** | ✅ |
 | Pembungkus route `withRoute` | `route-wrapper.ts`: auth, permission, query, body, rateLimit, 401/403/422/429 | ✅ |
 | `GET /api/auth/me` (identitas benar) | `{"id":"dev-user","name":"Dev User","roles":["admin"]}` (dev bypass) | ✅ |
-| Halaman login + logout | ⚠️ **TIDAK ADA halaman login** (lihat T-M2-1) | ❌ |
-| Forbidden page | ⚠️ **TIDAK ADA halaman 403** (lihat T-M2-2) | ❌ |
+| Halaman login + logout | ✅ **ADA** `/login` (dibuat setelah audit; lihat T-M2-1) | ✅ |
+| Forbidden page | 🟡 **belum ada halaman 403 generik**, tapi `/change-password` sudah ada sebagai preseden halaman penangan-state (T-M2-2) | 🟡 |
 
 ### Uji perilaku
 
@@ -154,17 +154,28 @@ migrasi **identik** dengan DB asli di 8 metrik). **M1: ✅ LULUS.**
 | `/api/auth/me` dengan dev bypass | ✅ `Dev User/admin` |
 | `/api/auth/me` tanpa auth (produksi) | ✅ `401 UNAUTHORIZED` |
 | `/api/questions` tanpa auth (produksi) | ✅ `401` |
-| `withRoute` paksa `mustChangePassword` | ✅ `403 "Harus ganti password dulu"` |
+| `withRoute`/`wrapRoute` paksa `mustChangePassword` | ✅ `403 PASSWORD_CHANGE_REQUIRED` (kini error eksplisit, lihat pembaruan 2026-09-30) |
 | Guard dipakai di service (`assertCan`) | ✅ 7 tempat (`create/edit/setReady/archive/flag/delete`) |
-| Matriks izin diuji (75 sel) | ✅ 63 tes auth, `EXPECTED` independen (bukan salin) |
+| Matriks izin diuji (75 sel) | ✅ 63→**72** tes auth (T1–T3); `EXPECTED` independen (bukan salin) |
 | Multi-role = union izin (`yes > own > no`) | ✅ diuji (`teacher+reviewer` → boleh setReady) |
-| Pagar dev bypass (`NODE_ENV=production` → mati) | ✅ `resolve.ts` memeriksa lebih dulu |
+| Pagar dev bypass (`NODE_ENV=production` → mati) | ✅ `resolve.ts` memeriksa lebih dulu; kini **3 pagar** (`NODE_ENV`, `APP_ENV`, `AUTH_DEV_BYPASS`) |
+
+> **🔄 Pembaruan 2026-09-30 (verifikasi lanjutan — `VERIFIKASI-AUDIT-M2B.md`):**
+> blokir `mustChangePassword` **sudah ada** sejak awal (klaim temuan #3 eksternal
+> salah), **tetapi** menyingkap cacat nyata: **dead-end** — user ber-flag tak bisa
+> baca status (kini `/api/auth/me` dikecualikan via `allowPasswordChangePending`)
+> dan tak ada jalan ganti password. **Dituntaskan:** halaman `/change-password` +
+> alih paksa di app-layout. Error diubah ke `PasswordChangeRequiredError`
+> (`PASSWORD_CHANGE_REQUIRED`) agar UI bisa bereaksi.
 
 ### Temuan
 
-#### 🟡 T-M2-1 — Tidak ada halaman login (MILESTONE salah centang)
+#### 🟡 T-M2-1 — Tidak ada halaman login (MILESTONE salah centang) — ✅ **SELESAI**
 
-MILESTONE M2 mencentang `[x] Halaman login + logout`. **Halaman login tidak ada** —
+> **🔄 Status 2026-09-30:** halaman `/login` **sudah dibuat** (`src/app/login/page.tsx`,
+> pemilih akun demo + form + `signIn`). Temuan ini **historis**.
+
+MILESTONE M2 mencentang `[x] Halaman login + logout`. **Saat audit**, halaman login tidak ada —
 tidak ada rute `/login`/`/masuk`, tak ada `signIn` di kode. Yang ada hanya **tombol
 "Keluar"** di dropdown pengguna (`sidebar-user.tsx` → `/api/auth/sign-out`).
 Autentikasi manusia hanya jalan lewat **API** Better Auth; UI login belum dibuat.
@@ -172,7 +183,11 @@ Autentikasi manusia hanya jalan lewat **API** Better Auth; UI login belum dibuat
 **Catatan:** ini konsisten dengan dev bypass yang aktif selama pengembangan. Login UI
 perlu ditambahkan sebelum deploy (masuk **M13/M15** atau sub-task tersendiri).
 
-#### 🟡 T-M2-2 — Tidak ada halaman Forbidden (403)
+#### 🟡 T-M2-2 — Tidak ada halaman Forbidden (403) — 🟡 **SEBAGIAN**
+
+> **🔄 Status 2026-09-30:** masih **belum ada halaman 403 generik**. Namun pola
+> halaman penangan-state sudah ada (`/change-password`). Menyediakan halaman 403
+> generik tetap utang UI kecil (bisa ikut M15).
 
 MILESTONE mencentang `[x] Forbidden page`. **Tidak ada** rute/halaman 403. Error 403
 hanya dikembalikan sebagai JSON di API. `ForbiddenError` ada (dipakai guards), tapi
@@ -208,9 +223,11 @@ permission = 75 sel**. Perbaiki angka (kecil, tapi akurasi).
 
 Inti M2 **kokoh**: matriks 75 sel teruji, guard dipakai konsisten di service & route,
 multi-role union benar, pagar produksi ada, respons 401/403/422/429 berformat tunggal.
-**Cacat: 2 klaim dokumen berlebih (login & forbidden page belum ada) + divergensi
-tabel L1.** Semua **diperbaiki/dicatat** di bawah. **M2: ✅ LULUS** (dengan utang UI
-yang dicatat ke M13/M15).
+**Cacat saat audit: 2 klaim dokumen berlebih (login & forbidden page belum ada) +
+divergensi tabel L1.** Login **sudah dibuat**; forbidden page **masih utang kecil**.
+Verifikasi lanjutan (2026-09-30) menambahkan: `apiKeyPermissions` kini **ditegakkan**
+(sebelumnya dead field), dev-bypass **3 pagar**, `trustedOrigins` produksi bersih,
+`mustChangePassword` **dead-end dituntaskan** (`/change-password`). **M2: ✅ LULUS.**
 
 ---
 

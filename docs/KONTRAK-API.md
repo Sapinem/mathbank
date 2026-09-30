@@ -23,7 +23,7 @@
 | Format | JSON (`application/json`) |
 | Autentikasi | **Session cookie** (Better Auth) **atau** header `x-api-key` (agen/mesin) |
 | Izin | Dicek via matriks peran×aksi (`permissions.ts`) |
-| Ganti password | Bila `mustChangePassword`, semua endpoint (kecuali auth) → **403** |
+| Ganti password | Bila `mustChangePassword`, semua endpoint diblokir **403 `PASSWORD_CHANGE_REQUIRED`** — **kecuali** `/api/auth/me` (agar UI bisa baca status) & endpoint auth Better Auth (ganti password). UI dialihkan ke `/change-password`. |
 | Versi | Saat ini **v0** (prefix `/api`); versioning eksplisit menyusul (lihat §8) |
 
 ---
