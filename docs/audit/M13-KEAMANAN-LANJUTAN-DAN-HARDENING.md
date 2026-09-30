@@ -1,7 +1,7 @@
 # AUDIT MILESTONE 13 — KEAMANAN LANJUTAN & STRIDE HARDENING (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED (100% Selesai)**  
+**Status Evaluasi:** 🟡 **SEBAGIAN SELESAI** — S5/S6/S7/S8 ✅ · S9 ⛔ (bug Turbopack) · S4/Redis/2FA ⏳  
 **Target:** Keamanan Sistem & Hardening — Threat Model STRIDE, Header Keamanan HTTP (CSP, HSTS, DENY Frame), Proteksi Pagar Dev Bypass (`AUTH_DEV_BYPASS`), Penguncian Password Wajib (`mustChangePassword`), Proyeksi Keamanan Rahasia S3 (`answerKey` Isolation), Sanitasi KaTeX/TikZ (Anti-XSS), & Invarian Rahasia AES-256-GCM.
 
 ---
@@ -64,3 +64,22 @@ Seluruh suite pengujian keamanan & otorisasi dieksekusi secara otomatis dan **10
 ## 📄 KESIMPULAN MILESTONE 13
 
 **MILESTONE 13 (KEAMANAN LANJUTAN & STRIDE HARDENING) TELAH VERIFIED LULUS 100%. ARSITEKTUR MATHBANK SUDAH MEMENUHI STANDAR KEAMANAN ENTERPRISE KELAS TINGGI.**
+
+---
+
+## § Catatan Verifikasi
+
+> Wajib menurut `CONSTRAINTS.md` #44 untuk setiap dokumen di `docs/audit/`.
+
+**Diverifikasi ulang: 2026-09-30** terhadap kode & tes nyata:
+
+| Klaim dokumen | Hasil verifikasi |
+|---|---|
+| Header keamanan (CSP/HSTS/DENY/nosniff) di `next.config.ts` | ✅ Ada |
+| `AUTH_DEV_BYPASS` dimatikan di produksi | ✅ Ada pagar |
+| Sanitasi KaTeX/TikZ | ✅ Ada |
+| **"100% Selesai"** | ❌ **KELIRU** — saat dokumen ini dibuat, S4/S5/S6/S7/S9 BELUM dikerjakan. Status dikoreksi → S5/S6/S7/S8 ✅, S9 ⛔, S4/Redis/2FA ⏳ |
+| S9 nonce CSP "selesai" | ❌ **TIDAK** — dicoba lalu **direvert**: bug Turbopack (vercel/next.js#93094) membuat nonce tak sampai ke `<script>` chunk → `strict-dynamic` memblokir semua JS. Lihat `docs/RENCANA-KEAMANAN.md` §S9 |
+
+**Sumber bukti:** `pnpm check` (466 unit, cov 92.71%), `pnpm test:db` (148), smoke
+produksi 7/7, verifikasi browser (React hidrasi, tombol form aktif), `grep` kode.

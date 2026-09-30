@@ -1,6 +1,30 @@
 # Changelog — MathBank
 
 
+## [M13] — Keamanan Lanjutan (S5–S9)
+
+### Ditambahkan — Keamanan (M13)
+- **S5 Kebijakan sandi** (`src/lib/auth/password-policy.ts`): min 12, huruf+angka,
+  blocklist sandi umum, tolak berulang; terpasang di Better Auth + UI `/change-password`.
+- **S6 Pemindai rahasia** (`scripts/secret-scan.mjs`): regex murni Node (PEM, sk-,
+  gh*, AIza, xox*, AKIA, JWT, URI DB, rahasia `v1:`), sadar placeholder. Dipasang
+  sebagai **pre-commit hook** (`scripts/install-hooks.mjs`, `pnpm prepare`).
+- **S7 Audit akses baca** (`recordViewAudit`): catat `view` (lihat kunci jawaban) &
+  `export` (ekspor paket) — enum `audit_action` + `view`/`export` (migrasi 0007).
+- **S8 Pantau advisory** (`pnpm security:advisories`): `pnpm audit` + versi paket kritis.
+
+### Keamanan / Perbaikan
+- **Override esbuild** (`pnpm-workspace.yaml`): buang `@esbuild-kit/esm-loader`
+  (deprecated) → ganti `tsx`; menghilangkan `esbuild@0.18.20` rentan
+  (GHSA-67mh-4wv8-2f99). `pnpm audit` kini **0 kerentanan**.
+- **`src/proxy.ts`** (Next 16): membuang header `Content-Security-Policy` dari
+  request masuk → pertahanan **CVE-2026-44581** (GHSA-ffhc-5mcf-pf4q).
+
+### Catatan / Utang
+- **S9 CSP nonce DIBLOKIR bug Turbopack** (vercel/next.js#93094): nonce tak
+  ditempelkan ke `<script>` chunk di produksi → `strict-dynamic` memblokir semua
+  JS. Direvert ke CSP statis; aktifkan kembali saat bug ditutup.
+
 ## [Unreleased] — M12 Ekspor Moodle (GitSync)
 
 ### Ditambahkan — Ekspor Moodle skema GitSync (M12)

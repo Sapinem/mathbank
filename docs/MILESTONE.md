@@ -372,16 +372,16 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 > Boleh paralel dengan fase 1/2. Tujuan: utang tak menumpuk.
 
-## M13 — Keamanan Lanjutan (S4–S9) 🟠
+## M13 — Keamanan Lanjutan (S4–S9) 🟡 (sebagian selesai)
 
-**Dependensi:** M4 · dari `KEAMANAN.md`
+**Dependensi:** M4 · dari `KEAMANAN.md` · rencana: `docs/RENCANA-KEAMANAN.md`
 
+- [x] **S5** Kebijakan kata sandi kuat + pesan jelas di UI (`password-policy.ts`) ✅
+- [x] **S6** Pemindai rahasia pre-commit (`scripts/secret-scan.mjs`, murni Node) ✅
+- [x] **S7** Audit akses baca data sensitif (`recordViewAudit`, enum view/export) ✅
+- [x] **S8** Pantau advisory (`pnpm security:advisories`; override esbuild rentan dibuang) ✅
+- [ ] **S9** **CSP nonce** — ⛔ diblokir bug Turbopack (#93094); direvert, proxy strip header CSP dipertahankan. Utang.
 - [ ] **S4** Verifikasi email (`requireEmailVerification: true`) + alur kirim
-- [ ] **S5** Kebijakan kata sandi kuat + rotasi; pesan jelas di UI
-- [ ] **S6** `gitleaks` di CI (atau pre-commit) — cegah rahasia ter-commit
-- [ ] **S7** Audit akses baca (siapa membaca apa), bukan hanya mutasi
-- [ ] **S8** Pantau advisory Better Auth + proses bump terjadwal
-- [ ] **S9** **CSP nonce/hash** — ganti `'unsafe-inline'` script (pengerasan S2)
 - [ ] Rate limit → **Redis** bila multi-instance (interface sudah siap-swap)
 - [ ] 2FA/TOTP (opsional) untuk admin
 

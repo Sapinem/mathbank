@@ -154,11 +154,11 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 | S2 | ~~Security headers~~ **✅ SELESAI** (2026-09-29): CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS (produksi). Di `next.config.ts`. Pengerasan lanjutan: nonce/hash CSP (kini `'unsafe-inline'`). | ✅ |
 | S3 | Proyeksi kolom (`src/lib/db/projections/question.ts`); `answer_key`+`isCorrect` hanya untuk viewer berwenang; `embedding*`/`aiTagged*` **selalu** dibuang. CONSTRAINT #34. **✅ pada jalur `/questions`** (13 tes). **⚠️ UTANG:** jalur baca **paket** (`listBundleItems`) belum meneruskan `actor` → kunci selalu dibuang (under-exposure, inkonsisten — NEW4, M13). | 🟠 |
 | S4 | **Verifikasi email** — kini `requireEmailVerification: false` | 🟠 |
-| S5 | **Kebijakan kata sandi kuat** + rotasi | 🟠 |
-| S6 | Pemindaian rahasia (**gitleaks**) di CI — tak tersedia | 🟠 |
-| S7 | Audit akses (siapa membaca apa), bukan hanya mutasi | 🟢 |
-| S8 | **Pantau advisory Better Auth** + pin `^1.7` (riset 2026 menemukan banyak CVE; versi kini 1.7.6 aman — lihat `RISET-BETTER-AUTH.md` §7.1) | 🟠 |
-| S9 | **CSP nonce/hash** — ganti `'unsafe-inline'` skrip dengan nonce (pengerasan lanjutan S2) | 🟢 |
+| S5 | **Kebijakan kata sandi kuat** + rotasi | ✅ |
+| S6 | Pemindaian rahasia — **selesai** via skrip Node murni + pre-commit hook (`scripts/secret-scan.mjs`) | ✅ |
+| S7 | Audit akses baca data sensitif (kunci jawaban, ekspor) | ✅ |
+| S8 | Pantau advisory — skrip `pnpm security:advisories`; **override esbuild@0.18.20 dibuang** (GHSA-67mh-4wv8-2f99) → `pnpm audit` 0 | ✅ |
+| S9 | **CSP nonce** — ⛔ **diblokir bug Turbopack** (vercel/next.js#93094: nonce tak ditempel ke `<script>` chunk → strict-dynamic memblokir semua JS). Direvert; **proxy strip header CSP request** (anti CVE-2026-44581) tetap ada. Utang: aktifkan bila bug ditutup | 🟠 |
 | S10 | **Role DB `mathbank` TIDAK boleh superuser di produksi** — saat ini superuser (dev lokal, agar `CREATE EXTENSION vector` jalan). **✅ alat disiapkan** (2026-09-30): `drizzle/manual/provision-prod.sql` (role app NOSUPERUSER + GRANT CRUD + `audit_logs` append-only) + `docs/RENCANA-DEPLOY.md` §5 dua-tahap. **Sisa:** jalankan di DB produksi sungguhan. | 🟡 |
 
 ---
