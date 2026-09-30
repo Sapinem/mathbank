@@ -112,6 +112,33 @@ describe("item paket — urutan & jumlah", () => {
     await expect(addItem(b.id, q.id, admin)).rejects.toBeInstanceOf(ConflictError);
   });
 
+  it("M8: listBundleItems melampirkan opsi (untuk naskah cetak)", async () => {
+    const b = await createBundle({ title: "Paket Opsi", bundleType: "exam" }, admin);
+    const q = await mkQuestion();
+    await addItem(b.id, q.id, admin);
+
+    const items = await listBundleItems(b.id);
+    expect(items).toHaveLength(1);
+    // mkQuestion membuat 2 opsi (A salah, B benar) — harus ikut ter-lampir.
+    expect(items[0]!.question.options).toHaveLength(2);
+    expect(items[0]!.question.options.map((o) => o.label)).toEqual(["A", "B"]);
+  });
+
+  it("M8: answerKey hanya terkirim bila aktor berhak melihat kunci", async () => {
+    const b = await createBundle({ title: "Paket Kunci", bundleType: "exam" }, admin);
+    const q = await mkQuestion("Soal kunci", true);
+    await addItem(b.id, q.id, admin);
+
+    // Guru berhak (canSeeAnswerKey true) → answerKey ada + isCorrect tersedia.
+    const asTeacher = await listBundleItems(b.id, teacher);
+    expect(asTeacher[0]!.question.answerKey).toMatchObject({ correct: ["B"] });
+    expect(asTeacher[0]!.question.options[1]).toHaveProperty("isCorrect", true);
+
+    // Tanpa aktor (mis. jalur tanpa izin) → answerKey TAK ada.
+    const anon = await listBundleItems(b.id);
+    expect(anon[0]!.question.answerKey).toBeUndefined();
+  });
+
   it("reorder mengubah order_index sesuai daftar", async () => {
     const b = await createBundle({ title: "Paket C", bundleType: "exam" }, admin);
     const q1 = await mkQuestion("A");

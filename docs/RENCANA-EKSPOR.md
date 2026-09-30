@@ -75,6 +75,11 @@ pra-render khusus.
 **kecil**, dan kualitas cetak adalah **inti nilai** bank soal (naskah ujian harus rapi).
 **Alternatif paling ringan = A** (bila prioritas "MVP cepat" & menerima kualitas tergantung browser).
 
+> **✅ KEPUTUSAN USER (2026-09-30): OPSI A — Browser Print (`@media print`).**
+> Alasan: paling ringan, **nol dependency baru**, sesuai insting "Playwright overkill".
+> Server-side (B/C) **ditunda** — bukan ditolak; bisa ditambah kelak memakai markup cetak
+> yang **sama** (jalur kedua, bukan ganti). Lihat §4 "Status".
+
 ---
 
 ## 3. Keputusan Opsi Cetak (dari user)
@@ -97,37 +102,67 @@ Pilihan **ditampilkan dengan penanda** (mis. tebal). Semua **bisa dipilih user**
 
 ## 4. Ruang Lingkup Teknis M8
 
-- [ ] **Halaman pratinjau cetak** `bundles/[id]/print` (ganti stub ComingSoon):
-  render naskah (soal bernomor, opsi rapi, stimulus 1×, KaTeX), panel opsi cetak.
-- [ ] **Layout `@media print`** (`print:` Tailwind, sembunyikan shell/aksi, A4, margin).
-- [ ] **Endpoint ekspor** `GET /api/bundles/[id]/export?format=pdf&cols=&key=&explain=&sheet=`
-  → Playwright render halaman print (mode "bersih") → `application/pdf` (stream).
-- [ ] **Opsi**: kolom (1/2) · kunci (sembunyi/tampil/lembar-terpisah) · pembahasan ·
-  lembar jawaban · header paket (judul/petunjuk/identitas) · nomor halaman.
-- [ ] **Job serialisasi**: 1 render sekaligus (semaphore), browser reuse, `finally` close.
-- [ ] **Izin**: `bundle:view`/`question:view` (kunci muncul hanya bila `canSeeAnswerKey`).
-- [ ] **Tes**: unit (opsi→struktur), DB (route ekspor), smoke (PDF non-kosong, `%PDF`).
-- [ ] Dokumen: `RENCANA-EKSPOR.md` (ini) + update KONTRAK-API, PETA-DOKUMEN, CHANGELOG.
+### Status (2026-09-30) — Opsi A
 
-**Non-tujuan:** job queue/background (volume rendah — render sinkron cukup), simpan PDF ke disk.
+- [x] **Halaman pratinjau cetak** `bundles/[id]/print` (ganti stub ComingSoon):
+  render naskah (soal bernomor, opsi rapi, stimulus 1×, KaTeX), panel opsi cetak.
+- [x] **Layout `@media print`** (`src/styles/print.css`: `@page` A4, sembunyikan shell,
+  page-break, lembar kunci/lembar jawaban mulai halaman baru).
+- [x] **Opsi**: kolom (1/2) · kunci (sembunyi / tandai tebal / lembar terpisah) ·
+  lembar jawaban (sertakan/sembunyikan).
+- [x] **Izin**: kunci hanya muncul bila `canSeeAnswerKey` (proyeksi API).
+- [x] **Perbaikan rute usang** (temuan saat M8): tombol detail paket `/sunting`,`/cetak`
+  → 404; diperbaiki ke `/edit`,`/print`. `/references/event` → `/references/events`.
+- [ ] **Tes** untuk halaman cetak (unit: pemetaan opsi→struktur; lihat §7).
+- [ ] **Pembahasan** (opsi tampil/lembar terpisah) — belum dibangun (data `explanation` ada).
+- [ ] **Endpoint ekspor server-side** `GET /api/bundles/[id]/export?format=pdf…` — **DITUNDA**
+  (Opsi B/C, belum diputuskan). Markup cetak disiapkan agar kelak **dipakai ulang**.
+- [x] Dokumen: `RENCANA-EKSPOR.md` (ini) + update PETA-DOKUMEN, CHANGELOG.
+
+**Non-tujuan (M8):** job queue/background, simpan PDF ke disk, kop/kaki/watermark lembaga
+(→ **M8b**, lihat §8).
 
 ---
 
-## 5. Risiko & Mitigasi
+## 5. Risiko & Mitigasi (Opsi A)
 
 | Risiko | Mitigasi |
 |---|---|
-| Chromium lolos/memory leak | browser **singleton** di-reuse; `page.close()`+`context.close()` di `finally`; semaphore=1 |
-| Render tak lengkap (KaTeX belum jadi) | tunggu `document.fonts.ready` + selector penanda "siap-cetak" sebelum `page.pdf()` |
-| Endpoint berat disalahgunakan | `rateLimit` ketat (CONSTRAINTS #33) + izin + timeout 30–60 dtk |
-| Chromium butuh lib sistem | sudah terbukti jalan di host ini (uji 2026-09-30) |
-| CSP menghalangi render internal | halaman print di-load dari origin sendiri (redirect + cookie), bukan `setContent` mentah |
+| Ukuran kertas tak dipatuhi (Firefox abaikan `@page size`) | `@page size: A4` + panduan pengguna; Chromium/Edge/Brave menghormati |
+| Shell/aksi ikut tercetak | `@media print` sembunyikan `[data-app-shell]` & `.no-print` |
+| KaTeX terpotong antar halaman | `.print-question { break-inside: avoid }` |
+| Margin tak seragam antar browser | `@page { margin }` + petunjuk pilih "Margins: Default" |
+| Operator salah lihat kunci | kunci hanya dikirim API bila peran berhak (`canSeeAnswerKey`) |
 
 ---
 
 ## 6. Prinsip yang dipatuhi
-- CONSTRAINTS #5 (**install saat perlu**) — Chromium **sudah ada**; hanya menambah **import** `playwright` runtime (Playwright sudah terpasang). Tidak ada dependency baru yang menganggur.
-- CONSTRAINTS #2 (**Zero Silent Assumptions**) — keputusan mesin PDF **disetujui user** dulu.
-- CONSTRAINTS #33 (`rateLimit`) & #34 (proyeksi kolom eksplisit).
+- CONSTRAINTS #5 (**install saat perlu**) — Opsi A: **nol dependency baru** (tanpa Playwright runtime, tanpa lib PDF).
+- CONSTRAINTS #2 (**Zero Silent Assumptions**) — keputusan mesin PDF **disetujui user** (Opsi A).
+- CONSTRAINTS #33 (`rateLimit`) & #34 (proyeksi kolom eksplisit) — berlaku untuk API terkait;
+  `listBundleItems` memakai `questionColumns`/`optionColumns` eksplisit.
+
+---
+
+## 8. M8b — Kop/Kaki + Watermark Lembaga (DITUNDA, keputusan user 2026-09-30)
+
+User menunjukkan contoh naskah (Bimbel) dengan **kop lembaga + watermark latar + kaki +
+nomor halaman**. Keputusan: **selesaikan M8 dasar dulu**, kop/kaki/watermark jadi **M8b**.
+
+Rencana M8b:
+- **Profil Lembaga** di Settings: nama, tagline, **logo diunggah (upload)**, warna aksen.
+- **Kop** (halaman pertama) + **kaki** + **watermark** (PNG transparan, `background-image`).
+- **Nomor halaman**: di Opsi A terbatas (hanya via dialog print browser); kustom penuh butuh
+  jalur server-side (B/C) — akan diputuskan di M8b.
+- Opsi cetak tambahan: toggle kop / watermark / nomor halaman.
+
+| Aspek | Opsi A (sekarang) | butuh server-side |
+|---|---|---|
+| Kop halaman pertama (kustom) | ✅ | — |
+| Kaki kustom | ✅ | — |
+| Watermark latar | ✅ | — |
+| Nomor halaman otomatis kustom | ❌ | ✅ (B/C) |
+
+---
 
 *Lihat juga: `docs/MILESTONE.md` §M8, `docs/RENCANA-UI.md`, `docs/KONTRAK-API.md`, `CONSTRAINTS.md`.*

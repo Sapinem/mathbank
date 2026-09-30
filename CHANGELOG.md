@@ -29,6 +29,20 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
   274 unit, 90 DB, build 0 (30/30), health 200, smoke ✅. TS 7 & ESLint 10 tetap
   **ditunda** (alasan di dokumen evaluasi).
 
+### Ditambah
+- **M8 — Ekspor Cetak Paket Soal** (Opsi A: cetak browser, **tanpa dependency baru**):
+  halaman `bundles/[id]/print` + `src/styles/print.css` (`@page` A4, sembunyikan shell,
+  page-break). Kontrol: 1/2 kolom · kunci (sembunyi/tandai tebal/lembar terpisah) ·
+  lembar jawaban. Kunci hanya muncul bila `canSeeAnswerKey`.
+- `listBundleItems` melampirkan **opsi** soal (batch, tanpa N+1) + tipe eksplisit
+  `BundleItemWithQuestion` untuk pratinjau/cetak.
+
+### Diperbaiki
+- **T-M8-0**: tombol "Sunting"/"Cetak" di detail paket menuju `/sunting` & `/cetak`
+  (**404**) → diperbaiki ke `/edit` & `/print`.
+- **Rute tak konsisten**: `/references/event` (tunggal) → **`/references/events`**
+  (jamak, sesuai PKN/Inggris); folder di-rename + nav/e2e/dokumen disinkronkan.
+
 ### Dokumentasi
 - **🔧 `REVIEW-TUMPUKAN-TEKNOLOGI.md` disinkronkan** (verifikasi ulang 2026-09-30): §5/§6
   masih menyatakan "`radix-ui` terpasang, Base UI belum" — padahal **migrasi SUDAH selesai**

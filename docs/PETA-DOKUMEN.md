@@ -88,7 +88,7 @@
 | D31 | `VERIFIKASI-AUDIT-M6.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M6 + T-M6-1 (logika ambang dedup), T-M6-2 (fusion belum terintegrasi) |
 | D32 | `VERIFIKASI-AUDIT-M7.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M7 + T-M7-2 (reorder parsial), T-M7-3 (RESTRICT abadi setelah arsip), T-M7-1 (klaim stimulus) |
 | D33 | `EVALUASI-UPGRADE-TUMPUKAN.md` | ✅ | evaluasi tradeoff P1–P3; **P1 dikerjakan** 2026-09-30 (next 16.3.7/react 19.3.0) |
-| D34 | `RENCANA-EKSPOR.md` | ✅ | **dibuat** 2026-09-30 — rencana M8 (mesin PDF, opsi cetak, risiko) |
+| D34 | `RENCANA-EKSPOR.md` | ✅ | **dibuat** 2026-09-30 — rencana M8 (mesin PDF, opsi cetak, risiko); keputusan = Opsi A; M8b kop/kaki/watermark |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 

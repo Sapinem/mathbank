@@ -19,6 +19,9 @@ import { questions, questionOptions } from "@/lib/db/schema/question";
 import { questionColumns, optionColumns, canSeeAnswerKey } from "@/lib/db/projections/question";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
+import type { PublicQuestion } from "./question-service";
+import type { QuestionOption } from "@/lib/db/schema/question";
+import type { AnswerKey } from "@/lib/contracts/question";
 import { slugify } from "@/lib/taxonomy/tree";
 import { recordAudit } from "./audit";
 
@@ -51,6 +54,21 @@ export interface BundleItemRow {
   sectionName: string | null;
   itemNumber: string | null;
   notes: string | null;
+}
+
+/**
+ * Baris item paket untuk pratinjau/cetak (M8): item + soal ter-proyeksi
+ * **beserta opsi**. `answerKey`/`isCorrect`/`distractorRationale` hanya ada bila
+ * aktor berwenang (`canSeeAnswerKey`) — karena itu opsional.
+ */
+export interface BundleItemWithQuestion {
+  item: BundleItemRow;
+  question: Omit<PublicQuestion, "options" | "answerKey"> & {
+    answerKey?: AnswerKey;
+    /** `isCorrect`/`distractorRationale` hanya ada bila aktor berwenang. */
+    options: (Omit<QuestionOption, "isCorrect" | "distractorRationale"> &
+      Partial<Pick<QuestionOption, "isCorrect" | "distractorRationale">>)[];
+  };
 }
 
 type BundleCore = Omit<BundleRow, "itemCount">;
@@ -265,9 +283,14 @@ export async function archiveBundle(id: string, actor: Actor): Promise<void> {
  * **NEW4:** `actor` diteruskan agar `answerKey` hanya muncul bila viewer berwenang
  * (`canSeeAnswerKey`) — konsisten dengan aturan S3 di `question-service`.
  */
-export async function listBundleItems(id: string, actor?: Actor) {
+export async function listBundleItems(
+  id: string,
+  actor?: Actor,
+): Promise<BundleItemWithQuestion[]> {
   const withAnswerKey = actor ? canSeeAnswerKey(actor) : false;
-  const rows = await db
+  // Proyeksi bersyarat (kunci hanya bila berwenang) membuat Drizzle menyimpulkan
+  // tipe GABUNGAN yang tak bisa disatukan TS. Kita normalkan sekali di batas baca.
+  const rows = (await db
     .select({
       item: {
         id: bundleItems.id,
@@ -284,10 +307,13 @@ export async function listBundleItems(id: string, actor?: Actor) {
     .from(bundleItems)
     .innerJoin(questions, eq(questions.id, bundleItems.questionId))
     .where(eq(bundleItems.bundleId, id))
-    .orderBy(asc(bundleItems.orderIndex));
+    .orderBy(asc(bundleItems.orderIndex))) as unknown as Array<{
+    item: BundleItemRow;
+    question: Omit<PublicQuestion, "options" | "answerKey"> & { answerKey?: AnswerKey };
+  }>;
 
   // Lampirkan opsi (M8: naskah cetak butuh pilihan jawaban). Batch agar tak N+1.
-  if (rows.length === 0) return rows;
+  if (rows.length === 0) return [];
   const ids = rows.map((r) => r.question.id);
   const opts = await db
     .select(optionColumns({ withAnswerKey }))

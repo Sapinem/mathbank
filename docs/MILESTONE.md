@@ -37,7 +37,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M5 | Taksonomi (Referensi) | ✅ | M4 | ✅ **· Topik/Sumber/Event/Label** |
 | M6 | Pencarian & Filter | ✅ | M5 | ✅ **· trigram, RRF+dedup, 3 mode** |
 | M7 | Paket Soal | ✅ | M6 | ✅ **· penyusun drag-and-drop, stimulus 1×, RESTRICT** |
-| M8 | Ekspor Cetak/PDF | 🔴 | M7 | ⬜ |
+| M8 | Ekspor Cetak/PDF | 🟡 | M7 | ✅ **· cetak browser (print CSS), 1/2 kolom, kunci, lembar jawaban · M8b: kop/kaki/watermark** |
 | | **🎉 MVP SELESAI** | | | ⬜ |
 
 > **MVP = M1–M8** (M0 = fondasi, di luar hitungan fitur).
@@ -287,7 +287,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 ---
 
-## M8 — Ekspor Cetak/PDF 🔴
+## M8 — Ekspor Cetak/PDF 🟡 (inti ✅, lanjutan M8b)
 
 **Tujuan:** ekspor paket → siap cetak. **Penutup alur MVP.**
 
@@ -295,14 +295,15 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 - [ ] Layout cetak (`@media print`) + halaman pratinjau cetak
 - [ ] Header paket (judul, petunjuk, identitas opsional, kolom jawaban)
-- [ ] Soal bernomor; opsi rapi; stimulus 1×; KaTeX ter-render di cetak
-- [ ] Opsi tampil/sembunyikan kunci jawaban; lembar jawaban terpisah
-- [ ] Ekspor **PDF server-side** (mis. Playwright/Puppeteer) — kualitas terkendali
-- [ ] Format kolom (1/2 kolom), margin, penomoran halaman
-- [ ] Tes cetak (snapshot PDF / cek elemen di mode print)
-- 📄 **RENCANA-EKSPOR.md**
+- [x] Soal bernomor; opsi rapi; stimulus 1×; KaTeX ter-render di cetak
+- [x] Opsi tampil/sembunyikan kunci jawaban; lembar jawaban terpisah
+- [x] Format kolom (1/2 kolom) + `@page` A4 + page-break
+- [x] Tes cetak (unit view: 7 tes; DB: opsi ter-lampir + gate kunci)
+- [~] Ekspor **PDF server-side** (Playwright/Puppeteer) — **ditunda**; keputusan user = **Opsi A (cetak browser)**
+- [ ] **M8b**: kop/kaki lembaga + watermark + nomor halaman (ditunda sesuai keputusan user)
+- ✅ **RENCANA-EKSPOR.md**
 
-**Kriteria:** ✅ paket → cetak/PDF rapi · ✅ KaTeX benar · ✅ **alur tuntas: cari → paket → ekspor** · ✅ gate hijau
+**Kriteria:** ✅ paket → cetak rapi · ✅ KaTeX benar · ✅ **alur tuntas: cari → paket → ekspor** · ✅ gate hijau
 
 > ## 🎉 **MVP SELESAI (M1–M8)**
 
@@ -443,7 +444,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 | **M5** | `RENCANA-TAKSONOMI.md` | 📄 perlu |
 | **M6** | `RENCANA-PENCARIAN.md` | 📄 perlu |
 | **M7** | `RENCANA-PAKET.md` | ✅ dibuat |
-| **M8** | `RENCANA-EKSPOR.md` | 📄 perlu |
+| **M8** | `RENCANA-EKSPOR.md` | ✅ dibuat |
 | M9 | `STRATEGI-INGEST.md` | 📄 perlu |
 | M10 | `RENCANA-ENRICHMENT.md` | 📄 perlu |
 | M11 | `RENCANA-MCP.md` | 📄 perlu |
