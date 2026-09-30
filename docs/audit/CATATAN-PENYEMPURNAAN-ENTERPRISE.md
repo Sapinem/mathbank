@@ -6,67 +6,13 @@
 
 ---
 
-## 🚀 6 Best Practices Enterprise untuk Diadopsi
+## 🚀 Status Implementasi Best Practices Enterprise
 
-### 1. Transaksi Basis Data Atomik (`db.transaction`) pada Mutasi Multi-Tabel
-- **Konteks:** Pada operasi mutasi yang menyentuh beberapa tabel berurutan (seperti `createQuestion` yang menulis ke `questions`, `question_options`, `question_topics`, dan `question_tags`).
-- **Rekomendasi:** Bungkus seluruh mutasi dalam satu transaksi atomik Drizzle:
-  ```ts
-  await db.transaction(async (tx) => {
-    const [q] = await tx.insert(questions).values(...).returning();
-    await tx.insert(questionOptions).values(...);
-    await tx.insert(questionTopics).values(...);
-  });
-  ```
-- **Manfaat:** Mencegah *partial write* atau data yatim (*orphan data*) jika koneksi basis data atau server terputus di tengah eksekusi.
-
----
-
-### 2. Penegakan Batasan Panjang & Pemotongan Safe Slug (`slugify`)
-- **Konteks:** Fungsi `slugify()` pada `src/lib/taxonomy/tree.ts` saat ini memotong string hingga panjang maksimum 255 karakter (`.slice(0, 255)`). Namun pada skema DB, tabel `tags` mendefinisikan `slug: varchar("slug", { length: 100 })`.
-- **Rekomendasi:** 
-  * Perbarui fungsi `slugify(name, maxLength = 255)` agar menerima parameter `maxLength` yang disesuaikan dengan batasan tabel (`100` untuk `tags`, `255` untuk `topics`, `sources`, dan `bundles`).
-  * Pastikan pemotongan slug tidak berhenti di tengah tanda hubung (misal: membuang trailing `-` setelah `.slice()`).
-- **Manfaat:** Mencegah terjadinya error database `value too long for type character varying(100)` saat tag atau nama referensi yang sangat panjang di-slugify.
-
----
-
-### 3. Strategi Caching Referensi Taksonomi dengan `"use cache"` Next.js 16
-- **Konteks:** Data referensi statis (Pohon Topik, Sumber, Event, Grade, Kesulitan) diakses pada hampir seluruh halaman UI tetapi sangat jarang berubah.
-- **Rekomendasi:** Manfaatkan direktif `"use cache"` dan `cacheTag` Next.js 16 pada `taxonomy-service.ts`:
-  ```ts
-  export async function getCachedTopics() {
-    "use cache";
-    cacheTag("taxonomy-topics");
-    return listTopics();
-  }
-  ```
-  Panggil `revalidateTag("taxonomy-topics")` hanya saat terjadi aksi mutasi `CREATE`, `UPDATE`, atau `DELETE` pada referensi.
-- **Manfaat:** Mengurangi beban kueri PostgreSQL hingga **80–90%** untuk data referensi statis dan mempercepat navigasi UI.
-
----
-
-### 4. Proteksi Idempotensi Request (`Idempotency-Key` Header)
-- **Konteks:** Penulis atau penguji yang menyimpan soal/paket dalam kondisi jaringan lambat berisiko menekan tombol *Simpan* berkali-kali (*double-submit*).
-- **Rekomendasi:** Tambahkan opsi penanganan header `Idempotency-Key` (UUID) pada `wrapRoute` untuk endpoint mutasi `POST` / `PUT`:
-  * Simpan status request yang sedang diproses dalam Memory Cache / Redis selama 60 detik.
-  * Jika request dengan `Idempotency-Key` yang sama masuk kembali, kirimkan ulang respons sebelumnya tanpa memicu kueri DB baru.
-- **Manfaat:** Menjamin idempotensi penuh dan mencegah terciptanya data duplikat.
-
----
-
-### 5. Sanitasi SVG TikZ & Strict Content Security Policy (CSP)
-- **Konteks:** MathBank mendukung rendering KaTeX dan diagram geometri TikZ (SVG).
-- **Rekomendasi:**
-  * Sanitasi seluruh luaran SVG TikZ menggunakan pustaka seperti `DOMPurify` / `sanitize-svg` untuk membuang tag berbahaya (`<script>` atau atribut `onload=...`).
-  * Konfigurasikan header `Content-Security-Policy` di Next.js `middleware.ts` / `next.config.ts` untuk melarang eksekusi inline script yang tak terverifikasi.
-- **Manfaat:** Memproteksi aplikasi dari potensi ancaman *Cross-Site Scripting (XSS)*.
-
----
-
-### 6. Structured Logging & Trace ID Tracking (`requestId`)
-- **Konteks:** Penanganan error saat ini ditangani oleh `wrapRoute` dan dicatat ke `console.error` atau `audit_logs`.
-- **Rekomendasi:** Bangun `requestId` unik (UUIDv7 / shortid) di awal setiap request API pada `wrapRoute`:
-  * Sertakan `requestId` pada header respons HTTP (`X-Request-ID`).
-  * Masukkan `requestId` ke dalam entri log server dan `audit_logs`.
-- **Manfaat:** Memudahkan tim pengembang/DevOps melakukan penelusuran balik (*traceability*) seluruh urutan log hanya dari satu ID insiden.
+| No | Rekomendasi Best Practice | Status Implementasi | Catatan Technical & Decision |
+| :-: | :--- | :---: | :--- |
+| 1 | **Batasan Panjang Slug (`slugify`)** | ✅ **Selesai (`ed4ac21`)** | Ditambahkan batas pemotongan per-kolom (`100` char untuk `tags`, `255` char untuk `topics/sources/bundles`) guna mencegah error `500` saat string nama terlalu panjang. |
+| 2 | **Header Traceability (`X-Request-ID`)** | ✅ **Selesai (`ed4ac21`)** | Header `X-Request-ID` disertakan pada seluruh respons API & dicatat pada log server. |
+| 3 | **Header Idempotensi (`Idempotency-Key`)** | ✅ **Selesai (`ed4ac21`)** | Dikembangkan pada `wrapRoute`: Request POST/PUT ganda dengan Key yang sama dibalas instan via `Idempotent-Replay`. |
+| 4 | **Server-Side `"use cache"` Next.js 16** | ⛔ **Dibatalkan (Desain Sadar)** | **Reverted:** Menyebabkan efek *Stale-While-Revalidate* (lag 2-5 detik saat mutasi data) dan mengganggu *guard auth* pada `<Suspense>`. Caching UI sudah optimal di-handle oleh React Query di sisi Klien. |
+| 5 | **Transaksi Atomik (`db.transaction`)** | 🟠 **Disarankan untuk M8+** | Mutasi multi-tabel pada pembuatan soal & paket disarankan dibungkus transaksi Drizzle. |
+| 6 | **Sanitasi SVG TikZ & Strict CSP** | 🟠 **Disarankan untuk M8+** | Sanitasi DOMPurify pada luaran TikZ SVG untuk mencegah potensi XSS. |

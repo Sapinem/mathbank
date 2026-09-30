@@ -90,6 +90,67 @@ describe("dedup — buang duplikat", () => {
     );
     expect(out).toHaveLength(2);
   });
+
+  // ── Zona "near" (0.85–0.98): duplikat HANYA bila penalaran SAMA ──
+  // "hitung nilai x dari persamaan" (5 token) vs "…persamaan lengkap" (6 token)
+  // → 5/6 ≈ 0.833 < 0.85. Pakai varian 6 vs 7 token agar ≈0.857 (di zona near).
+  const nearLookup = (id: string) =>
+    ({
+      p: "hitung nilai x dari persamaan kuadrat berikut",
+      q: "hitung nilai x dari persamaan kuadrat berikut ini",
+    })[id];
+
+  it("zona near + penalaran SAMA → dibuang", () => {
+    const s = similarity(nearLookup("p"), nearLookup("q"));
+    expect(s).toBeGreaterThanOrEqual(0.85);
+    expect(s).toBeLessThan(0.98);
+    const out = dedup(
+      [
+        { id: "p", score: 2 },
+        { id: "q", score: 1 },
+      ],
+      nearLookup,
+      { lookupReasoning: () => "x=2" },
+    );
+    expect(out.map((o) => o.id)).toEqual(["p"]);
+  });
+
+  it("zona near + penalaran BEDA → keduanya DIPERTAHANKAN", () => {
+    const reasons: Record<string, string> = { p: "x=2", q: "x=-3" };
+    const out = dedup(
+      [
+        { id: "p", score: 2 },
+        { id: "q", score: 1 },
+      ],
+      nearLookup,
+      { lookupReasoning: (id) => reasons[id] },
+    );
+    expect(out.map((o) => o.id)).toEqual(["p", "q"]);
+  });
+
+  it("zona near + keduanya tanpa penalaran → dibuang (dianggap sama)", () => {
+    const out = dedup(
+      [
+        { id: "p", score: 2 },
+        { id: "q", score: 1 },
+      ],
+      nearLookup,
+    );
+    expect(out.map((o) => o.id)).toEqual(["p"]);
+  });
+
+  it("≥ exact tetap duplikat walau penalaran BEDA", () => {
+    const reasons: Record<string, string> = { a: "x=1", b: "x=9" };
+    const out = dedup(
+      [
+        { id: "a", score: 2 },
+        { id: "b", score: 1 },
+      ],
+      lookup, // a & b identik → similarity 1 ≥ exact
+      { lookupReasoning: (id) => reasons[id] },
+    );
+    expect(out.map((o) => o.id)).toEqual(["a"]);
+  });
 });
 
 describe("hybridSearch — pipeline", () => {
@@ -109,5 +170,17 @@ describe("hybridSearch — pipeline", () => {
     // c muncul di dua daftar (skor tinggi) & unik; a/b duplikat → salah satu dibuang.
     expect(out.map((o) => o.id)).toContain("c");
     expect(out).toHaveLength(2);
+  });
+
+  it("meneruskan lookupReasoning (near + beda penalaran → tetap dua)", () => {
+    const texts: Record<string, string> = {
+      a: "hitung nilai x dari persamaan kuadrat berikut",
+      b: "hitung nilai x dari persamaan kuadrat berikut ini",
+    };
+    const reasons: Record<string, string> = { a: "x=1", b: "x=2" };
+    const out = hybridSearch([[{ id: "a" }, { id: "b" }]], (id) => texts[id], {
+      lookupReasoning: (id) => reasons[id],
+    });
+    expect(out.map((o) => o.id)).toEqual(["a", "b"]);
   });
 });

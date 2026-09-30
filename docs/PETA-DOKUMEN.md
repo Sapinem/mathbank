@@ -85,6 +85,7 @@
 | D28 | `VERIFIKASI-AUDIT-M5.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M5 + T-M5-1 (audit salah label), T-M5-2 (propagasi level), T-M5-3 (clean-unused) |
 | D29 | `VERIFIKASI-CATATAN-ENTERPRISE.md` | ✅ | **dibuat** 2026-09-30 — verifikasi catatan enterprise (6 rekomendasi): #2 fix, #4/#6 diterapkan, #3 dibatalkan (alasan) |
 | D30 | `VERIFIKASI-AUDIT-PUSTAKA.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit pustaka: kedua temuan "redundan" (cn, tw-animate-css) SALAH |
+| D31 | `VERIFIKASI-AUDIT-M6.md` | ✅ | **dibuat** 2026-09-30 — verifikasi audit M6 + T-M6-1 (logika ambang dedup), T-M6-2 (fusion belum terintegrasi) |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
 

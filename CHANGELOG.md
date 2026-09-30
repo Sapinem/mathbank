@@ -9,6 +9,20 @@ versi mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 ## [Belum Dirilis]
 
 ### Diperbaiki
+- **🔎 Audit M6 — logika ambang dedup diperbaiki + status jujur** (`docs/VERIFIKASI-AUDIT-M6.md`):
+  - **T-M6-1 (fix):** `dedup()` (`src/lib/search/fusion.ts`) menyatakan "exact (0.98)
+    **ATAU** near (0.85) + penalaran sama", tapi kode faktual `s >= exact || (s >= near
+    && …)` → karena `exact > near`, syarat `near` **menelan** `exact` → ambang exact
+    **logika mati** & pasangan "near" dibuang **tanpa** cek penalaran. Diperbaiki:
+    `≥exact` → duplikat (apa pun); zona near → duplikat **hanya bila penalaran sama**
+    (`Candidate.reasoning` + `lookupReasoning` + `normReasoning`). **Terbukti:** pasangan
+    s=0.857 penalaran-beda → dulu dibuang, kini **bertahan**. Tes 11 → **16** (+5).
+  - **T-M6-2 (dokumen):** status `rrfFuse`/`dedup` di `docs/audit/M6-*.md` dari "✅ Lulus"
+    → "⚠️ belum terintegrasi (dipakai M10)" — nol konsumen produksi.
+  - **Koreksi:** klaim operator `word_similarity` keliru — kode memakai `%` (=`similarity()`).
+  - **Jalur live SEHAT ✅** (trigram/typo/multi-kata/urut relevansi/filter subtree) —
+    diverifikasi live; "multi-kata gagal" ternyata artefak shell (encoding), bukan bug.
+  - **Pelajaran → `CONSTRAINTS.md` #42–43.**
 - **🏢 Catatan Enterprise — penerapan selektif (verifikasi dulu, bukan asal ikut)**
   (`docs/VERIFIKASI-CATATAN-ENTERPRISE.md`):
   - **#2 (fix nyata):** `slugify(name, maxLength=255)` — NFKD bisa **memperpanjang**

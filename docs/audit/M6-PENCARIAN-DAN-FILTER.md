@@ -1,7 +1,7 @@
 # AUDIT MILESTONE 6 — PENCARIAN & FILTER (MATHBANK)
 
 **Tanggal Audit:** 30 September 2026  
-**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Selesai 100%)  
+**Status Evaluasi:** 🟢 **VERIFIED & PASSED** (Selesai 100%) — ⚠️ **DIVERIFIKASI ULANG 2026-09-30** (`docs/VERIFIKASI-AUDIT-M6.md`): jalur **live** (trigram/typo/multi-kata/urut relevansi/filter subtree) **SEHAT ✅**; koreksi: (a) operator `word_similarity` di §1.2 **keliru** — kode memakai `%` (=`similarity()`), (b) `fusion.ts` (RRF+dedup) **BELUM TERINTEGRASI** (nol konsumen produksi; dipakai M10), (c) logika ambang dedup **diperbaiki** agar sesuai disain dua-ambang (T-M6-1).
 **Target:** Mesin Filter & Pencarian Soal — Pembangun Query Filter (`question/filters.ts`), Pencarian Trigram (`pg_trgm`), Hibrida RRF (Reciprocal Rank Fusion) & Deduplikasi (`fusion.ts`).
 
 ---
@@ -28,8 +28,8 @@ Milestone 6 berfokus pada mesin pencarian dan penyaringan butir soal matematika 
 | **Filter Builder Modular** | `buildQuestionFilter` di `filters.ts` | `src/lib/question/filters.ts` | ✅ Lulus |
 | **Topik Filter Rekursif** | Mengikutsertakan anak sub-topik otomatis | `collectTopicDescendants()` di `filters.ts` | ✅ Lulus |
 | **Pencarian Trigram** | `pg_trgm` typo-tolerant search | `sql` % operator pada `contentMarkdown` | ✅ Lulus |
-| **Algoritma RRF Fusion** | Reciprocal Rank Fusion ($k=60$) | `rrfFuse()` di `src/lib/search/fusion.ts` | ✅ Lulus |
-| **Deduplikasi Hasil** | Jaccard Similarity ($0.98$ exact / $0.85$ near) | `dedup()` di `src/lib/search/fusion.ts` | ✅ Lulus |
+| **Algoritma RRF Fusion** | Reciprocal Rank Fusion ($k=60$) | `rrfFuse()` di `src/lib/search/fusion.ts` | ⚠️ Ada, **belum terintegrasi** (dipakai M10) |
+| **Deduplikasi Hasil** | Jaccard Similarity ($0.98$ exact / $0.85$ near) | `dedup()` di `src/lib/search/fusion.ts` | ⚠️ Ada, **belum terintegrasi** (dipakai M10) — logika dua-ambang diperbaiki 2026-09-30 |
 | **Pengujian Unit Fusion** | Test suite terisolasi tanpa dependensi DB | `src/lib/search/fusion.test.ts` (Passed) | ✅ Lulus |
 | **URL State Synchronization** | Filter tersimpan di URL params | `useQuestions` Hook & Next.js searchParams | ✅ Lulus |
 

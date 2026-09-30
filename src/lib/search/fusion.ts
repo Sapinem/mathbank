@@ -9,16 +9,23 @@
  *
  * Dedup: dua kandidat dianggap duplikat bila:
  *   - id sama (selalu), ATAU
- *   - kemiripan teks ≥ ambang exact (0.98) — duplikat praktis identik, ATAU
- *   - kemiripan teks ≥ ambang near (0.85) DAN salah satu tanpa penalaran
- *     berbeda… (disederhanakan: cukup ambang near, ambil yang peringkat lebih
- *     baik). Ambang dapat dikonfigurasi.
+ *   - kemiripan teks ≥ ambang exact (0.98) — praktis identik, ATAU
+ *   - kemiripan teks ≥ ambang near (0.85) DAN **penalaran kedua kandidat sama**
+ *     (mis. `reasoning` sama/keduanya kosong). Bila penalaran BERBEDA, keduanya
+ *     dipertahankan — dua soal mirip teksnya tapi berbeda penalaran itu SAH.
+ * Ambang dapat dikonfigurasi.
  */
 
 export interface Candidate {
   id: string;
   /** Teks ternormalisasi untuk perbandingan kemiripan (mis. konten). */
   text?: string;
+  /**
+   * Penanda penalaran (mis. jawaban benar / rationale ternormalisasi). Dipakai
+   * pembeda saat kemiripan teks berada di zona "near": dua kandidat hanya
+   * dianggap duplikat bila penalarannya SAMA. Kosong = "tanpa penalaran".
+   */
+  reasoning?: string;
   /** Peringkat 0-based dalam daftar sumber (semakin kecil semakin baik). */
   rank?: number;
 }
@@ -57,33 +64,60 @@ export function rrfFuse(lists: Candidate[][], k = RRF_K): { id: string; score: n
 
 /**
  * Buang duplikat dari daftar kandidat (sudah ber-RRF), dengan ambang kemiripan.
- * Menyimpan kandidat dengan skor lebih tinggi; yang mirip ≥ ambang dibuang.
+ * Menyimpan kandidat dengan skor lebih tinggi; yang duplikat dibuang.
+ *
+ * `lookup` memberi teks; `lookupReasoning` (opsional) memberi penanda penalaran
+ * untuk zona "near" — bila penalaran BEDA, kandidat DIPERTAHANKAN.
  */
 export function dedup(
   ordered: { id: string; score: number }[],
   lookup: (id: string) => string | undefined,
-  opts: { exact?: number; near?: number } = {},
+  opts: {
+    exact?: number;
+    near?: number;
+    lookupReasoning?: (id: string) => string | undefined;
+  } = {},
 ): { id: string; score: number }[] {
   const exact = opts.exact ?? DEDUP_EXACT;
   const near = opts.near ?? DEDUP_NEAR;
-  const kept: { id: string; score: number; text?: string }[] = [];
+  const reasoningOf = opts.lookupReasoning ?? (() => undefined);
+  const kept: { id: string; score: number; text?: string; reasoning?: string }[] = [];
   for (const cand of ordered) {
     const text = lookup(cand.id);
+    const reasoning = reasoningOf(cand.id);
     const dup = kept.some((k) => {
       const s = similarity(text, k.text);
-      return s >= exact || (s >= near && text !== undefined && k.text !== undefined);
+      if (s >= exact) return true; // praktis identik — apa pun penalarannya
+      if (s < near) return false; // cukup beda — bukan duplikat
+      // Zona "near": duplikat HANYA bila penalaran kedua kandidat sama
+      // (termasuk sama-sama kosong/tanpa penalaran).
+      return normReasoning(reasoning) === normReasoning(k.reasoning);
     });
-    if (!dup) kept.push({ ...cand, text });
+    if (!dup) kept.push({ ...cand, text, reasoning });
   }
   return kept.map(({ id, score }) => ({ id, score }));
+}
+
+/** Normalisasi penanda penalaran: trim + lowercase; kosong/undefined → "" . */
+function normReasoning(r: string | undefined): string {
+  return (r ?? "").trim().toLowerCase();
 }
 
 /** Pipeline lengkap: gabung + dedup. */
 export function hybridSearch(
   lists: Candidate[][],
   lookup: (id: string) => string | undefined,
-  opts: { k?: number; exact?: number; near?: number } = {},
+  opts: {
+    k?: number;
+    exact?: number;
+    near?: number;
+    lookupReasoning?: (id: string) => string | undefined;
+  } = {},
 ): { id: string; score: number }[] {
   const fused = rrfFuse(lists, opts.k ?? RRF_K);
-  return dedup(fused, lookup, { exact: opts.exact, near: opts.near });
+  return dedup(fused, lookup, {
+    exact: opts.exact,
+    near: opts.near,
+    lookupReasoning: opts.lookupReasoning,
+  });
 }
