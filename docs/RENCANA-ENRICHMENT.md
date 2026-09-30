@@ -136,7 +136,36 @@ soal (embedding null ATAU hash konten ≠ embedding_content_hash)
 
 ---
 
-## 7. ⚠️ Keputusan yang butuh persetujuan pemilik produk
+## 7. ✅ Keputusan (ditetapkan 2026-09-30)
+
+### ✅ D1 — Hosting BGE-M3: **Ollama lokal** · LLM: **9router (OpenAI-compatible)**
+**Terukur nyata di mesin ini** (bukan estimasi):
+
+| Metrik | Nilai |
+|--------|-------|
+| Dimensi | **1024** ✅ persis sesuai skema |
+| Kecepatan warm | **296 ms/teks** (CPU, 8 core) |
+| Muat pertama | 13,9 s (sekali) |
+| RAM | **1.276 MB** (~1,2 GB); sisa 2,4 GB |
+| Model | `bge-m3` (sudah di-pull) |
+
+Endpoint Ollama: `POST /api/embed` → `{model, input}` → `{embeddings[]}`.
+**LLM (9router)** via `ai/client.ts` baca `app_settings`; endpoint OpenAI-compatible.
+**Model dapat dipilih dari Setting** — endpoint `GET ai.base_url/models` menampilkan daftar model yang tersedia.
+
+### ✅ D2 — `ai.api_key` **terenkripsi at-rest** (AES-256-GCM), kunci di ENV
+Kunci: `SETTINGS_ENC_KEY` (32 byte, hex/base64). Secret lain mengikuti pola sama.
+
+### ✅ D3 — Cakupan enrichment: **topik + kesulitan + cognitive level + tags**
+Semua = **usulan** → disimpan, status soal → `review` (bukan `ready`). `answer_key` tak disentuh.
+
+### ✅ D4 — Pemicu: **manual + batch**
+- **Manual**: 1 soal / beberapa terpilih di UI.
+- **Batch**: antrean (pola mirip ingest) — proses bertahap, bisa dilanjutkan.
+
+---
+
+## 7b. (Riwayat) Keputusan yang diajukan
 
 ### ⚠️ D1 — Bagaimana BGE-M3 dihosting?
 Mesin **CPU-only, RAM ketat** (§3).
@@ -187,12 +216,12 @@ Apa yang AI **boleh** usulkan? (semua = usulan, bukan tulisan final)
 
 | Langkah | Isi | Gate |
 |---------|-----|------|
-| M10-a | `ai/client.ts` (baca setting, chat/chatJson/health) + tes mock | tsc/lint/tes |
-| M10-b | `ai-settings-service` + enkripsi + endpoint `/api/ai/settings` + UI Pengaturan bagian AI | tes DB |
-| M10-c | `embedding/bge-m3.ts` + hash + tes | tes |
-| M10-d | `enrichment-service` + `/api/ai/enrich` + status→`review` | tes DB |
+| M10-a | `ai/client.ts` (baca setting, `chat`/`chatJson`/`health`/**`listModels`**) + tes mock | tsc/lint/tes |
+| M10-b | `ai-settings-service` + **enkripsi AES-256-GCM** + endpoint `/api/ai/settings` + `/api/ai/models` + UI Pengaturan bagian AI | tes DB |
+| M10-c | `embedding/bge-m3.ts` (**Ollama `/api/embed`**) + hash + tes | tes |
+| M10-d | `enrichment-service` + `/api/ai/enrich` + status→`review` (manual) | tes DB |
 | M10-e | Aktifkan mode **semantik** di pencarian M6 (fallback trigram) | tes DB |
-| M10-f | Halaman UI enrichment (1 soal + terpilih) | manual |
+| M10-f | **Batch** enrichment (antrean) + Halaman UI enrichment | tes DB/manual |
 | 📄 | Dokumen ini (`RENCANA-ENRICHMENT.md`) | ✅ |
 
 ---
