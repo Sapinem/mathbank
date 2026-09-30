@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingState, ErrorState } from "@/components/ui/states";
+import { AiSettingsCard } from "@/components/system/ai-settings-card";
 import { useSettings, useUpdateSettings } from "@/lib/hooks/use-settings";
 import { DIFFICULTY_LABELS } from "@/lib/display/labels";
 
@@ -178,17 +179,7 @@ export function PengaturanView() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>AI / Enrichment</CardTitle>
-            <CardDescription>
-              Konfigurasi 9router (base URL, model, kunci). Menyusul **M10**.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Badge variant="outline">Belum tersedia — M10</Badge>
-          </CardContent>
-        </Card>
+        <AiSettingsCard />
         </>
         )}
       </div>
