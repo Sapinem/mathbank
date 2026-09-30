@@ -354,14 +354,17 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [x] API key untuk agen (manajemen + cabut) + UI "Akses Agen" ✅
 - 📄 **RENCANA-MCP.md** ✅ (terimplementasi)
 
-## M12 — Ekspor Moodle 🟢
+## M12 — Ekspor Moodle ✅
 
-**Dependensi:** M8 · **Perkiraan:** 3–4 hari
+**Dependensi:** M8 · **Selesai:** 2026-09-30
 
-- [ ] Ekspor Moodle XML (**per-item**: tiap soal bawa bacaannya sendiri)
-- [ ] GitSync-compatible; validasi skema XML
-- [ ] Halaman ekspor (pilih paket → unduh)
-- 📄 **RENCANA-MOODLE.md**
+- [x] Ekspor **skema GitSync** (`qbank_gitsync`): ZIP berisi 1 berkas XML/soal
+- [x] Folder = kategori **topik** (`top/<Topik>/<Subtopik>/`) + `gitsync_category.xml`
+- [x] Stimulus **inline** ke setiap soal anak (D1); tipe kompleks dilewati+lapor (D2)
+- [x] LaTeX dinormalisasi `$…$`→`\(…\)`, `$$…$$`→`\[…\]` (D3)
+- [x] **Tolak** ekspor bila ada soal tanpa kunci (D4); ZIP tanpa dependency (D6)
+- [x] Endpoint `GET /api/bundles/[id]/export/moodle` + tombol UI di detail paket
+- 📄 **RENCANA-MOODLE.md** (✅)
 
 ---
 

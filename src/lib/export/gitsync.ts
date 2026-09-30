@@ -89,15 +89,22 @@ export function buildGitsyncZip(questions: GitsyncQuestion[]): GitsyncResult {
     const segments = (q.topicPath.length ? q.topicPath : [NO_TOPIC]).map((s) =>
       sanitizeName(s),
     );
+    // Nama kategori (untuk gitsync_category.xml) = teks asli, bukan folder.
+    const names = q.topicPath.length ? q.topicPath : [NO_TOPIC];
     // Catat kategori (buat gitsync_category.xml sekali per folder unik).
     let acc = "top";
+    let depth = 0;
     for (const seg of segments) {
       acc = `${acc}/${seg}`;
       if (!categoriesSeen.has(acc)) {
         categoriesSeen.add(acc);
-        entries.push({ name: `${acc}/gitsync_category.xml`, data: Buffer.from(categoryXml(seg), "utf8") });
+        entries.push({
+          name: `${acc}/gitsync_category.xml`,
+          data: Buffer.from(categoryXml(names[depth] ?? seg), "utf8"),
+        });
         files.push(`${acc}/gitsync_category.xml`);
       }
+      depth++;
     }
     const dir = `top/${segments.join("/")}`;
     const file = `${dir}/${questionFileName(q, i)}`;

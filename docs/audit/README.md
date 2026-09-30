@@ -37,6 +37,7 @@ Setiap dokumen audit kini terhubung dengan berkas verifikasi nyata di `docs/VERI
 8. [`docs/audit/M8-EKSPOR-DAN-LAYOUT-CETAK.md`](M8-EKSPOR-DAN-LAYOUT-CETAK.md) — Milestone 8 (Browser-native Print Direct Engine, `@media print`, 1/2 Kolom, Kunci Jawaban S3 Guard, Lembar Jawaban Siswa, & KaTeX).
 9. [`docs/audit/AUDIT-PUSTAKA-DAN-DEPENDENSI.md`](AUDIT-PUSTAKA-DAN-DEPENDENSI.md) — Evaluasi Penggunaan Library & Dependensi (Next.js 16, React 19, `@base-ui/react`, Drizzle, Refactoring `cn`, & `isomorphic-dompurify`).
 10. [`docs/audit/CATATAN-PENYEMPURNAAN-ENTERPRISE.md`](CATATAN-PENYEMPURNAAN-ENTERPRISE.md) — Rekomendasi Best Practices Enterprise (DB Transaction Atomicity, Slug Length Guards, `"use cache"` Next.js 16, Idempotency-Key Header, Sanitasi TikZ SVG, & Request ID Traceability).
+11. [`docs/audit/AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md`](AUDIT-KOMPREHENSIF-FASE-1-DAN-CATATAN-FASE-2.md) — Audit Komprehensif Penutup Fase 1 (MVP) & Panduan Teknis Lengkap Pengembangan Fase 2 (M9–M12) dan Fase 3.
 
 ---
 

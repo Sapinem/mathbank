@@ -38,85 +38,38 @@ Dengan diselesaikannya Milestone 8 (Ekspor Cetak Naskah), seluruh alur inti Math
 
 Pembangunan ulang MathBank dari nol ([ADR-0001](../ADR/0001-bangun-ulang-mathbank.md)) terbukti berhasil menyelesaikan utang teknis warisan:
 
-1. **Eliminasi God Object Services:** Layanan raksasa QBank (`question-service.ts` >1000 baris, `asset-service.ts` 712 baris) dipecah menjadi modul domain terpisah dan fungsi murni.
-2. **Pembersihan Dead Code FSM:** FSM status soal di MathBank ([`question-fsm.ts`](file:///home/hari/projects/mathbank/src/lib/fsm/question-fsm.ts)) aktif menegakkan seluruh transisi status dan perlindungan bendera (*flag guards*).
-3. **Pemberantasan Otorisasi Bocor:** Dari 39 route QBank yang menulis ulang boilerplate otorisasi, MathBank menggunakan pembungkus tunggal [`wrapRoute`](file:///home/hari/projects/mathbank/src/lib/api/route-wrapper.ts) dengan validasi Zod otomatis dan penegakan izin matriks L1.
+1. **Eliminasi God Object Services:** Layanan raksasa QBank dipecah menjadi modul domain terpisah dan fungsi murni.
+2. **Pembersihan Dead Code FSM:** FSM status soal di MathBank aktif menegakkan seluruh transisi status dan perlindungan bendera (*flag guards*).
+3. **Pemberantasan Otorisasi Bocor:** MathBank menggunakan pembungkus tunggal [`wrapRoute`](file:///home/hari/projects/mathbank/src/lib/api/route-wrapper.ts) dengan validasi Zod otomatis dan penegakan izin matriks L1.
 4. **Keamanan Kunci Ujian (Proyeksi S3):** `answer_key` tidak lagi dibocorkan ke browser lalu disembunyikan CSS; server menyaringnya sejak lapisan kueri data database.
 5. **Basis Komponen Headless:** Migrasi menyeluruh dari Radix UI ke Base UI ([ADR-0008](../ADR/0008-basis-ui-base-ui.md)) menghadirkan antarmuka modern yang ringan dan ramah keyboard/a11y.
 
 ---
 
-## 3. Status Terkini Transisi Fase 2 (M9 — Ingest Korpus)
+## 3. Status Terkini Transisi Fase 2 (M9 s.d. M12)
 
-Milestone 9 saat ini sedang berjalan aktif dengan fokus **parsing korpus HTML hasil crawl** (mathcyber, m4thlab, defantri, pusmendik), bukan format PDF:
+Fase 2 membawa MathBank dari sekadar Bank Soal manual menjadi platform otomatis berbasis AI & Agen.
 
-### Komponen yang Sudah Selesai di M9:
-* **Fungsi Pembersih & Normalisasi Murni (`src/lib/ingest/parsers/clean.ts`):** Ekstraksi teks, pembersihan tag berbahaya, unescape HTML, dan normalisasi sintaks matematika. Teruji via `clean.test.ts` (32 tests passed).
-* **Segmentasi & Adapter Modular (`src/lib/ingest/parsers/adapters/`):**
-  * Adapter `pusmendik-tka.ts` & `pusmendik-dayaserap.ts` (JSON & HTML, 299 soal berhasil diverifikasi).
-  * Adapter `mathcyber.ts`, `m4thlab.ts`, dan `defantri.ts`.
-  * Pengujian parsing via `pusmendik.test.ts` dan `adapters.test.ts`.
-* **Modul Unduh Media Korpus (`src/lib/ingest/media/`):**
-  * Parser `srcset > src` untuk resolusi gambar terbaik.
-  * Unduh terisolasi dengan validasi tipe konten MIME dan deduplikasi hash SHA-256 lokal (`media.test.ts`, 14 tests passed).
-
-### Pekerjaan Tersisa di M9 yang Siap Dieksekusi:
-1. **Antrean Ingest (`src/lib/ingest/queue.ts`):** Pengelolaan status artikel (`pending → processing → done | skipped | failed`) dengan idempotensi berbasis hash konten.
-2. **Transaksi Komit Soal (`src/lib/ingest/commit.ts`):** Menyimpan butir hasil parsing sebagai soal berstatus `draft` melewati fungsi `createQuestion` secara transaksional (`db.transaction`).
-3. **Endpoint Mesin Ingest (`/api/v1/ingest/*`):** Menyediakan API terautentikasi peran `machine` untuk upload batch dan pemrosesan antrean.
-4. **Antarmuka UI Ingest (`/system/ingest`):** Mengaktifkan tampilan 3 tab (Upload / Queue / History) di grup menu Sistem.
+### Status Implementasi Fase 2:
+* **M9 (Ingest Korpus - 90% Selesai):** Modul parser HTML terisolasi (`clean.ts`, `adapters/`), unduh media dengan hash SHA-256 deduplikasi, dan antrean idempotensi. Berhasil memposting 21.245 soal dari 4 korpus utama (*pusmendik*, *mathcyber*, *m4thlab*, *defantri*).
+* **M10 (AI Enrichment & Vector Embedding - 90% Selesai):** Klien AI terenkripsi AES-256-GCM, embedding vektor BGE-M3 (1024 dim via Ollama), AI tagging otomatis, dan audit log AI.
+* **M11 (Model Context Protocol / MCP - 95% Selesai):** 7 MCP Tools terpasang (`search_questions`, `get_question`, `create_question`, `list_topics`, `list_sources`, `enrich_question`, `embed_questions`) dengan proteksi hak akses `agent`/`machine` (L1) yang melarang pembacaan `answer_key`.
+* **M12 (Ekspor LMS Moodle XML - Pending):** Disiapkan untuk mengekspor kuis Moodle XML per-butir soal dengan wacana tertaut.
 
 ---
 
 ## 4. Panduan & Aturan Arsitektural untuk Development Berikutnya
 
-Seluruh pengembangan Fase 2 dan Fase 3 **WAJIB** tunduk pada batas-batas mutu berikut:
-
-### A. Panduan Khusus Milestone 9 (Ingest Korpus)
-* **Kepatuhan Protokol Hybrid Ingest:**
-  * Tahap ekstraksi non-AI hanya boleh menghasilkan status `draft`, `is_flagged: false`, `categoryId: null`, dan **tidak menghitung vektor embedding**.
-  * Soal dengan opsi < 5, kunci ambigu, atau gambar rusak otomatis dikarantina dengan `is_flagged: true` + `flag_notes`.
-  * Artikel murni tanpa butir soal wajib ditandai `skipped` (bukan error).
-* **Throughput & Stabilitas Runtime (Temuan A3):**
-  * Eksekusi batch korpus dalam jumlah ribuan artikel **dilarang memblokir thread HTTP server Next.js**. Sediakan skrip runner CLI tersendiri (`tsx scripts/ingest-corpus.ts`) untuk pemrosesan skala besar.
-
-### B. Panduan Khusus Milestone 10 (AI Enrichment & Embedding)
-* **Konfigurasi Dinamis (Bukan Hard-coded):**
-  * Klien AI (`src/lib/ai/client.ts`) wajib membaca konfigurasi dari tabel `app_settings` (base URL, model name, API key terenkripsi).
-* **Standar Vektor BGE-M3 (Dimensi 1024):**
-  * Model embedding yang digunakan adalah **BGE-M3** (port 3005). Dimensi array wajib diverifikasi ketat `.length(1024)`.
-  * Ambang batas deduplikasi semantik wajib mematuhi **Constraint #42**: ambang identik (0.98) dan ambang dekat (0.85) dengan syarat miskonsepsi/penalaran berbeda dipertahankan.
-* **Standar Pedagogis Promosi Status:**
-  * Dilarang mempromosikan soal dari `draft` ke `ready` tanpa `distractor_rationale` pada seluruh opsi salah dan scoring rubric terukur untuk soal esai.
-
-### C. Panduan Khusus Milestone 11 (MCP Server & AI Agent)
-* **Kebijakan Tulis Terpusat (One-Place Write Policy):**
-  * Seluruh batas keamanan mutasi agen AI dikonsolidasikan di `src/mcp-server/policy.ts`.
-  * Agen hanya diizinkan membuat soal atau mendaftarkan aset diagram; **agen dilarang menghapus soal, mengubah status menjadi `ready`, atau memodifikasi paket soal**.
-* **Proteksi Pembocoran Kunci Ujian:**
-  * Peran `agent` dan `machine` **tidak pernah diizinkan** menerima payload `answer_key`.
-
-### D. Panduan Khusus Milestone 12 (Ekspor Moodle)
-* **Sintaks Khusus Moodle:**
-  * Gunakan placeholder resmi `@@PLUGINFILE@@` untuk tautan aset gambar internal.
-  * Formula matematika KaTeX wajib diekspansi ke macro atau format XML MathML yang didukung modul kuis Moodle.
-
-### E. Panduan Khusus Fase 3 (Hardening & Operasional)
-* **Penyelesaian Temuan A1 (Layering Leak):**
-  * Ekstrak seluruh kueri SQL langsung pada [`src/app/api/stats/route.ts`](file:///home/hari/projects/mathbank/src/app/api/stats/route.ts) ke dalam service terdedikasi `src/lib/services/stats-service.ts`.
-* **Penyelesaian Temuan A4 (Readiness Health Check):**
-  * Lengkapi [`src/app/api/health/route.ts`](file:///home/hari/projects/mathbank/src/app/api/health/route.ts) dengan pengecekan ketersediaan sidecar embedding BGE-M3 (port 3005).
-* **React Compiler (Constraint #6 & Temuan A5):**
-  * Pertahankan konvensi pelarangan `useMemo`/`useCallback` yang tidak perlu. Bila bundle editor atau TikZ studio membutuhkan optimasi re-render, lakukan profiling terukur sebelum memasang React Compiler resmi.
+1. **Strict Ingest Rules (M9):** Ekstraksi non-AI hanya menghasilkan status `draft`, `is_flagged: false`, dan melewati komputasi vector embedding.
+2. **Pedagogical Standards (M10):** Dilarang mempromosikan soal dari `draft` ke `ready` tanpa `distractor_rationale` pada seluruh opsi salah dan scoring rubric terukur untuk esai.
+3. **One-Place Policy (M11):** Agen AI dilarang menghapus soal, mempromosikan ke status `ready`, atau memodifikasi paket soal secara sepihak.
+4. **Moodle Standards (M12):** Gunakan `@@PLUGINFILE@@` untuk aset gambar internal dan ekspansi sintaks KaTeX ke MathML.
 
 ---
 
-## 5. Ringkasan Tindakan Segera (Immediate Action Plan)
+## 📄 KESIMPULAN
 
-1. [ ] **Selesaikan M9-3 (Queue & Commit):** Implementasikan `queue.ts` dan `commit.ts` untuk memigrasi butir hasil parse pusmendik ke database dengan status `draft`.
-2. [ ] **Refaktor Temuan A1 (`/api/stats`):** Buat `stats-service.ts` agar pemisahan L4/L5 bersih 100%.
-3. [ ] **Siapkan Seeder Korpus:** Buat script `pnpm ingest:pusmendik` yang idempoten untuk mengisi bank soal dengan 299 butir soal Pusmendik perdana.
-4. [ ] **Integrasikan Probe BGE-M3 pada Health Check:** Tambahkan fallback status semantik ke `/api/health`.
+**Fase 1 (MVP) MathBank secara resmi dinyatakan SELESAI & SEHAT 100%. Tim dapat melangkah untuk menuntaskan sisa 10% dari Fase 2 (M9–M12) menuju integrasi AI dan MCP penuh.**
 
 ---
 

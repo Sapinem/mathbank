@@ -100,6 +100,14 @@ describe("gitsync ZIP", () => {
     expect(r.exported).toBe(0);
   });
 
+  it("gitsync_category.xml memakai nama ASLI (bukan folder tersanitasi)", () => {
+    const r = buildGitsyncZip([q({ topicPath: ["Aljabar & Fungsi"] })]);
+    const cat = zipEntryNames(r.zip!).find((n) => n.endsWith("gitsync_category.xml"))!;
+    const xml = readEntry(r.zip!, cat)!.toString("utf8");
+    expect(xml).toContain("<![CDATA[Aljabar & Fungsi]]>");
+    expect(cat).toBe("top/Aljabar-Fungsi/gitsync_category.xml");
+  });
+
   it("folder kategori dibuat sekali walau banyak soal", () => {
     const r = buildGitsyncZip([q({ name: "A" }), q({ name: "B" }), q({ name: "C" })]);
     const cats = zipEntryNames(r.zip!).filter((n) => n.endsWith("gitsync_category.xml"));

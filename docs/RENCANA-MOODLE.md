@@ -1,6 +1,6 @@
 # RENCANA — Ekspor Moodle (M12)
 
-> **Status:** 🟡 dirancang · **Milestone:** M12 · **Dependensi:** M8 · **Tanggal:** 2026-09-30
+> **Status:** ✅ SELESAI 2026-09-30 · **Milestone:** M12 · **Dependensi:** M8 · **Tanggal:** 2026-09-30
 > **Rujukan:** `docs/RENCANA-EKSPOR.md` (M8 cetak/PDF), dokumentasi Moodle XML resmi.
 
 ---
@@ -197,3 +197,25 @@ data + central directory + end-of-central-directory + CRC32 (dihitung sendiri).
 Tujuan: patuh CONSTRAINTS #5 (install hanya bila perlu).
 
 ---
+
+---
+
+## 9. Verifikasi (2026-09-30)
+
+| Uji | Hasil |
+|---|---|
+| Unit (`src/lib/export/*`) | **33 pass** (xml-escape, latex-to-moodle, moodle-xml, gitsync, zip) |
+| DB integrasi (`moodle-export.db.test.ts`) | **4 pass** (agent ditolak; ZIP struktur; Tanpa-Topik; D4 tolak) |
+| Endpoint live `/api/bundles/[id]/export/moodle` | 200, `application/zip`, magic `PK\x03\x04`, `filename="Test-gitsync.zip"`, exported=2 |
+| Struktur ZIP produksi | `top/Tanpa-Topik/{gitsync_category.xml, 1-….xml, 2-….xml}` ✓ |
+| Validasi XML | semua berkas **well-formed** (parser) ✓ |
+| Normalisasi LaTeX | `$2+2$` → `\(2+2\)` ✓ |
+| **Temuan penting** | 2/16 soal produksi punya `answerKey.correct` ≠ `options.isCorrect` → ekspor memakai **`answerKey.correct`** sebagai sumber kebenaran (bukan `isCorrect`) |
+
+### Catatan dev (ditulis atas permintaan user)
+
+- **D2 (tipe kompleks)**: `matrix_grid` & `matching` **dilewati** + dilaporkan.
+  TODO: petakan ke `multianswer`/cloze atau `match` bawaan Moodle bila diminta.
+- Mode **satu berkas** (`buildMoodleXml`) tetap ada untuk keperluan unduh cepat;
+  jalur produksi memakai **GitSync** (banyak berkas).
+- Manifest `*_question_manifest.json` **tidak** dibuat (milik CLI GitSync).
