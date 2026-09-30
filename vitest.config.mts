@@ -32,6 +32,7 @@ export default defineConfig({
         "src/lib/theme/color.ts",
         "src/lib/search/fusion.ts",
         "src/lib/taxonomy/tree.ts",
+        "src/lib/ingest/parsers/clean.ts",
         // Komponen kustom (BUKAN vendor ui/**) yang punya tes komponen.
         "src/components/questions/question-card.tsx",
         "src/components/questions/bank-soal-view.tsx",

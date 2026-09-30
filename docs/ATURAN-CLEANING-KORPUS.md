@@ -52,18 +52,25 @@ Urutan **tidak boleh** ditukar (alasan di §4).
 (8) Normalisasi math: $$…$$ → \[…\] · $…$ → \(…\) · perbaiki LaTeX rusak
 ```
 
-### 3.1 Detail tiap aturan
+### 3.1 Detail tiap aturan (final — keputusan user 2026-09-30)
 
 | # | Aturan | Contoh sebelum → sesudah |
 |---|---|---|
 | 0 | Buang script/style/noscript/komentar/iframe | `<script>let lbl=[]…</script>` → *(hilang)* |
-| 1 | Buang iklan | `<div class="fd26c469…"><script…adsbygoogle…>` → *(hilang)* |
+| 1 | Buang iklan (AdSense + `div class="<hash>"`) | `<div class="fd26c469…"><script…adsbygoogle>` → *(hilang)* |
 | 3 | Gambar → markdown | `<img src="x.png">` → `![Gambar](x.png)` |
-| 4 | Sisa tag → spasi | `<span style="color:#000">Halo</span>` → `Halo` |
-| 5 | Entitas | `you&#8217;re` → `you’re` · `&nbsp;` → ` ` · `&amp;` → `&` |
-| 6 | Spasi | `A&nbsp;&nbsp;B` → `A B` · baris kosong > 2 → 1 |
-| 7 | Shortcode | `[collapse]` · `[/collapse]` · `[su_…]` → *(hilang)* |
-| 8 | Math | `$$x$$` → `\[x\]` · `$x$` → `\(x\)` |
+| 4a | Struktur → markdown | `<li>`→`- `/`1. ` · `<blockquote>`→`>` · `<hr>`→`---` · `<code>`→`` ` `` |
+| 4b | `<table>` | **DIPERTAHANKAN** HTML (keputusan user) |
+| 4c | `<br>` | → `\n` |
+| 5 | Sisa tag → spasi | `<span style="color:#000">Halo</span>` → `Halo` |
+| 6 | **Entitas** (SEBELUM math) | `you&#8217;re` → `you’re` · `&nbsp;` → ` ` · `&amp;` → `&` |
+| 7 | Spasi | `A&nbsp;&nbsp;B` → `A B` · baris kosong > 2 → 1 |
+| 8 | **Shortcode (DAFTAR-HITAM)** | hanya `[collapse]`·`[/collapse]`·`[spoiler]`·`[/spoiler]` → *(hilang)* |
+| 9 | Math | `$$x$$` → `\[x\]` · `$x$` → `\(x\)` |
+
+> **⚠️ Shortcode = daftar-hitam, BUKAN buang-semua.** Evaluasi 1.081 file membuktikan
+> `[n]`,`[m]`,`[type]` dll. adalah **LaTeX** (`$\sqrt[n]{a}$`, `$[n]=\{1,\dots\}$`) —
+> pola `\[[a-z]+\]` akan **merusak matematika**. Lihat `EVALUASI-KORPUS-KOMPREHENSIF.md`.
 
 ---
 
