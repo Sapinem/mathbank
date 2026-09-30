@@ -30,7 +30,34 @@ Saran umum "hindari Chromium server-side" berlaku untuk **Lambda/Docker/ VPS kec
 **Uji nyata:** `page.pdf()` di host ini **BERHASIL** (7,5 KB, hangat ~200–500 ms).
 → **Argumen utama menolak Chromium server-side (resource/biaya/cold-start) TIDAK BERLAKU di sini.**
 
-### Opsi & tradeoff (dengan konteks di atas)
+### 2.1 Lanskap lengkap mesin PDF (riset 2026-09-30)
+
+Ekosistem terbagi **dua kelas** — penting agar tidak salah pilih:
+
+1. **Konversi HTML→PDF** (butuh *render engine*): Chromium (Playwright/Puppeteer), WebKit (wkhtmltopdf—**mati**), **WeasyPrint** (Python, pagination-first), **Paged.js** (polyfill CSS paged media), engine native baru (**Fulgur**, Pliego/Servo, Go-wkhtmltopdf).
+2. **Pembuatan PDF native** (menggambar langsung, **tanpa HTML**): PDFKit, pdfmake, `@react-pdf/renderer` (JSX).
+
+| Kandidat | Kelas | Ukuran/Dep | Kontrol ukuran kertas | KaTeX | Cocok MathBank? |
+|---|---|---|---|---|---|
+| **Playwright/Puppeteer** (Chromium) | HTML→PDF | ±300 MB (sudah ada) | **Penuh** (`@page size` + API `format`) | **Ya** (render DOM) | ✅ realistis |
+| **Browser print** (`@media print`+`window.print`) | HTML (di klien) | **0** | `@page size` (Chromium hormati; Firefox abaikan) | **Ya** (DOM sudah ter-render) | ✅ realistis, ringan |
+| **Paged.js** (polyfill di browser) | HTML (klien) | ± kecil (JS) | **Ya** (`@page`) di browser Chromium | Ya | 🟡 menambah lib klien |
+| **WeasyPrint** | HTML→PDF | Python + GTK/Pango (bukan Node) | **Penuh** (paged media terlengkap) | ⚠️ **tidak jalankan JS** → KaTeX harus pra-render jadi SVG/MathML | ❌ ganjalan stack |
+| **wkhtmltopdf** | HTML→PDF | ±50 MB binary | CLI flags (`-s A4`) | ❌ engine 2014 | ❌ **mati/arsip 2023** |
+| **PDFKit** | Native (gambar) | ±3 MB | Penuh (`size:[w,h]`) | ❌ **tak ada HTML/CSS** — rumus harus digambar manual | ❌ |
+| **pdfmake** | Native (DSL JSON) | ±1 MB | Penuh | ❌ tak ada HTML; rumus/rumus kompleks sulit | ❌ |
+| **@react-pdf/renderer** | Native (JSX) | ±2 MB | Penuh (`<Page size="A4">`) | ❌ custom CSS **terbatas**; KaTeX HTML/SVG **tak** didukung | ❌ |
+| **Fulgur/Pliego/gowkhtmltopdf** | Native engine baru | biner | terbatas | ❌ | ❌ belum matang |
+
+**Kesimpulan riset:** untuk **HTML+CSS+KaTeX** (naskah matematika) yang **sudah punya
+halaman web**, mesin **berbasis render-engine (Chromium)** atau **print-css browser**
+adalah yang **secara teknis benar**. Alat "lebih ringan" (PDFKit/pdfmake/react-pdf)
+memang kecil tapi **menggambar PDF dari nol** — mereka **tidak bisa** memakai halaman
+HTML+KaTeX kita; menulis ulang seluruh tata letak naskah = **kerja besar & rawan**.
+WeasyPrint (ringan, pagination terbaik) **tak jalankan JS** → KaTeX perlu jalur
+pra-render khusus.
+
+### 2.2 Opsi & tradeoff (dengan konteks di atas)
 
 | Aspek | **A. Browser print (`@media print`)** | **B. Server-side (Playwright→PDF)** | **C. Hybrid (B + tombol print)** |
 |---|---|---|---|
