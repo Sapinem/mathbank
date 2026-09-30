@@ -223,3 +223,29 @@ pilihAdapter(meta) →
 ### Belum (M9-2b)
 - **pusmendik**: `pusmendik_dayaserap` = **JSON terstruktur** (`questions[].question_data`
   dengan `pertanyaan/pilihan/kunci_jawaban`) — butuh masukan non-HTML; `pusmendik_tka` = HTML.
+
+---
+
+## 10. pusmendik — DUA bentuk sumber (M9-2c, 2026-09-30)
+
+| Sumber | Bentuk | Soal | Tipe |
+|---|---|---:|---|
+| `pusmendik_dayaserap` | **JSON terstruktur** | 110 | PG 66 · MCMA 22 · Kategori 22 |
+| `pusmendik_tka` | **HTML halaman ujian** | 189 | PG (semua) |
+
+### Pemetaan tipe (TANPA tipe baru — enum MathBank sudah lengkap)
+- PG → `single_choice`
+- PG Kompleks **MCMA** → `multiple_choice_checkbox`
+- PG Kompleks **Kategori** → `matrix_grid` (`dataPayload = {labels, rows}`)
+
+### Temuan kunci
+1. **KUNCI pusmendik: 0/299.** `kunci_jawaban` = `[]`/`null`; `pernyataan[].jawaban` = "".
+   → kosong + flag (jangan menebak).  [Backlog: minta kunci ke sumber]
+2. **TKA**: soal = `<img>` di `div.isi-soal` **sebelum** `<!-- PG -->`; opsi = `<img>` di
+   `<td>` setelah radio (huruf dari `pil="a"`). Kunci **tidak ada di HTML** (di server).
+3. **SSL pusmendik rusak** (`CERTIFICATE_VERIFY_FAILED`) — gambar sebenarnya hidup.
+   → TLS dilonggarkan **hanya** untuk domain ter-pin (`TLS_RELAXED_HOSTS`).
+
+### Kontrak baru
+- `JsonAdapter` (sumber non-HTML) + `segmentJson(data, meta)`.
+- `finalizeItem(..., { type?, dataPayload? })`.

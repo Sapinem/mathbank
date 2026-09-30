@@ -108,3 +108,11 @@ opsi=`option`, pembahasan=`solution`).
 - **Skema media**: `src/lib/db/schema/media.ts` (baris 20–70) — `media_assets`
   + `question_media` + enum `web_ingest` di `_enums.ts:99–107`.
 - **Storage**: `.env.example:51` → `MEDIA_STORAGE_PATH=./storage/media`.
+
+## 10. TLS khusus (temuan pusmendik, 2026-09-30)
+
+`pusmendik.kemendikdasmen.go.id` punya **sertifikat SSL rusak**
+(`CERTIFICATE_VERIFY_FAILED`), padahal gambarnya hidup (200). Solusi: verifikasi TLS
+**dilonggarkan HANYA** untuk host di `TLS_RELAXED_HOSTS` (ter-pin di `fetch.ts`); host
+lain tetap ketat. Unduhan host relaxed memakai modul `https`/`http` Node
+(`rejectUnauthorized: false`), bukan `fetch` global.

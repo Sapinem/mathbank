@@ -319,6 +319,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 - [x] `ingest/parsers/` — fungsi murni teruji: `clean` ✅ · `segment`+`adapters/` ✅ · `items` ✅ (dipecah, bukan monolit)
 - [x] `ingest/media/` — unduh gambar korpus: `resolve-url`/`fetch`/`store`/`ingest-media` ✅ (srcset>src, dedup hash, storage lokal)
+- [x] adapter **pusmendik** ✅ — `pusmendik_tka` (HTML) + `pusmendik_dayaserap` (JSON); 299 soal; TLS pin
 - [ ] `ingest/parsers/adapters/` — penanda per-sumber (mathcyber · m4thlab · defantri)
 - [ ] `ingest/queue.ts` — enqueue artikel + status + retry + **idempotensi** (hash konten)
 - [ ] `ingest/commit.ts` — hasil parse → soal **draft** (lewat `createQuestion`, transaksi)

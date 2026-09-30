@@ -3,6 +3,14 @@
 
 ## [Unreleased] — M9 Ingest Korpus (berjalan)
 
+### Ditambahkan — Adapter pusmendik (M9-2c)
+- `pusmendik_dayaserap` (JSON terstruktur) → `JsonAdapter` + `segmentJson`; tipe
+  PG/MCMA/Kategori → `single_choice`/`multiple_choice_checkbox`/`matrix_grid`.
+- `pusmendik_tka` (HTML) → adapter HTML; soal = `<img>` di `div.isi-soal`.
+- `media/fetch.ts`: TLS dilonggarkan **ter-pin** (`TLS_RELAXED_HOSTS`) untuk domain
+  ber-sertifikat rusak; host lain tetap ketat.
+- Kunci pusmendik **0/299** di sumber → kosong + flag (tidak menebak).
+
 ### Ditambahkan — Unduh gambar korpus (M9-2b)
 - `src/lib/ingest/media/` (`resolve-url`, `fetch`, `store`, `ingest-media`). Prioritas
   `srcset` > `src` (mathcyber `src` = path crawler rusak/404, URL asli di `srcset`);
