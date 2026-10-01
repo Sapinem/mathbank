@@ -64,7 +64,7 @@ export function ComingSoon({ milestone }: { milestone: string }) {
   return (
     <EmptyState
       title="Belum tersedia"
-      description={`Halaman ini akan dibangun pada ${milestone}.`}
+      description={`Halaman ini direncanakan pada tahap ${milestone}.`}
     />
   );
 }

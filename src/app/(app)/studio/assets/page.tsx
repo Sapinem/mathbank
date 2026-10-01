@@ -5,7 +5,7 @@ export default function AssetsPage() {
   return (
     <>
       <PageHeader title="Galeri Aset" description="Kelola aset media: gambar, SVG, dan diagram TikZ." />
-      <ComingSoon milestone="M6" />
+      <ComingSoon milestone="G4 — Studio Media" />
     </>
   );
 }

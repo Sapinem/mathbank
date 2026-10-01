@@ -5,7 +5,7 @@ export default function TikzPage() {
   return (
     <>
       <PageHeader title="TikZ Studio" description="Editor diagram TikZ → SVG." />
-      <ComingSoon milestone="M6" />
+      <ComingSoon milestone="G4 — Studio Media" />
     </>
   );
 }
