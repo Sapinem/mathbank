@@ -23,6 +23,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { ROLE_LABELS } from "@/lib/display/labels";
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
@@ -39,6 +40,13 @@ function initial(name: string): string {
 export function SidebarUser() {
   const { data: user, isLoading } = useCurrentUser();
   const router = useRouter();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   const name = user?.name ?? (isLoading ? "…" : "Tamu");
   const roleLabel = user?.roles?.length
@@ -79,15 +87,25 @@ export function SidebarUser() {
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/system/profile" />}>
+              <DropdownMenuItem
+                render={
+                  <Link href="/system/profile" onClick={handleNavClick} />
+                }
+              >
                 <User /> Profil
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/system/settings" />}>
+              <DropdownMenuItem
+                render={
+                  <Link href="/system/settings" onClick={handleNavClick} />
+                }
+              >
                 <Settings /> Pengaturan
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem render={<Link href="/login" />}>
+            <DropdownMenuItem
+              render={<Link href="/login" onClick={handleNavClick} />}
+            >
               <RefreshCw /> Ganti peran (demo)
             </DropdownMenuItem>
             <DropdownMenuSeparator />

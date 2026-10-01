@@ -97,4 +97,26 @@ describe("AppShell", () => {
     const skip = document.querySelector('a[href="#konten-utama"]');
     expect(skip).toBeTruthy();
   });
+
+  it("memastikan tombol header memiliki touch target minimal 44x44px (CONSTRAINT #11)", () => {
+    withQuery(
+      <AppShell>
+        <p>x</p>
+      </AppShell>,
+    );
+    // SidebarTrigger
+    const trigger = document.querySelector('[data-sidebar="trigger"]');
+    expect(trigger?.className).toContain("min-h-[44px]");
+    expect(trigger?.className).toContain("min-w-[44px]");
+
+    // Tombol cari mobile
+    const mobileSearch = screen.getByLabelText("Cari");
+    expect(mobileSearch.className).toContain("min-h-[44px]");
+    expect(mobileSearch.className).toContain("min-w-[44px]");
+
+    // Tombol ganti tema
+    const themeBtn = screen.getByLabelText("Ganti tema");
+    expect(themeBtn.className).toContain("min-h-[44px]");
+    expect(themeBtn.className).toContain("min-w-[44px]");
+  });
 });

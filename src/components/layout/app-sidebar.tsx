@@ -29,13 +29,29 @@ import { isActive } from "./nav-utils";
  */
 export function AppSidebar() {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/" aria-label="MathBank — Dasbor" />}>
+            <SidebarMenuButton
+              size="lg"
+              render={
+                <Link
+                  href="/"
+                  onClick={handleNavClick}
+                  aria-label="MathBank — Dasbor"
+                />
+              }
+            >
               <span className="grid aspect-square size-8 place-items-center rounded-lg bg-brand font-bold text-brand-fg">
                 ∑
               </span>
@@ -66,7 +82,9 @@ export function AppSidebar() {
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
-                        render={<Link href={item.href} />}
+                        render={
+                          <Link href={item.href} onClick={handleNavClick} />
+                        }
                         isActive={active}
                         tooltip={item.label}
                       >

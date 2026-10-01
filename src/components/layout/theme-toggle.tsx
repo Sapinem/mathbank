@@ -27,7 +27,12 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Ganti tema" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="min-h-[44px] min-w-[44px]"
+            aria-label="Ganti tema"
+          />
         }
       >
         <Sun className="dark:hidden" />

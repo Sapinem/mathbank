@@ -31,7 +31,7 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3 sm:px-4">
-      <SidebarTrigger className="-ml-1" />
+      <SidebarTrigger className="-ml-1 min-h-[44px] min-w-[44px]" />
       <Separator
         orientation="vertical"
         className="mr-1 data-[orientation=vertical]:h-4"
@@ -76,13 +76,13 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
           <span>Cari…</span>
           <kbd className="rounded border border-border px-1 text-xs">⌘K</kbd>
         </Button>
-        {/* Mobile: ikon cari */}
+        {/* Mobile: ikon cari — touch target ≥ 44px (CONSTRAINT #11) */}
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           onClick={onOpenCommand}
           aria-label="Cari"
-          className="sm:hidden"
+          className="min-h-[44px] min-w-[44px] sm:hidden"
         >
           <Search />
         </Button>

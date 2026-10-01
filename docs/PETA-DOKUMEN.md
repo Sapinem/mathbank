@@ -61,6 +61,7 @@
 | C4 | `THEME-FRAMEWORK-GUIDE.md` | ✅ | panduan teknis |
 | C5 | `A11Y.md` | ✅ | **dibuat** 2026-09-29 — target WCAG 2.2 AA |
 | C6 | `DESIGN-QUESTION-VIEW-MODES.md` | ✅ | **dibuat** 2026-10-01 — rancangan Linear-style view modes (List, Grid, Masonry) & penanganan soal panjang |
+| C7 | `docs/redesign-ui/APP-SHELL-EVALUATION.md` | ✅ | **dibuat** 2026-10-01 — evaluasi responsivitas AppShell, perbaikan drawer auto-close, touch target ≥44px, dan konsistensi breakpoint lg |
 
 ### Kategori D — Mutu & Proses
 
