@@ -43,6 +43,11 @@ export type PublicQuestion = Omit<
   answerKey?: AnswerKey;
   /** Provenance (ADR-0012): sumber-sumber butir ini (bisa >1). */
   sources?: QuestionSourceView[];
+  /**
+   * Wacana stimulus induk (soal `stimulus`), bila butir ini adalah soal anak.
+   * Menyertakan `contentMarkdown` agar UI dapat merender konteks utuh (audit §3.9).
+   */
+  parent?: { id: string; contentMarkdown: string } | null;
 };
 
 /** Bentuk ringkas provenance untuk respons API. */
@@ -112,7 +117,21 @@ export async function getQuestion(
     .where(eq(questionSources.questionId, id))
     .orderBy(asc(questionSources.createdAt));
 
-  return { ...row, options, sources } as PublicQuestion;
+  const parent = row.parentId ? await getParentStimulus(row.parentId) : null;
+
+  return { ...row, options, sources, parent } as PublicQuestion;
+}
+
+/** Ambil wacana stimulus induk (id + contentMarkdown) bila ada. */
+async function getParentStimulus(
+  parentId: string,
+): Promise<{ id: string; contentMarkdown: string } | null> {
+  const [p] = await db
+    .select({ id: questions.id, contentMarkdown: questions.contentMarkdown })
+    .from(questions)
+    .where(and(eq(questions.id, parentId), isNull(questions.deletedAt)))
+    .limit(1);
+  return p ?? null;
 }
 
 /**
@@ -218,5 +237,23 @@ async function attachOptions(
     arr.push(o as QuestionOption);
     byQuestion.set(o.questionId, arr);
   }
-  return rows.map((r) => ({ ...r, options: byQuestion.get(r.id) ?? [] }));
+
+  // Lampirkan wacana stimulus induk (hindari N+1): 1 query untuk semua parentId.
+  const parentIds = [
+    ...new Set(rows.map((r) => r.parentId).filter((v): v is string => !!v)),
+  ];
+  const parentMap = new Map<string, { id: string; contentMarkdown: string }>();
+  if (parentIds.length > 0) {
+    const parents = await db
+      .select({ id: questions.id, contentMarkdown: questions.contentMarkdown })
+      .from(questions)
+      .where(inArray(questions.id, parentIds));
+    for (const p of parents) parentMap.set(p.id, p);
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    options: byQuestion.get(r.id) ?? [],
+    parent: r.parentId ? (parentMap.get(r.parentId) ?? null) : null,
+  }));
 }

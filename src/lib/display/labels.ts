@@ -71,3 +71,39 @@ export function difficultyClass(d: number): string {
   if (d === 4) return "text-warning";
   return "text-error";
 }
+
+/**
+ * Warna semantik badge level kognitif (C1–C6).
+ * Warna naik mengikuti kedalaman proses berpikir (teal→rose→emerald).
+ */
+export function cognitiveClass(level: string): string {
+  switch (level) {
+    case "remember":
+      return "border-info/40 bg-info/10 text-info";
+    case "understand":
+      return "border-brand/30 bg-brand/10 text-brand";
+    case "apply":
+      return "border-success/40 bg-success/10 text-success";
+    case "analyze":
+      return "border-warning/40 bg-warning/10 text-warning";
+    case "evaluate":
+      return "border-error/40 bg-error/10 text-error";
+    case "create":
+      return "border-gold/40 bg-gold/15 text-gold-fg";
+    default:
+      return "border-border bg-muted text-muted-foreground";
+  }
+}
+
+/** Kode ringkas level kognitif untuk badge mikro, mis. "C4". */
+export function cognitiveCode(level: string): string {
+  const map: Record<string, string> = {
+    remember: "C1",
+    understand: "C2",
+    apply: "C3",
+    analyze: "C4",
+    evaluate: "C5",
+    create: "C6",
+  };
+  return map[level] ?? "—";
+}

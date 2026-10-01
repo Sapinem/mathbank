@@ -28,10 +28,10 @@ import {
 import {
   STATUS_LABELS,
   TYPE_LABELS,
-  DIFFICULTY_LABELS,
-  COGNITIVE_LABELS,
   statusClass,
 } from "@/lib/display/labels";
+import { CognitiveBadge, DifficultyBadge } from "@/components/questions/rubric-badge";
+import { StimulusCard } from "@/components/questions/stimulus-card";
 
 /**
  * Halaman detail soal (M4c) — lihat + edit + ubah status (FSM) + hapus.
@@ -129,18 +129,16 @@ export function QuestionDetailView() {
             {STATUS_LABELS[q.status] ?? q.status}
           </Badge>
           <Badge variant="outline">{q.grade}</Badge>
-          <Badge variant="outline">
-            {DIFFICULTY_LABELS[q.difficulty] ?? `Level ${q.difficulty}`}
-          </Badge>
-          <Badge variant="outline">
-            {COGNITIVE_LABELS[q.cognitiveLevel] ?? q.cognitiveLevel}
-          </Badge>
+          <DifficultyBadge level={q.difficulty} />
+          <CognitiveBadge level={q.cognitiveLevel} />
           {q.isFlagged && (
             <Badge variant="outline" className="border-gold/40 bg-gold/15 text-gold-fg">
               <AlertTriangle data-icon="inline-start" /> Ditandai
             </Badge>
           )}
         </div>
+
+        {q.parent && <StimulusCard content={q.parent.contentMarkdown} />}
 
         <Card>
           <CardHeader>

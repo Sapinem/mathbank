@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils";
 import {
   STATUS_LABELS,
   TYPE_LABELS,
-  DIFFICULTY_LABELS,
   statusClass,
-  difficultyClass,
 } from "@/lib/display/labels";
+import { CognitiveBadge, DifficultyBadge } from "@/components/questions/rubric-badge";
+import { StimulusCard } from "@/components/questions/stimulus-card";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
 /** Kutipan singkat konten (tanpa memotong rumus). */
@@ -58,13 +58,16 @@ export function QuestionCard({
             {TYPE_LABELS[q.questionType] ?? q.questionType}
           </span>
           <span className="text-xs text-muted-foreground">· {q.grade}</span>
-          <span className={cn("text-xs", difficultyClass(q.difficulty))}>
-            · {DIFFICULTY_LABELS[q.difficulty] ?? `Level ${q.difficulty}`}
-          </span>
+          <DifficultyBadge level={q.difficulty} />
+          <CognitiveBadge level={q.cognitiveLevel} />
           {q.isFlagged && (
             <Flag className="size-3.5 text-gold" role="img" aria-label="Ditandai" />
           )}
         </div>
+
+        {q.parent && (
+          <StimulusCard content={q.parent.contentMarkdown} className="mt-2" />
+        )}
 
         <Link href={href} className="mt-1.5 block">
           <MathContent

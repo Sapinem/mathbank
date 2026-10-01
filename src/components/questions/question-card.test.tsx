@@ -35,12 +35,39 @@ function q(over: Partial<PublicQuestion> = {}): PublicQuestion {
 }
 
 describe("QuestionCard", () => {
-  it("menampilkan status, tipe, grade, kesulitan (label manusia)", () => {
+  it("menampilkan status, tipe, grade, dan badge rubrik (kesulitan + kognitif)", () => {
     const { container } = render(<QuestionCard question={q()} href="/questions/q1" />);
     expect(screen.getByText("Draf")).toBeInTheDocument();
     // grade dirender sebagai "· SMA-11" dalam satu span
     expect(container.textContent).toContain("SMA-11");
-    expect(container.textContent).toContain("Sedang"); // difficulty 3
+    // Difficulty 3 → badge "Lv.3" + meter titik ●●●○○
+    expect(container.textContent).toContain("Lv.3");
+    expect(container.textContent).toContain("●●●○○");
+    // cognitiveLevel "understand" → badge mikro "C2"
+    expect(container.textContent).toContain("C2");
+  });
+
+  it("badge rubrik dapat difokus keyboard & punya aria-label rubrik", () => {
+    render(<QuestionCard question={q()} href="/questions/q1" />);
+    // Badge kognitif C2 → aria-label memuat rubrik operasional
+    expect(
+      screen.getByLabelText(/C2 · Memahami:/),
+    ).toBeInTheDocument();
+    // Badge kesulitan → aria-label memuat rubrik Lv.3
+    expect(screen.getByLabelText(/Lv\.3 · Sedang/)).toBeInTheDocument();
+  });
+
+  it("merender wacana stimulus induk bila soal anak punya parent", () => {
+    render(
+      <QuestionCard
+        question={q({
+          parent: { id: "p1", contentMarkdown: "Bacalah tabel berikut." },
+        } as Partial<PublicQuestion>)}
+        href="/questions/q1"
+      />,
+    );
+    expect(screen.getByText("Wacana Stimulus (Induk)")).toBeInTheDocument();
+    expect(screen.getByText("Bacalah tabel berikut.")).toBeInTheDocument();
   });
 
   it("tautan ke href yang diberikan", () => {
