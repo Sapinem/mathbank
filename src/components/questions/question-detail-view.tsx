@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Pencil, Trash2, AlertTriangle, Lightbulb } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  Lightbulb,
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Sliders,
+} from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { QuestionEditor } from "@/components/questions/question-editor";
 import { EnrichButton } from "@/components/questions/enrich-button";
@@ -124,140 +133,219 @@ export function QuestionDetailView() {
         }
       />
 
-      <div className="flex flex-col gap-6 p-4 sm:p-6 max-w-5xl">
-        {/* LEMBAR DOKUMEN SOAL (SOAL + OPSI MENYATU) */}
-        <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
-          <CardHeader className="border-b border-border/40 pb-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge className={statusClass(q.status)}>
-                  {STATUS_LABELS[q.status] ?? q.status}
-                </Badge>
-                <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 font-mono text-xs font-semibold text-foreground/90">
-                  Kelas {formatGradeBadge(q.grade)}
-                </span>
-                <DifficultyBadge level={q.difficulty} />
-                <CognitiveBadge level={q.cognitiveLevel} />
-                {q.isFlagged && (
-                  <Badge variant="outline" className="border-gold/40 bg-gold/15 text-gold-fg">
-                    <AlertTriangle data-icon="inline-start" /> Ditandai
-                  </Badge>
+      <div className="p-4 sm:p-6 max-w-7xl w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* KOLOM KIRI (UTAMA: LEMBAR SOAL & PEMBAHASAN) (~68%) */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            {/* LEMBAR DOKUMEN SOAL (SOAL + OPSI MENYATU) */}
+            <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+              <CardHeader className="border-b border-border/40 pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={statusClass(q.status)}>
+                      {STATUS_LABELS[q.status] ?? q.status}
+                    </Badge>
+                    <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 font-mono text-xs font-semibold text-foreground/90">
+                      Kelas {formatGradeBadge(q.grade)}
+                    </span>
+                    <DifficultyBadge level={q.difficulty} />
+                    <CognitiveBadge level={q.cognitiveLevel} />
+                    {q.isFlagged && (
+                      <Badge variant="outline" className="border-gold/40 bg-gold/15 text-gold-fg">
+                        <AlertTriangle data-icon="inline-start" /> Ditandai
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {TYPE_LABELS[q.questionType] ?? q.questionType}
+                  </span>
+                </div>
+              </CardHeader>
+
+              <CardContent className="flex flex-col gap-5 pt-5">
+                {/* Wacana Stimulus (Bila Ada) */}
+                {q.parent && (
+                  <StimulusCard content={q.parent.contentMarkdown} className="text-sm" />
                 )}
-              </div>
-              <span className="text-xs text-muted-foreground font-mono">
-                {TYPE_LABELS[q.questionType] ?? q.questionType}
-              </span>
-            </div>
-          </CardHeader>
 
-          <CardContent className="flex flex-col gap-5 pt-5">
-            {/* Wacana Stimulus (Bila Ada) */}
-            {q.parent && (
-              <StimulusCard content={q.parent.contentMarkdown} className="text-sm" />
-            )}
+                {/* Batang Soal (Stem) — Font 20px di Desktop */}
+                <div className="text-base lg:text-[20px] lg:leading-[1.75] text-foreground">
+                  <MathContent content={q.contentMarkdown} className="no-scrollbar" />
+                </div>
 
-            {/* Batang Soal (Stem) */}
-            <div className="text-sm sm:text-base leading-relaxed text-foreground">
-              <MathContent content={q.contentMarkdown} className="no-scrollbar" />
-            </div>
-
-            {/* Opsi Pilihan Ganda (Menyatu dalam Dokumen, Format 1 Kolom ke Bawah) */}
-            {q.options && q.options.length > 0 && (
-              <div className="flex flex-col gap-2 border-t border-border/40 pt-4">
-                {q.options.map((o) => {
-                  const isKey = correctLabels.includes(o.label) || o.isCorrect;
-                  return (
-                    <div
-                      key={o.id}
-                      className={cn(
-                        "flex items-start gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors",
-                        isKey ? "bg-emerald-500/5 dark:bg-emerald-950/20" : "",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "font-mono font-semibold text-sm shrink-0",
-                          isKey
-                            ? "text-success text-emerald-600 dark:text-emerald-400 font-bold"
-                            : "text-foreground/70",
-                        )}
-                      >
-                        {o.label}.
-                      </span>
-                      <div className="min-w-0 flex-1 text-sm leading-relaxed">
-                        <MathContent content={o.contentMarkdown} noScroll />
-                        {o.distractorRationale && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Pengecoh: {o.distractorRationale}
-                          </p>
-                        )}
-                      </div>
-                      {isKey && (
-                        <span
-                          className="inline-flex items-center text-sm font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
-                          title="Kunci Jawaban"
+                {/* Opsi Pilihan Ganda (Menyatu dalam Dokumen, Format 1 Kolom ke Bawah) */}
+                {q.options && q.options.length > 0 && (
+                  <div className="flex flex-col gap-2 border-t border-border/40 pt-4">
+                    {q.options.map((o) => {
+                      const isKey = correctLabels.includes(o.label) || o.isCorrect;
+                      return (
+                        <div
+                          key={o.id}
+                          className={cn(
+                            "flex items-start gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors",
+                            isKey ? "bg-emerald-500/5 dark:bg-emerald-950/20" : "",
+                          )}
                         >
-                          ✓
-                        </span>
-                      )}
+                          <span
+                            className={cn(
+                              "font-mono font-semibold text-base lg:text-[20px] shrink-0",
+                              isKey
+                                ? "text-success text-emerald-600 dark:text-emerald-400 font-bold"
+                                : "text-foreground/70",
+                            )}
+                          >
+                            {o.label}.
+                          </span>
+                          <div className="min-w-0 flex-1 text-base lg:text-[20px] lg:leading-[1.75]">
+                            <MathContent content={o.contentMarkdown} noScroll />
+                            {o.distractorRationale && (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Pengecoh: {o.distractorRationale}
+                              </p>
+                            )}
+                          </div>
+                          {isKey && (
+                            <span
+                              className="inline-flex items-center text-base lg:text-[20px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
+                              title="Kunci Jawaban"
+                            >
+                              ✓
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* KARTU KUNCI & PEMBAHASAN */}
+            <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+              <CardHeader className="border-b border-border/40 pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Lightbulb className="size-4 text-amber-500 shrink-0" />
+                  Kunci & Pembahasan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4 pt-4">
+                {/* Kunci Jawaban Singkat */}
+                {key && (correctLabels.length > 0 || key.text) && (
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <span className="text-muted-foreground">Kunci Jawaban:</span>
+                    <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                      {correctLabels.join(", ") || key.text} ✓
+                    </span>
+                  </div>
+                )}
+
+                {/* Pembahasan Detail — Font 20px di Desktop */}
+                {key?.explanation ? (
+                  <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Langkah Penyelesaian
+                    </p>
+                    <div className="text-base lg:text-[20px] lg:leading-[1.75] text-foreground whitespace-pre-wrap">
+                      <MathContent content={key.explanation} className="no-scrollbar" />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-6 text-center">
+                    <p className="text-xs text-muted-foreground max-w-sm">
+                      Belum ada naskah pembahasan yang disimpan untuk butir soal ini.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                        <Pencil data-icon="inline-start" /> Tulis Pembahasan
+                      </Button>
+                      <EnrichButton questionId={id} />
+                    </div>
+                  </div>
+                )}
 
-        {/* KARTU KUNCI & PEMBAHASAN */}
-        <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
-          <CardHeader className="border-b border-border/40 pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Lightbulb className="size-4 text-amber-500 shrink-0" />
-              Kunci & Pembahasan
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 pt-4">
-            {/* Kunci Jawaban Singkat */}
-            {key && (correctLabels.length > 0 || key.text) && (
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <span className="text-muted-foreground">Kunci Jawaban:</span>
-                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                  {correctLabels.join(", ") || key.text} ✓
-                </span>
-              </div>
-            )}
+                {!key && (
+                  <p className="text-sm text-muted-foreground">
+                    Kunci jawaban tidak ditampilkan untuk peran Anda.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-            {/* Pembahasan Detail */}
-            {key?.explanation ? (
-              <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Langkah Penyelesaian
-                </p>
-                <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                  <MathContent content={key.explanation} className="no-scrollbar" />
+          {/* KOLOM KANAN (SIDEBAR METADATA & SUMBER) (~32%) */}
+          <div className="lg:col-span-4 flex flex-col gap-5">
+            {/* KARTU KLASIFIKASI SOAL */}
+            <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+              <CardHeader className="border-b border-border/40 pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Sliders className="size-4 text-primary shrink-0" />
+                  Klasifikasi Soal
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 pt-4 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge className={statusClass(q.status)}>
+                    {STATUS_LABELS[q.status] ?? q.status}
+                  </Badge>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-6 text-center">
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Belum ada naskah pembahasan yang disimpan untuk butir soal ini.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                    <Pencil data-icon="inline-start" /> Tulis Pembahasan
-                  </Button>
-                  <EnrichButton questionId={id} />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Tipe Soal</span>
+                  <span className="font-medium text-foreground">
+                    {TYPE_LABELS[q.questionType] ?? q.questionType}
+                  </span>
                 </div>
-              </div>
-            )}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Jenjang Kelas</span>
+                  <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 font-mono text-xs font-semibold text-foreground/90">
+                    Kelas {formatGradeBadge(q.grade)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Tingkat Kesulitan</span>
+                  <DifficultyBadge level={q.difficulty} />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Level Kognitif</span>
+                  <CognitiveBadge level={q.cognitiveLevel} />
+                </div>
 
-            {!key && (
-              <p className="text-sm text-muted-foreground">
-                Kunci jawaban tidak ditampilkan untuk peran Anda.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                {q.isFlagged && (
+                  <div className="rounded-lg border border-gold/40 bg-gold/15 p-2.5 text-gold-fg mt-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-xs mb-1">
+                      <AlertTriangle className="size-3.5 shrink-0" /> Ditandai
+                    </div>
+                    {q.flagNotes && (
+                      <p className="text-[11px] leading-relaxed">{q.flagNotes}</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-border/30 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+                    <span>ID Butir</span>
+                    <span className="truncate max-w-[150px]" title={q.id}>
+                      {q.id.slice(0, 13)}…
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>Dibuat</span>
+                    <span>
+                      {new Date(q.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* KARTU ASAL-USUL & SUMBER (SLIDE CAROUSEL BILA > 1, TANPA TAUTAN ASLI) */}
+            <QuestionSourcesCard sources={q.sources} />
+          </div>
+        </div>
       </div>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
@@ -290,3 +378,160 @@ export function QuestionDetailView() {
     </div>
   );
 }
+
+/**
+ * Kartu Asal-Usul & Sumber (Slide Carousel bila > 1).
+ *
+ * Catatan CONSTRAINTS #6: Tanpa useMemo/useCallback.
+ * Tanpa tautan asli sesuai instruksi pengguna.
+ */
+function QuestionSourcesCard({
+  sources = [],
+}: {
+  sources?: Array<{
+    id: string;
+    sourceType?: string | null;
+    title?: string | null;
+    publisher?: string | null;
+    author?: string | null;
+    year?: number | null;
+    itemNumber?: string | null;
+    notes?: string | null;
+  }>;
+}) {
+  const [index, setIndex] = useState(0);
+  const total = sources.length;
+
+  if (total === 0) {
+    return (
+      <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+        <CardHeader className="border-b border-border/40 pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <BookOpen className="size-4 text-primary shrink-0" />
+            Asal-Usul & Sumber
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 text-xs text-muted-foreground">
+          Belum ada rujukan sumber yang ditautkan ke butir soal ini.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Jaga index aman jika sources berubah
+  const safeIndex = index < total ? index : 0;
+  const current = sources[safeIndex] ?? sources[0];
+
+  return (
+    <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+      <CardHeader className="border-b border-border/40 pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <BookOpen className="size-4 text-primary shrink-0" />
+            Asal-Usul & Sumber
+          </CardTitle>
+          {total > 1 && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="h-6 w-6"
+                aria-label="Sumber sebelumnya"
+                onClick={() => setIndex((prev) => (prev > 0 ? prev - 1 : total - 1))}
+              >
+                <ChevronLeft className="size-3.5" />
+              </Button>
+              <span className="font-mono font-medium text-[11px]">
+                {safeIndex + 1}/{total}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="h-6 w-6"
+                aria-label="Sumber berikutnya"
+                onClick={() => setIndex((prev) => (prev < total - 1 ? prev + 1 : 0))}
+              >
+                <ChevronRight className="size-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2.5 pt-4 text-xs">
+        <div>
+          <span className="text-muted-foreground block text-[11px] uppercase tracking-wider font-semibold">
+            Judul / Dokumen
+          </span>
+          <span className="font-medium text-foreground text-sm leading-snug">
+            {current?.title || "Mathcyber"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
+          <div>
+            <span className="text-muted-foreground block text-[11px]">Jenis</span>
+            <span className="font-mono text-foreground capitalize">
+              {current?.sourceType || "Website"}
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground block text-[11px]">Tahun</span>
+            <span className="font-mono text-foreground">
+              {current?.year ?? "—"}
+            </span>
+          </div>
+        </div>
+
+        {(current?.author || current?.publisher) && (
+          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
+            {current.author && (
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Penulis</span>
+                <span className="text-foreground">{current.author}</span>
+              </div>
+            )}
+            {current.publisher && (
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Penerbit</span>
+                <span className="text-foreground">{current.publisher}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {current?.itemNumber && (
+          <div className="pt-1 border-t border-border/30">
+            <span className="text-muted-foreground block text-[11px]">Nomor Butir</span>
+            <span className="font-mono text-foreground">{current.itemNumber}</span>
+          </div>
+        )}
+
+        {current?.notes && (
+          <div className="pt-1 border-t border-border/30">
+            <span className="text-muted-foreground block text-[11px]">Catatan</span>
+            <p className="text-muted-foreground leading-relaxed">{current.notes}</p>
+          </div>
+        )}
+
+        {/* Indikator titik slide bila > 1 sumber */}
+        {total > 1 && (
+          <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/30">
+            {sources.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setIndex(i)}
+                aria-label={`Pindah ke sumber ${i + 1}`}
+                className={cn(
+                  "h-1.5 rounded-full transition-all",
+                  i === safeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",
+                )}
+              />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+

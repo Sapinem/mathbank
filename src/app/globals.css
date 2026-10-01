@@ -183,3 +183,8 @@
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
 }
+
+/* Harmonisasi skala KaTeX agar x-height seimbang dengan font non-LaTeX */
+.katex {
+  font-size: 1.04em;
+}
