@@ -292,14 +292,14 @@ export function QuestionCard({
               <div
                 key={o.id}
                 className={cn(
-                  "flex items-start gap-2 leading-relaxed transition-colors",
+                  "flex items-center gap-2 leading-relaxed transition-colors",
                   o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
                 )}
               >
                 <span className={cn(o.isCorrect ? "text-success" : "")}>
                   <strong
                     className={cn(
-                      "font-mono font-semibold",
+                      "font-mono font-semibold shrink-0",
                       o.isCorrect
                         ? "text-success text-emerald-600 dark:text-emerald-400"
                         : "text-foreground/70",
@@ -308,17 +308,17 @@ export function QuestionCard({
                     {o.label}.
                   </strong>
                 </span>
-                <span className="flex-1 min-w-0">
+                <div className="min-w-0 shrink">
                   <MathContent content={o.contentMarkdown} />
-                  {o.isCorrect && (
-                    <span
-                      className="ml-1.5 inline-flex items-center text-[11px] font-bold text-success text-emerald-600 dark:text-emerald-400"
-                      title="Kunci Jawaban"
-                    >
-                      ✓
-                    </span>
-                  )}
-                </span>
+                </div>
+                {o.isCorrect && (
+                  <span
+                    className="inline-flex items-center text-[12px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
+                    title="Kunci Jawaban"
+                  >
+                    ✓
+                  </span>
+                )}
               </div>
             ))}
           </div>
