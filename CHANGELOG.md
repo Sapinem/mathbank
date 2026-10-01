@@ -1,5 +1,29 @@
 # Changelog — MathBank
 
+## [ADR-0012] — Provenance per-butir (`question_sources`) + dedup dua-tingkat
+
+### Ditambahkan
+- **Tabel `question_sources`** (ADR-0012) — provenance **per-butir**, **many-to-many**:
+  satu soal boleh >1 sumber. Kolom: `question_id`, `source_id`, `source_type`,
+  `title` (judul artikel web), `url`, `accessed_at` (waktu akses), `publisher`,
+  `author`, `year`, `grade`, `item_number`, `notes`. **`UNIQUE (question_id, source_id)`**.
+- **`questions.content_hash`** — hash **stem+opsi tanpa sumber**; **unik partial**
+  (`deleted_at IS NULL`) → anti-duplikat lintas-sumber.
+- **Dedup dua-tingkat**: **exact** (`contentHash`) auto-gabung saat **ingest**;
+  **near** (embedding `<=>`, `classifyDuplicate`) hanya **menandai** (`is_flagged`)
+  saat **enrichment** — tutup **CONSTRAINTS #42 & #43** (`fusion.ts` kini punya konsumen produksi).
+- `GET /api/questions/[id]` menyertakan `sources` (asal-usul butir).
+
+### Diperbaiki
+- **Bug ingest**: `commitItems` membuang `title`/`source_url` artikel — kini tersimpan
+  ke `question_sources` (jejak provenance tidak lagi hilang).
+- **Dedup salah arah**: `itemHash(source, stem)` memasukkan `source` → memicu duplikat
+  lintas-sumber. Diganti `contentHash(stem, opsi)` (deprecated `itemHash`).
+- **Db-test**: pembersihan `audit_logs` (trigger immutable) via DISABLE/ENABLE trigger.
+
+### Migrasi
+- Invarian tabel **28 → 29** (`invariants.ts` + `db-verify.ts`); migrasi drizzle `0008`.
+
 
 ## [M16] — Observabilitas & Operasional
 

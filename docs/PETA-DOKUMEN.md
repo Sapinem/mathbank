@@ -97,6 +97,7 @@
 | D38 | `docs/audit/M10-AI-ENRICHMENT-DAN-EMBEDDING.md` | ✅ | **dibuat** 2026-09-30 — audit AI enrichment & embedding (M10); §Catatan Verifikasi 2026-09-30 (koreksi: proteksi kunci struktural, action `update`) |
 | D43 | `docs/audit/M15-UI-UX-DAN-AKSESIBILITAS.md` | ✅ | **dibuat** 2026-09-30 — audit UI/UX M15; §Catatan Verifikasi (galat/404/403, reduced-motion, axe) |
 | D44 | `docs/audit/M16-OBSERVABILITAS-DAN-OPERASIONAL.md` | ✅ | **dibuat** 2026-09-30 — audit M16; §Catatan Verifikasi (uji restore, Docker end-to-end, gate) |
+| D45 | `docs/audit/ADR-0012-PROVENANCE-DAN-DEDUP.md` | ✅ | **dibuat** 2026-10-01 — audit ADR-0012 (`question_sources` + dedup dua-tingkat); §Catatan Verifikasi |
 | D42 | `docs/audit/M14-KUALITAS-KODE-DAN-TES.md` | ✅ | **dibuat** 2026-09-30 — audit kualitas M14; §Catatan Verifikasi (refactor, tes, ambang coverage) |
 | D41 | `docs/audit/M13-KEAMANAN-LANJUTAN-DAN-HARDENING.md` | ✅ | **dibuat** 2026-09-30 — audit keamanan M13; §Catatan Verifikasi (koreksi: status sebagian, bukan 100%) |
 | D40 | `docs/audit/M12-EKSPOR-MOODLE-XML-DAN-GITSYNC.md` | ✅ | **dibuat** 2026-09-30 — audit ekspor Moodle/GitSync (M12); §Catatan Verifikasi (koreksi: base64 media TIDAK ada) |

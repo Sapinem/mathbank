@@ -27,7 +27,7 @@
 
 > ⚠️ **Koreksi:** dokumen awal menulis "18" — itu **salah hitung**. Tabel domain sebenarnya **21** (A+B+C), plus **6 tabel auth** (Better Auth) = **27**.
 
-### A. Soal & Asal (7)
+### A. Soal & Asal (8)
 1. `questions` — soal (termasuk stimulus via `parent_id`)
 2. `question_options` — opsi jawaban
 3. `solutions` — pembahasan
@@ -35,6 +35,7 @@
 5. `books` — atribut buku (anak `sources`)
 6. `institutions` — atribut sekolah (anak `sources`)
 7. `events` — peristiwa ujian (UTBK/OSN/SBMPTN)
+8. `question_sources` — provenance per-butir (many-to-many; judul/url/waktu akses) — **ADR-0012**
 
 ### B. Taksonomi & Relasi (7)
 8. `topics` — topik 3-level (dulu `categories`)
@@ -111,6 +112,7 @@ Inti sistem. Stimulus = soal biasa dengan `parent_id` NULL; anak menunjuk ke sti
 | `cognitive_level` | enum | ✗ | Bloom |
 | `grade` | varchar(20) | ✗ | validasi vs `grades` |
 | `content_markdown` | text | ✗ | isi soal (KaTeX `\(...\)`) |
+| `content_hash` | varchar(64) | ✅ | hash konten (stem+opsi, **tanpa sumber**) — dedup exact lintas-sumber (ADR-0012); unik partial (deleted_at NULL) |
 | `data_payload` | jsonb | ✗ | default `{}` — **hanya** matrix_grid & matching (§Data Payload) |
 | `answer_key` | jsonb | ✗ | default `{}` — **skema per-tipe** (§Answer Key) |
 | `status` | enum | ✗ | default `'draft'` |
@@ -135,7 +137,30 @@ Inti sistem. Stimulus = soal biasa dengan `parent_id` NULL; anak menunjuk ke sti
 | `deleted_at` | timestamptz | ✅ | soft-delete |
 | `created_at` / `updated_at` | timestamptz | ✗ | |
 
-**Index:** PK; `parent_id`; `status`; `grade`; `difficulty`; `source_id`; `event_id`; `author_id`; `deleted_at`; composite `(grade,difficulty,status)`; GIN trigram `content_markdown`; HNSW `embedding`.
+**Index:** PK; `parent_id`; `status`; `grade`; `difficulty`; `source_id`; `event_id`; `author_id`; `deleted_at`; composite `(grade,difficulty,status)`; GIN trigram `content_markdown`; HNSW `embedding`; **unique partial `content_hash`** (WHERE `deleted_at IS NULL AND content_hash IS NOT NULL`) — anti-duplikat (ADR-0012).
+
+### 1b. `question_sources` (provenance per-butir, ADR-0012)
+
+Sumber-sumber sebuah butir (**many-to-many**: satu soal boleh >1 sumber — mis. konten sama dari web + buku). Menyimpan jejak asal-usul: judul artikel, URL, waktu akses.
+
+| Kolom | Tipe | Null | Catatan |
+|-------|------|------|---------|
+| `id` | uuid | PK | `uuidv7()` |
+| `question_id` | uuid | ✗ | → `questions.id` **CASCADE** |
+| `source_id` | uuid | ✅ | → `sources.id` **SET NULL** (master, opsional) |
+| `source_type` | enum | ✗ | `source_kind` (book/website/school/competition), default `website` |
+| `title` | varchar(255) | ✅ | **judul artikel/halaman web** |
+| `url` | text | ✅ | URL sumber |
+| `accessed_at` | timestamptz | ✅ | **waktu akses/pengambilan** saat ingest |
+| `publisher` / `author` | varchar(255) | ✅ | detail publikasi |
+| `year` | smallint | ✅ | | 
+| `grade` | varchar(20) | ✅ | |
+| `item_number` | varchar(50) | ✅ | nomor butir di sumber |
+| `notes` | text | ✅ | |
+| `created_at` | timestamptz | ✗ | |
+
+**Index:** PK; `question_id`; `source_id`; `source_type`; **UNIQUE `(question_id, source_id)`** (cegah baris sumber ganda; `source_id` NULL → boleh banyak).
+
 
 **Invarian:**
 - **Stimulus:** soal `question_type='stimulus'` **wajib** `parent_id IS NULL`. Soal anak **wajib** `question_type != 'stimulus'`.

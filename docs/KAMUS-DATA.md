@@ -17,6 +17,8 @@
 | **Kunci jawaban** | `questions.answer_key` | Jawaban benar. **Opsional** saat bikin soal; wajib untuk `ready`. |
 | **Pembahasan** (solution) | `solutions` | Penjelasan jawaban (langkah penyelesaian). |
 | **Sumber** (source) | `sources` | Asal soal: buku, sekolah, platform, dsb. |
+| **Provenance butir** | `question_sources` | Sumber-sumber sebuah butir (**many-to-many**): judul artikel, URL, waktu akses. Satu soal boleh >1 sumber. *(ADR-0012)* |
+| **Hash konten** | `questions.content_hash` | Hash stem+opsi (tanpa sumber) — dasar **dedup exact** lintas-sumber. |
 | **Institusi** | `institutions` | Anak dari `sources` (mis. nama sekolah). |
 | **Buku** (book) | `books` | Referensi buku (bagian dari `sources`). |
 | **Event** | `events` | Ujian nyata: UTBK / OSN / SBMPTN. *(dulu `exam_events`)* |
