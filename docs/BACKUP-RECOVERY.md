@@ -1,7 +1,9 @@
 # BACKUP-RECOVERY.md — Strategi Backup & Pemulihan
 
-> **Status:** 📝 rencana (belum ada backup otomatis per 2026-09-29).
-> **Sifat:** dokumen hidup — perbarui saat mekanisme nyata dibuat.
+> **Status:** ✅ **TERIMPLEMENTASI (M16, 2026-09-30).**
+> Skrip nyata: `scripts/backup-db.mjs` (`pnpm backup:db`) & `scripts/restore-check.mjs`
+> (`pnpm restore:check`). Uji-restore terbukti hijau (28 tabel, 26 trigger, HNSW, uuidv7).
+> **Sifat:** dokumen hidup — perbarui saat mekanisme berubah.
 > **Prinsip:** **backup yang belum diuji-restore = bukan backup.**
 
 ---
@@ -32,34 +34,44 @@
 
 ## 3. Metode
 
-**Database** (pilihan, `pg_dump` paling aman & portabel):
+**Database** — pakai skrip proyek (menghormati `DATABASE_URL`, retensi, tanpa log rahasia):
 ```bash
-# Backup logis (custom format, terkompresi)
-pg_dump -Fc -p 5433 mathbank > backup/mathbank_$(date +%F_%H%M).dump
-
-# Pulihkan
-pg_restore -p 5433 -d mathbank_restore backup/mathbank_2026-09-29_1200.dump
+pnpm backup:db                 # → ./backups/mathbank_<stamp>.dump (retensi 7)
+BACKUP_DIR=/var/backups/mathbank BACKUP_KEEP=14 pnpm backup:db
+```
+Setara manual (custom format, terkompresi):
+```bash
+pg_dump -Fc --no-owner -f backup/mathbank_$(date +%F_%H%M).dump "$DATABASE_URL"
 ```
 
 **Media:** sinkronisasi direktori (`rsync`/`restic`) ke lokasi terpisah.
 
-**Jadwal usulan:**
-- **Harian** penuh (retensi 7–30 hari).
+**Jadwal (usulan):**
+- **Harian** penuh, retensi 7–30 hari (`BACKUP_KEEP`).
 - **Mingguan** arsip lebih lama (retensi 3 bulan).
-- **Sebelum migrasi** skema → snapshot manual wajib.
+- **Sebelum migrasi** skema → snapshot manual wajib (`MIGRASI-ZERO-DOWNTIME.md` §4).
 
 ---
 
 ## 4. Uji Restore (WAJIB berkala)
 
-**Prosedur:**
+**Otomatis — satu perintah:**
+```bash
+pnpm restore:check                 # uji arsip TERBARU
+pnpm restore:check backups/<file>.dump
+```
+Skrip (`scripts/restore-check.mjs`): buat DB sementara → `pg_restore` → jalankan
+`db:verify` → **bersihkan** DB sementara. Gagal bila invarian tak lengkap.
+
+**Manual (setara):**
 1. Buat DB kosong: `mathbank_restore`.
-2. `pg_restore` dari backup terbaru.
-3. Jalankan `pnpm db:verify` (env `DATABASE_URL` → DB restore) → **harus hijau** (27 tabel, 2 CHECK, 1 HNSW, 25 trigger, PK `uuidv7()`).
-4. Spot-check data (hitung baris `questions`, `topics`).
+2. `pg_restore -d mathbank_restore <dump>`.
+3. `DATABASE_URL=<restore> pnpm db:verify` → **harus hijau** (28 tabel, 2 CHECK, 1 HNSW, 26 trigger, PK `uuidv7()`).
+4. Spot-check data (`questions`, `topics`).
 5. Catat waktu (uji RTO) & dokumentasikan.
 
 > `db:verify` menjadikan uji restore **objektif** — bukan sekadar "restore jalan tanpa error".
+> **Jalankan `restore:check` minimal tiap kali jadwal backup berubah & sebelum migrasi berisiko.**
 
 ---
 

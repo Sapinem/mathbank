@@ -109,7 +109,8 @@
 | E2 | `RENCANA-DEPLOY.md` | ✅ | **dibuat** 2026-09-29 — dev/staging/prod, CI/CD, rilis |
 | E3 | `OBSERVABILITAS.md` | ✅ | **dibuat** 2026-09-29 — logging, metrik, health check, alerting |
 | E4 | `BACKUP-RECOVERY.md` | ✅ | **dibuat** 2026-09-29 — RPO/RTO, uji restore |
-| E5 | `RUNBOOK.md` | 🟢 | **belum** — prosedur operasional & insiden |
+| E5 | `RUNBOOK.md` | ✅ | **dibuat** 2026-09-30 (M16) — operasi harian, deploy, insiden, backup, migrasi, Docker (opsi) |
+| E9 | `MIGRASI-ZERO-DOWNTIME.md` | ✅ | **dibuat** 2026-09-30 (M16) — expand→migrate→contract, rollback, uji migrasi |
 | E6 | `KEPATUHAN-PRIVASI.md` | ✅ | **dibuat** 2026-09-29 — UU PDP, retensi, hak subjek data |
 | E7 | `SLA-SLO.md` | ✅ | **dibuat** 2026-09-29 — target ketersediaan/performa |
 | E8 | `PERFORMA.md` | ✅ | **dibuat** 2026-09-29 — budget performa, Core Web Vitals |
@@ -126,6 +127,7 @@
 | F6 | `RENCANA-KUALITAS-M14.md` | ✅ | **sebagian selesai** 2026-09-30 — M14: lint #34, uji shell, refactor service, ambang coverage; TS7 ditunda |
 | F7 | `RENCANA-TS7.md` | 🔴 | **ditunda** 2026-09-30 — rencana migrasi TypeScript 7 (keputusan: tunda, risiko mayor) |
 | F8 | `RENCANA-UI-M15.md` | ✅ | **selesai** 2026-09-30 — M15: galat/404/403, reduced-motion, a11y lint+axe, pintasan keyboard |
+| F9 | `RENCANA-OBSERVABILITAS-M16.md` | ✅ | **selesai** 2026-09-30 — M16: logger, metrik, health split, backup, CI, Docker, runbook |
 
 ### Kategori G — Fitur & Data Pipeline
 

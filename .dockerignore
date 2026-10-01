@@ -1,0 +1,21 @@
+# Konteks build Docker (M16) — kecualikan yang tak perlu agar image kecil & cepat.
+node_modules
+.next
+.git
+.github
+coverage
+backups
+test-results
+playwright-report
+e2e-manual
+docs
+*.md
+!README.md
+.env
+.env.*
+!.env.docker.example
+docker-compose.yml
+Caddyfile
+Dockerfile
+.dockerignore
+.gitignore

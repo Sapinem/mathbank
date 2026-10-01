@@ -92,6 +92,13 @@ function securityHeaders(isDev: boolean, isHttps: boolean) {
 
 const nextConfig: NextConfig = {
   /**
+   * Output standalone (M16/Docker) — dipakai HANYA saat membangun image Docker
+   * (`NEXT_OUTPUT_STANDALONE=true`). Di produksi systemd tetap memakai
+   * `pnpm build && pnpm start` (tanpa standalone) agar perilaku tak berubah.
+   * Standalone menghasilkan `.next/standalone/server.js` + node_modules minimal.
+   */
+  ...(process.env.NEXT_OUTPUT_STANDALONE === "true" ? { output: "standalone" } : {}),
+  /**
    * Origin dev yang diizinkan (Next 16). Sejak Next 16, resource dev
    * (`/_next/*`, HMR) **diblokir default** untuk origin non-lokal → saat dev
    * diakses lewat LAN (`http://192.168.x.x:3001`), JS tak termuat → halaman

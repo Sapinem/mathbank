@@ -1,0 +1,80 @@
+name: CI
+
+# Gerbang mutu MathBank (M16) — dijalankan tiap push/PR ke main.
+# Semua langkah WAJIB hijau sebelum merge.
+#
+# Catatan: DB uji = PostgreSQL 18 + pgvector + pg_trgm (service container).
+# `pnpm check` mencakup: theme:check → lint:names → typecheck → lint →
+# test:coverage → build. Lalu `pnpm test:db` (integrasi DB nyata).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Mutu (check + DB)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # PG 18 + pgvector. `pgvector/pgvector` menyediakan ekstensi `vector`.
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: mathbank
+          POSTGRES_PASSWORD: mathbank_ci
+          POSTGRES_DB: mathbank_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mathbank"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://mathbank:mathbank_ci@localhost:5432/mathbank
+      TEST_DATABASE_URL: postgresql://mathbank:mathbank_ci@localhost:5432/mathbank_test
+      BETTER_AUTH_SECRET: ci-secret-00000000000000000000000000000000
+      SETTINGS_ENC_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      NODE_ENV: test
+      STRICT_INVARIANTS: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Ekstensi DB (pgvector, pg_trgm, pgcrypto)
+        run: |
+          PGPASSWORD=mathbank_ci psql -h localhost -U mathbank -d mathbank_test \
+            -c "CREATE EXTENSION IF NOT EXISTS vector;" \
+            -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" \
+            -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+
+      - name: Migrasi skema (DB uji)
+        run: pnpm db:migrate
+
+      - name: Gate mutu (theme, penamaan, tsc, lint, coverage, build)
+        run: pnpm check
+
+      - name: Tes integrasi DB
+        run: pnpm test:db

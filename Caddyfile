@@ -1,0 +1,33 @@
+# MathBank — Caddyfile (M16). Reverse-proxy + TLS otomatis (Let's Encrypt).
+#
+# Mengganti $APP_DOMAIN dengan domain nyata (env di docker-compose.yml).
+# Caddy memperoleh & memperbarui sertifikat TLS otomatis bila domain publik
+# mengarah ke host ini. Untuk lokal, domain "localhost" → sertifikat internal.
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Header keamanan TLS di sini; header aplikasi (CSP dll) tetap dari Next.js.
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		-X-Powered-By
+		remove Server
+	}
+
+	# Teruskan ke app Next (port internal compose).
+	reverse_proxy app:3000 {
+		header_up X-Request-ID {http.request.uuid}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Log akses terstruktur (JSON) — mudah dikumpulkan.
+	log {
+		output stdout
+		format json
+	}
+}
+
+# Email ACME (Let's Encrypt) untuk notifikasi kedaluwarsa.
+{
+	email {$ACME_EMAIL}
+}

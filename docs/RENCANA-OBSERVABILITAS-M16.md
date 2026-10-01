@@ -1,7 +1,7 @@
 # RENCANA — Observabilitas & Operasional (M16)
 
-> **Status:** 🟡 dirancang · **Milestone:** M16 · **Dependensi:** M8 · **Tanggal:** 2026-09-30
-> **Rujukan:** `docs/MILESTONE.md` §M16, `docs/OBSERVABILITAS.md`, `docs/BACKUP-RECOVERY.md`, `docs/RENCANA-DEPLOY.md`
+> **Status:** ✅ **SELESAI** (M16, 2026-09-30) · **Milestone:** M16 · **Dependensi:** M8
+> **Rujukan:** `docs/MILESTONE.md` §M16, `docs/OBSERVABILITAS.md`, `docs/BACKUP-RECOVERY.md`, `docs/RENCANA-DEPLOY.md`, `docs/RUNBOOK.md`
 
 ---
 
@@ -19,18 +19,18 @@
 | Zero-downtime + rollback | ❌ dokumen saja |
 | RUNBOOK / PANDUAN-OPERASIONAL | ❌ belum ada |
 
-## 2. Yang dikerjakan
+## 2. Yang dikerjakan (semua ✅)
 
-| # | Item | Rencana teknis |
-|---|------|----------------|
-| T1 | **Logger terstruktur** | `src/lib/telemetry/logger.ts` — JSON line, level, redaksi rahasia, `requestId`; ganti `console.error` di route-wrapper |
-| T2 | **Telemetri ringan** | `src/lib/telemetry/metrics.ts` — hitung in-memory per-route: count, error, latensi p50/p95 (ring buffer); ekspos via `/api/health` / `/api/metrics` |
-| T3 | **Health liveness/readiness** | Pisah `/api/health` (liveness, cepat) + `/api/ready` (readiness DB+invarian); pertahankan kontrak lama |
-| T4 | **Backup otomatis + uji restore** | `scripts/backup-db.mjs` (pg_dump -Fc, retensi) + `scripts/restore-check.mjs` (restore ke DB uji → `db:verify`) |
-| T5 | **CI** | `.github/workflows/ci.yml` — `pnpm check` + `test:db` (service PG) + lint/tsc |
-| T6 | **Dockerfile + compose** | multi-stage Next standalone + compose (app + PG pgvector + Caddy/nginx TLS) |
-| T7 | **Migrasi zero-downtime + rollback** | Dokumen prosedur + skrip cek kompatibilitas (expand-contract) |
-| T8 | **RUNBOOK.md + PANDUAN-OPERASIONAL.md** | Dokumen operasional (deploy, backup/restore, insiden, alerting) |
+| # | Item | Status | Hasil |
+|---|------|:------:|-------|
+| T1 | **Logger terstruktur** | ✅ | `src/lib/telemetry/logger.ts` — JSON line, level, redaksi rahasia, `requestId` |
+| T2 | **Telemetri ringan** | ✅ | `src/lib/telemetry/metrics.ts` — ring buffer in-memory (count/error/p50/p95/max), ekspos `/api/metrics` |
+| T3 | **Health liveness/readiness** | ✅ | `/api/health` (liveness+readiness, kontrak lama) + `?probe=liveness` + `/api/ready` |
+| T4 | **Backup + uji restore** | ✅ | `scripts/backup-db.mjs` (pg_dump -Fc, retensi) + `scripts/restore-check.mjs` (uji restore → db:verify) |
+| T5 | **CI** | ✅ | `.github/workflows/ci.yml` — PG pgvector service + `pnpm check` + `test:db` |
+| T6 | **Dockerfile + compose** | ✅ | multi-stage standalone + compose (app + PG pgvector + Caddy TLS); **opsi, bukan produksi** |
+| T7 | **Migrasi zero-downtime** | ✅ | `docs/MIGRASI-ZERO-DOWNTIME.md` — expand→migrate→contract, rollback, uji migrasi |
+| T8 | **RUNBOOK.md** | ✅ | `docs/RUNBOOK.md` — operasi harian, deploy, insiden, backup, migrasi, Docker |
 
 ## 3. Keputusan terkunci (2026-09-30)
 
@@ -38,5 +38,14 @@
 - **D2** Telemetri = **in-memory ring buffer** (nol dependency; single-node),
   diekspos via `/api/metrics` (JSON).
 - **D3** **Docker + compose** (app + PG pgvector + Caddy TLS) + **CI** GitHub Actions.
+- **D4** **Produksi tetap systemd** (`mathbank.service`, port 1234). **Docker = opsi
+  alternatif** (host/VPS lain) — bukan pengganti produksi saat ini. (Ditegaskan pemilik produk 2026-09-30.)
 
 > Prinsip: **"install saat perlu"** — hindari dependency/infra berat tanpa kebutuhan nyata.
+
+## 4. Verifikasi (bukti nyata)
+
+- `pnpm check` hijau (527 unit, coverage ≥ ambang, build OK).
+- **Uji restore nyata**: `pnpm restore:check` → 28 tabel, 26 trigger, HNSW, uuidv7 ✓.
+- **Docker build nyata**: image berhasil dibangun; container + PG pgvector dijalankan →
+  `/api/health` 200 (`invariants.ok:true`), `/api/ready` 200 (`status:"ready"`), `/login` 200.

@@ -1,8 +1,9 @@
 # OBSERVABILITAS.md — Logging, Metrik & Kesehatan
 
-> **Status:** 📝 rencana (belum ada infrastruktur observabilitas per 2026-09-29).
-> **Sifat:** dokumen hidup — perbarui saat fitur nyata dibuat.
-> **Prinsip:** **"install saat perlu"** — mulai dari log terstruktur + health check saat mendekati produksi.
+> **Status:** ✅ **TERIMPLEMENTASI (M16, 2026-09-30).**
+> `src/lib/telemetry/logger.ts` (log JSON + redaksi), `metrics.ts` (ring buffer
+> in-memory), `/api/health` (liveness+readiness), `/api/ready`, `/api/metrics`.
+> **Sifat:** dokumen hidup — perbarui saat fitur berubah.
 
 ---
 
@@ -10,86 +11,90 @@
 
 | Pilar | Pertanyaan | Kondisi kini |
 |-------|-----------|--------------|
-| **Logs** | Apa yang terjadi? | `console.error` di `route-wrapper.ts` (minimal) |
-| **Metrics** | Seberapa cepat/banyak? | ❌ belum ada |
-| **Traces** | Di mana lambat? | ❌ belum ada |
+| **Logs** | Apa yang terjadi? | ✅ `log()` JSON-level (`src/lib/telemetry/logger.ts`) + redaksi rahasia |
+| **Metrics** | Seberapa cepat/banyak? | ✅ ring buffer in-memory per route (`/api/metrics`) |
+| **Traces** | Di mana lambat? | ❌ belum (single-node; p50/p95/max per route cukup) |
 
 ---
 
-## 2. Logging (rencana)
+## 2. Logging
 
-**Target:** log **terstruktur JSON** (bukan `console.log` bebas) dengan field konsisten:
+**Log terstruktur JSON** satu baris (bukan `console.log` bebas), field konsisten:
 
 ```json
-{ "level": "error", "time": "...", "route": "/api/questions",
-  "actorId": "...", "code": "NOT_READY", "message": "..." }
+{ "level": "error", "time": "2026-09-30T…", "route": "/api/questions",
+  "requestId": "…", "actorId": "…", "code": "NOT_READY", "message": "…" }
 ```
 
 **Aturan:**
-- **Jangan pernah** log rahasia: `BETTER_AUTH_SECRET`, password, `answer_key`, API key.
-- Setiap error API sudah punya `code` (lihat `KONTRAK-API.md`) → pakai itu sebagai field.
-- Level: `debug` · `info` · `warn` · `error`.
-- Modul rencana: `src/lib/telemetry/` (saat ini kosong — diisi saat M9+).
+- **Jangan pernah** log rahasia: `BETTER_AUTH_SECRET`, password, `answer_key`, API key
+  — modul `logger.ts` **meredaksi** kunci sensitif otomatis (nilai → `[REDACTED]`).
+- Setiap error API punya `code` (`KONTRAK-API.md`) → dipakai sebagai field `code`.
+- Level: `debug` · `info` · `warn` · `error` (diatur env `LOG_LEVEL`; default `info`).
+- warn/error → **stderr**; sisanya stdout (mudah difilter di journald).
+- Saat tes, log **dibungkam** (kecuali `LOG_LEVEL` dipaksa) agar output tes bersih.
+- Modul: `src/lib/telemetry/logger.ts`.
 
 ---
 
-## 3. Health Check (rencana, prioritas)
+## 3. Health Check
 
-Endpoint `/api/health` (belum ada) yang memeriksa:
-- **liveness** — proses hidup (selalu 200).
-- **readiness** — DB bisa dijangkau (`SELECT 1`) + `db:verify` cepat.
+| Endpoint | Fungsi | 200 | 503 |
+|---|---|---|---|
+| `GET /api/health` | liveness **+** readiness (DB + invarian) | sehat | DB turun / invarian hilang |
+| `GET /api/health?probe=liveness` | liveness **murni** (tanpa DB) | proses hidup | — |
+| `GET /api/ready` | readiness eksplisit (DB + invarian) | `status:"ready"` | `status:"not_ready"` |
 
-```json
-{ "status": "ok", "db": "ok", "version": "<git-sha>" }
-```
-
-Berguna untuk load balancer & monitoring.
-
----
-
-## 4. Metrik (rencana)
-
-| Metrik | Kenapa |
-|--------|--------|
-| Latensi per route (p50/p95) | deteksi lambat |
-| Tingkat error per kode | pantau 4xx/5xx |
-| Koneksi pool DB | cegah kehabisan |
-| Ukuran tabel `questions` | pertumbuhan data |
-
-Perkakas: Prometheus + Grafana, atau layanan terkelola. **Belum diputuskan.**
+Invarian yang diperiksa: 28 tabel, 2 CHECK, 1 HNSW, 26 trigger, PK `uuidv7()`.
+Lihat `src/lib/db/invariants.ts` + `src/app/api/health/route.ts`.
 
 ---
 
-## 5. Audit & Jejak (sudah ada sebagian)
+## 4. Metrik
+
+`GET /api/metrics` → JSON (count/error/p50/p95/max, per `METHOD route`), uptime,
+total request. **In-memory ring buffer** (fixed-size, **nol dependency**) — cukup
+untuk single-node; reset saat proses restart. Dilindungi `METRICS_TOKEN`
+(bila kosong → nonaktif di produksi). Modul: `src/lib/telemetry/metrics.ts`.
+
+---
+
+## 5. Audit & Jejak
 
 - Tabel **`audit_logs`** (skema v2) mencatat perubahan penting (siapa, apa, kapan) — **jejak aplikatif**, bukan pengganti log sistem.
+- Log request API (route, requestId, actorId, status, durasi) via `route-wrapper.ts`.
 
 ---
 
-## 6. Alerting (rencana)
+## 6. Alerting (belum — usulan)
 
 | Kondisi | Aksi |
 |---------|------|
-| `/api/health` readiness gagal | notifikasi |
-| Tingkat 5xx melonjak | notifikasi |
+| `/api/health` readiness gagal | notifikasi (cron probe / uptime monitor) |
+| Tingkat 5xx melonjak (dari `/api/metrics`) | notifikasi |
 | Backup gagal (`BACKUP-RECOVERY.md`) | notifikasi |
 | Disk/DB mendekati penuh | notifikasi |
+
+> Belum diotomasi (single-node). Cukup probe eksternal → `/api/ready`.
 
 ---
 
 ## 7. Yang Belum Ada (utang)
 
-- [ ] Log terstruktur (JSON) + level
-- [ ] `/api/health` (liveness + readiness)
-- [ ] Metrik + dashboard
-- [ ] Alerting
-- [ ] Korelasi request (request-id)
+- [ ] Alerting otomatis
+- [ ] Tracing terdistribusi (tak perlu untuk single-node saat ini)
+- [x] Log terstruktur (JSON) + level — **M16**
+- [x] `/api/health` (liveness + readiness) + `/api/ready` — **M16**
+- [x] Metrik per route (`/api/metrics`) — **M16**
+- [x] Korelasi request (request-id) — **M16**
 
 ---
 
 ## 8. Rujukan
 
 - Envelope & kode error: `KONTRAK-API.md`
+- Operasi harian: `RUNBOOK.md`
 - Deploy: `RENCANA-DEPLOY.md`
 - Backup: `BACKUP-RECOVERY.md`
 - Keamanan (jangan log rahasia): `KEAMANAN.md`
+- Rencana M16: `RENCANA-OBSERVABILITAS-M16.md`

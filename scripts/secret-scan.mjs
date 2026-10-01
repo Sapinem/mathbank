@@ -92,6 +92,9 @@ const SKIP_FILES = new Set([
   "pnpm-lock.yaml",
   "package-lock.json",
   "yarn.lock",
+  // Berkas UJI pemindai ini sendiri memuat contoh rahasia NYATA sebagai input
+  // verifikasi (agar deteksi terbukti). Ia bukan kebocoran — bukan kode produksi.
+  "secret-scan.test.ts",
 ]);
 const SKIP_EXT = /\.(png|jpe?g|gif|webp|ico|pdf|zip|gz|tgz|woff2?|ttf|otf|mp4|mp3|wasm)$/i;
 
@@ -114,6 +117,45 @@ function isPlaceholder(value) {
   const v = value.toLowerCase();
   if (PLACEHOLDERS.has(v)) return true;
   if (/^(todo|xxx+|\.\.\.|<.*>)$/.test(v)) return true; // samaran khas
+  return false;
+}
+
+/**
+ * Nilai placeholder yang JELAS bukan rahasia (nilai CI/dummy/build).
+ * Sengaja sempit agar rahasia nyata tetap tertangkap.
+ */
+function isObviousPlaceholder(value) {
+  const v = value.toLowerCase();
+  // Kata kunci penanda dummy.
+  if (/changeme|placeholder|dummy|sample|example|redacted|testpass|testpass|^ci-|^build-|-placeholder-|-not-a-secret|-injected-/.test(v)) return true;
+  // Huruf/angka sama berulang ≥16× (mis. "0000…", "aaaa…").
+  if (/(.)\1{15,}/.test(v)) return true;
+  // Panjang ≥16 tapi hanya 1 karakter unik (mis. 32 nol).
+  if (v.length >= 16 && new Set(v).size === 1) return true;
+  return false;
+}
+
+/** Berkas templat/contoh (dokumentasi, nilai = contoh). */
+function isExampleFile(file) {
+  return /\.example$|\.sample$|\.template$/i.test(file) || /(^|\/)\.env\.[^/]*\.example$/.test(file);
+}
+
+/**
+ * Nilai pada berkas contoh yang aman (placeholder yang jelas, bukan rahasia nyata).
+ * Lebih longgar dari isObviousPlaceholder tapi tetap menolak nilai alfanumerik
+ * acak yang menyerupai rahasia asli.
+ */
+function isPlaceholderLike(value) {
+  if (isObviousPlaceholder(value)) return true;
+  const v = value.toLowerCase();
+  // Semua huruf (kata biasa, mis. "changeme-strong-password") = contoh.
+  if (/^[a-z-]+$/.test(v)) return true;
+  // Mengandung kata penanda umum.
+  if (/pass|secret|key|token|user|db|host|domain|email|ion|it/.test(v)) return true;
+  // Akhiran khusus CI/uji (mis. "mathbank_ci", "app_test", "test_db").
+  if (/_ci$|_test$|^ci_|^test_|_e2e$|_dummy$/.test(v)) return true;
+  // Placeholder bersudut/bergaris: <...>, ${...}, YOUR_*, *_HERE.
+  if (/<[^>]*>|\$\{|^your_|_here$|^xxx/.test(v)) return true;
   return false;
 }
 
@@ -148,9 +190,17 @@ function scanFile(file) {
       while ((m = rule.re.exec(line)) !== null) {
         // Aturan ber-`allowPassword`: grup 2 = password. Bila password berupa
         // placeholder (***, xxx, REDACTED) ATAU interpolasi template (`${…}`,
-        // nilai dinamis) → bukan rahasia literal, lewati.
+        // nilai dinamis) ATAU placeholder jelas (build/test/ci/dummy) →
+        // bukan rahasia literal, lewati.
         if (rule.allowPassword) {
-          if (m[2] && (rule.allowPassword.test(m[2]) || hasTemplateInterpolation(m[2]))) continue;
+          if (
+            m[2] &&
+            (rule.allowPassword.test(m[2]) ||
+              hasTemplateInterpolation(m[2]) ||
+              isObviousPlaceholder(m[2]) ||
+              isPlaceholderLike(m[2]))
+          )
+            continue;
           // Password nyata (bukan placeholder) → temuan.
           findings.push({ file, rule: rule.name, line: i + 1 });
           continue;
@@ -161,6 +211,11 @@ function scanFile(file) {
         // Abaikan contoh dokumentasi bernilai (…/REDACTED/contoh) ATAU nilai
         // yang sengaja ditandai publik/demo oleh komentar di sekitar baris.
         if (/REDACTED|example|contoh|placeholder/i.test(line)) continue;
+        // Nilai placeholder yang jelas (bukan rahasia): "changeme", "build",
+        // "test*", "dummy", "ci-*", "*-placeholder", string huruf-ulang.
+        if (isObviousPlaceholder(captured)) continue;
+        // Berkas templat (mis. `.env.*.example`) = dokumentasi; nilainya contoh.
+        if (isExampleFile(file) && isPlaceholderLike(captured)) continue;
         // Cek juga beberapa baris SEBELUMNYA (komentar penjelas sering di atas
         // kode, dipisah baris kosong / docblock).
         const context = lines.slice(Math.max(0, i - 4), i + 1).join(" ");
