@@ -1,5 +1,32 @@
 # Changelog — MathBank
 
+## [UI] — Halaman Koleksi (`/collections`) + menu
+
+### Ditambahkan
+- **Halaman `/collections`** — daftar arsip soal publik: tabel judul/sumber/
+  event/jumlah soal/kelas, dialog buat koleksi (judul, sumber, event, tahun,
+  kelas, keterangan), dan konfirmasi hapus dengan pesan tegas *"soalnya
+  **TIDAK** terhapus"*.
+- **Halaman `/collections/[id]`** — detail arsip: kartu metadata, isi arsip,
+  pencarian soal untuk ditambahkan (menandai yang **sudah ada** agar tak
+  dobel), dan tombol keluarkan.
+- **Menu "Koleksi"** di grup **Kerja**, tepat setelah **Paket Soal** —
+  menegaskan bedanya di UI: *Paket Soal* = naskah kerja guru (**`own`**),
+  *Koleksi* = arsip publik.
+- **`use-collections.ts`** — hook React Query (list, detail, create, update,
+  delete, add/remove item) mengikuti pola `use-bundles`.
+
+### Catatan
+- **Menandai "sudah ada"** pada pemilih soal — mencegah guru menambahkan soal
+  yang sama berulang, meski API-nya idempoten.
+- **Semua touch target ≥ 44px** (CONSTRAINTS #11) & **tanpa `space-y-*`** (#7).
+- **`nav-config.test.ts` diperbarui** — tes itu sengaja mengunci struktur menu,
+  jadi penambahan menu **memaksa tinjauan sadar** (gagal dulu, baru disesuaikan).
+- Dialog hapus memakai `<select>` native untuk sumber/event (bukan komponen
+  `Select` shadcn) agar state-nya sederhana & tanpa nilai kosong palsu.
+- Diverifikasi: typecheck ✅, lint ✅ (0 warning), lint:names ✅, test **657** ✅,
+  test:db **234** ✅, build ✅ (5 rute terdaftar), `/collections` → 307 (hidup).
+
 ## [Docs] — `AGENTS.md`: aturan kerja agent (8 bagian)
 
 ### Ditambahkan

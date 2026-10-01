@@ -3,6 +3,7 @@ import {
   BookOpen,
   ClipboardCheck,
   Package,
+  Library,
   FolderTree,
   Database,
   CalendarDays,
@@ -42,6 +43,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Bank Soal", href: "/questions", icon: BookOpen },
       { label: "Telaah", href: "/review", icon: ClipboardCheck, badge: "review" },
       { label: "Paket Soal", href: "/bundles", icon: Package },
+      // ADR-0016: arsip soal publik — beda hakikat dari Paket Soal (own).
+      { label: "Koleksi", href: "/collections", icon: Library },
     ],
   },
   {

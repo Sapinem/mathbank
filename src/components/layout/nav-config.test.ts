@@ -12,14 +12,17 @@ describe("nav-config", () => {
     ]);
   });
 
-  it("grup Kerja punya 4 item dengan Telaah berbadge", () => {
+  it("grup Kerja punya 5 item dengan Telaah berbadge", () => {
     const kerja = NAV_GROUPS[0].items;
-    expect(kerja).toHaveLength(4);
+    // "Koleksi" ditambahkan 2026-10-02 (ADR-0016): arsip soal PUBLIK,
+    // beda hakikat dari "Paket Soal" (naskah kerja guru, `own`).
+    expect(kerja).toHaveLength(5);
     expect(kerja.map((i) => i.label)).toEqual([
       "Dasbor",
       "Bank Soal",
       "Telaah",
       "Paket Soal",
+      "Koleksi",
     ]);
     expect(kerja.find((i) => i.label === "Telaah")?.badge).toBe("review");
   });
