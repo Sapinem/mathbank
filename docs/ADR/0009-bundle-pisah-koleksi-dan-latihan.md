@@ -1,90 +1,55 @@
-# ADR-0009 — Pisah `collections` (Koleksi/Arsip) dari `bundles` (Latihan/Naskah)
+# ADR-0009 — Bundle: satu tabel `bundles` (Koleksi & Latihan) — **mengikuti keputusan final QBank**
 
-- **Status:** 🟡 Diusulkan (menunggu persetujuan pemilik produk)
+- **Status:** 🔴 **DITOLAK / DIBATALKAN** (usulan awal "pisah tabel" salah arah; lihat Catatan Revisi)
 - **Tanggal:** 2026-10-01
 - **Pengambil keputusan:** Pemilik produk
-- **Terkait:** `docs/audit/…`, `MathBankAuditor/reports/AUDIT-KOMPARASI-FITUR-DAN-UIUX-MATHBANK-VS-QBANK.md` §3.6,
-  QBank `docs/PRD-SYSTEM-ARCHITECTURE.md` §5 (Collections) & §8 (Exams), `CONSTRAINTS.md #16/#35`
+- **Terkait:** `docs/DESAIN-SKEMA-BUNDLE-TERPISAH.md` (proposal pembanding), QBank `master:src/lib/db/schema/bundles.ts`,
+  QBank commits `9e09211` (legacy cleanup) & `5d01dfe` (hapus collections/exams), QBank `docs/superpowers/specs/2026-09-27-exam-origin-events-design.md`
 
-## Konteks
+> ## ⚠️ Catatan Revisi (2026-10-01)
+> ADR ini **awalnya** mengusulkan **memisah** `collections` (Koleksi) dari `bundles` (Latihan).
+> Setelah **verifikasi ke riwayat git QBank**, usulan itu **TERBUKTI SALAH ARAH**:
+> - QBank **v0.9.0** (tag, versi LAMA) memang punya `collections.ts` + `exams.ts` **terpisah**.
+> - QBank **`master`** (FINAL) **MENGHAPUS keduanya** (commit `5d01dfe`), menyatukan menjadi
+>   **satu tabel `question_bundles`** — `"752 collections_legacy sudah 100% tergabung ke question_bundles"`.
+> - **MathBank saat ini sudah ≈ identik** dengan keputusan final QBank (satu tabel `bundles`).
+>
+> Maka "pisah tabel" = **desain yang justru sudah ditinggalkan**. Status ADR: **DITOLAK.**
+> Rancangan versi terpisah tetap didokumentasikan di `docs/DESAIN-SKEMA-BUNDLE-TERPISAH.md`
+> sebagai bahan pembanding, bukan rencana eksekusi.
 
-Saat ini **satu tabel `bundles`** (+`bundle_items`) menampung tiga varian (`bundle_type`:
-`source` | `exam` | `exercise`). Model ini **mencampur dua konsep domain** yang berbeda hakikat:
+## Konteks (dipertahankan untuk jejak)
 
-- **Koleksi / Arsip Naskah** (QBank PRD §5, `/collections`): mengelompokkan soal berdasarkan
-  asal-usul (Penyelenggara, Tahun, Jenjang, Tipe Evaluasi). Menampung N soal + **ringkasan
-  materi & sebaran kognitif otomatis**. **Statis** (arsip). **Tanpa** urutan kaku, durasi,
-  instruksi, atau bobot skor. Kepemilikan **institusional/publik**.
-- **Latihan / Naskah Ujian** (QBank PRD §8, `/exams`): **merakit** naskah dari soal terpilih.
-  Punya **urutan kaku** (`order_index`), durasi, instruksi, kop resmi, dual-mode cetak (guru/siswa),
-  ekspor Moodle. **Dinamis** (living document). Kepemilikan **personal guru**. (Pembobotan
-  `points` = fitur fase depan, QBank pun masih *deferred*.)
+`bundles` menampung `bundle_type`: `source` | `exam` | `exercise`. Dua konsep domain
+(Koleksi = arsip statis institusional; Latihan = naskah rakitan personal) menyatu di satu tabel.
 
-**Contoh nyata (dari pemilik produk):** *"satu paket latihan dari SMA Labschool"*, *"satu artikel
-soal aljabar dari mathcyber"*, *"soal tryout 1 Inten"* → masing-masing = **satu Koleksi** berisi N soal.
-Ini **bukan** metadata sumber biasa — ia menampung & meringkas butir soal.
+## Keputusan (FINAL — mengikuti QBank `master`)
 
-## Fakta terverifikasi (2026-10-01)
+**Pertahankan SATU tabel `bundles` + `bundle_items`** dengan kolom tipe-spesifik yang sudah ada
+(`sourceId`,`eventId`,`year` untuk `source`; `durationMinutes`,`instructions`,`status`,`createdById`
+untuk `exam`). **Jangan pisah tabel.**
 
-1. **QBank pun memisah** menjadi dua tabel + dua rute: `collections` (+`questionSources.collectionId`)
-   dan `examPackages` (+`examItems` dengan `orderIndex`, `points`). Ini konfirmasi sumber primer.
-2. `bundles` di MathBank **self-contained** — hanya `bundle_items` yang FK ke `bundles`.
-3. `bundle_type` di MathBank saat ini **label pasif** — tak ada perilaku yang membedakan tipe.
-4. `bundles.createdById` **ditulis tapi TIDAK ditegakkan** (`listBundles` tanpa filter pemilik;
-   izin `bundle:manage` = broadcast) → **cacat perilaku** (guru bisa menyentuh bundle guru lain).
-5. Produksi: **1 bundle (`exam`); nol `source`.**
-6. Dampak pemisahan: **18 berkas** menyentuh `bundles`/`bundle-service` (terkendali).
-
-## Keputusan
-
-**Pisahkan menjadi dua entitas:**
-
-| Entitas baru | Menggantikan | Sifat |
-|---|---|---|
-| **`collections`** + `collection_items` | peran `bundle_type='source'` | Arsip statis; institusional; ringkasan materi/kognitif otomatis; **tanpa** urutan/durasi/points |
-| **`bundles`** + `bundle_items` | peran `bundle_type IN ('exam','exercise')` | Naskah rakitan; personal (own); urutan, durasi, instruksi, cetak, Moodle |
-
-Rasional: **dua perilaku + dua set kolom yang tumbuh berbeda** (sesuai visi pemilik produk &
-preseden QBank). Memisah sekarang (1 bundle, 0 koleksi) lebih murah daripada nanti setelah kolom
-tipe-spesifik menumpuk sebagai `NULL` di satu tabel.
-
-## Rencana Eksekusi (setelah disetujui)
-
-1. **ADR diterima** → catat di `RIWAYAT-KEPUTUSAN.md` + `PETA-DOKUMEN.md`.
-2. **Migrasi skema (expand, non-destruktif)**: buat `collections`/`collection_items`;
-   pindahkan data `bundle_type='source'` (saat ini nol → mudah); siapkan migrasi `contract`
-   (hapus `source` dari `bundle_type` enum) pada deploy terpisah. Wajib: snapshot drizzle-kit +
-   `pnpm db:verify` hijau + uji restore (`MIGRASI-ZERO-DOWNTIME.md`).
-3. **Service/API**: `collection-service.ts` + `/api/collections/*`; sesuaikan `bundle-service.ts`.
-4. **Perilaku**: tegakkan `createdById` (own) untuk `bundles`; `collections` = publik/institusional.
-   (Perbaiki cacat #4 apa pun keputusannya.)
-5. **UI**: `/collections` (katalog arsip + ringkasan) & `/bundles` (workspace latihan).
-6. **Tes**: route-per-peran (#37) + integrasi DB + `pnpm check` hijau.
-7. **Dokumen**: `SKEMA-DB-DETAIL.md`, `KAMUS-DATA.md`, `MILESTONE.md`, audit baru dengan §Catatan Verifikasi.
+Yang tetap **perlu dikerjakan** (bukan soal pisah/satu tabel):
+1. **Beri perilaku pada `bundle_type`** — saat ini label pasif (tak membedakan perilaku/izin).
+2. **Tegakkan `createdById`** (own) — sekarang ditulis tapi tak dipakai (`listBundles` tanpa filter pemilik;
+   izin `bundle:manage` broadcast) → **cacat perilaku**: guru bisa menyentuh bundle guru lain.
+3. **(Opsional, fase depan)** `points` di `bundle_items` — QBank pun menunda.
 
 ## Alternatif yang Dipertimbangkan
 
-| Alternatif | Kenapa ditolak |
+| Alternatif | Keputusan |
 |---|---|
-| **Tetap satu tabel `bundles`** (kode sekarang) | Mencampur dua perilaku & kolom berbeda; `source`-bundle tak punya urutan/durasi sementara `exam` butuh — `NULL` menumpuk |
-| **`collections` = view dari `sources`+`questions`** | Salah: `sources` hanya metadata penyelenggara; tak menyimpan daftar soal terkurasi maupun ringkasan materi/kognitif |
-| **Pisah DB + perilaku per-tipe (satu tabel)** | Menegakkan perilaku tanpa memecah skema; murah, tapi **tak mengakomodasi visi kolom yang tumbuh berbeda** |
+| **Pisah tabel** (`collections` + `bundles`) | ❌ **Ditolak** — desain lama QBank yang sudah dibuang (`D2`); +2 tabel, risiko migrasi, tanpa manfaat nyata |
+| **Satu tabel + perilaku per-tipe** | ✅ **Dipilih** — cermin QBank final; murah; mengikuti pola `questions.status` |
 
 ## Konsekuensi
 
-**Positif:**
-- Skema eksplisit: tiap entitas punya kolom & perilaku sesuai domainnya.
-- Menghapus ambiguitas `bundle_type` yang membingungkan (label pasif).
-- Menutup celah: arsip institusional vs naskah personal jelas terpisah izin & kepemilikannya.
-
-**Negatif / biaya:**
-- +2 tabel baru; 18 berkas disentuh; migrasi (expand→contract) berisiko → wajib backup + uji.
-- Selama fitur Koleksi belum dipakai (0 baris), tabel `collections` awalnya kosong.
-- Kerja UI baru (`/collections`).
+- Skema **tak berubah** (tetap 28 tabel) → nol risiko migrasi.
+- Fokus bergeser ke **perilaku** (izin `own`, read-only vs editable) & **konsistensi `event`/`source`**.
+- `docs/DESAIN-SKEMA-BUNDLE-TERPISAH.md` disimpan sebagai rujukan historis.
 
 ## Catatan
 
-- **`points` (bobot skor) BUKAN bagian ADR ini** — ditunda (QBank pun menunda). Tambahkan nanti
-  bila ada kebutuhan nyata.
-- Cacat **`createdById` tak ditegakkan** harus diperbaiki **apa pun** keputusan tabel ini.
-- Ini **belum dieksekusi.** Menunggu persetujuan pemilik produk.
+- Keputusan ini **belum dieksekusi** (menunggu persetujuan pemilik produk atas poin #1–#3 di atas).
+- Temuan git: **MathBank tidak kacau & tak ada rollback**; kekacauan ada di QBank karena disk berada di
+  tag `v0.9.0` (lama), bukan `master` (final).
