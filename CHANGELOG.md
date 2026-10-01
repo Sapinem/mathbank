@@ -1,5 +1,29 @@
 # Changelog — MathBank
 
+## [G2] — Editor Soal: Form Dinamis, Stimulus, Autosave, KaTeX Linter
+
+### Ditambahkan
+- **Form dinamis per tipe** (G2.1): tipe `matrix_grid` (editor baris pernyataan B/S)
+  & `matching` (dua kolom kiri↔kanan) kini punya field khusus yang menulis
+  `data_payload` terstruktur (sebelumnya selalu `{}`). Tipe lain tetap cukup
+  `content_markdown` (sesuai keputusan skema — hindari YAGNI).
+- **Pemilih wacana stimulus induk** di editor (G2.2) — dropdown memilih soal
+  bertipe `stimulus` untuk mengaitkan butir anak (`parentId`). Hook baru
+  `useStimulusParents()`.
+- **Autosave draf** ke `localStorage` (G2.3) — hook `useEditorAutosave` (debounce
+  2,5 dtk) + banner pemulihan ("Pulihkan/Buang") bila tab tertutup/crash.
+- **KaTeX linter pre-save** (G2.4) — `src/lib/math/katex-lint.ts` mengekstrak
+  rumus & menguji ke KaTeX (`throwOnError`); editor menampilkan **peringatan**
+  (tidak memblokir simpan — keputusan G2).
+- **Petunjuk rubrik inline** di editor (G2.5) — deskripsi operasional di bawah
+  dropdown kesulitan & level kognitif (`RubricHint`).
+- **Modul bersama `FieldGroup`/`Field`** (`components/ui/field-group.tsx`) —
+  sebelumnya `Field` hanya lokal di editor (menutup temuan audit "FieldGroup hantu").
+
+### Diperbaiki
+- `question-editor` mengirim `data_payload` + `parentId` (sebelumnya `dataPayload: {}`
+  dan tanpa `parentId`).
+
 ## [ADR-0012] — Provenance per-butir (`question_sources`) + dedup dua-tingkat
 
 ### Ditambahkan

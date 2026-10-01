@@ -83,3 +83,25 @@ export function useEvents() {
     staleTime: 30 * 60_000,
   });
 }
+
+export interface StimulusRow {
+  id: string;
+  contentMarkdown: string;
+}
+
+/**
+ * Daftar soal bertipe `stimulus` (untuk pemilih wacana induk di editor, G2.2).
+ * Tak di-cache lama (soal bisa berubah); staleTime singkat 60 dtk.
+ */
+export function useStimulusParents() {
+  return useQuery({
+    queryKey: ["reference", "stimulus-parents"],
+    queryFn: async () => {
+      const res = await apiFetch<{ items: StimulusRow[] }>(
+        "/api/questions?questionType=stimulus&limit=100",
+      );
+      return res.items ?? [];
+    },
+    staleTime: 60_000,
+  });
+}

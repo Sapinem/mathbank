@@ -149,6 +149,35 @@ describe("createQuestion", () => {
       createQuestion(baseInput({ difficulty: 9 }), teacher),
     ).rejects.toThrow();
   });
+
+  it("menyimpan dataPayload matrix_grid & matching apa adanya", async () => {
+    const m = await createQuestion(
+      baseInput({
+        questionType: "matrix_grid",
+        contentMarkdown: "Nilai tiap pernyataan.",
+        dataPayload: {
+          columns: ["Benar", "Salah"],
+          rows: [{ label: "Sisi miring = 5 cm" }],
+        },
+      }),
+      teacher,
+    );
+    expect((m.dataPayload as { rows: { label: string }[] }).rows[0].label).toBe(
+      "Sisi miring = 5 cm",
+    );
+
+    const mt = await createQuestion(
+      baseInput({
+        questionType: "matching",
+        contentMarkdown: "Jodohkan.",
+        dataPayload: { left: ["sin 30°"], right: ["1/2"] },
+      }),
+      teacher,
+    );
+    const dp = mt.dataPayload as { left: string[]; right: string[] };
+    expect(dp.left).toEqual(["sin 30°"]);
+    expect(dp.right).toEqual(["1/2"]);
+  });
 });
 
 describe("getQuestion & listQuestions", () => {

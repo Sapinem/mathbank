@@ -24,8 +24,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MathContent } from "@/components/math/math-content";
+import { Field, FieldGroup } from "@/components/ui/field-group";
 import { useCreateQuestion, useUpdateQuestion } from "@/lib/hooks/use-questions";
-import { useGrades } from "@/lib/hooks/use-reference";
+import { useGrades, useStimulusParents } from "@/lib/hooks/use-reference";
+import { useEditorAutosave } from "@/lib/hooks/use-editor-autosave";
+import { lintKatex } from "@/lib/math/katex-lint";
+import {
+  MatrixGridFields,
+  MatchingFields,
+  readMatrixPayload,
+  readMatchingPayload,
+  type MatrixPayload,
+  type MatchingPayload,
+} from "@/components/questions/type-specific-fields";
+import { RubricHint } from "@/components/questions/rubric-badge";
+import { cognitiveRubric, difficultyRubric } from "@/lib/display/rubrics";
 import {
   TYPE_LABELS,
   DIFFICULTY_LABELS,
@@ -88,6 +101,7 @@ export function QuestionEditor({
   const create = useCreateQuestion();
   const update = useUpdateQuestion(existing?.id ?? "");
   const { data: grades } = useGrades();
+  const { data: stimulusParents } = useStimulusParents();
 
   const [questionType, setQuestionType] = useState<string>(
     existing?.questionType ?? "single_choice",
@@ -119,10 +133,54 @@ export function QuestionEditor({
   const [explanation, setExplanation] = useState(
     existing?.answerKey?.explanation ?? "",
   );
+  const [parentId, setParentId] = useState<string>(
+    existing?.parentId ?? "",
+  );
+  const [matrix, setMatrix] = useState<MatrixPayload>(() =>
+    readMatrixPayload(
+      (existing?.dataPayload as Record<string, unknown> | undefined) ?? {},
+    ),
+  );
+  const [matching, setMatching] = useState<MatchingPayload>(() =>
+    readMatchingPayload(
+      (existing?.dataPayload as Record<string, unknown> | undefined) ?? {},
+    ),
+  );
+
+  // Autosave draf (G2.3) — kunci unik per soal.
+  const draftKey = `mathbank:qeditor:${existing?.id ?? "new"}`;
+  const { pendingDraft, restore, discard, clear } = useEditorAutosave(
+    draftKey,
+    content,
+    existing?.contentMarkdown ?? "",
+  );
+  // Peringatan KaTeX (G2.4) — dihitung ulang saat `content` berubah.
+  const katexDiags = lintKatex(content);
 
   const isText = (TEXT_TYPES as readonly string[]).includes(questionType);
   const usesOptions = isOptionBased(questionType as never);
   const multiCorrect = questionType === "multiple_choice_checkbox";
+  const isMatrix = questionType === "matrix_grid";
+  const isMatching = questionType === "matching";
+  const isChildCandidate = !isText && !isMatrix && !isMatching &&
+    questionType !== "stimulus";
+
+  /** Susun `data_payload` sesuai tipe (G2.1). Tipe lain → {}. */
+  function buildDataPayload(): Record<string, unknown> {
+    if (isMatrix) {
+      return {
+        columns: matrix.columns,
+        rows: matrix.rows.filter((r) => r.label.trim()),
+      };
+    }
+    if (isMatching) {
+      return {
+        left: matching.left.filter((s) => s.trim()),
+        right: matching.right.filter((s) => s.trim()),
+      };
+    }
+    return {};
+  }
 
   const pending = create.isPending || update.isPending;
   const errorMessage = create.error?.message ?? update.error?.message ?? null;
@@ -158,7 +216,8 @@ export function QuestionEditor({
       cognitiveLevel: cognitiveLevel as CreateQuestionInput["cognitiveLevel"],
       grade,
       contentMarkdown: content.trim(),
-      dataPayload: {},
+      dataPayload: buildDataPayload(),
+      parentId: parentId || null,
       childOrder: 0,
       topicIds: [],
       tagIds: [],
@@ -179,7 +238,10 @@ export function QuestionEditor({
         : [],
     };
 
-    const onDone = (q: PublicQuestion) => router.push(`/questions/${q.id}`);
+    const onDone = (q: PublicQuestion) => {
+      clear(); // draf tersimpan sudah jadi — buang agar tak ditawarkan lagi.
+      router.push(`/questions/${q.id}`);
+    };
 
     if (existing) {
       // `updateQuestionSchema` = partial; kirim field yang relevan.
@@ -197,6 +259,32 @@ export function QuestionEditor({
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {pendingDraft !== null && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-4 py-3 text-sm"
+        >
+          <span>
+            Ditemukan draf tersimpan untuk soal ini. Pulihkan naskah?
+          </span>
+          <span className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const v = restore();
+                if (v !== null) setContent(v);
+              }}
+            >
+              Pulihkan
+            </Button>
+            <Button variant="ghost" size="sm" onClick={discard}>
+              Buang
+            </Button>
+          </span>
+        </div>
+      )}
+
       {errorMessage && (
         <div
           role="alert"
@@ -230,6 +318,26 @@ export function QuestionEditor({
                     Pratinjau
                   </p>
                   <MathContent content={content} />
+                </div>
+              )}
+
+              {katexDiags.length > 0 && (
+                <div
+                  role="alert"
+                  className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400"
+                >
+                  <p className="mb-1 font-medium">
+                    {katexDiags.length} rumus tampaknya bermasalah (tetap bisa
+                    disimpan):
+                  </p>
+                  <ul className="list-inside list-disc space-y-0.5">
+                    {katexDiags.map((d, i) => (
+                      <li key={i}>
+                        baris {d.line}: <code>{d.expression}</code> —{" "}
+                        {d.message}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </CardContent>
@@ -330,6 +438,34 @@ export function QuestionEditor({
               </CardContent>
             </Card>
           )}
+
+          {isMatrix && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pernyataan Matriks</CardTitle>
+                <CardDescription>
+                  Tabel penilaian (kolom tetap: {matrix.columns.join(" / ")}).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MatrixGridFields value={matrix} onChange={setMatrix} />
+              </CardContent>
+            </Card>
+          )}
+
+          {isMatching && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pasangan Menjodohkan</CardTitle>
+                <CardDescription>
+                  Dua kolom: kiri (premis) & kanan (respons).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MatchingFields value={matching} onChange={setMatching} />
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Kolom kanan: metadata + aksi */}
@@ -339,6 +475,7 @@ export function QuestionEditor({
               <CardTitle>Metadata</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              <FieldGroup>
               <Field label="Tipe Soal">
                 <Select value={questionType} onValueChange={(v) => v && setQuestionType(v)}>
                   <SelectTrigger className="w-full" aria-label="Tipe soal">
@@ -396,6 +533,10 @@ export function QuestionEditor({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                <RubricHint
+                  code={difficultyRubric(difficulty).code}
+                  description={difficultyRubric(difficulty).description}
+                />
               </Field>
 
               <Field label="Level Kognitif">
@@ -416,7 +557,35 @@ export function QuestionEditor({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                <RubricHint
+                  code={`${cognitiveRubric(cognitiveLevel).code}`}
+                  description={cognitiveRubric(cognitiveLevel).description}
+                />
               </Field>
+
+              {isChildCandidate && (
+                <Field label="Wacana Stimulus Induk (opsional)">
+                  <Select
+                    value={parentId || "__none__"}
+                    onValueChange={(v) => v && setParentId(v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger className="w-full" aria-label="Wacana stimulus induk">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— Tanpa induk —</SelectItem>
+                      {(stimulusParents ?? []).map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.contentMarkdown.replace(/[#*$`]/g, "").slice(0, 60) || s.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Kaitkan soal ini ke wacana bertipe stimulus (audit §3.9).
+                  </p>
+                </Field>
+              )}
 
               <Separator />
 
@@ -430,6 +599,7 @@ export function QuestionEditor({
                 rows={3}
                 aria-label="Pembahasan"
               />
+              </FieldGroup>
             </CardContent>
           </Card>
 
@@ -486,20 +656,5 @@ export function QuestionEditor({
         </div>
       </div>
     </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      {children}
-    </label>
   );
 }

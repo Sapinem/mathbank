@@ -45,8 +45,9 @@
 | B8 | `DESAIN-SKEMA-BUNDLE-TERPISAH.md` | 📝 | proposal pembanding (DDL `collections` vs `bundles`) — **belum dieksekusi** |
 | B9 | `RENCANA-QUESTION-SOURCES.md` | 📝 | rencana eksekusi ADR-0012 (`question_sources`) — T1–T8 |
 | B10 | `REVIEW-MASUKAN-AUDIT-QBANK.md` | ✅ | **dibuat** 2026-10-01 — verifikasi 24 masukan audit QBank + 5 perbaikan; usulan 7 gelombang eksekusi |
-| B11 | `RENCANA-G1-PRESENTASI-SOAL.md` | 📝 | rencana G1 (badge C1–C6, popover rubrik, stimulus induk, filter multi-select) — menunggu persetujuan |
+| B11 | `RENCANA-G1-PRESENTASI-SOAL.md` | ✅ | **selesai** 2026-10-01 — G1.1 badge C1–C6 + meter kesulitan, G1.2 popover rubrik, G1.3 wacana stimulus, G1.4 filter multi-select |
 | B12 | `RENCANA-GRADE-QBANK.md` | ✅ | **selesai** 2026-10-01 — selaraskan grade dgn QBank (id "1".."12"); endpoint `/api/grades`, UI dari tabel, backfill prod |
+| B13 | `RENCANA-G2-EDITOR-SOAL.md` | ✅ | **selesai** 2026-10-01 — editor: form dinamis (matrix/matching), pemilih stimulus, autosave, KaTeX linter, petunjuk rubrik |
 
 ### Kategori C — Desain & UI
 

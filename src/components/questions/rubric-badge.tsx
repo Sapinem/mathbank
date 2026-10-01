@@ -91,3 +91,21 @@ export function DifficultyBadge({
     </RubricBadge>
   );
 }
+
+/**
+ * Petunjuk rubrik inline untuk EDITOR (G2.5) — teks bantu di bawah dropdown
+ * kesulitan/level kognitif, menjelaskan deskripsi operasional pilihan aktif.
+ */
+export function RubricHint({
+  code,
+  description,
+}: {
+  code: string;
+  description: string;
+}) {
+  return (
+    <p className="text-xs leading-snug text-muted-foreground">
+      <span className="font-medium text-foreground">{code}</span> — {description}
+    </p>
+  );
+}
