@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/schema/question";
 import { embedText } from "@/lib/embedding/bge-m3";
 import type { Actor } from "@/lib/auth/actor";
+import { questionSources } from "@/lib/db/schema/question-source";
 import {
   questionColumns,
   optionColumns,
@@ -37,7 +38,28 @@ export type PublicQuestion = Omit<
   | "aiTaggedAt"
   | "answerKey"
   | "contentHash"
-> & { options: QuestionOption[]; answerKey?: AnswerKey };
+> & {
+  options: QuestionOption[];
+  answerKey?: AnswerKey;
+  /** Provenance (ADR-0012): sumber-sumber butir ini (bisa >1). */
+  sources?: QuestionSourceView[];
+};
+
+/** Bentuk ringkas provenance untuk respons API. */
+export interface QuestionSourceView {
+  id: string;
+  sourceId: string | null;
+  sourceType: string;
+  title: string | null;
+  url: string | null;
+  accessedAt: Date | null;
+  publisher: string | null;
+  author: string | null;
+  year: number | null;
+  grade: string | null;
+  itemNumber: string | null;
+  notes: string | null;
+}
 
 /** Soal internal (untuk logika service: FSM, izin) — punya `answerKey`. */
 export interface QuestionInternal extends Question {
@@ -71,7 +93,26 @@ export async function getQuestion(
     .where(eq(questionOptions.questionId, id))
     .orderBy(asc(questionOptions.orderIndex));
 
-  return { ...row, options } as PublicQuestion;
+  const sources = await db
+    .select({
+      id: questionSources.id,
+      sourceId: questionSources.sourceId,
+      sourceType: questionSources.sourceType,
+      title: questionSources.title,
+      url: questionSources.url,
+      accessedAt: questionSources.accessedAt,
+      publisher: questionSources.publisher,
+      author: questionSources.author,
+      year: questionSources.year,
+      grade: questionSources.grade,
+      itemNumber: questionSources.itemNumber,
+      notes: questionSources.notes,
+    })
+    .from(questionSources)
+    .where(eq(questionSources.questionId, id))
+    .orderBy(asc(questionSources.createdAt));
+
+  return { ...row, options, sources } as PublicQuestion;
 }
 
 /**

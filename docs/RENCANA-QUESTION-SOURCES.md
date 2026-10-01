@@ -1,12 +1,23 @@
 # RENCANA EKSEKUSI — ADR-0012 `question_sources` (provenance per-butir)
 
-> **Status:** 🟡 menunggu persetujuan eksekusi
+> **Status:** 🟡 **BERJALAN** — T1–T4 ✅ selesai & lulus; T5–T8 sisa.
 > **Rujukan:** `docs/ADR/0012-provenance-per-butir-question-sources.md`
 > **Urutan aman:** skema → verifikasi → service → perbaikan ingest → API/UI → tes → dokumen.
 
+## Status ringkas
+- ✅ **T1** skema `question_sources` + `questions.content_hash` (migrasi 0008).
+- ✅ **T2** invarian tabel 28→29 (`invariants.ts` + `db-verify.ts`); `db:verify` hijau.
+- ✅ **T3** contentHash di contract/projection (internal; tak bocor ke publik).
+- ✅ **T4** bug ingest diperbaiki (title/url/accessed_at tersimpan) + dedup exact + near-dedup di enrichment (#42/#43).
+- ✅ **Tes**: 540 unit + 161 DB lulus.
+- ⬜ **T5** service baca (sertakan `question_sources`).
+- ⬜ **T6** API (GET/list menyertakan sumber).
+- ⬜ **T7** UI (tampilkan asal-usul).
+- ⬜ **T8** dokumen (SKEMA-DB-DETAIL, KAMUS-DATA, MILESTONE, CHANGELOG, audit).
+
 ## Prasyarat
-- [ ] **Backup DB**: `pnpm backup:db` (dump terverifikasi) — DB produksi punya data nyata.
-- [ ] Service produksi **stop** sebelum build/migrasi (PELAJARAN proyek).
+- [x] **Backup DB**: `pnpm backup:db` (dump terverifikasi).
+- [x] Service produksi **stop** sebelum build/migrasi (PELAJARAN proyek).
 
 ## T1 — Skema `question_sources` (drizzle)
 - Tambah `src/lib/db/schema/question-source.ts` (atau perluas `source.ts`): tabel + relasi + tipe.

@@ -3,6 +3,7 @@ import postgres from "postgres";
 import type { Actor } from "@/lib/auth/actor";
 import { enqueue, listQueue, listPending, markProcessing, markDone, countByStatus, getQueueItem } from "./queue";
 import { commitItems, resolveSourceId, existingItemHashes } from "./commit";
+import { getQuestion } from "@/lib/services/question-read";
 import { articleHash, itemHash, contentHash } from "./hash";
 import type { ParsedItem } from "./parsers/types";
 
@@ -161,6 +162,23 @@ describe("commit (soal draft)", () => {
     expect(p.title).toBe("Pembahasan Limit");
     expect(p.url).toBe("https://sumber/artikel");
     expect(new Date(p.accessed_at).toISOString()).toBe(at.toISOString());
+  });
+
+  it("T5: getQuestion menyertakan provenance (sources) — multi-sumber", async () => {
+    const a = await commitItems([item()], machine, {
+      sourceOrigin: "uji-ingest",
+      articleTitle: "Artikel A",
+    });
+    await commitItems([item()], machine, {
+      sourceOrigin: "uji-ingest-2",
+      articleTitle: "Artikel B",
+    });
+    const q = await getQuestion(a.questionIds[0]!, { viewer: machine });
+    expect(q).not.toBeNull();
+    expect(q!.sources).toBeDefined();
+    expect(q!.sources!.length).toBe(2);
+    const titles = q!.sources!.map((s) => s.title).sort();
+    expect(titles).toEqual(["Artikel A", "Artikel B"]);
   });
 
   it("kunci kosong tetap draft (tak menebak)", async () => {
