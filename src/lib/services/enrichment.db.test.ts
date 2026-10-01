@@ -43,7 +43,9 @@ async function cleanAll() {
   await sql`DELETE FROM questions`;
   await sql`DELETE FROM tags WHERE slug IN ('kalkulus','turunan')`;
   await sql`DELETE FROM topics WHERE slug IN ('aljabar','bilangan')`;
+  await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;
+  await sql`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_immutable`;
   for (const k of ["ai.enabled", "ai.base_url", "ai.api_key", "ai.model", "ai.max_tokens", "ai.timeout_ms"]) {
     await db.delete(appSettings).where(eq(appSettings.key, k));
   }

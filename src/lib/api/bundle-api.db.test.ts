@@ -45,14 +45,16 @@ function ctx(id: string) {
   return { params: Promise.resolve({ id }) };
 }
 
-async function mkQuestion() {
+async function mkQuestion(tag = "") {
   return createQuestion(
     {
       questionType: "single_choice",
       difficulty: 3,
       cognitiveLevel: "remember",
       grade: "g1",
-      contentMarkdown: "Soal $1+1$?",
+      // ADR-0012: konten identik = soal yang SAMA (unique `content_hash`).
+      // Beri tag agar tiap pemanggilan menghasilkan soal berbeda.
+      contentMarkdown: `Soal $1+1$?${tag ? ` (${tag})` : ""}`,
       dataPayload: {},
       answerKey: { correct: ["B"] },
       status: "draft",
@@ -142,8 +144,8 @@ describe("Alur API paket (L4)", () => {
     const b = (await (
       await listPOST(req("POST", "/api/bundles", { title: "Urut API", bundleType: "exam" }))
     ).json()).data;
-    const q1 = await mkQuestion();
-    const q2 = await mkQuestion();
+    const q1 = await mkQuestion("q1");
+    const q2 = await mkQuestion("q2");
     const i1 = (await (
       await itemsPOST(req("POST", `/api/bundles/${b.id}/items`, { questionId: q1.id }), ctx(b.id))
     ).json()).data;

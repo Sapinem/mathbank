@@ -20,7 +20,9 @@ const admin: Actor = { id: "s7-admin", name: "Admin", roles: ["admin"], via: "se
 const agent: Actor = { id: "s7-agent", name: "Agen", roles: ["agent"], via: "apikey" };
 
 async function clean() {
+  await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;
+  await sql`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM questions`;
 }
 

@@ -37,7 +37,9 @@ async function cleanAll() {
   await sql`DELETE FROM questions`;
   await sql`DELETE FROM ingest_queue`;
   await sql`DELETE FROM sources WHERE slug = 'uji-api'`;
+  await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;
+  await sql`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_immutable`;
 }
 
 beforeAll(async () => {

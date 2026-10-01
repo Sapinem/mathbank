@@ -71,7 +71,9 @@ async function cleanAll() {
   await sql`DELETE FROM question_tags`;
   await sql`UPDATE questions SET parent_id = NULL`;
   await sql`DELETE FROM questions`;
+  await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;
+  await sql`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_immutable`;
 }
 
 beforeAll(async () => {
