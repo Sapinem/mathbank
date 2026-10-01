@@ -22,6 +22,7 @@
 | [0012](0012-provenance-per-butir-question-sources.md) | Provenance per-butir: tabel `question_sources` (many-to-many, anti-duplikat) | ⚪ Digantikan sebagian oleh ADR-0014 |
 | [0013](0013-pisah-collections-dari-bundles.md) | Pisah tabel `collections` vs `bundles` | 🔴 **DIBATALKAN** (audit: duplikasi `question_sources`) |
 | [0014](0014-sumber-menempel-pada-bundle.md) | Sumber menempel pada **BUNDLE** (bukan soal); `question_sources` dihapus; `event_*` dipertahankan | **Diterima** |
+| [0015](0015-gabung-books-institutions-ke-sources.md) | Gabung `books` & `institutions` ke `sources` (kolom per-`kind`); hapus 2 tabel | **Diterima** |
 
 ## Cara menambah ADR
 
