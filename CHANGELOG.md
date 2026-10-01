@@ -1,5 +1,29 @@
 # Changelog — MathBank
 
+## [Data] — Isi katalog `events` (5 ujian nyata)
+
+### Ditambahkan
+- **`events` 0 → 5** — rumah untuk jenis ujian, yang setelah ADR-0015 jadi
+  satu-satunya tempat menampung UTBK/OSN (enum `competition` sudah dibuang):
+
+  | Event | Singkatan | Kategori | Subtes | Alias |
+  |---|---|---|---:|---:|
+  | UTBK-SNBT | UTBK | `utbk` | 2 | 4 |
+  | OSN Matematika | OSN | `osn` | 0 | 5 |
+  | SIMAK UI | SIMAK UI | `sbmptn` | 2 | 2 |
+  | Ujian Mandiri PTN | UM PTN | `sbmptn` | 0 | 3 |
+  | Ujian Sekolah | US | `ujian_sekolah` | 0 | 4 |
+
+- **`scripts/seed-events.ts`** — seeder idempoten (event yang sudah ada
+  dilewati), melewati **service resmi** bukan SQL langsung, supaya otorisasi
+  `assertCan` & pembentukan `code`/`fullname` ikut teruji.
+
+### Catatan
+- Alias diisi supaya pencarian pengguna cocok: "SNBT", "SBMPTN", "OSK", "OSP",
+  "PAS", "PAT" mengarah ke event yang sama.
+- **Belum diputuskan:** `questions.event_*` (5 kolom, 0/56 terisi) — berpotensi
+  duplikat `events`. Lihat ADR-0010/0014/0015. Ini mempengaruhi ADR-0014.
+
 ## [Skema] — ADR-0015: `books` & `institutions` digabung ke `sources`
 
 ### Diubah
