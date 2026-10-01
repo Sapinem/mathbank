@@ -15,10 +15,10 @@ config({ path: ".env" });
 
 /** Harapan minimum skema (rata-rata setelah 0000..0004). */
 const EXPECTED = {
-  tables: 26, // 27 - question_sources (ADR-0014); 29 - books - institutions (ADR-0015)
+  tables: 28, // 26 + collections + collection_items (ADR-0016)
   checkConstraints: 2,
   hnswIndexes: 1,
-  triggers: 24, // 19 updated_at (-books,-institutions per ADR-0015) + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
+  triggers: 25, // 20 updated_at (+collections per ADR-0016) + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
 } as const;
 
 /** Nama constraint/trigger kritis yang WAJIB ada. */

@@ -1,5 +1,44 @@
 # Changelog — MathBank
 
+## [Fitur] — ADR-0016: tambah `collections` (arsip soal publik)
+
+### Ditambahkan
+- **Tabel `collections` + `collection_items`** — arsip soal **publik** (statis,
+  institusional), **berdampingan** dengan `bundles` (naskah kerja guru: dinamis,
+  personal). **DB 26 → 28 tabel.**
+- **Permission `collection:view` & `collection:manage`** — keduanya `yes` untuk
+  guru/reviewer/admin. Beda dari `bundle:manage` (`own`): karena `collections`
+  **tak punya `ownerId`**, izinnya **bisa** dipasang di gerbang route
+  (CONSTRAINTS #35 hanya mengikat izin `own`).
+- **`collection-service.ts`** — `listCollections`, `getCollection`,
+  `createCollection`, `updateCollection`, `deleteCollection`, `addCollectionItem`
+  (idempoten), `removeCollectionItem`, `reorderCollectionItems`,
+  `listCollectionsOfQuestion`, `listQuestionIdsInCollection`, `addCollectionItems`.
+- **API:** `GET/POST /api/collections`, `GET/PATCH/DELETE /api/collections/[id]`,
+  `GET/POST/PUT/DELETE /api/collections/[id]/items`.
+
+### Diubah
+- **Enum `audit_entity` + nilai `collection`** — `recordAudit` menolak
+  `entityType` di luar enum, jadi `audit_logs` gagal mencatat tanpa ini.
+- `db_safety.sql`: `collections` ikut dipasangi trigger `updated_at`.
+
+### Catatan
+- **`bundles` TIDAK DISENTUH** — `bundle_type` tetap `source`|`exam`|`exercise`;
+  ADR-0009 tetap berlaku. ADR ini **menambah**, bukan merombak.
+- **Melanjutkan ADR-0013 yang dulu dibatalkan** — alasannya sudah tak berlaku:
+  pembatalan itu bersandar pada *"`question_sources` sudah jadi Koleksi"*,
+  padahal tabel itu **sudah dihapus ADR-0014**. Setelah itu, Koleksi **tak punya
+  wadah sama sekali**.
+- **13 tes DB** mengunci invarian pembeda dari `bundles`: publik (guru lain
+  boleh kelola), idempoten, RESTRICT (soal terarsip tak bisa dihapus), CASCADE
+  (hapus koleksi tak menghapus soal), M:N (satu soal di banyak koleksi).
+- **Pelajaran diterapkan:** `db_safety.sql` **dan DB uji** dimigrasikan bersamaan
+  (jebakan ADR-0015 yang dulu kena dua kali); kode mati langsung dibuang
+  (CONSTRAINT #19); `permissions.test.ts` mengunci matriks izin secara exhaustive.
+- Migrasi `0011` idempoten dari nol: diverifikasi via DB baru → 28 tabel,
+  25 trigger, 0 drift.
+- **UI menyusul** (belum dikerjakan sesuai keputusan: skema + service + izin dulu).
+
 ## [Skema] — ADR-0014: sumber menempel pada BUNDLE, `question_sources` dihapus
 
 ### Diubah

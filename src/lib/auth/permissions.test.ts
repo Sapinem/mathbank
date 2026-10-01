@@ -25,6 +25,10 @@ const EXPECTED: Record<Permission, Record<Role, "yes" | "own" | "no">> = {
   // ADR-0009 "Opsi 2": latihan = milik pembuat (`own`); koleksi (type='source')
   // ditangani `assertBundleWrite` di service sebagai arsip institusional (umum).
   "bundle:manage": { admin: "yes", teacher: "own", reviewer: "own", agent: "no", machine: "no" },
+  // ADR-0016: `collections` = arsip PUBLIK. Beda dari `bundles` (own) — karena
+  // tak ada `ownerId`, izin ini berlaku di gerbang route, bukan service.
+  "collection:view": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "yes" },
+  "collection:manage": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "no", machine: "no" },
   "media:manage": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "no" },
   "settings:manage": { admin: "yes", teacher: "no", reviewer: "no", agent: "no", machine: "no" },
   "user:manage": { admin: "yes", teacher: "no", reviewer: "no", agent: "no", machine: "no" },

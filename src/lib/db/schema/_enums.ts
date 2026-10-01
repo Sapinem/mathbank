@@ -126,6 +126,7 @@ export const auditActionEnum = pgEnum("audit_action", [
 export const auditEntityEnum = pgEnum("audit_entity", [
   "question",
   "bundle",
+  "collection", // ADR-0016
   "topic",
   "source",
   "event",

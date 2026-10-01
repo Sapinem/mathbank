@@ -23,6 +23,7 @@
 | [0013](0013-pisah-collections-dari-bundles.md) | Pisah tabel `collections` vs `bundles` | 🔴 **DIBATALKAN** (audit: duplikasi `question_sources`) |
 | [0014](0014-sumber-menempel-pada-bundle.md) | Sumber menempel pada **BUNDLE** (bukan soal); `question_sources` dihapus; `event_*` dipertahankan | **Diterapkan** |
 | [0015](0015-gabung-books-institutions-ke-sources.md) | Gabung `books` & `institutions` ke `sources` (kolom per-`kind`); hapus 2 tabel | **Diterapkan** |
+| [0016](0016-tambah-collections-berdampingan.md) | Tambah `collections` sebagai konsep **berdampingan** (arsip publik); `bundles` tak disentuh | **Diterapkan** |
 
 ## Cara menambah ADR
 

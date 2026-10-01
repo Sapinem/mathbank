@@ -30,11 +30,12 @@ $$;
 
 -- Pasang trigger updated_at ke tabel ber-updated_at (idempotent: drop dulu bila ada).
 -- ADR-0015: `books` & `institutions` DIHAPUS (kolomnya digabung ke `sources`).
+-- ADR-0016: `collections` ikut (arsip soal publik).
 DO $$
 DECLARE
   t text;
   tables text[] := ARRAY[
-    'account', 'apikey', 'app_settings', 'bundles',
+    'account', 'apikey', 'app_settings', 'bundles', 'collections',
     'cognitive_levels', 'difficulty_levels', 'events', 'grades',
     'ingest_queue', 'media_assets', 'question_options',
     'questions', 'session', 'solutions', 'sources', 'tags',

@@ -17,6 +17,7 @@ export type AuditAction =
 export type AuditEntity =
   | "question"
   | "bundle"
+  | "collection"
   | "topic"
   | "source"
   | "event"
