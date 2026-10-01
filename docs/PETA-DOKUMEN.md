@@ -41,10 +41,11 @@
 | B4 | `SKEMA-DB-DETAIL.md` | ✅ | sumber kebenaran skema |
 | B5 | `L7-TINJAUAN-KRITIS-DATA.md` | ✅ | |
 | B6 | `KAMUS-DATA.md` (glossary) | ✅ | **dibuat** 2026-09-29 — glosarium domain |
-| B7 | `docs/ADR/` | ✅ | **13 ADR** (0001–0008 dibuat 2026-09-29; **0008 = basis UI Base UI**; **0009 = bundle tetap satu tabel** (⚪ digantikan ADR-0013); **0010 = event jenis berulang (tahun di soal)**; **0011 = stimulus tetap di `questions`**; **0012 = provenance per-butir `question_sources`** (diusulkan); **0013 = pisah tabel `collections` vs `bundles`** (diterima 2026-10-01)) |
+| B7 | `docs/ADR/` | ✅ | **13 ADR** (0001–0008 dibuat 2026-09-29; **0008 = basis UI Base UI**; **0009 = bundle satu tabel / Opsi 2** (✅ berlaku); **0010 = event jenis berulang (tahun di soal)**; **0011 = stimulus tetap di `questions`**; **0012 = provenance per-butir `question_sources`** (diusulkan); **0013 = pisah tabel `collections`** — 🔴 **DIBATALKAN** atas audit DB 2026-10-01) |
 | B8 | `DESAIN-SKEMA-BUNDLE-TERPISAH.md` | 📝 | proposal pembanding (DDL `collections` vs `bundles`) — **belum dieksekusi** |
 | B9 | `RENCANA-QUESTION-SOURCES.md` | 📝 | rencana eksekusi ADR-0012 (`question_sources`) — T1–T8 |
 | B10 | `REVIEW-MASUKAN-AUDIT-QBANK.md` | ✅ | **dibuat** 2026-10-01 — verifikasi 24 masukan audit QBank + 5 perbaikan; usulan 7 gelombang eksekusi |
+| B11b | `AUDIT-DB-2026-10-01.md` | ✅ | **dibuat** 2026-10-01 — audit 29 tabel: asal (per migrasi), peruntukan, pemakaian kode & isi; temuan tabel gendut; dasar pembatalan ADR-0013 |
 | B11 | `RENCANA-G1-PRESENTASI-SOAL.md` | ✅ | **selesai** 2026-10-01 — G1.1 badge C1–C6 + meter kesulitan, G1.2 popover rubrik, G1.3 wacana stimulus, G1.4 filter multi-select |
 | B12 | `RENCANA-GRADE-QBANK.md` | ✅ | **selesai** 2026-10-01 — selaraskan grade dgn QBank (id "1".."12"); endpoint `/api/grades`, UI dari tabel, backfill prod |
 | B13 | `RENCANA-G2-EDITOR-SOAL.md` | ✅ | **selesai** 2026-10-01 — editor: form dinamis (matrix/matching), pemilih stimulus, autosave, KaTeX linter, petunjuk rubrik |

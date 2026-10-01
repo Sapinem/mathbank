@@ -1,8 +1,11 @@
 # ADR-0009 — Bundle: satu tabel `bundles` (Koleksi & Latihan) — **mengikuti keputusan final QBank**
 
-- **Status:** ⚪ **DIGANTIKAN oleh [ADR-0013](0013-pisah-collections-dari-bundles.md)** (2026-10-01)
-  — pemilik produk meninjau ulang dan memilih **pisah tabel**
-- **Status sebelumnya:** 🔴 DITOLAK / DIBATALKAN (usulan awal "pisah tabel" salah arah; lihat Catatan Revisi)
+- **Status:** ✅ **BERLAKU** — bentuk keputusan yang **dikonfirmasi ulang** sebagai
+  **"Opsi 2"**: satu tabel `bundles`, dipisah **100% di UI** (menu Koleksi vs Latihan),
+  tanpa tambah tabel. Lihat [`AUDIT-DB-2026-10-01.md`](../AUDIT-DB-2026-10-01.md).
+- **Riwayat status:** 🔴 DITOLAK (2026-10-01 08:22, untuk usulan "pisah tabel") →
+  ⚪ digantikan ADR-0013 (2026-10-01 siang) → **dibatalkan balik** karena audit
+  membuktikan `collections` menduplikasi `question_sources`
 - **Tanggal:** 2026-10-01
 - **Pengambil keputusan:** Pemilik produk
 - **Terkait:** `docs/DESAIN-SKEMA-BUNDLE-TERPISAH.md` (proposal pembanding), QBank `master:src/lib/db/schema/bundles.ts`,

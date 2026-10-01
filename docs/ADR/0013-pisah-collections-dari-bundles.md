@@ -1,16 +1,41 @@
-# ADR-0013 — Pisah tabel: `collections` (arsip sumber) vs `bundles` (naskah rakitan)
+# ADR-0013 — Pisah tabel `collections` vs `bundles` — **DIBATALKAN** (audit DB)
 
-- **Status:** ✅ **DITERIMA** (2026-10-01) — **menggantikan keputusan "Opsi 2" di ADR-0009**
+- **Status:** 🔴 **DIBATALKAN** (2026-10-01, hari yang sama) — migrasi & kode **direvert**;
+  DB kembali ke **29 tabel / 26 trigger**
+- **Status sebelumnya:** ✅ DITERIMA (2026-10-01) — dibatalkan setelah **audit seluruh DB**
 - **Pengambil keputusan:** Pemilik produk
-- **Terkait:** `docs/ADR/0009-bundle-pisah-koleksi-dan-latihan.md` (digantikan),
-  `docs/DESAIN-SKEMA-BUNDLE-TERPISAH.md` (rancangan teknis),
-  `docs/ADR/0012-provenance-per-butir-question-sources.md` (source/provenance),
-  `CONSTRAINTS.md` #46 (RESTRICT hanya hitung induk aktif)
+- **Terkait:** `docs/ADR/0009-*.md` (**kembali berlaku** — Opsi 2: satu tabel),
+  `docs/DESAIN-SKEMA-BUNDLE-TERPISAH.md` (rancangan teknis, tetap sebagai rujukan),
+  `docs/ADR/0012-*.md` (provenance per-butir `question_sources`),
+  `docs/AUDIT-DB-2026-10-01.md` (hasil audit)
 
-## Konteks
+## Ringkasan
 
-`bundles` menampung **dua konsep domain berbeda** dalam satu tabel, dibedakan
-kolom `bundle_type` (`source` | `exam` | `exercise`):
+ADR ini semula memutuskan **memisah** `collections` + `collection_items` dari
+`bundles` + `bundle_items`. Setelah diimplementasikan (skema, migrasi `0009`,
+diterapkan ke DB), pemilik produk memerintahkan **audit seluruh tabel** sebelum
+melanjutkan. Audit menemukan bahwa:
+
+1. **`question_sources` sudah memuat seluruh kolom yang dibutuhkan "Koleksi"** —
+   `source_id`, `source_type`, `title`, `url`, `year`, `grade`, `item_number`.
+   Data nyata: **56 baris / 56 soal**, semuanya dari satu artikel (`mathcyber`).
+   Artinya "Koleksi" (kumpulan soal dari satu sumber+artikel) **sudah terwakili**
+   tanpa tabel baru — ia **query**, bukan entitas.
+2. **`collections` menduplikasi informasi** yang sudah ada di `question_sources`
+   (`year`, `grade`, judul) → risiko data tak sinkron + menambah tempat kelima
+   penyimpanan `year`.
+3. **DB sudah menanggung beban tabel kosong** — 9 tabel tanpa data berguna;
+   menambah 2 tabel kosong lagi memperburuknya.
+4. **Bentuk `collections` yang dibuat adalah ASUMSI, bukan keputusan** —
+   kolomnya (`notes`, membuang `duration_minutes`/`status`) tidak pernah
+   disepakati bersama.
+
+Maka keputusan **dibatalkan**; kembali ke **Opsi 2** (satu tabel, ADR-0009 berlaku).
+
+## Konteks (mengapa sempat dipisah)
+
+`bundles` menampung dua konsep domain berbeda lewat `bundle_type`
+(`source` | `exam` | `exercise`):
 
 | | **Koleksi** (`source`) | **Latihan** (`exam`, `exercise`) |
 |---|---|---|
@@ -22,94 +47,75 @@ kolom `bundle_type` (`source` | `exam` | `exercise`):
 **Bukti ketidakcocokan di skema** (verifikasi DB 2026-10-01):
 
 ```
-Kolom                dipakai `source`   dipakai `exam`/`exercise`
-source_id/event_id/year   ✔                   ✘ (selalu NULL)
-duration_minutes/instructions/status   ✘ (selalu NULL)   ✔
+Kolom                     dipakai `source`      dipakai `exam`/`exercise`
+source_id/event_id/year        ✔                     ✘ (selalu NULL)
+duration_minutes/status    ✘ (selalu NULL)               ✔
 ```
 
-Kolom-kolom bergantian NULL = tanda dua konsep dipaksa satu tabel.
+Kolom bergantian NULL = tanda dua konsep dipaksa satu tabel. **Ini tetap benar.**
 
-**Riwayat keputusan:**
-1. **2 Sep** — konsep "tahun menempel pada sumber, bukan soal" (spec
-   `/home/hari/docs/superpowers/specs/2026-09-02-bank-soal-design.md`);
-   lahir konsep **Koleksi** (19 Sep: `/collections`, arsip naskah asli).
+## Riwayat keputusan (jejak lengkap)
+
+1. **2 Sep** — "tahun menempel pada sumber, bukan soal" (spec
+   `/home/hari/docs/superpowers/specs/2026-09-02-bank-soal-design.md`) → lahir
+   konsep **Koleksi** (19 Sep: `/collections`, arsip naskah asli).
 2. **1 Okt 06:32** — disepakati **Opsi 2**: *unified DB, 1 tabel, dipisah 100% di UI*
-   (catatan resmi di Mnemosyne; `AUDIT-KOMPARASI` §3.6 & §5). Alasan saat itu:
-   menjaga stabilitas **28 tabel & 26 trigger**.
-3. **1 Okt 08:22** — ADR-0009 ditulis dengan status **DITOLAK** untuk "pisah tabel",
-   sejalan dengan Opsi 2.
-4. **1 Okt (sekarang)** — pemilik produk **meninjau ulang** dan memilih **pisah tabel**.
+   (catatan resmi Mnemosyne; `AUDIT-KOMPARASI` §3.6 & §5).
+3. **1 Okt 08:22** — ADR-0009 ditulis: "pisah tabel" **DITOLAK**, sejalan Opsi 2.
+4. **1 Okt (siang)** — pemilik produk meninjau ulang → memilih **pisah tabel** →
+   ADR-0013 ditulis (DITERIMA) + skema/migrasi `0009` dibuat & diterapkan.
+5. **1 Okt (sore)** — pemilik produk meminta **audit seluruh tabel** →
+   ditemukan temuan di atas → **ADR-0013 DIBATALKAN**, kode & DB direvert.
 
-## Keputusan
+## Yang BENAR-BENAR perlu dikerjakan (dari Opsi 2 — belum tersentuh)
 
-**Pisah menjadi dua pasang tabel** (menyimpang sadar dari Opsi 2):
+Pembatalan ini **tidak** membatalkan kebutuhan aslinya. Yang tetap perlu:
 
-| Tabel | Peran |
-|---|---|
-| `collections` + `collection_items` | Koleksi — arsip sumber, **read publik**, berbasis `source_id`/`event_id`/`year` |
-| `bundles` + `bundle_items` | Latihan/Exam — naskah rakitan, **`own`** (pembuatnya), berbasis `created_by_id` |
+| # | Pekerjaan | Kenapa penting |
+|---|---|---|
+| 1 | **Tegakkan `createdById` (owner) di jalur bundle** | Sekarang `listBundles` tanpa filter pemilik & `bundle:manage` = `yes` untuk semua → **guru bisa menyentuh bundle guru lain** (cacat keamanan nyata) |
+| 2 | **Pisahkan Koleksi vs Latihan di UI** | Sesuai Opsi 2: menu "Koleksi" (filter source/provenance) & "Latihan" (filter owner) — **tanpa** tabel baru |
+| 3 | **`points` di `bundle_items`** | Ditunda (fase depan) |
+| 4 | Izin: Koleksi read publik & tulis umum; Latihan `own` tapi **boleh dilihat** guru lain | Diputuskan pemilik produk (di bawah) |
 
-### Perilaku & izin (diputuskan pemilik produk)
+### Perilaku & izin (keputusan pemilik produk — tetap berlaku)
 
 | Tipe | Buat/Ubah/Hapus | Baca |
 |---|---|---|
-| **Koleksi** | **umum** (semua guru/reviewer) | umum |
+| **Koleksi** (`source`) | **umum** (semua guru/reviewer) | umum |
 | **Latihan/Exam** | **`own`** — hanya pembuat | **boleh lihat punya orang lain**, tak boleh ubah |
 | Admin | semua | semua |
 
-### Relasi soal (diputuskan pemilik produk)
+> ⚠️ Izin ini **tidak bisa** dipasang di gerbang `permission` route
+> (CONSTRAINTS #35: `own` tanpa `ownerId` selalu menolak). Wajib ditegakkan
+> **di service** yang punya `ownerId` + `bundleType`.
 
-**Satu soal boleh berada di banyak Koleksi DAN banyak Latihan sekaligus** —
-bebas, tanpa batas, tanpa eksklusivitas. Konsisten dengan model provenance
-per-butir ADR-0012 ("1 soal : banyak kemunculan").
-Konsekuensi: relasi `RESTRICT` (cegah hapus soal) **wajib dicek ke DUA tabel**.
-
-### `points`
-
-**Ditunda** (keputusan pemilik produk) — tidak ikut migrasi ini, agar fokus.
-Dicatat sebagai utang; kolom tetap direncanakan di item kedua tabel.
-
-## Alternatif yang Ditolak
+## Alternatif yang ditolak (setelah audit)
 
 | Alternatif | Kenapa ditolak |
 |---|---|
-| **Opsi 2 (1 tabel + pisah UI saja)** | Perilaku beda akhirnya tetap harus di-encode lewat `bundle_type` di banyak tempat; kolom NULL bergantian tetap ada; izin per-tipe jadi bercabang di service yang sama |
-| **`collections` saja, `bundles` dibuang** | Latihan punya atribut sendiri (durasi, instruksi, status) yang tak relevan untuk arsip |
-| **Tetap 1 tabel, tanpa perubahan apa pun** | Meninggalkan cacat izin (`own` tak ditegakkan) & perilaku pasif `bundle_type` |
+| **Pisah tabel** (isi ADR ini semula) | Duplikasi `question_sources`; +2 tabel kosong; bentuk kolom = asumsi |
+| **`collections` menyimpan `year`/`grade` sendiri** | `year` sudah ada di `question_sources`, `books`, `bundles`, `questions.event_year` → jadi tempat kelima |
+| **Opsi 2 tanpa perubahan sama sekali** | Meninggalkan cacat izin owner (paling mendesak) |
 
-## Konsekuensi
+## Konsekuensi pembatalan
 
-### Skema & migrasi
-- **+2 tabel** (`collections`, `collection_items`) → **29 → 31 tabel**.
-- Trigger `updated_at` untuk `collections` → **31 → 32 trigger**.
-- `invariants.ts` + `scripts/db-verify.ts` (saat ini: `tables: 29`) **wajib diperbarui**.
-- Migrasi drizzle-kit + snapshot; `pnpm db:migrate` di DB kosong **wajib** menghasilkan
-  skema penuh (CONSTRAINTS #24) & `pnpm db:verify` hijau (#25).
-- Item di kedua tabel **memakai enum `bundle_item_role`** yang sudah ada (tanpa enum baru).
-
-### Integritas data (paling berisiko)
-- `collection_items.question_id` → `questions.id` **ON DELETE RESTRICT**.
-- **`isQuestionUsedInBundles` & `bundlesUsingQuestions` (`question-write.ts`) WAJIB
-  memeriksa DUA tabel** — jika tidak, muncul **dead-end baru**: soal terkunci
-  koleksi yang tak terdeteksi (kelas bug CONSTRAINTS #46).
-- `duplicate`/`moodle-export`/`stats` harus memutuskan tabel mana yang dihitung.
-
-### Cakupan perubahan — **32 berkas** (terhitung, bukan 18)
-Termasuk: 7 API route, 5 halaman, 6 komponen (+`nav-config`), 3 service
-(`bundle-service`, `moodle-export-service`, `question-write`), 2 hook,
-skema, `stats`, dan **9 berkas tes**.
-
-### UI
-- Sidebar: **"Koleksi"** (baru) + **"Latihan"** (dari "Paket Soal").
+- **DB:** tabel `collections` & `collection_items` **DIDROP** (keduanya kosong —
+  nol data hilang). Migrasi `0009` dihapus; `_journal`, snapshot, skema,
+  invarian, trigger `db_safety.sql` **direvert**.
+- **Kembali ke 29 tabel / 26 trigger**; `pnpm db:verify` **hijau**.
+- **Diverifikasi:** `pnpm db:migrate` di **DB kosong** menghasilkan skema penuh
+  (29 tabel, 26 trigger) & `db:verify` hijau → CONSTRAINTS #24/#25 terpenuhi.
+- `typecheck` bersih; tak ada sisa referensi `collection` di kode/migrasi.
 
 ## Catatan
 
-- **ADR-0009 tetap disimpan** (tidak dihapus) sesuai aturan "jangan hapus ADR lama —
-  tandai Digantikan oleh" (#32). Statusnya diubah menjadi *"Digantikan oleh ADR-0013"*.
-- **Risiko dicatat jujur:** Opsi 2 dipilih demi stabilitas jumlah tabel. Keputusan ini
-  membatalkannya secara sadar. Bila kompleksitas terbukti lebih mahal dari manfaat
-  setelah implementasi, ADR ini dapat ditinjau kembali — tetapi **tidak** boleh
-  setengah jalan (sebagian route baca tabel lama, sebagian tabel baru).
+- **ADR-0009 kembali berlaku** (statusnya dipulihkan dari
+  "Digantikan oleh ADR-0013" → **Diterima sebagai Opsi 2**).
+- **Pelajaran (audit dulu, kode kemudian):** migrasi diimplementasikan **sebelum**
+  audit kegunaan tabel. Audit menemukan jawaban sudah tersedia di
+  `question_sources`. **Aturan untuk ke depan: sebelum menambah tabel, buktikan
+  bahwa informasi yang dibutuhkan TIDAK sudah ada di tabel yang ada.** Perintah
+  audit-dulu ini datang dari pemilik produk.
 - **Utang dokumentasi:** catatan keputusan "Opsi 2" ada di **Mnemosyne** & spec di
-  `/home/hari/docs/superpowers/specs/` (**di luar repo git**). Wajib disalin ke repo
-  agar tidak bergantung pada memori eksternal.
+  `/home/hari/docs/superpowers/specs/` (**di luar repo git**) → wajib disalin ke repo.
