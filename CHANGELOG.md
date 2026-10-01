@@ -1,5 +1,37 @@
 # Changelog — MathBank
 
+## [Skema] — ADR-0015: `books` & `institutions` digabung ke `sources`
+
+### Diubah
+- **`books` & `institutions` DIHAPUS** — keduanya anak 1-ke-1 dari `sources`
+  (`UNIQUE source_id`) dan **0 baris**, jadi tabel terpisah tak memberi manfaat.
+  Kolomnya pindah ke `sources` sebagai **kolom per-`kind`** (NULL untuk jenis
+  lain), mengikuti pola `sources.url` yang sudah ada:
+  - `kind='book'` → `publisher`, `author`, `book_year`
+  - `kind='school'` → `city`
+- **DB 29 → 27 tabel**; trigger `updated_at` 26 → 24.
+- **Enum `source_kind`: 4 → 3 nilai** — `competition` dibuang (UTBK/OSN/SIMAK UI
+  adalah **event**, rumahnya `events`). 1 baris "OSN Matematika SMA" dihapus
+  lebih dulu (0 soal memakainya) agar konversi enum tak gagal.
+- **Form sumber jadi dinamis per jenis** (`sources-view.tsx`): pilih Buku →
+  muncul penerbit/penulis/tahun; Sekolah → kota; Situs → URL. Field jenis lain
+  dikirim `null`, jadi tak ada kolom yang terisi asal.
+- `usageCount` sumber kini **murni dari jumlah soal** — sebelumnya
+  `Math.max(institutionUsage, questionCount)`, padahal `institutions.usage_count`
+  tak pernah diisi trigger apa pun (selalu 0, jadi selalu jatuh ke `questionCount`).
+
+### Diperbaiki
+- **`db_safety.sql`** tak lagi memasang trigger ke `books`/`institutions`.
+- **Invarian DB dikoreksi dengan fakta** (aturan #25): `tables` 27, `triggers` 24
+  — diverifikasi lewat `db:verify` *dan* uji bangun-ulang dari nol (aturan #24).
+
+### Catatan
+- **Migrasi `0009` idempoten dari nol** — diverifikasi dengan membangun DB baru
+  (`mb_repro2`): 27 tabel, 24 trigger, 0 drift.
+- **⚠️ DB uji (`TEST_DATABASE_URL`) juga wajib dimigrasi.** Awalnya tertinggal di
+  skema lama → 10 tes `ingest` gagal, dan gejalanya menyesatkan karena
+  `resolveSourceId` menelan error asli (`ConflictError`). Detail di ADR-0015.
+
 ## [Redesign-UI] — Bank Soal: Filter Bar, 3 View Modes, App Shell Responsif
 
 ### Ditambahkan

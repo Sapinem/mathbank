@@ -66,12 +66,16 @@ export const authorTypeEnum = pgEnum("author_type", [
   "system",
 ]);
 
-/** Jenis sumber (Pola B: induk `sources` + anak). */
+/**
+ * Jenis sumber.
+ *
+ * ADR-0015: `competition` DIBUANG — UTBK/OSN/SIMAK UI adalah **event** (jenis
+ * ujian), bukan tempat menyalin soal. Rumahnya tabel `events` (ADR-0010/0014).
+ */
 export const sourceKindEnum = pgEnum("source_kind", [
   "book",
   "website",
   "school",
-  "competition",
 ]);
 
 /** Jenis paket soal. */

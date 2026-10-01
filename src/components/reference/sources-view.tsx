@@ -50,7 +50,6 @@ const KIND_LABELS: Record<SourceKind, string> = {
   book: "Buku",
   website: "Situs",
   school: "Sekolah",
-  competition: "Kompetisi",
 };
 
 export function SourcesView() {
@@ -64,6 +63,11 @@ export function SourcesView() {
   const [kind, setKind] = useState<SourceKind>("book");
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
+  // Kolom khusus-jenis (ADR-0015): buku & sekolah. NULL untuk jenis lain.
+  const [publisher, setPublisher] = useState("");
+  const [author, setAuthor] = useState("");
+  const [bookYear, setBookYear] = useState("");
+  const [city, setCity] = useState("");
   const [confirm, setConfirm] = useState<SourceRow | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
 
@@ -72,6 +76,10 @@ export function SourcesView() {
     setKind("book");
     setLabel("");
     setUrl("");
+    setPublisher("");
+    setAuthor("");
+    setBookYear("");
+    setCity("");
     setFormErr(null);
     setOpen(true);
   }
@@ -80,13 +88,26 @@ export function SourcesView() {
     setKind(s.kind);
     setLabel(s.label);
     setUrl(s.url ?? "");
+    setPublisher(s.publisher ?? "");
+    setAuthor(s.author ?? "");
+    setBookYear(s.bookYear != null ? String(s.bookYear) : "");
+    setCity(s.city ?? "");
     setFormErr(null);
     setOpen(true);
   }
 
   function submit() {
     setFormErr(null);
-    const payload = { kind, label: label.trim(), url: url.trim() || null };
+    // Kirim hanya field yang relevan dengan jenis — sisanya null (ADR-0015).
+    const payload = {
+      kind,
+      label: label.trim(),
+      url: kind === "website" ? url.trim() || null : null,
+      publisher: kind === "book" ? publisher.trim() || null : null,
+      author: kind === "book" ? author.trim() || null : null,
+      bookYear: kind === "book" && bookYear.trim() ? Number(bookYear) : null,
+      city: kind === "school" ? city.trim() || null : null,
+    };
     if (editing) {
       update.mutate(
         { id: editing.id, ...payload },
@@ -205,18 +226,75 @@ export function SourcesView() {
                 id="src-label"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
-                placeholder="mis. Buku Matematika Kelas X"
+                placeholder={
+                  kind === "book"
+                    ? "mis. Buku Matematika Kelas X"
+                    : kind === "school"
+                      ? "mis. SMAN 1 Jakarta"
+                      : "mis. mathcyber"
+                }
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="src-url" className="text-sm font-medium">URL (opsional)</label>
-              <Input
-                id="src-url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://…"
-              />
-            </div>
+
+            {/* Field kondisional per jenis (ADR-0015) */}
+            {kind === "website" && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="src-url" className="text-sm font-medium">URL</label>
+                <Input
+                  id="src-url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://…"
+                />
+              </div>
+            )}
+
+            {kind === "book" && (
+              <div className="flex flex-col gap-4 sm:grid sm:grid-cols-2 sm:gap-3">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="src-publisher" className="text-sm font-medium">Penerbit</label>
+                  <Input
+                    id="src-publisher"
+                    value={publisher}
+                    onChange={(e) => setPublisher(e.target.value)}
+                    placeholder="mis. Erlangga"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="src-author" className="text-sm font-medium">Penulis</label>
+                  <Input
+                    id="src-author"
+                    value={author}
+                    onChange={(e) => setAuthor(e.target.value)}
+                    placeholder="mis. Sukino"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 sm:col-span-1">
+                  <label htmlFor="src-book-year" className="text-sm font-medium">Tahun terbit</label>
+                  <Input
+                    id="src-book-year"
+                    type="number"
+                    inputMode="numeric"
+                    value={bookYear}
+                    onChange={(e) => setBookYear(e.target.value)}
+                    placeholder="mis. 2024"
+                  />
+                </div>
+              </div>
+            )}
+
+            {kind === "school" && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="src-city" className="text-sm font-medium">Kota</label>
+                <Input
+                  id="src-city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="mis. Jakarta"
+                />
+              </div>
+            )}
+
             {formErr && <p className="text-destructive text-sm">{formErr}</p>}
           </div>
           <DialogFooter>

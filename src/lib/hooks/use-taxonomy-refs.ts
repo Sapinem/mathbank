@@ -20,8 +20,15 @@ export function useSources() {
 export function useCreateSource() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { kind: string; label: string; url?: string | null }) =>
-      api<SourceRow>("/api/sources", { method: "POST", body: JSON.stringify(input) }),
+    mutationFn: (input: {
+      kind: string;
+      label: string;
+      url?: string | null;
+      publisher?: string | null;
+      author?: string | null;
+      bookYear?: number | null;
+      city?: string | null;
+    }) => api<SourceRow>("/api/sources", { method: "POST", body: JSON.stringify(input) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: refKeys.sources }),
   });
 }
@@ -29,7 +36,19 @@ export function useCreateSource() {
 export function useUpdateSource() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...input }: { id: string; kind?: string; label?: string; url?: string | null }) =>
+    mutationFn: ({
+      id,
+      ...input
+    }: {
+      id: string;
+      kind?: string;
+      label?: string;
+      url?: string | null;
+      publisher?: string | null;
+      author?: string | null;
+      bookYear?: number | null;
+      city?: string | null;
+    }) =>
       api<SourceRow>(`/api/sources/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: refKeys.sources }),
   });

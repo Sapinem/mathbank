@@ -10,7 +10,7 @@
  */
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { sources, institutions } from "@/lib/db/schema/source";
+import { sources } from "@/lib/db/schema/source";
 import { events } from "@/lib/db/schema/event";
 import { tags, grades, questionTags } from "@/lib/db/schema/taxonomy";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
@@ -19,7 +19,7 @@ import { recordAudit } from "./audit";
 import type { Actor } from "@/lib/auth/actor";
 import { slugify } from "@/lib/taxonomy/tree";
 
-export type SourceKind = "book" | "website" | "school" | "competition";
+export type SourceKind = "book" | "website" | "school";
 
 export interface SourceRow {
   id: string;
@@ -27,6 +27,12 @@ export interface SourceRow {
   label: string;
   slug: string;
   url: string | null;
+  /** Khusus `kind='book'`. */
+  publisher: string | null;
+  author: string | null;
+  bookYear: number | null;
+  /** Khusus `kind='school'`. */
+  city: string | null;
   isActive: boolean;
   usageCount: number;
 }
@@ -88,15 +94,17 @@ export async function listSources(): Promise<SourceRow[]> {
       label: sources.label,
       slug: sources.slug,
       url: sources.url,
+      publisher: sources.publisher,
+      author: sources.author,
+      bookYear: sources.bookYear,
+      city: sources.city,
       isActive: sources.isActive,
-      institutionUsage: institutions.usageCount,
       questionCount: sql<number>`(
         SELECT count(*)::int FROM questions q
         WHERE q.source_id = ${sources.id} AND q.deleted_at IS NULL
       )`,
     })
     .from(sources)
-    .leftJoin(institutions, eq(institutions.sourceId, sources.id))
     .orderBy(asc(sources.kind), asc(sources.label));
 
   return rows.map((r) => ({
@@ -105,13 +113,25 @@ export async function listSources(): Promise<SourceRow[]> {
     label: r.label,
     slug: r.slug,
     url: r.url,
+    publisher: r.publisher,
+    author: r.author,
+    bookYear: r.bookYear,
+    city: r.city,
     isActive: r.isActive,
-    usageCount: Math.max(r.institutionUsage ?? 0, r.questionCount),
+    usageCount: r.questionCount,
   }));
 }
 
 export async function createSource(
-  input: { kind: SourceKind; label: string; url?: string | null },
+  input: {
+    kind: SourceKind;
+    label: string;
+    url?: string | null;
+    publisher?: string | null;
+    author?: string | null;
+    bookYear?: number | null;
+    city?: string | null;
+  },
   actor: Actor,
 ): Promise<SourceRow> {
   assertCan(actor, "reference:manage");
@@ -124,6 +144,10 @@ export async function createSource(
           label: input.label,
           slug: slugify(input.label),
           url: input.url ?? null,
+          publisher: input.publisher ?? null,
+          author: input.author ?? null,
+          bookYear: input.bookYear ?? null,
+          city: input.city ?? null,
         })
         .returning({
           id: sources.id,
@@ -131,6 +155,10 @@ export async function createSource(
           label: sources.label,
           slug: sources.slug,
           url: sources.url,
+          publisher: sources.publisher,
+          author: sources.author,
+          bookYear: sources.bookYear,
+          city: sources.city,
           isActive: sources.isActive,
         }),
     "Sumber dengan nama itu sudah ada.",
@@ -147,7 +175,15 @@ export async function createSource(
 
 export async function updateSource(
   id: string,
-  input: { kind?: SourceKind; label?: string; url?: string | null },
+  input: {
+    kind?: SourceKind;
+    label?: string;
+    url?: string | null;
+    publisher?: string | null;
+    author?: string | null;
+    bookYear?: number | null;
+    city?: string | null;
+  },
   actor: Actor,
 ): Promise<SourceRow> {
   assertCan(actor, "reference:manage");
@@ -158,6 +194,10 @@ export async function updateSource(
     patch.slug = slugify(input.label);
   }
   if (input.url !== undefined) patch.url = input.url;
+  if (input.publisher !== undefined) patch.publisher = input.publisher;
+  if (input.author !== undefined) patch.author = input.author;
+  if (input.bookYear !== undefined) patch.bookYear = input.bookYear;
+  if (input.city !== undefined) patch.city = input.city;
   const [row] = await withUniqueGuard(
     () =>
       db
@@ -170,6 +210,10 @@ export async function updateSource(
           label: sources.label,
           slug: sources.slug,
           url: sources.url,
+          publisher: sources.publisher,
+          author: sources.author,
+          bookYear: sources.bookYear,
+          city: sources.city,
           isActive: sources.isActive,
         }),
     "Sumber dengan nama itu sudah ada.",

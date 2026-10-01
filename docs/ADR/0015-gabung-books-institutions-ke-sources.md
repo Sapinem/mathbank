@@ -1,6 +1,6 @@
 # ADR-0015 — Gabung `books` & `institutions` ke dalam `sources`
 
-- **Status:** ✅ **DITERIMA** (2026-10-01)
+- **Status:** ✅ **DITERAPKAN** (2026-10-01) — migrasi `0009`, DB 29 → 27 tabel, 24 trigger
 - **Pengambil keputusan:** Pemilik produk
 - **Terkait:** `docs/ADR/0014-sumber-menempel-pada-bundle.md` (sumber = bundle),
   `docs/AUDIT-DB-2026-10-01.md` (temuan tabel nganggur),
@@ -124,6 +124,17 @@ dilengkapi bertahap.
 
 ## Catatan
 
+- **⚠️ JEBAKAN (kena saat penerapan): `db_safety.sql` & DB uji.**
+  1. `db_safety.sql` masih memasang trigger `updated_at` ke `books`/`institutions`
+     yang sudah di-`DROP` → `db:migrate` gagal (`42P01`). Daftar tabel
+     **wajib** disesuaikan setiap kali tabel dibuang.
+  2. **`TEST_DATABASE_URL` (DB uji) tertinggal skema lama.** Kode sudah memakai
+     kolom baru, tapi DB uji belum dimigrasi → `INSERT` gagal, dan karena
+     `resolveSourceId` **menelan error** (`catch`), gejalanya menyesatkan:
+     10 tes `ingest` gagal dengan `ConflictError` yang **bukan penyebabnya**.
+     **Jalankan `db:migrate` + `db:verify` pada DB uji, bukan hanya DB utama.**
+     Pelajaran tambahan: `catch` yang menelan error asli **mahal** — pertahankan
+     `cause` saat membungkus error.
 - **NPSN & `province` bisa ditambahkan kelak** bila terbukti perlu (NPSN = kode
   resmi Kemendikbud, bisa mengisi kota otomatis). Dicatat sebagai kemungkinan
   fitur masa depan, bukan kebutuhan sekarang — pemilik produk memilih

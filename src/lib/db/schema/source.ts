@@ -1,23 +1,28 @@
 import { uuidPk } from "./_columns";
 import {
   pgTable,
-  uuid,
   varchar,
   text,
   smallint,
   boolean,
-  integer,
   timestamp,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 import { sourceKindEnum } from "./_enums";
 
 /**
- * sources — induk sumber soal (pola B).
- * Anak: `books` (kind=book), `institutions` (kind=school).
- * Web cukup kolom `url` di sini.
+ * sources — master sumber soal (ADR-0015).
+ *
+ * Satu tabel untuk semua jenis sumber; kolom spesifik-jenis dibiarkan **NULL**
+ * untuk jenis lain. Pola ini sudah dipakai sejak awal (`url` hanya untuk
+ * `website`) — ADR-0015 sekadar memperluasnya, menggantikan tabel anak
+ * `books`/`institutions` yang relasinya 1-ke-1 (jadi tak memberi manfaat).
+ *
+ * Pengisian per jenis:
+ *   book    → label, publisher, author, book_year
+ *   school  → label, city
+ *   website → label, url
  */
 export const sources = pgTable(
   "sources",
@@ -27,6 +32,12 @@ export const sources = pgTable(
     label: varchar("label", { length: 255 }).notNull(),
     slug: varchar("slug", { length: 255 }).notNull(),
     url: text("url"), // khusus kind='website'
+    // ── Khusus kind='book' (dulu tabel `books`) ──
+    publisher: varchar("publisher", { length: 255 }),
+    author: varchar("author", { length: 255 }),
+    bookYear: smallint("book_year"),
+    // ── Khusus kind='school' (dulu tabel `institutions`) ──
+    city: varchar("city", { length: 100 }),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -39,79 +50,9 @@ export const sources = pgTable(
     uniqueIndex("uq_sources_slug").on(t.slug),
     index("idx_sources_kind").on(t.kind),
     index("idx_sources_is_active").on(t.isActive),
+    index("idx_sources_city").on(t.city),
   ],
 );
-
-/** books — atribut buku (anak sources, kind='book'). */
-export const books = pgTable(
-  "books",
-  {
-    id: uuidPk(),
-    sourceId: uuid("source_id")
-      .notNull()
-      .references(() => sources.id, { onDelete: "cascade" }),
-    isbn: varchar("isbn", { length: 20 }),
-    publisher: varchar("publisher", { length: 255 }),
-    author: varchar("author", { length: 255 }),
-    year: smallint("year"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (t) => [uniqueIndex("uq_books_source").on(t.sourceId)],
-);
-
-/** institutions — atribut sekolah (anak sources, kind='school'). Dulu `schools`. */
-export const institutions = pgTable(
-  "institutions",
-  {
-    id: uuidPk(),
-    sourceId: uuid("source_id")
-      .notNull()
-      .references(() => sources.id, { onDelete: "cascade" }),
-    npsn: varchar("npsn", { length: 20 }),
-    level: varchar("level", { length: 20 }), // 'SMA' | 'SMP' | 'SD'
-    city: varchar("city", { length: 100 }),
-    province: varchar("province", { length: 100 }),
-    address: text("address"),
-    usageCount: integer("usage_count").default(0).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (t) => [
-    uniqueIndex("uq_institutions_source").on(t.sourceId),
-    index("idx_institutions_city").on(t.city),
-    index("idx_institutions_npsn").on(t.npsn),
-  ],
-);
-
-export const sourcesRelations = relations(sources, ({ one }) => ({
-  book: one(books),
-  institution: one(institutions),
-}));
-
-export const booksRelations = relations(books, ({ one }) => ({
-  source: one(sources, {
-    fields: [books.sourceId],
-    references: [sources.id],
-  }),
-}));
-
-export const institutionsRelations = relations(institutions, ({ one }) => ({
-  source: one(sources, {
-    fields: [institutions.sourceId],
-    references: [sources.id],
-  }),
-}));
 
 export type Source = typeof sources.$inferSelect;
 export type NewSource = typeof sources.$inferInsert;
-export type Book = typeof books.$inferSelect;
-export type Institution = typeof institutions.$inferSelect;

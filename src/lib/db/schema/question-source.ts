@@ -35,7 +35,7 @@ export const questionSources = pgTable(
     sourceId: uuid("source_id").references(() => sources.id, {
       onDelete: "set null",
     }),
-    // Jenis sumber — pakai enum yang sudah ada (book|website|school|competition).
+    // Jenis sumber — pakai enum yang sudah ada (book|website|school).
     sourceType: sourceKindEnum("source_type").notNull().default("website"),
     // Judul artikel/halaman web (mis. "Pembahasan Limit Fungsi Kelas 12").
     title: varchar("title", { length: 255 }),
