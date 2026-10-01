@@ -25,6 +25,7 @@ import { LoadingState, ErrorState } from "@/components/ui/states";
 import { AiSettingsCard } from "@/components/system/ai-settings-card";
 import { AgentKeysCard } from "@/components/system/agent-keys-card";
 import { useSettings, useUpdateSettings } from "@/lib/hooks/use-settings";
+import { useGrades } from "@/lib/hooks/use-reference";
 import { DIFFICULTY_LABELS } from "@/lib/display/labels";
 
 /**
@@ -37,6 +38,7 @@ import { DIFFICULTY_LABELS } from "@/lib/display/labels";
 export function SettingsView() {
   const { data, isLoading, isError, error } = useSettings();
   const update = useUpdateSettings();
+  const { data: grades } = useGrades();
 
   const [orgName, setOrgName] = useState<string | null>(null);
   const [defGrade, setDefGrade] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function SettingsView() {
     items.find((i) => i.key === key)?.value as string | number | null | undefined;
 
   const orgValue = orgName ?? (get("general.org_name") as string) ?? "";
-  const gradeValue = defGrade ?? (get("general.default_grade") as string) ?? "SMA-11";
+  const gradeValue = defGrade ?? (get("general.default_grade") as string) ?? "11";
   const diffValue =
     defDifficulty ?? String(get("general.default_difficulty") ?? 3);
 
@@ -119,23 +121,11 @@ export function SettingsView() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup>
-                    {[
-                      "SD-4",
-                      "SD-5",
-                      "SD-6",
-                      "SMP-7",
-                      "SMP-8",
-                      "SMP-9",
-                      "SMA-10",
-                      "SMA-11",
-                      "SMA-12",
-                    ].map((g) => (
-                      <SelectItem key={g} value={g}>
-                        {g}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
+                  {(grades ?? []).map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

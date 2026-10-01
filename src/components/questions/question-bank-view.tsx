@@ -20,17 +20,12 @@ import {
 } from "@/components/questions/view-mode-toggle";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { useQuestions } from "@/lib/hooks/use-questions";
-import { useTopics, useSources } from "@/lib/hooks/use-reference";
+import { useTopics, useSources, useGrades } from "@/lib/hooks/use-reference";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/display/labels";
 import { cn } from "@/lib/utils";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
 
 const PAGE_SIZE = 20;
-const GRADES = [
-  "SD-1", "SD-2", "SD-3", "SD-4", "SD-5", "SD-6",
-  "SMP-7", "SMP-8", "SMP-9",
-  "SMA-10", "SMA-11", "SMA-12",
-];
 
 /** Baca daftar nilai dari URL (tunggal maupun banyak, dukung CSV). */
 function readList(params: URLSearchParams, key: string): string[] {
@@ -74,6 +69,7 @@ export function QuestionBankView() {
   const { data, isLoading, isError, error } = useQuestions(query);
   const { data: topics } = useTopics();
   const { data: sources } = useSources();
+  const { data: grades } = useGrades();
 
   /** Perbarui satu param tunggal (q, status, sourceId, mode, page). */
   function setParam(key: string, value: string | null) {
@@ -159,12 +155,12 @@ export function QuestionBankView() {
       </FilterGroup>
 
       <FilterGroup title="Jenjang">
-        {GRADES.map((g) => (
+        {(grades ?? []).map((g) => (
           <ToggleRow
-            key={g}
-            label={g}
-            checked={grade.includes(g)}
-            onChange={() => toggleValue("grade", g)}
+            key={g.id}
+            label={g.label}
+            checked={grade.includes(g.id)}
+            onChange={() => toggleValue("grade", g.id)}
           />
         ))}
       </FilterGroup>

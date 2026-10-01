@@ -13,6 +13,7 @@ import {
   listTags,
   deleteTag,
   cleanUnusedTags,
+  listGrades,
 } from "./taxonomy-service";
 import { ForbiddenError, NotFoundError } from "@/lib/auth/guards";
 
@@ -26,6 +27,17 @@ const teacher: Actor = { id: "t-teacher", name: "Guru", roles: ["teacher"], via:
 
 beforeAll(async () => {
   await sql`SELECT 1`;
+  // Seed grade master (idempotent) — data referensi QBank-style untuk uji.
+  await sql`
+    INSERT INTO grades (id, label, level_group, curriculum_phase, order_index, is_active)
+    VALUES
+      ('10', 'Kelas 10 SMA', 'sma', 'Fase E', 10, true),
+      ('11', 'Kelas 11 SMA', 'sma', 'Fase F', 11, true)
+    ON CONFLICT (id) DO UPDATE SET
+      label = EXCLUDED.label,
+      level_group = EXCLUDED.level_group,
+      is_active = true
+  `;
 });
 beforeEach(async () => {
   await sql`DELETE FROM sources`;
@@ -120,5 +132,27 @@ describe("label", () => {
     // setelah bersih, tak ada tag usage_count=0
     const sisa = (await listTags()).filter((x) => x.usageCount === 0);
     expect(sisa).toHaveLength(0);
+  });
+});
+
+describe("grade (jenjang, selaras QBank)", () => {
+  it("listGrades mengembalikan jenjang aktif ber-id QBank (\"1\"..\"12\", varian w/l, utbk, umum)", async () => {
+    const rows = await listGrades();
+    expect(rows.length).toBeGreaterThan(0);
+    const ids = rows.map((r) => r.id);
+    // id format QBank — bukan "SMA-10"
+    expect(ids).toContain("10");
+    expect(ids).toContain("11");
+    expect(ids).not.toContain("SMA-10");
+    // label manusiawi & levelGroup terisi
+    const g10 = rows.find((r) => r.id === "10")!;
+    expect(g10.label).toMatch(/Kelas 10/);
+    expect(g10.levelGroup).toBe("sma");
+  });
+
+  it("listGrades terurut menurut orderIndex", async () => {
+    const rows = await listGrades();
+    const orders = rows.map((r) => r.orderIndex);
+    expect(orders).toEqual([...orders].sort((a, b) => a - b));
   });
 });

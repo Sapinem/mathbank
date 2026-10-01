@@ -53,7 +53,7 @@ const j = (v: unknown): any => sql.json(v as never);
 
 const QUESTIONS: Seed[] = [
   {
-    type: "single_choice", difficulty: 1, cognitive: "remember", grade: "SMA-10",
+    type: "single_choice", difficulty: 1, cognitive: "remember", grade: "10",
     content: "Hasil dari $2^3 + 3^2$ adalah …",
     answer: { correct: ["C"] }, status: "ready", options: [
       { label: "A", content: "$12$" }, { label: "B", content: "$15$" },
@@ -61,7 +61,7 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "single_choice", difficulty: 2, cognitive: "apply", grade: "SMA-10",
+    type: "single_choice", difficulty: 2, cognitive: "apply", grade: "10",
     content: "Jika $x + 3 = 10$, maka nilai $2x$ adalah …",
     answer: { correct: ["B"] }, status: "ready", options: [
       { label: "A", content: "$12$" }, { label: "B", content: "$14$", correct: true },
@@ -69,7 +69,7 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "single_choice", difficulty: 3, cognitive: "apply", grade: "SMA-11",
+    type: "single_choice", difficulty: 3, cognitive: "apply", grade: "11",
     content: "Akar-akar persamaan $x^2 - 5x + 6 = 0$ adalah …",
     answer: { correct: ["A"] }, status: "review", options: [
       { label: "A", content: "$x=2$ atau $x=3$", correct: true },
@@ -79,7 +79,7 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "multiple_choice_checkbox", difficulty: 3, cognitive: "analyze", grade: "SMA-11",
+    type: "multiple_choice_checkbox", difficulty: 3, cognitive: "analyze", grade: "11",
     content: "Manakah pernyataan yang **benar** tentang fungsi $f(x)=x^2-4$? (Pilih semua)",
     answer: { correct: ["A", "C"] }, status: "draft", options: [
       { label: "A", content: "Memotong sumbu-$x$ di $x=2$ dan $x=-2$", correct: true },
@@ -89,7 +89,7 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "assertion_reason", difficulty: 4, cognitive: "evaluate", grade: "SMA-12",
+    type: "assertion_reason", difficulty: 4, cognitive: "evaluate", grade: "12",
     content:
       "**Pernyataan:** $\\sqrt{16}=4$.\n**Alasan:** $4^2=16$.\n\nPilih:",
     answer: { correct: ["A"] }, status: "ready", options: [
@@ -100,7 +100,7 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "combination_1234", difficulty: 3, cognitive: "analyze", grade: "SMA-10",
+    type: "combination_1234", difficulty: 3, cognitive: "analyze", grade: "10",
     content:
       "Perhatikan pernyataan berikut.\n(1) $2+3=5$\n(2) $\\sqrt{4}=3$\n(3) $5>2$\n(4) $\\frac{1}{2}<\\frac{1}{3}$\n\nPernyataan yang benar adalah …",
     answer: { correct: ["B"] }, status: "draft", options: [
@@ -109,7 +109,7 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "quantitative_pq", difficulty: 4, cognitive: "analyze", grade: "SMA-11",
+    type: "quantitative_pq", difficulty: 4, cognitive: "analyze", grade: "11",
     content: "Diketahui $P=3^4+4^3$ dan $Q=5^3$. Manakah yang benar?",
     answer: { correct: ["A"] }, status: "review", options: [
       { label: "A", content: "$P>Q$", correct: true }, { label: "B", content: "$P<Q$" },
@@ -117,7 +117,7 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "data_sufficiency", difficulty: 4, cognitive: "evaluate", grade: "SMA-12",
+    type: "data_sufficiency", difficulty: 4, cognitive: "evaluate", grade: "12",
     content: "Berapakah nilai $x$?\n(1) $x+y=10$\n(2) $y=4$",
     answer: { correct: ["C"] }, status: "draft", options: [
       { label: "A", content: "Pernyataan (1) saja cukup" },
@@ -127,19 +127,19 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "short_answer", difficulty: 2, cognitive: "apply", grade: "SMA-10",
+    type: "short_answer", difficulty: 2, cognitive: "apply", grade: "10",
     content: "Tentukan nilai $x$ dari $3x - 6 = 9$.",
     answer: { text: "5", explanation: "$3x=15 \\Rightarrow x=5$" }, status: "ready",
   },
   {
-    type: "essay", difficulty: 5, cognitive: "create", grade: "SMA-12",
+    type: "essay", difficulty: 5, cognitive: "create", grade: "12",
     content:
       "Buktikan bahwa jumlah dua bilangan ganjil selalu bilangan genap. Sertakan langkah-langkahnya.",
     answer: { explanation: "M isal $2k+1$ dan $2m+1$; jumlahnya $2(k+m+1)$ → genap." },
     status: "draft",
   },
   {
-    type: "matrix_grid", difficulty: 4, cognitive: "analyze", grade: "SMA-11",
+    type: "matrix_grid", difficulty: 4, cognitive: "analyze", grade: "11",
     content: "Tentukan benar/salah setiap pernyataan tentang barisan aritmetika $2,5,8,\\dots$",
     payload: { statements: ["Beda $=3$", "$U_{10}=29$", "$S_5=40$"] },
     answer: { correct: ["A", "B", "D"] }, status: "draft", options: [
@@ -147,7 +147,7 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "matching", difficulty: 5, cognitive: "evaluate", grade: "SMA-12",
+    type: "matching", difficulty: 5, cognitive: "evaluate", grade: "12",
     content: "Jodohkan setiap fungsi dengan turunannya.",
     payload: { left: ["$x^2$", "$2x$", "$\\sin x$"], right: ["$2x$", "$2$", "$\\cos x$"] },
     answer: { correct: ["A", "B", "C"] }, status: "draft", options: [
@@ -156,13 +156,13 @@ const QUESTIONS: Seed[] = [
     ],
   },
   {
-    type: "stimulus", difficulty: 3, cognitive: "understand", grade: "SMA-11",
+    type: "stimulus", difficulty: 3, cognitive: "understand", grade: "11",
     content:
       "**Bacaan:** Sebuah toko menjual dua jenis kue. Kue A seharga Rp5.000, kue B Rp7.000. Seorang pembeli membeli 10 kue dengan total Rp62.000.",
     answer: {}, status: "ready",
   },
   {
-    type: "single_choice", difficulty: 3, cognitive: "apply", grade: "SMA-11",
+    type: "single_choice", difficulty: 3, cognitive: "apply", grade: "11",
     content: "Berdasarkan bacaan, berapa banyak kue A yang dibeli?",
     answer: { correct: ["B"] }, status: "ready", options: [
       { label: "A", content: "3" }, { label: "B", content: "4", correct: true },

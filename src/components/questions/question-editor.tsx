@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MathContent } from "@/components/math/math-content";
 import { useCreateQuestion, useUpdateQuestion } from "@/lib/hooks/use-questions";
+import { useGrades } from "@/lib/hooks/use-reference";
 import {
   TYPE_LABELS,
   DIFFICULTY_LABELS,
@@ -60,18 +61,6 @@ const OPTION_TYPES = [
 
 const TEXT_TYPES = ["short_answer", "essay"] as const;
 
-const GRADES = [
-  "SD-4",
-  "SD-5",
-  "SD-6",
-  "SMP-7",
-  "SMP-8",
-  "SMP-9",
-  "SMA-10",
-  "SMA-11",
-  "SMA-12",
-] as const;
-
 interface OptionDraft {
   label: string;
   contentMarkdown: string;
@@ -98,11 +87,12 @@ export function QuestionEditor({
   const router = useRouter();
   const create = useCreateQuestion();
   const update = useUpdateQuestion(existing?.id ?? "");
+  const { data: grades } = useGrades();
 
   const [questionType, setQuestionType] = useState<string>(
     existing?.questionType ?? "single_choice",
   );
-  const [grade, setGrade] = useState<string>(existing?.grade ?? "SMA-11");
+  const [grade, setGrade] = useState<string>(existing?.grade ?? "11");
   const [difficulty, setDifficulty] = useState<number>(
     existing?.difficulty ?? 3,
   );
@@ -379,13 +369,11 @@ export function QuestionEditor({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectGroup>
-                      {GRADES.map((g) => (
-                        <SelectItem key={g} value={g}>
-                          {g}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
+                    {(grades ?? []).map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>

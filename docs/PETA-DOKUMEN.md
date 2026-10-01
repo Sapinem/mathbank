@@ -46,6 +46,7 @@
 | B9 | `RENCANA-QUESTION-SOURCES.md` | 📝 | rencana eksekusi ADR-0012 (`question_sources`) — T1–T8 |
 | B10 | `REVIEW-MASUKAN-AUDIT-QBANK.md` | ✅ | **dibuat** 2026-10-01 — verifikasi 24 masukan audit QBank + 5 perbaikan; usulan 7 gelombang eksekusi |
 | B11 | `RENCANA-G1-PRESENTASI-SOAL.md` | 📝 | rencana G1 (badge C1–C6, popover rubrik, stimulus induk, filter multi-select) — menunggu persetujuan |
+| B12 | `RENCANA-GRADE-QBANK.md` | ✅ | **selesai** 2026-10-01 — selaraskan grade dgn QBank (id "1".."12"); endpoint `/api/grades`, UI dari tabel, backfill prod |
 
 ### Kategori C — Desain & UI
 

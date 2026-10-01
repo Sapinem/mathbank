@@ -36,11 +36,29 @@ export interface EventRow {
   category: string;
 }
 
+export interface GradeRow {
+  id: string;
+  label: string;
+  levelGroup: string | null;
+  curriculumPhase: string | null;
+  orderIndex: number;
+}
+
 export const referenceKeys = {
   topics: ["reference", "topics"] as const,
   sources: ["reference", "sources"] as const,
   events: ["reference", "events"] as const,
+  grades: ["reference", "grades"] as const,
 };
+
+/** Daftar jenjang/kelas (selaras QBank: id "1".."12","11w","utbk","umum"). */
+export function useGrades() {
+  return useQuery({
+    queryKey: referenceKeys.grades,
+    queryFn: () => apiFetch<GradeRow[]>("/api/grades"),
+    staleTime: 30 * 60_000,
+  });
+}
 
 export function useTopics() {
   return useQuery({

@@ -18,12 +18,14 @@ let currentSearch = "";
 const useQuestionsMock = vi.fn();
 const useTopicsMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 const useSourcesMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
+const useGradesMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 vi.mock("@/lib/hooks/use-questions", () => ({
   useQuestions: (q: unknown) => useQuestionsMock(q),
 }));
 vi.mock("@/lib/hooks/use-reference", () => ({
   useTopics: () => useTopicsMock(),
   useSources: () => useSourcesMock(),
+  useGrades: () => useGradesMock(),
 }));
 
 /**
@@ -184,13 +186,19 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
     unmount();
   });
 
-  it("multi Jenjang → dua nilai grade di URL", () => {
-    currentSearch = "grade=SMA-10";
+  it("multi Jenjang → dua nilai grade di URL (id QBank)", () => {
+    useGradesMock.mockReturnValue({
+      data: [
+        { id: "10", label: "Kelas 10 SMA", levelGroup: "sma", curriculumPhase: "Fase E", orderIndex: 10 },
+        { id: "11", label: "Kelas 11 SMA", levelGroup: "sma", curriculumPhase: "Fase F", orderIndex: 11 },
+      ],
+    });
+    currentSearch = "grade=10";
     render(<QuestionBankView />);
-    fireEvent.click(screen.getByLabelText("SMA-11"));
+    fireEvent.click(screen.getByLabelText("Kelas 11 SMA"));
     const url = replace.mock.calls.at(-1)?.[0] as string;
-    expect(url).toContain("grade=SMA-10");
-    expect(url).toContain("grade=SMA-11");
+    expect(url).toContain("grade=10");
+    expect(url).toContain("grade=11");
   });
 
   it("opsi Topik & Sumber berasal dari hook referensi", () => {

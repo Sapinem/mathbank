@@ -12,7 +12,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sources, institutions } from "@/lib/db/schema/source";
 import { events } from "@/lib/db/schema/event";
-import { tags } from "@/lib/db/schema/taxonomy";
+import { tags, grades } from "@/lib/db/schema/taxonomy";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
 import { recordAudit } from "./audit";
@@ -46,6 +46,36 @@ export interface TagRow {
   name: string;
   slug: string;
   usageCount: number;
+}
+
+export interface GradeRow {
+  id: string;
+  label: string;
+  levelGroup: string | null;
+  curriculumPhase: string | null;
+  orderIndex: number;
+}
+
+// ── Grade (jenjang/kelas) ─────────────────────────────────────
+
+/**
+ * Daftar jenjang/kelas aktif (referensi baca-saja) — sumber tunggal untuk
+ * editor & filter. Format selaras QBank (`curriculum.yaml`): `id` = nomor kelas
+ * / kode ("1".."12", "11w", "utbk", "umum"), `label` = "Kelas N SD/SMP/SMA".
+ */
+export async function listGrades(): Promise<GradeRow[]> {
+  const rows = await db
+    .select({
+      id: grades.id,
+      label: grades.label,
+      levelGroup: grades.levelGroup,
+      curriculumPhase: grades.curriculumPhase,
+      orderIndex: grades.orderIndex,
+    })
+    .from(grades)
+    .where(eq(grades.isActive, true))
+    .orderBy(asc(grades.orderIndex), asc(grades.id));
+  return rows;
 }
 
 // ── Sumber ────────────────────────────────────────────────────
