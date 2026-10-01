@@ -10,6 +10,7 @@ import { embedText } from "@/lib/embedding/bge-m3";
 import type { Actor } from "@/lib/auth/actor";
 import { questionSources } from "@/lib/db/schema/question-source";
 import { solutions } from "@/lib/db/schema/solution";
+import { questionTopics } from "@/lib/db/schema/taxonomy";
 import {
   questionColumns,
   optionColumns,
@@ -62,6 +63,8 @@ export type PublicQuestion = Omit<
    * Menyertakan `contentMarkdown` agar UI dapat merender konteks utuh (audit §3.9).
    */
   parent?: { id: string; contentMarkdown: string } | null;
+  /** ID topik taksonomi yang ditautkan (untuk pemilih topik di editor). */
+  topicIds?: string[];
 };
 
 /** Bentuk ringkas provenance untuk respons API. */
@@ -133,6 +136,13 @@ export async function getQuestion(
 
   const parent = row.parentId ? await getParentStimulus(row.parentId) : null;
 
+  // Taksonomi: id topik terpilih (untuk pemilih topik di editor).
+  const topicRows = await db
+    .select({ topicId: questionTopics.topicId })
+    .from(questionTopics)
+    .where(eq(questionTopics.questionId, id));
+  const topicIds = topicRows.map((t) => t.topicId);
+
   // Ambil daftar solusi bila viewer berwenang melihat kunci/pembahasan
   let solutionList: QuestionSolutionView[] = [];
   if (withAnswerKey) {
@@ -169,7 +179,7 @@ export async function getQuestion(
     }
   }
 
-  return { ...row, options, sources, solutions: solutionList, parent } as PublicQuestion;
+  return { ...row, options, sources, solutions: solutionList, parent, topicIds } as PublicQuestion;
 }
 
 /** Ambil wacana stimulus induk (id + contentMarkdown) bila ada. */

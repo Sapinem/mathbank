@@ -13,6 +13,13 @@ vi.mock("@/lib/hooks/use-questions", () => ({
   useUpdateQuestion: () => ({ mutate: vi.fn(), isPending: false, error: null }),
 }));
 vi.mock("@/lib/hooks/use-reference", () => ({
+  // `use-taxonomy` (dipakai TopicPicker) membaca `referenceKeys` dari sini.
+  referenceKeys: {
+    topics: ["reference", "topics"],
+    sources: ["reference", "sources"],
+    events: ["reference", "events"],
+    tags: ["reference", "tags"],
+  },
   useGrades: () => ({
     data: [{ id: "11", label: "Kelas 11 SMA", levelGroup: "sma", curriculumPhase: "F", orderIndex: 10 }],
   }),

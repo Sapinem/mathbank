@@ -308,6 +308,22 @@ describe("setQuestionFlag & deleteQuestion", () => {
 });
 
 describe("M6 — filter & pencarian", () => {
+  it("getQuestion mengembalikan topicIds (jalur baca — editor memakainya)", async () => {
+    const kat = await createTopic({ name: `G8 Kat ${Date.now()}` }, admin);
+    const sub = await createTopic({ name: "G8 Sub", parentId: kat.id }, admin);
+
+    const q = await createQuestion(
+      baseInput({ topicIds: [sub.id], contentMarkdown: `Soal topik ${Date.now()}` }),
+      teacher,
+    );
+
+    // Round-trip: apa yang disimpan harus terbaca kembali — inilah yang
+    // membuat pemilih topik di editor terisi saat menyunting soal lama.
+    const read = await getQuestion(q.id, { viewer: teacher });
+    expect(read?.topicIds).toBeDefined();
+    expect(read?.topicIds).toContain(sub.id);
+  });
+
   it("filter topik TERMASUK anak (rekursif)", async () => {
     // Buat Kategori > Topik > SubTopik, soal dikaitkan ke SubTopik.
     const kat = await createTopic({ name: `M6 Kat ${Date.now()}` }, admin);

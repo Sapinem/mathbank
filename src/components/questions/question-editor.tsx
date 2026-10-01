@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { MathContent } from "@/components/math/math-content";
 import { Field, FieldGroup } from "@/components/ui/field-group";
+import { TopicPicker } from "./topic-picker";
 import { useCreateQuestion, useUpdateQuestion } from "@/lib/hooks/use-questions";
 import { useGrades, useStimulusParents } from "@/lib/hooks/use-reference";
 import { useEditorAutosave } from "@/lib/hooks/use-editor-autosave";
@@ -115,6 +116,7 @@ export function QuestionEditor({
   const [cognitiveLevel, setCognitiveLevel] = useState<string>(
     existing?.cognitiveLevel ?? "apply",
   );
+  const [topicIds, setTopicIds] = useState<string[]>(existing?.topicIds ?? []);
   const [content, setContent] = useState(existing?.contentMarkdown ?? "");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<"content" | "solution">("content");
@@ -333,7 +335,7 @@ export function QuestionEditor({
       dataPayload: buildDataPayload(),
       parentId: parentId || null,
       childOrder: 0,
-      topicIds: [],
+      topicIds,
       tagIds: [],
       status,
       answerKey: isText
@@ -864,6 +866,10 @@ export function QuestionEditor({
                     ))}
                   </SelectContent>
                 </Select>
+              </Field>
+
+              <Field label="Topik Materi">
+                <TopicPicker value={topicIds} onChange={setTopicIds} />
               </Field>
 
               <Field label="Kesulitan">
