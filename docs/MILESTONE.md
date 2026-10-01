@@ -160,7 +160,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [x] **Mesin tema** (`scripts/theme/build.ts`): warna sumber → OKLCH → `--mb-*`
 - [x] Verifikasi WCAG otomatis; gelap+terang, default ikut OS (tanpa flash)
 - [x] Warna status universal; font Roboto Flex + Roboto Mono
-- [x] Shell: sidebar 4 grup (Kerja/Referensi/Studio/Sistem) + header + breadcrumb
+- [x] Shell: sidebar 3 grup (Kerja/Referensi/Sistem) + header + breadcrumb
 - [x] Command palette (⌘K); Referensi = submenu; halaman kosong bermakna
 - [x] **Revisi:** primitif UI → **Base UI** (`@base-ui/react`, P12); responsif (Fase R)
 

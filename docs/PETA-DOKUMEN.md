@@ -49,6 +49,7 @@
 | B12 | `RENCANA-GRADE-QBANK.md` | ✅ | **selesai** 2026-10-01 — selaraskan grade dgn QBank (id "1".."12"); endpoint `/api/grades`, UI dari tabel, backfill prod |
 | B13 | `RENCANA-G2-EDITOR-SOAL.md` | ✅ | **selesai** 2026-10-01 — editor: form dinamis (matrix/matching), pemilih stimulus, autosave, KaTeX linter, petunjuk rubrik |
 | B14 | `RENCANA-G3-KURASI-MASSAL.md` | ✅ | **selesai** 2026-10-01 — bulk action (5 aksi), Rapid Review (mode Kilat ←/→), merge label atomik |
+| B15 | `RENCANA-G4-STUDIO-MEDIA.md` | ✅ | **selesai 2026-10-01** — G4 Studio Media: G4.1 registrasi ingest, G4.2 penyaji `/img/{shortId}`, G4.3 `short_id`, G4.4 parser `{{img:}}`, G4.5 AssetPicker, G4.6 galeri `/assets` + hygiene orphan. **Ditunda:** fork, AI Generator, **#9 TikZ Studio** |
 
 ### Kategori C — Desain & UI
 
@@ -59,6 +60,7 @@
 | C3 | `DESIGN-THEME-FRAMEWORK.md` | ✅ | mesin tema |
 | C4 | `THEME-FRAMEWORK-GUIDE.md` | ✅ | panduan teknis |
 | C5 | `A11Y.md` | ✅ | **dibuat** 2026-09-29 — target WCAG 2.2 AA |
+| C6 | `DESIGN-QUESTION-VIEW-MODES.md` | ✅ | **dibuat** 2026-10-01 — rancangan Linear-style view modes (List, Grid, Masonry) & penanganan soal panjang |
 
 ### Kategori D — Mutu & Proses
 

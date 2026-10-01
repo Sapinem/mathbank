@@ -102,12 +102,14 @@ describe("ingestArticleMedia (orkestrasi, mock fetch)", () => {
     }));
     const dir = await mkdtemp(join(tmpdir(), "mb-ing-"));
     try {
+      // Tanpa `register` = uji murni unduh+simpan (tanpa DB); pendaftaran
+      // short_id diuji terpisah lewat callback yang disuntikkan.
       const cache = await ingestArticleMedia(
         [{ text: "![a](https://a.com/ok.png) ![b](https://a.com/bad.png)", role: "content" }],
         { rootDir: dir, articleUrl: "https://a.com/a/" },
       );
       expect(cache.get("https://a.com/ok.png")?.ok).toBe(true);
-      expect(cache.get("https://a.com/ok.png")?.localUrl).toMatch(/^\/media\//);
+      expect(cache.get("https://a.com/ok.png")?.contentHash).toBeTruthy();
       expect(cache.get("https://a.com/bad.png")?.ok).toBe(false);
     } finally {
       await rm(dir, { recursive: true, force: true });

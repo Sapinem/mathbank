@@ -244,7 +244,7 @@ Verifikasi lanjutan (2026-09-30) menambahkan: `apiKeyPermissions` kini **ditegak
 | Gelap+terang, default ikut OS (tanpa flash) | `defaultTheme="system"`, `enableSystem`, `suppressHydrationWarning` | ✅ |
 | Warna status universal | `--mb-success/error/warning/info` hardcoded (tak ikut brand) | ✅ |
 | Font Roboto Flex + Roboto Mono | `next/font/google`, self-host | ✅ |
-| Shell: sidebar 4 grup + header + breadcrumb | Kerja/Referensi/Studio/Sistem, breadcrumb, `SidebarTrigger` | ✅ |
+| Shell: sidebar 3 grup + header + breadcrumb | Kerja/Referensi/Sistem, breadcrumb, `SidebarTrigger` | ✅ |
 | Command palette (⌘K) | `CommandDialog` + `CommandGroup` | ✅ |
 | Primitif UI → **Base UI** | 0 sisa `@radix-ui` (package.json & node_modules), 18 file `@base-ui/react` | ✅ |
 | Responsif (Fase R) | sidebar shadcn resmi (drawer mobile), **satu kode** | ✅ |

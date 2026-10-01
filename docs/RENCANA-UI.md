@@ -21,7 +21,7 @@
 
 ---
 
-## 2. Struktur Sidebar (4 grup)
+## 2. Struktur Sidebar (3 grup)
 
 ```
 ┌─────────────────────────────┐
@@ -38,13 +38,11 @@
 │   ◻ Sumber & Asal           │  /references/sources
 │   ◻ Event                   │  /references/events
 │   ◻ Label                   │  /references/labels
-├─────────────────────────────┤
-│  STUDIO                     │
-│   ◻ Galeri Aset             │  /studio/assets
-│   ◻ TikZ Studio             │  /studio/tikz
+│   ◻ Galeri Aset             │  /assets
 ├─────────────────────────────┤
 │  SISTEM                     │
 │   ◻ Ingest & Integrasi ¹    │  /system/ingest
+│   ◻ TikZ Studio ²           │  /studio/tikz
 │   ◻ Pengaturan              │  /system/settings
 ├─────────────────────────────┤
 │  (avatar) Nama · Peran      │  ← SidebarFooter: UserMenu
@@ -60,9 +58,16 @@
 
 ¹ **Disembunyikan sampai M9** (fase lanjut). Menu kosong membingungkan → munculkan saat siap.
 
+² **TikZ Studio ditunda** (butuh compiler TeX; lihat `RENCANA-G4-STUDIO-MEDIA.md`). Menu
+disembunyikan sampai dibangun — halaman `/studio/tikz` tetap ada, tapi tak tampil di sidebar.
+
 **Keputusan L2 yang ditegaskan:**
 - **Referensi = link terpisah** di bawah judul grup (bukan accordion) → tiap halaman bookmarkable.
 - **URL berprefix** (`/references/*`, `/studio/*`, `/system/*`) → terkelompok rapi.
+  **Pengecualian (revisi 2026-10-01):** Galeri Aset jadi **`/assets`**, bukan `/studio/assets`.
+  Grup "Studio" dihapus karena hanya berisi satu halaman aktif — TikZ Studio ditunda, jadi
+  prefix `/studio/*` cuma menyisakan satu stub dan bukan lagi pengelompokan nyata. Bila TikZ
+  dibangun kelak, `/studio/*` bisa dihidupkan lagi.
 - Menu **sama** untuk semua peran (bedanya aksi, bukan menu) — konfirmasi L2.
 - Badge "Telaah" = jumlah soal menunggu (dynamic).
 
@@ -118,10 +123,14 @@ TELAHAH
 **3.7 Event `/references/events`** — UTBK/OSN/SBMPTN; CRUD + subtes
 **3.8 Label `/references/labels`** — tags; CRUD
 
-### STUDIO
+### REFERENSI (lanjutan)
 
-**3.9 Galeri Aset `/studio/assets`** — galeri media; unggah; tri-facet (gambar/svg/tikz)
-**3.10 TikZ Studio `/studio/tikz`** — editor TikZ → SVG
+**3.9 Galeri Aset `/assets`** — galeri media; unggah; tri-facet (gambar/svg/tikz)
+
+### STUDIO (ditunda)
+
+**3.10 TikZ Studio `/studio/tikz`** — editor TikZ → SVG. **Ditunda** — halaman stub, menu
+disembunyikan. Bila dibangun, grup "Studio" dihidupkan kembali di sidebar.
 
 ### SISTEM
 

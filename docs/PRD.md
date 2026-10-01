@@ -191,7 +191,7 @@ Dari `CONSTRAINTS.md` + hasil desain L1–L9:
 | L | Lapisan | Inti |
 |---|---------|------|
 | L1 | Pengguna & Peran | Multi-role, 5 peran, matriks izin |
-| L2 | Antarmuka | 4 grup sidebar, Referensi submenu lipat |
+| L2 | Antarmuka | 3 grup sidebar, Referensi submenu lipat |
 | L3 | State/Klien | Hook kecil, staleTime per-jenis |
 | L4 | API | Pembungkus route, respons tunggal |
 | L5 | Layanan | Fungsi, pecah ≤300 baris, tanpa repo |

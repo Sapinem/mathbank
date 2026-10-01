@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Send, Loader2 } from "lucide-react";
+import { Save, Send, Loader2, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +28,7 @@ import { Field, FieldGroup } from "@/components/ui/field-group";
 import { useCreateQuestion, useUpdateQuestion } from "@/lib/hooks/use-questions";
 import { useGrades, useStimulusParents } from "@/lib/hooks/use-reference";
 import { useEditorAutosave } from "@/lib/hooks/use-editor-autosave";
+import { AssetPickerModal } from "@/components/media/asset-picker-modal";
 import { lintKatex } from "@/lib/math/katex-lint";
 import {
   MatrixGridFields,
@@ -114,6 +115,30 @@ export function QuestionEditor({
     existing?.cognitiveLevel ?? "apply",
   );
   const [content, setContent] = useState(existing?.contentMarkdown ?? "");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Sisipkan shortcode gambar di POSISI KURSOR guru, bukan selalu di akhir.
+   * Fokus dikembalikan ke textarea agar guru bisa langsung lanjut menulis.
+   */
+  function insertAtCursor(snippet: string) {
+    const el = contentRef.current;
+    if (!el) {
+      setContent((prev) => prev + snippet);
+      return;
+    }
+    const start = el.selectionStart ?? content.length;
+    const end = el.selectionEnd ?? content.length;
+    const next = content.slice(0, start) + snippet + content.slice(end);
+    setContent(next);
+    // Kembalikan kursor setelah shortcode yang disisipkan.
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + snippet.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
 
   const [options, setOptions] = useState<OptionDraft[]>(() => {
     if (existing?.options?.length) {
@@ -305,7 +330,22 @@ export function QuestionEditor({
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  Sisipkan gambar lewat tombol, atau tulis shortcode manual.
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  <ImagePlus className="size-4" />
+                  Sisip Gambar
+                </Button>
+              </div>
               <Textarea
+                ref={contentRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Tulis pertanyaan… mis. Tentukan nilai $x$ dari $2x+3=11$."
@@ -655,6 +695,12 @@ export function QuestionEditor({
           </Card>
         </div>
       </div>
+
+      <AssetPickerModal
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(shortcode) => insertAtCursor(shortcode)}
+      />
     </div>
   );
 }

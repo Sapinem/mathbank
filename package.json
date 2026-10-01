@@ -37,6 +37,9 @@
     "mcp:stdio": "tsx src/mcp-stdio.ts",
     "backup:db": "node scripts/backup-db.mjs",
     "restore:check": "node scripts/restore-check.mjs",
+    "media:verify-img": "tsx scripts/verify-img-serve.ts",
+    "media:verify-hygiene": "tsx scripts/verify-hygiene-live.ts",
+    "media:register-orphans": "tsx scripts/register-orphan-files.ts",
     "lint:names": "node scripts/check-names.mjs"
   },
   "dependencies": {

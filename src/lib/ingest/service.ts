@@ -16,6 +16,7 @@ import { segmentArticle, segmentJson } from "./parsers/segment";
 import { ingestArticleMedia, applyMedia, type MediaCache } from "./media/ingest-media";
 import { commitItems } from "./commit";
 import { markDone, markProcessing, toMediaManifest } from "./queue";
+import { registerMediaAsset } from "@/lib/services/media-service";
 import type { IngestQueueItem } from "@/lib/db/schema/system";
 import type { ParsedItem } from "./parsers/types";
 
@@ -92,12 +93,22 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
       return { id: item.id, status: "skipped", created: 0, skipped: 0, mediaOk: 0, mediaFailed: 0 };
     }
 
-    // 2. Unduh gambar (gagal tak memblokir).
+    // 2. Unduh gambar + DAFTARKAN ke media_assets (gagal tak memblokir).
+    //    Pendaftaran prasyarat: markdown memakai `{{img:<shortId>}}`, dan
+    //    short_id lahir dari pendaftaran. Registrasi disuntikkan dari sini
+    //    (L5) agar lapisan media tetap murni (CONSTRAINTS #15).
     const cache = await ingestArticleMedia(mediaTexts(seg.items), {
       rootDir: opts.mediaRoot,
       articleUrl: item.sourceUrl ?? undefined,
       ...(opts.mediaCache ? { cache: opts.mediaCache } : {}),
       delayMs: opts.mediaDelayMs ?? 0,
+      register: async (m) => {
+        const asset = await registerMediaAsset({
+          ...m,
+          sourceOrigin: "web_ingest",
+        });
+        return { shortId: asset.shortId };
+      },
     });
     let mediaOk = 0;
     let mediaFailed = 0;

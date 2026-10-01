@@ -11,7 +11,7 @@
 | Aspek | Keadaan |
 |-------|---------|
 | Build | ✓ Compiled **~0,8–1,8 detik** (Turbopack) |
-| Halaman statis | `/`, `/bank-soal`, `/paket`, `/referensi/*`, `/studio/*`, `/sistem/*`, `/telaah` → **○ Static** |
+| Halaman statis | `/`, `/questions`, `/bundles`, `/references/*`, `/assets`, `/system/*`, `/review` → **○ Static** |
 | API | 12 route → **ƒ Dynamic** (server-rendered, benar untuk data) |
 | Index DB | **50 index** (+ trigram GIN + HNSW vektor) |
 | Font | Roboto Flex + Roboto Mono (self-hosted) |

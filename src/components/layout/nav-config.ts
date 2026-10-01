@@ -51,13 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Sumber & Asal", href: "/references/sources", icon: Database },
       { label: "Event", href: "/references/events", icon: CalendarDays },
       { label: "Label", href: "/references/labels", icon: Tag },
-    ],
-  },
-  {
-    label: "Studio",
-    items: [
-      { label: "Galeri Aset", href: "/studio/assets", icon: ImageIcon },
-      { label: "TikZ Studio", href: "/studio/tikz", icon: PenTool },
+      { label: "Galeri Aset", href: "/assets", icon: ImageIcon },
     ],
   },
   {
@@ -65,6 +59,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       // Disembunyikan sampai M9 (RENCANA-UI.md §4)
       { label: "Ingest & Integrasi", href: "/system/ingest", icon: Upload, hidden: true },
+      // TikZ Studio: ditunda (butuh compiler TeX). Aktifkan saat G4b dikerjakan.
+      { label: "TikZ Studio", href: "/studio/tikz", icon: PenTool, hidden: true },
       { label: "Pengaturan", href: "/system/settings", icon: Settings },
     ],
   },

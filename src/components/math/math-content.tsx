@@ -10,22 +10,26 @@ import katex from "katex";
  * (Daftar token dihitung murni dari `content` yang stabil.)
  */
 
-/** Pisahkan teks menjadi potongan teks & rumus. */
+/** Pisahkan teks menjadi potongan teks, rumus, & gambar. */
 type Token =
   | { kind: "text"; value: string }
-  | { kind: "math"; value: string; display: boolean };
+  | { kind: "math"; value: string; display: boolean }
+  | { kind: "img"; shortId: string };
+
+/** Shortcode media `{{img:<shortId>}}` — sinkron dengan src/lib/media/shortcode.ts. */
+const IMG_SHORTCODE = /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})\s*\}\}/g;
 
 export function tokenizeMath(input: string): Token[] {
   const tokens: Token[] = [];
-  // Mendukung DUA gaya (CONSTRAINTS #25: konten baru pakai \( \) ; data lama $ ):
-  //   display: \[ ... \]  atau  $$ ... $$
-  //   inline : \( ... \)   atau  $ ... $
+  // Mendukung DUA gaya (CONSTRAINTS #25: konten baru pakai \\( \\) ; data lama $ ):
+  //   display: \\[ ... \\]  atau  $$ ... $$
+  //   inline : \\( ... \\)   atau  $ ... $
   const re = /\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$|\\\(([\s\S]+?)\\\)|\$([^$\n]+?)\$/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(input)) !== null) {
     if (m.index > last) {
-      tokens.push({ kind: "text", value: input.slice(last, m.index) });
+      pushTextWithImages(tokens, input.slice(last, m.index));
     }
     if (m[1] !== undefined) {
       tokens.push({ kind: "math", value: m[1], display: true });
@@ -39,9 +43,28 @@ export function tokenizeMath(input: string): Token[] {
     last = re.lastIndex;
   }
   if (last < input.length) {
-    tokens.push({ kind: "text", value: input.slice(last) });
+    pushTextWithImages(tokens, input.slice(last));
   }
   return tokens;
+}
+
+/**
+ * Pecah teks biasa menjadi token teks & gambar.
+ *
+ * Gambar dipisah di sini (bukan di regex rumus) supaya shortcode `{{img:…}}`
+ * TIDAK pernah tertelan sebagai rumus, dan sebaliknya.
+ */
+function pushTextWithImages(tokens: Token[], text: string): void {
+  if (!text) return;
+  let last = 0;
+  IMG_SHORTCODE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = IMG_SHORTCODE.exec(text)) !== null) {
+    if (m.index > last) tokens.push({ kind: "text", value: text.slice(last, m.index) });
+    tokens.push({ kind: "img", shortId: m[1]! });
+    last = IMG_SHORTCODE.lastIndex;
+  }
+  if (last < text.length) tokens.push({ kind: "text", value: text.slice(last) });
 }
 
 /** Escape entitas HTML dasar (anti-XSS). */
@@ -91,16 +114,49 @@ export function MathContent({
   const tokens = tokenizeMath(content);
   return (
     <span className={className ? `block overflow-x-auto ${className}` : "block overflow-x-auto"}>
-      {tokens.map((t, i) =>
-        t.kind === "text" ? (
+      {tokens.map((t, i) => {
+        if (t.kind === "img") {
+          return <MediaImage key={i} shortId={t.shortId} />;
+        }
+        return t.kind === "text" ? (
           <span key={i} dangerouslySetInnerHTML={{ __html: renderText(t.value) }} />
         ) : (
           <span
             key={i}
             dangerouslySetInnerHTML={{ __html: renderMath(t.value, t.display) }}
           />
-        ),
-      )}
+        );
+      })}
+    </span>
+  );
+}
+
+/**
+ * Gambar dari shortcode `{{img:<shortId>}}`.
+ *
+ * Berkas disajikan lewat `/img/{shortId}` (route yang menerjemahkan short_id →
+ * berkas). Bila gagal dimuat, teks pengganti ditampilkan agar soal tetap terbaca
+ * dan guru tahu ada gambar yang bermasalah — bukan ruang kosong tanpa penjelasan.
+ */
+function MediaImage({ shortId }: { shortId: string }) {
+  return (
+    <span className="inline-block align-middle">
+      {/* eslint-disable-next-line @next/next/no-img-element -- media dari storage lokal (bukan CDN); next/image butuh loader khusus. */}
+      <img
+        src={`/img/${shortId}`}
+        alt={`Gambar ${shortId}`}
+        loading="lazy"
+        className="my-2 inline-block max-h-96 max-w-full rounded border border-border"
+        onError={(e) => {
+          const el = e.currentTarget;
+          el.style.display = "none";
+          const fallback = el.nextElementSibling as HTMLElement | null;
+          if (fallback) fallback.style.display = "inline";
+        }}
+      />
+      <span className="hidden rounded border border-border bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+        [gambar {shortId} tidak dapat dimuat]
+      </span>
     </span>
   );
 }

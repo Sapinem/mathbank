@@ -122,7 +122,7 @@ CREATE TABLE user_roles (
 
 # 🔵 L2 — ANTARMUKA ✅ TERKUNCI
 
-## Struktur Menu (sidebar, 4 grup)
+## Struktur Menu (sidebar, 3 grup)
 
 ```
 KERJA
@@ -132,25 +132,28 @@ KERJA
   Paket Soal
 
 REFERENSI  ▼           ← GRUP BERJUDUL + BISA DILIPAT (cara C)
-    Topik              → /topik · /topik/[id]
-    Sumber & Asal      → /sumber · /sumber/[id]
-    Event              → /event · /event/[id]
-    Label              → /label · /label/[id]
-
-STUDIO
-  Galeri Aset
-  TikZ Studio
+    Topik              → /references/topics · /topics/[id]
+    Sumber & Asal      → /references/sources
+    Event              → /references/events
+    Label              → /references/labels
+    Galeri Aset        → /assets
 
 SISTEM
-  Ingest & Integrasi   (dipindah dari menu utama)
+  Ingest & Integrasi   (disembunyikan sampai M9)
+  TikZ Studio          (disembunyikan — ditunda, butuh compiler TeX)
   Pengaturan
 ```
+
+> **Revisi 2026-10-01:** grup **STUDIO dihapus**. Isinya hanya dua halaman, dan satu
+> di antaranya (TikZ Studio) ditunda. Galeri Aset pindah ke grup Referensi dengan URL
+> tingkat atas `/assets` (bukan `/studio/assets`). Alasan: prefix `/studio/*` yang hanya
+> menyisakan satu stub bukan lagi pengelompokan nyata.
 
 ## Keputusan L2
 
 | # | Keputusan |
 |---|-----------|
-| 1 | **4 grup sidebar**: Kerja · Referensi · Studio · Sistem |
+| 1 | **3 grup sidebar**: Kerja · Referensi · Sistem (semula 4 — "Studio" dihapus 2026-10-01) |
 | 2 | **Referensi = grup berjudul + bisa dilipat** (cara C); status lipat **diingat** (localStorage) |
 | 3 | **Semua halaman Referensi punya halaman turunan** (`/[id]`) |
 | 4 | **Event punya halaman** (`/event`, `/event/[id]`) — QBank hanya punya API |
@@ -183,7 +186,7 @@ Auth:       /login · /change-password
 ```
 
 ## Yang Dibawa dari QBank (referensi)
-- Struktur halaman (19 halaman) — dipetakan ulang ke 4 grup
+- Struktur halaman (19 halaman) — dipetakan ulang ke 3 grup
 - Komponen shell: Sidebar (shadcn resmi), Breadcrumb, CommandPalette, ThemeToggle
 - Kerangka tema generatif (`scripts/theme/build.ts`) + token OKLCH (`--mb-*`)
 
@@ -600,7 +603,7 @@ BETTER_AUTH_SECRET / BETTER_AUTH_URL
 | Lapisan | Status | Inti |
 |---------|--------|------|
 | L1 Pengguna & Peran | ✅ | Multi-role, 5 peran, matriks izin |
-| L2 Antarmuka | ✅ | 4 grup, referensi submenu lipat |
+| L2 Antarmuka | ✅ | 3 grup, referensi submenu lipat |
 | L3 State/Klien | ✅ | Hook kecil, staleTime per-jenis |
 | L4 API | ✅ | Pembungkus route, respons tunggal |
 | L5 Layanan | ✅ | Fungsi, pecah, tanpa repo |

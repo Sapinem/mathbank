@@ -92,6 +92,16 @@ function securityHeaders(isDev: boolean, isHttps: boolean) {
 
 const nextConfig: NextConfig = {
   /**
+   * Direktori output — bisa dialihkan lewat `NEXT_DIST_DIR`.
+   *
+   * Dipakai `scripts/deploy.sh` untuk membangun ke `.next.new` lebih dulu,
+   * lalu menukarnya secara atomik. Tanpa ini, `next build` menulis langsung ke
+   * `.next` yang sedang disajikan `mathbank.service` → seluruh situs balas 500
+   * selama build berjalan (`Cannot find module .next/server/middleware-manifest.json`).
+   * Default tetap `.next` agar perilaku lama tidak berubah.
+   */
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
+  /**
    * Output standalone (M16/Docker) — dipakai HANYA saat membangun image Docker
    * (`NEXT_OUTPUT_STANDALONE=true`). Di produksi systemd tetap memakai
    * `pnpm build && pnpm start` (tanpa standalone) agar perilaku tak berubah.

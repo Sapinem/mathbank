@@ -71,8 +71,14 @@ Ini **inti kanvas bersih**. Dibahas L1→L9, tiap lapisan dikunci.
 - **Enrichment manual:** `teacher` & `reviewer` **boleh** memicu (keputusan pemilik produk, review M2 2026-09-30).
 
 ### L2 — Antarmuka ✅
-- 4 grup sidebar: **Kerja / Referensi / Studio / Sistem**.
+- ~~4 grup sidebar: **Kerja / Referensi / Studio / Sistem**~~ → **3 grup sidebar: Kerja / Referensi / Sistem** (revisi 2026-10-01).
+  - **Grup "Studio" dihapus.** Isinya hanya Galeri Aset + TikZ Studio; TikZ ditunda (butuh
+    compiler TeX), jadi prefix `/studio/*` hanya menyisakan satu stub — bukan pengelompokan nyata.
+  - **Galeri Aset → `/assets`** (bukan `/studio/assets`), masuk grup Referensi.
+  - TikZ Studio tetap ada sebagai halaman `/studio/tikz` tetapi **disembunyikan** dari sidebar
+    sampai compiler siap. Bila dibangun, grup "Studio" bisa dihidupkan kembali.
 - **Referensi = submenu lipat** (Topik · Sumber & Asal · Event · Label), bukan tab terpisah, bukan 3 menu terpisah.
+  - Ditambah **Galeri Aset** sebagai item kelima (URL `/assets`, sengaja tanpa prefix `/references/`).
 - Event punya halaman (dulu QBank: ada API, tak ada halaman).
 - Ingest pindah ke grup **Sistem**.
 - Menu **sama** untuk semua peran (bedanya hanya aksi), belum dibedakan.

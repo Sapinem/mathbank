@@ -73,16 +73,21 @@ describe("collectUrls & applyMedia", () => {
     const urls = collectUrls(`<img src="https://a.com/z.png">`, undefined, "option");
     expect(urls[0]!.url).toBe("https://a.com/z.png");
   });
-  it("applyMedia ganti yang berhasil saja", () => {
+  it("applyMedia ganti yang berhasil saja (jadi shortcode)", () => {
     const cache: MediaCache = new Map();
     cache.set("https://a.com/x.png", {
-      sourceUrl: "https://a.com/x.png", localUrl: "/media/ab/abc.png", role: "content", ok: true,
+      sourceUrl: "https://a.com/x.png",
+      shortId: "a7Kx9mP2",
+      shortcode: "{{img:a7Kx9mP2}}",
+      role: "content",
+      ok: true,
     });
     cache.set("https://a.com/y.png", {
       sourceUrl: "https://a.com/y.png", role: "content", ok: false, error: "HTTP 404",
     });
     const out = applyMedia(md, cache);
-    expect(out).toContain("/media/ab/abc.png");
+    expect(out).toContain("{{img:a7Kx9mP2}}");
+    expect(out).not.toContain("https://a.com/x.png");
     expect(out).toContain("https://a.com/y.png"); // gagal → tetap URL sumber
     expect(replaceUrl("a.b.a", "a", "X")).toBe("X.b.X");
   });

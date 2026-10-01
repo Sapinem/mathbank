@@ -6,8 +6,8 @@
  *   - Nama = **contentHash** → **dedup otomatis** (gambar sama = 1 berkas).
  *   - Tulis **atomik** (`.tmp` lalu rename).
  */
-import { mkdir, writeFile, rename, access } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, writeFile, rename, access, rm } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
 import { constants } from "node:fs";
 
 /** Ekstensi dari mime. */
@@ -74,4 +74,22 @@ export async function storeImage(
   await writeFile(tmp, bytes);
   await rename(tmp, abs); // atomik
   return { stored: true, relativePath: rel, deduped: false };
+}
+
+/**
+ * Hapus berkas tersimpan berdasarkan path relatifnya (G4.6 hygiene).
+ *
+ * **Anti path-traversal**: path WAJIB tetap di dalam `rootDir`. Tanpa penjagaan ini,
+ * nilai `original_image_path` yang jahat (`../../etc/passwd`) akan menghapus berkas
+ * di luar storage. Sama seperti penjagaan di route penyaji `/img`.
+ *
+ * Melempar bila berkas tidak ada — pemanggil yang memutuskan itu masalah atau bukan.
+ */
+export async function removeStoredFile(rootDir: string, relPath: string): Promise<void> {
+  const root = resolve(rootDir);
+  const abs = resolve(join(root, relPath));
+  if (abs !== root && !abs.startsWith(root + sep)) {
+    throw new Error(`Path di luar storage ditolak: ${relPath}`);
+  }
+  await rm(abs);
 }

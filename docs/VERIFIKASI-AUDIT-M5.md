@@ -12,7 +12,7 @@
 | Service `topic-service.ts` (3-level, anti-siklus) | ada; `resolveLevelFrom`, `isSelfOrDescendantFrom`, `subtreeMaxDepthFrom` | ✅ |
 | Batas kedalaman 3 → `ConflictError` | `resolveLevelFrom` baris 69-73 | ✅ |
 | Service `taxonomy-service.ts` (sources/events/tags) | ada | ✅ |
-| 8 endpoint CRUD referensi | `topics`(GET/POST) + `[id]`(GET/PATCH/DELETE), idem sources/events/tags = **14 endpoint** (klaim "4 grup" benar) | ✅ |
+| 8 endpoint CRUD referensi | `topics`(GET/POST) + `[id]`(GET/PATCH/DELETE), idem sources/events/tags = **14 endpoint** | ✅ |
 | UI pohon/sumber/event/label | `topics-view`, `sources-view`, `events-view`, `labels-view` ada | ✅ |
 | Tes DB topik & taksonomi | `topic-service.db.test.ts`, `taxonomy-service.db.test.ts` ada; 84 lulus | ✅ |
 | Trigger `usage_count` | `invariants.ts` menyebut 2 trigger usage_count | ✅ |

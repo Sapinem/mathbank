@@ -12,6 +12,11 @@ Milestone 3 membangun antarmuka pengguna yang konsisten, berkinerja tinggi, dan 
 1. **Mesin Tema Terhitung (OKLCH Color Engine):** Generator token (`scripts/theme/build.ts`) & verifikasi kontras otomatis (`scripts/theme/check.ts`) pada mode terang & gelap.
 2. **Standardisasi Primitif UI (ADR-0008 Base UI):** Migrasi 100% dari `radix-ui` ke `@base-ui/react` (`base-nova`), menghapus dependensi Radix.
 3. **App Shell Layout (4 Grup Navigasi):** `SidebarProvider` resmi dengan 4 grup terstruktur (**Kerja**, **Referensi**, **Studio**, **Sistem**), `SkipLink`, dan Command Palette ⌘K.
+   > **Catatan verifikasi (2026-10-01):** jumlah grup kini **3** — grup **Studio dihapus** dan
+   > Galeri Aset pindah ke grup Referensi dengan URL `/assets`. TikZ Studio (satu-satunya isi
+   > grup itu yang tersisa) ditunda, sehingga prefix `/studio/*` tak lagi jadi pengelompokan
+   > nyata. Catatan ini disimpan agar angka "4" di atas tidak dibaca sebagai keadaan sekarang;
+   > isi laporan M3 sendiri tidak diubah.
 
 ---
 

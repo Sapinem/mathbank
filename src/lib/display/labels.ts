@@ -47,6 +47,25 @@ export const ROLE_LABELS: Record<string, string> = {
   machine: "Mesin",
 };
 
+/** Asal aset media — cerminan `mediaOriginEnum`. */
+export const MEDIA_ORIGIN_LABELS: Record<string, string> = {
+  manual_upload: "Unggahan",
+  pdf_crop: "Potongan PDF",
+  ai_generated_tikz: "AI · TikZ",
+  ai_generated_svg: "AI · SVG",
+  web_scrape: "Comot Web",
+  web_ingest: "Ingest Web",
+  tex_import: "Impor TeX",
+};
+
+/** Peran media dalam soal — cerminan `mediaRoleEnum`. */
+export const MEDIA_ROLE_LABELS: Record<string, string> = {
+  content: "Isi Soal",
+  option: "Pilihan",
+  solution: "Pembahasan",
+  thumbnail: "Miniatur",
+};
+
 /**
  * Warna status (UNIVERSAL — tak ikut brand; "Siap" = biru brand).
  * Mengembalikan kelas Tailwind sesuai aturan RENCANA-UI §6.

@@ -21,6 +21,12 @@ export const mediaAssets = pgTable(
   "media_assets",
   {
     id: uuidPk(),
+    /**
+     * Kunci kanonik untuk shortcode `{{img:<shortId>}}` (8 char base62).
+     * Markdown soal menyimpan ini, BUKAN path storage — sehingga berkas boleh
+     * pindah/diganti tanpa menyentuh isi soal.
+     */
+    shortId: varchar("short_id", { length: 8 }).notNull(),
     title: varchar("title", { length: 255 }).notNull(),
     altText: text("alt_text"),
     caption: text("caption"),
@@ -47,6 +53,7 @@ export const mediaAssets = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
+    uniqueIndex("uq_media_short_id").on(t.shortId),
     uniqueIndex("uq_media_content_hash").on(t.contentHash),
     index("idx_media_source_origin").on(t.sourceOrigin),
   ],
