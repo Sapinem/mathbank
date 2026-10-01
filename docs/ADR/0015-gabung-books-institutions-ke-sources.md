@@ -38,7 +38,7 @@ NULL untuk jenis lain — **tanpa** tabel terpisah.
 
 **Gabung kolom berguna ke `sources`; hapus `books` & `institutions`.**
 
-### Kolom yang ditambahkan ke `sources` (5 kolom)
+### Kolom yang ditambahkan ke `sources` (4 kolom)
 
 | Kolom | Tipe | Untuk `kind` | Asal |
 |---|---|---|---|
@@ -46,34 +46,45 @@ NULL untuk jenis lain — **tanpa** tabel terpisah.
 | `author` | varchar(255) | `book` | `books.author` |
 | `book_year` | smallint | `book` | `books.year` |
 | `city` | varchar(100) | `school` | `institutions.city` |
-| `province` | varchar(100) | `school` | `institutions.province` |
 
-→ **`sources` 8 → 13 kolom.**
+→ **`sources` 8 → 12 kolom.**
+
+### Enum `source_kind`: buang `competition` (keputusan pemilik produk)
+
+**"Lomba tidak perlu masuk source."** UTBK / OSN / SIMAK UI adalah **event**
+(jenis ujian), bukan tempat menyalin — sesuai persepsi yang disepakati di
+ADR-0014 (`defantri` = sumber, `UTBK` = event). Nilai `competition` **dibuang**
+dari enum `source_kind`; jenis ujian diwujudkan di tabel **`events`**.
+
+- Data terdampak: **1 baris** `sources` "OSN Matematika SMA" (`kind='competition'`)
+  — **0 soal memakainya** → **dihapus** (data mati; dibuat baru di `events` bila perlu).
+- `source_kind` final: **`book` | `website` | `school`** (3 nilai).
 
 ### Kolom yang SENGAJA TIDAK dibawa (keputusan pemilik produk)
 
 | Kolom | Alasan dibuang |
 |---|---|
 | `books.isbn`, `institutions.npsn` | **"Terlalu teknis"** — kode registrasi yang tak dipakai siapa pun; bila nanti perlu, tambah belakangan |
+| `institutions.province` | **Cukup `city`** (keputusan pemilik produk: "sekolah label kota aja udah") |
 | `institutions.address`, `institutions.level` | Tak dibutuhkan; `level` (SMA/SMP/SD) dapat diturunkan dari `label` |
 | `institutions.usage_count` | **Tak pernah berfungsi** (tak ada trigger). Sudah digantikan hitungan `questionCount` di query |
 | `books.id`, `institutions.id`, `*_source_id` | Tak berguna bila 1:1 — `sources.id` sudah jadi kunci |
 
 ### Strategi pengisian: per-`kind`, sisanya NULL
 
-| Kolom | `website` | `book` | `school` | `competition` |
-|---|---|---|---|---|
-| `label`, `slug` | ✅ | ✅ | ✅ | ✅ |
-| `url` | ✅ | — | — | — |
-| `publisher`, `author`, `book_year` | — | ✅ | — | — |
-| `city`, `province` | — | — | ✅ | — |
+| Kolom | `website` | `book` | `school` |
+|---|---|---|---|
+| `label`, `slug` | ✅ | ✅ | ✅ |
+| `url` | ✅ | — | — |
+| `publisher`, `author`, `book_year` | — | ✅ | — |
+| `city` | — | — | ✅ |
 
 **Aturan:** isi hanya yang relevan dengan `kind`. **NULL bukan cacat** — artinya
 "tidak berlaku untuk jenis ini" (pola sama dengan `sources.url`).
 
 **Jalur pengisian:**
 1. **UI `/references/sources`** — form **dinamis per `kind`**: pilih `Buku` →
-   muncul Penerbit/Penulis/Tahun; pilih `Sekolah` → muncul Kota/Provinsi.
+   muncul Penerbit/Penulis/Tahun; pilih `Sekolah` → muncul Kota.
    (Pola sama dengan form per-tipe di editor soal — konsisten.)
 2. **Ingest** — `kind='website'` + `label` + `slug` + `url` (tak berubah).
 3. **Seed** — sesuai data contoh.
@@ -92,24 +103,33 @@ dilengkapi bertahap.
 | **Bawa `isbn`/`npsn`** | Terlalu teknis (keputusan pemilik produk); tak ada konsumen |
 | **Bawa `address`/`level`** | Tak dibutuhkan saat ini; `level` bisa diturunkan |
 | **Tabel JSON `metadata`** | Menghilangkan type-safety; sulit difilter (mis. "sekolah di Jakarta") |
+| **Pertahankan `competition` di `sources`** | UTBK/OSN itu **event**, bukan tempat menyalin — mencampurnya mengulang kebingungan yang ADR-0014 selesaikan |
 
 ## Konsekuensi
 
 - **Tabel: 29 → 27** (hapus `books`, `institutions`).
   Setelah **ADR-0014** (hapus `question_sources`) → **26 tabel**.
-- `sources`: **+5 kolom**.
+- `sources`: **+4 kolom** (`publisher`, `author`, `book_year`, `city`).
+- **Enum `source_kind`: 4 → 3 nilai** (`competition` dibuang) — enum alteration
+  di PostgreSQL; **1 baris** "OSN Matematika SMA" dihapus lebih dulu (0 soal).
 - `invariants.ts` + `scripts/db-verify.ts`: `tables` diperbarui; trigger
   `updated_at` untuk `books`/`institutions` **dihapus** dari `db_safety.sql`.
 - **Kode:** hapus `books`/`institutions` dari `schema/source.ts` (+relasi, tipe);
-  `taxonomy-service.ts` — buang `leftJoin(institutions)`, `usageCount` murni dari
-  `questionCount`; `sources-view.tsx` — form dinamis per `kind`.
-- **Migrasi data:** kedua tabel **0 baris** → **tidak ada data hilang**; cukup
-  `DROP` (tak perlu pemindahan).
+  buang `"competition"` dari `SourceKind` (`taxonomy-service.ts`), dua Zod enum
+  (`api/sources/route.ts`, `api/sources/[id]/route.ts`), & `KIND_LABELS`
+  (`sources-view.tsx`); `taxonomy-service.ts` — buang `leftJoin(institutions)`,
+  `usageCount` murni dari `questionCount`; `sources-view.tsx` — form dinamis per `kind`.
+- **Migrasi data:** kedua tabel **0 baris** → tak ada data hilang; cukup `DROP`.
+  Satu baris `sources` kind=`competition` dihapus (0 soal memakainya).
 
 ## Catatan
 
-- **NPSN bisa ditambahkan otomatis kelak** — ia kode resmi Kemendikbud, dapat
-  diambil dari API publik untuk mengisi kota/provinsi. Dicatat sebagai
-  kemungkinan fitur masa depan, bukan kebutuhan sekarang.
+- **NPSN & `province` bisa ditambahkan kelak** bila terbukti perlu (NPSN = kode
+  resmi Kemendikbud, bisa mengisi kota otomatis). Dicatat sebagai kemungkinan
+  fitur masa depan, bukan kebutuhan sekarang — pemilik produk memilih
+  **"yang penting jelas aja dulu"**.
 - **Pola `kind` + kolom opsional ini konsisten** dengan `sources.url` yang sudah
   ada sejak awal — bukan pendekatan baru.
+- **`events` kini satu-satunya rumah untuk jenis ujian.** Menghapus `competition`
+  dari `sources` **menambah** kebutuhan mengisi `events` (UTBK, OSN, SIMAK UI) —
+  dicatat sebagai pekerjaan lanjutan, bukan diabaikan.
