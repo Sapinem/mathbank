@@ -239,7 +239,7 @@ export function QuestionCard({
         "group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card/60 p-4 transition-all duration-150",
         "hover:border-border hover:bg-card hover:shadow-xs",
         "dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
-        mode === "grid" && "h-[320px]",
+        mode === "grid" && "min-h-[280px]",
         selected && "border-brand/70 bg-brand/5 ring-1 ring-brand/30",
       )}
     >
@@ -285,35 +285,40 @@ export function QuestionCard({
           />
         </Link>
 
-        {/* OPSI JAWABAN (PREVIEW BERBINGKAI HALUS) */}
+        {/* OPSI PILIHAN GANDA (FORMAT DOKUMEN NASKAH 1 KOLOM KE BAWAH) */}
         {q.options.length > 0 && (
-          <div
-            className={cn(
-              "mt-1 flex flex-col gap-1.5 border-t border-border/50 pt-2 text-xs",
-              mode === "grid" && "grid grid-cols-2 gap-1.5",
-            )}
-          >
-            {q.options.slice(0, mode === "grid" ? 4 : undefined).map((o) => (
+          <div className="mt-2 flex flex-col gap-1.5 border-t border-border/40 pt-2.5 text-xs">
+            {q.options.map((o) => (
               <div
                 key={o.id}
                 className={cn(
-                  "flex items-center justify-between rounded-md px-2 py-1 text-muted-foreground border border-transparent transition-colors",
-                  o.isCorrect
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-foreground font-medium"
-                    : "bg-muted/30 hover:bg-muted/60",
+                  "flex items-start gap-2 leading-relaxed transition-colors",
+                  o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
                 )}
               >
-                <span className={cn(o.isCorrect && "text-success font-medium", "truncate")}>
-                  <strong className={cn("font-mono", o.isCorrect ? "text-emerald-500" : "text-muted-foreground")}>
+                <span className={cn(o.isCorrect ? "text-success" : "")}>
+                  <strong
+                    className={cn(
+                      "font-mono font-semibold",
+                      o.isCorrect
+                        ? "text-success text-emerald-600 dark:text-emerald-400"
+                        : "text-foreground/70",
+                    )}
+                  >
                     {o.label}.
-                  </strong>{" "}
-                  <MathContent content={excerpt(o.contentMarkdown, 36)} />
+                  </strong>
                 </span>
-                {o.isCorrect && (
-                  <span className="ml-1 rounded font-mono text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    KUNCI
-                  </span>
-                )}
+                <span className="flex-1 min-w-0">
+                  <MathContent content={o.contentMarkdown} />
+                  {o.isCorrect && (
+                    <span
+                      className="ml-1.5 inline-flex items-center text-[11px] font-bold text-success text-emerald-600 dark:text-emerald-400"
+                      title="Kunci Jawaban"
+                    >
+                      ✓
+                    </span>
+                  )}
+                </span>
               </div>
             ))}
           </div>
@@ -322,8 +327,10 @@ export function QuestionCard({
 
       {/* FOOTER KARTU */}
       <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2 text-[11px] font-mono text-muted-foreground">
-        <span>{q.sourceId ?? "Mandiri"}</span>
-        <Link href={href} className="flex items-center gap-1 hover:text-foreground">
+        <span className="truncate max-w-[180px]">
+          {q.sourceId ? (q.sourceId.length > 20 ? "Bank Soal" : q.sourceId) : "Mandiri"}
+        </span>
+        <Link href={href} className="flex items-center gap-1 hover:text-foreground shrink-0">
           Buka <ArrowUpRight className="size-3.5" />
         </Link>
       </div>
