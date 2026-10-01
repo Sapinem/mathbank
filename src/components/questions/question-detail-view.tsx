@@ -158,7 +158,7 @@ export function QuestionDetailView() {
 
             {/* Batang Soal (Stem) */}
             <div className="text-sm sm:text-base leading-relaxed text-foreground">
-              <MathContent content={q.contentMarkdown} />
+              <MathContent content={q.contentMarkdown} className="no-scrollbar" />
             </div>
 
             {/* Opsi Pilihan Ganda (Menyatu dalam Dokumen, Format 1 Kolom ke Bawah) */}
@@ -185,7 +185,7 @@ export function QuestionDetailView() {
                         {o.label}.
                       </span>
                       <div className="min-w-0 flex-1 text-sm leading-relaxed">
-                        <MathContent content={o.contentMarkdown} />
+                        <MathContent content={o.contentMarkdown} noScroll />
                         {o.distractorRationale && (
                           <p className="mt-1 text-xs text-muted-foreground">
                             Pengecoh: {o.distractorRationale}
@@ -234,7 +234,7 @@ export function QuestionDetailView() {
                   Langkah Penyelesaian
                 </p>
                 <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                  <MathContent content={key.explanation} />
+                  <MathContent content={key.explanation} className="no-scrollbar" />
                 </div>
               </div>
             ) : (

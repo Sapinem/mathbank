@@ -163,3 +163,23 @@
     animation-iteration-count: infinite !important;
   }
 }
+
+@layer utilities {
+  /* Utilitas untuk menyembunyikan scrollbar tanpa menghilangkan fungsionalitas scroll */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Hindari horizontal scrollbar yang mengganggu pada rumus KaTeX */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
