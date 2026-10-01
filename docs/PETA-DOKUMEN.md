@@ -62,6 +62,7 @@
 | C5 | `A11Y.md` | ✅ | **dibuat** 2026-09-29 — target WCAG 2.2 AA |
 | C6 | `DESIGN-QUESTION-VIEW-MODES.md` | ✅ | **dibuat** 2026-10-01 — rancangan Linear-style view modes (List, Grid, Masonry) & penanganan soal panjang |
 | C7 | `docs/redesign-ui/APP-SHELL-EVALUATION.md` | ✅ | **dibuat** 2026-10-01 — evaluasi responsivitas AppShell, perbaikan drawer auto-close, touch target ≥44px, dan konsistensi breakpoint lg |
+| C8 | `docs/redesign-ui/QUESTION-BANK-REDESIGN.md` | ✅ | **dibuat** 2026-10-01 — arsitektur & implementasi perombakan bank soal (/questions): compound horizontal filter bar, on-demand slide-over filter drawer, dan adaptif 3 view modes (list/grid/masonry) |
 
 ### Kategori D — Mutu & Proses
 

@@ -127,9 +127,22 @@ describe("QuestionCard", () => {
     expect(container.textContent).not.toMatch(/\bA\./);
   });
 
-  it("memangkas konten panjang (>180 karakter) dengan elipsis", () => {
+  it("memangkas konten panjang (>180 karakter) dengan elipsis pada mode list", () => {
     const long = "x".repeat(300);
-    render(<QuestionCard question={q({ contentMarkdown: long })} href="/x" />);
+    render(<QuestionCard question={q({ contentMarkdown: long })} href="/x" mode="list" />);
     expect(screen.getByText(/…/)).toBeInTheDocument();
+  });
+
+  it("merender kartu dengan border bulat dan padding pada mode grid & masonry", () => {
+    const { container: gridContainer } = render(
+      <QuestionCard question={q()} href="/x" mode="grid" />,
+    );
+    expect(gridContainer.firstElementChild?.className).toContain("rounded-xl");
+    expect(gridContainer.firstElementChild?.className).toContain("border");
+
+    const { container: masonryContainer } = render(
+      <QuestionCard question={q()} href="/x" mode="masonry" />,
+    );
+    expect(masonryContainer.firstElementChild?.className).toContain("rounded-xl");
   });
 });

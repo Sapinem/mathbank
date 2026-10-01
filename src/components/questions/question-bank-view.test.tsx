@@ -164,14 +164,14 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
   });
 
   it("centang Status → menulis status ke URL", () => {
-    render(<QuestionBankView />);
+    render(<QuestionBankView defaultFiltersOpen />);
     fireEvent.click(screen.getByLabelText("Siap"));
     expect(replace).toHaveBeenCalledWith("/questions?status=ready");
   });
 
   it("memilih 'Semua' pada Status → menghapus param", () => {
     currentSearch = "status=ready";
-    render(<QuestionBankView />);
+    render(<QuestionBankView defaultFiltersOpen />);
     // "Semua" pertama = grup Status
     fireEvent.click(screen.getAllByLabelText("Semua")[0]);
     expect(replace).toHaveBeenCalledWith("/questions?");
@@ -179,7 +179,7 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
 
   it("centang beberapa Kesulitan → multi-nilai di URL", () => {
     currentSearch = "difficulty=4";
-    const { unmount } = render(<QuestionBankView />);
+    const { unmount } = render(<QuestionBankView defaultFiltersOpen />);
     fireEvent.click(screen.getByLabelText("Level 3"));
     const url = replace.mock.calls.at(-1)?.[0] as string;
     expect(url).toContain("difficulty=4");
@@ -195,7 +195,7 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
       ],
     });
     currentSearch = "grade=10";
-    render(<QuestionBankView />);
+    render(<QuestionBankView defaultFiltersOpen />);
     fireEvent.click(screen.getByLabelText("Kelas 11 SMA"));
     const url = replace.mock.calls.at(-1)?.[0] as string;
     expect(url).toContain("grade=10");
@@ -209,7 +209,7 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
     useSourcesMock.mockReturnValue({
       data: [{ id: "s1", kind: "book", label: "Buku A", slug: "buku-a" }],
     });
-    render(<QuestionBankView />);
+    render(<QuestionBankView defaultFiltersOpen />);
     expect(screen.getByText("Aljabar")).toBeInTheDocument();
     expect(screen.getByText("Buku A")).toBeInTheDocument();
   });
@@ -221,7 +221,7 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
         { id: "t2", name: "Geometri", slug: "geometri", parentId: null, level: 1 },
       ],
     });
-    render(<QuestionBankView />);
+    render(<QuestionBankView defaultFiltersOpen />);
     const search = screen.getByLabelText("Cari topik");
     fireEvent.change(search, { target: { value: "geo" } });
     expect(screen.getByText("Geometri")).toBeInTheDocument();
