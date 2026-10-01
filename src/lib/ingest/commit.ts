@@ -257,6 +257,10 @@ export async function commitItems(
           })),
           topicIds: opts.topicId ? [opts.topicId] : [],
           tagIds: [],
+          // Peringatan parser → tanda "perlu telaah" (STRATEGI-INGEST §3.2).
+          // Sebelumnya dibuang, jadi soal tanpa kunci masuk tanpa tanda apa pun.
+          isFlagged: it.warnings.length > 0,
+          flagNotes: it.warnings.length > 0 ? it.warnings.join("; ") : null,
         },
         actor,
       );

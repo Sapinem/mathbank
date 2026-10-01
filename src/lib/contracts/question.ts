@@ -110,6 +110,16 @@ export const createQuestionSchema = z.object({
   eventItemNumber: z.string().max(50).nullable().optional(),
   eventNotes: z.string().nullable().optional(),
 
+  /**
+   * Tandai perlu telaah saat pembuatan (dipakai jalur ingest).
+   *
+   * `docs/STRATEGI-INGEST.md` §3.2: kunci tak terdeteksi / opsi kurang →
+   * `isFlagged` + catatan, **tetap draft**. Sebelumnya jalur ingest membuang
+   * peringatan parser, jadi soal bermasalah masuk tanpa tanda apa pun.
+   */
+  isFlagged: z.boolean().optional(),
+  flagNotes: z.string().max(2000).nullable().optional(),
+
   options: z.array(optionInputSchema).default([]),
   solutions: z.array(solutionInputSchema).optional().default([]),
   topicIds: z.array(z.string().uuid()).default([]),

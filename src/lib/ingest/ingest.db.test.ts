@@ -206,6 +206,47 @@ describe("commit (soal draft)", () => {
     expect(q.answer_key.correct).toBeUndefined();
   });
 
+  // ── Peringatan parser → isFlagged (STRATEGI-INGEST §3.2) ──────────
+  // Sebelumnya `warnings` DIBUANG di commit: soal tanpa kunci masuk sebagai
+  // draft biasa tanpa tanda, jadi guru tak tahu mana yang perlu ditelaah.
+  it("peringatan parser → isFlagged + flagNotes tersimpan", async () => {
+    const res = await commitItems(
+      [item({ correct: [], warnings: ["Kunci jawaban tidak ditemukan — perlu telaah"] })],
+      machine,
+      { sourceOrigin: "uji-ingest" },
+    );
+    const [q] = await sql`SELECT is_flagged, flag_notes FROM questions WHERE id = ${res.questionIds[0]}`;
+    expect(q.is_flagged).toBe(true);
+    expect(q.flag_notes).toContain("Kunci jawaban tidak ditemukan");
+  });
+
+  it("tanpa peringatan → TIDAK ditandai (tak semua soal dicap bermasalah)", async () => {
+    const res = await commitItems([item()], machine, { sourceOrigin: "uji-ingest" });
+    const [q] = await sql`SELECT is_flagged, flag_notes FROM questions WHERE id = ${res.questionIds[0]}`;
+    expect(q.is_flagged).toBe(false);
+    expect(q.flag_notes).toBeNull();
+  });
+
+  it("beberapa peringatan → digabung jadi satu catatan", async () => {
+    const res = await commitItems(
+      [
+        item({
+          options: [
+            { label: "A", text: "1", isCorrect: true },
+            { label: "B", text: "2", isCorrect: false },
+            { label: "C", text: "3", isCorrect: false },
+          ],
+          warnings: ["Opsi hanya 3 — mungkin parsing kurang", "Kunci jawaban tidak ditemukan — perlu telaah"],
+        }),
+      ],
+      machine,
+      { sourceOrigin: "uji-ingest" },
+    );
+    const [q] = await sql`SELECT flag_notes FROM questions WHERE id = ${res.questionIds[0]}`;
+    expect(q.flag_notes).toContain("Opsi hanya 3");
+    expect(q.flag_notes).toContain("Kunci jawaban tidak ditemukan");
+  });
+
   it("stem kosong dilewati (tak simpan sampah)", async () => {
     const res = await commitItems([item({ stem: "   " })], machine, { sourceOrigin: "uji-ingest" });
     expect(res.created).toBe(0);

@@ -65,6 +65,9 @@ export async function createQuestion(
         eventSubtest: input.eventSubtest ?? null,
         eventItemNumber: input.eventItemNumber ?? null,
         eventNotes: input.eventNotes ?? null,
+        // Tanda perlu telaah (jalur ingest membawa peringatan parser ke sini).
+        isFlagged: input.isFlagged ?? false,
+        flagNotes: input.flagNotes ?? null,
         authorId: actor.id,
       })
       .returning({ id: questions.id });

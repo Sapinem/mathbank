@@ -1,5 +1,33 @@
 # Changelog — MathBank
 
+## [Perbaikan] — peringatan parser kini jadi tanda "perlu telaah" (`isFlagged`)
+
+### Diperbaiki
+- **`ParsedItem.warnings` dibuang di jalur ingest.** Parser sudah lama mendeteksi
+  masalah mutu (`"Kunci jawaban tidak ditemukan — perlu telaah"`, `"Opsi hanya 3"`),
+  lalu `commit.ts` **tak pernah membacanya** — jadi soal bermasalah masuk sebagai
+  draft biasa **tanpa tanda apa pun**, dan guru tak tahu mana yang perlu diperiksa.
+  Ini **melanggar** `docs/STRATEGI-INGEST.md` §3.2 yang sudah menetapkan
+  perilaku benar: *"Kunci tak terdeteksi → `isFlagged` + catatan"*.
+- **Bukti nyata (dijalankan, bukan diklaim):** ingest artikel Inggris
+  (Beaver Computing Challenge, tanpa kunci):
+  - sebelum: **15 soal → 0 ditandai**
+  - sesudah: **15 soal → 15 ditandai** + catatan `"Kunci jawaban tidak ditemukan — perlu telaah"`
+
+### Diubah
+- `contracts/question.ts`: `createQuestionSchema` menerima `isFlagged` & `flagNotes`.
+- `question-write.ts`: `createQuestion` menyimpannya.
+- `ingest/commit.ts`: `it.warnings` → `isFlagged: warnings.length > 0`,
+  `flagNotes: warnings.join("; ")`.
+
+### Catatan
+- **3 tes DB baru** mengunci perilakunya: ditandai bila ada peringatan ·
+  **tidak** ditandai bila bersih (agar tak semua soal dicap bermasalah) ·
+  beberapa peringatan digabung.
+- `isFlagged` dibuat **opsional** (bukan `.default(false)`) — `z.default()`
+  membuatnya *required* di tipe output dan memecah 5 pemanggil lama.
+- Data uji sudah dibuang lagi; kanvas kembali **0 soal**.
+
 ## [UI] — Halaman Koleksi (`/collections`) + menu
 
 ### Ditambahkan
