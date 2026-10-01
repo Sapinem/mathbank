@@ -151,8 +151,8 @@ export function QuestionDetailView() {
                   <StimulusCard content={q.parent.contentMarkdown} className="text-sm" />
                 )}
 
-                {/* Batang Soal (Stem) — Font 20px di Desktop */}
-                <div className="text-base lg:text-[20px] lg:leading-[1.75] text-foreground">
+                {/* Batang Soal (Stem) — Font 17px di Desktop */}
+                <div className="text-base lg:text-[17px] lg:leading-[1.7] text-foreground">
                   <MathContent content={q.contentMarkdown} className="no-scrollbar" />
                 </div>
 
@@ -171,7 +171,7 @@ export function QuestionDetailView() {
                         >
                           <span
                             className={cn(
-                              "font-mono font-semibold text-base lg:text-[20px] shrink-0",
+                              "font-mono font-semibold text-base lg:text-[17px] shrink-0",
                               isKey
                                 ? "text-success text-emerald-600 dark:text-emerald-400 font-bold"
                                 : "text-foreground/70",
@@ -179,7 +179,7 @@ export function QuestionDetailView() {
                           >
                             {o.label}.
                           </span>
-                          <div className="min-w-0 flex-1 text-base lg:text-[20px] lg:leading-[1.75]">
+                          <div className="min-w-0 flex-1 text-base lg:text-[17px] lg:leading-[1.7]">
                             <MathContent content={o.contentMarkdown} noScroll />
                             {o.distractorRationale && (
                               <p className="mt-1 text-xs text-muted-foreground">
@@ -189,7 +189,7 @@ export function QuestionDetailView() {
                           </div>
                           {isKey && (
                             <span
-                              className="inline-flex items-center text-base lg:text-[20px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
+                              className="inline-flex items-center text-base lg:text-[17px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
                               title="Kunci Jawaban"
                             >
                               ✓
@@ -295,7 +295,7 @@ export function QuestionDetailView() {
                             </span>
                           )}
                         </div>
-                        <div className="text-base lg:text-[20px] lg:leading-[1.75] text-foreground whitespace-pre-wrap">
+                        <div className="text-base lg:text-[17px] lg:leading-[1.7] text-foreground whitespace-pre-wrap">
                           <MathContent
                             content={activeSol.contentMarkdown}
                             className="no-scrollbar"

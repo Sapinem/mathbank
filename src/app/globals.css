@@ -184,7 +184,7 @@
   padding-bottom: 0.25rem;
 }
 
-/* Harmonisasi skala KaTeX agar x-height seimbang dengan font non-LaTeX */
+/* Skala KaTeX persis sama dengan font non-LaTeX */
 .katex {
-  font-size: 1.04em;
+  font-size: 1em;
 }
