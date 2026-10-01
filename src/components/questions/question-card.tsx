@@ -39,22 +39,22 @@ export function formatGradeBadge(grade: string): string {
   const g = grade.trim();
   const lower = g.toLowerCase();
 
-  // SMP formatting: selalu "SMP 0X" atau "SMP XX" dengan spasi (larang "SMP08")
+  // SMP (7, 8, 9) -> "07", "08", "09" (hanya angka 2 digit tanpa teks 'SMP')
   if (lower.startsWith("smp")) {
     const num = lower.replace("smp", "").replace(/[^0-9]/g, "");
-    return num ? `SMP ${num.padStart(2, "0")}` : "SMP";
+    return num ? num.padStart(2, "0") : g.toUpperCase();
   }
   if (["7", "8", "9"].includes(lower)) {
-    return `SMP 0${lower}`;
+    return `0${lower}`;
   }
 
-  // SD formatting: selalu "SD 0X" dengan spasi
+  // SD (1 s/d 6) -> "01" s/d "06" (hanya angka 2 digit tanpa teks 'SD')
   if (lower.startsWith("sd")) {
     const num = lower.replace("sd", "").replace(/[^0-9]/g, "");
-    return num ? `SD ${num.padStart(2, "0")}` : "SD";
+    return num ? num.padStart(2, "0") : g.toUpperCase();
   }
   if (["1", "2", "3", "4", "5", "6"].includes(lower)) {
-    return `SD 0${lower}`;
+    return `0${lower}`;
   }
 
   // SMA Wajib / Lanjut
