@@ -1,6 +1,8 @@
 # ADR-0009 — Bundle: satu tabel `bundles` (Koleksi & Latihan) — **mengikuti keputusan final QBank**
 
-- **Status:** 🔴 **DITOLAK / DIBATALKAN** (usulan awal "pisah tabel" salah arah; lihat Catatan Revisi)
+- **Status:** ⚪ **DIGANTIKAN oleh [ADR-0013](0013-pisah-collections-dari-bundles.md)** (2026-10-01)
+  — pemilik produk meninjau ulang dan memilih **pisah tabel**
+- **Status sebelumnya:** 🔴 DITOLAK / DIBATALKAN (usulan awal "pisah tabel" salah arah; lihat Catatan Revisi)
 - **Tanggal:** 2026-10-01
 - **Pengambil keputusan:** Pemilik produk
 - **Terkait:** `docs/DESAIN-SKEMA-BUNDLE-TERPISAH.md` (proposal pembanding), QBank `master:src/lib/db/schema/bundles.ts`,

@@ -16,10 +16,11 @@
 | [0006](0006-invarian-lunak-di-service.md) | Invarian "lunak" di service, bukan CHECK keras | Diterima |
 | [0007](0007-db-reproduktif-dari-file.md) | DB wajib direproduksi dari file migrasi | Diterima |
 | [0008](0008-basis-ui-base-ui.md) | Basis UI: Base UI (menggantikan Radix) | Diterima |
-| [0009](0009-bundle-pisah-koleksi-dan-latihan.md) | Bundle: **satu tabel** `bundles` (usulan "pisah" ditolak) | Ditolak |
+| [0009](0009-bundle-pisah-koleksi-dan-latihan.md) | Bundle: **satu tabel** `bundles` (usulan "pisah" ditolak) | ⚪ Digantikan oleh ADR-0013 |
 | [0010](0010-event-jenis-berulang-tahun-di-soal.md) | `event` = jenis berulang; tahun di `questions.event_year` | Diterima |
 | [0011](0011-stimulus-tetap-di-questions.md) | Stimulus tetap di `questions` (`parent_id`) — jangan dipisah | Diterima |
 | [0012](0012-provenance-per-butir-question-sources.md) | Provenance per-butir: tabel `question_sources` (many-to-many, anti-duplikat) | Diterima |
+| [0013](0013-pisah-collections-dari-bundles.md) | **Pisah tabel**: `collections` (arsip sumber, read publik) vs `bundles` (naskah rakitan, `own`) | **Diterima** |
 
 ## Cara menambah ADR
 
