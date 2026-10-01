@@ -1,5 +1,36 @@
 # Changelog — MathBank
 
+## [Docs] — `AGENTS.md`: aturan kerja agent (8 bagian)
+
+### Ditambahkan
+- **`AGENTS.md` diisi aturan proyek** — sebelumnya **hanya** berisi blok bawaan
+  Next.js, sehingga agent (dan sesi baru) **tak diberi tahu apa pun** tentang
+  MathBank. Akibat nyatanya: pekerjaan salah arah berulang (menganggap QBank =
+  MathBank; tidak membaca dokumen yang sudah ada; melaporkan "berhasil ingest"
+  tanpa menyebut kualitas).
+
+  Isinya:
+
+  | § | Topik |
+  |---|---|
+  | 0 | **Wajib baca** — `CONSTRAINTS.md` (46 aturan) dulu, lalu peta dokumen/ADR |
+  | 1 | ⚠️ **MathBank ≠ QBank** — dua repo, dua port (1906 = QBank); apa yang boleh & dilarang diambil |
+  | 2 | **Data** — backup dulu, urutan hapus FK, ingest = draft **mentah** (bukan data siap pakai) |
+  | 3 | **Prosedur skema/migrasi** — 6 langkah, termasuk **DB uji** (jebakan yang kena 2×) |
+  | 4 | **Gerbang mutu** sebelum bilang "selesai" |
+  | 5 | **Dokumen wajib** terdaftar / ADR / §Catatan Verifikasi |
+  | 6 | **Gaya** — #28b, #6, #7, #22, #35 |
+  | 7 | **Kejujuran laporan** — bedakan "jalan" dari "benar" |
+  | 8 | **Kondisi proyek saat ini** + utang terbuka |
+
+### Catatan
+- **Setiap klaim di aturan itu diverifikasi ke keadaan nyata** sebelum ditulis:
+  28 tabel · 174 topik · 5 events · 6 sumber · 0 soal · QBank di port 1906 ·
+  nomor-nomor `CONSTRAINTS` — semuanya dicek, bukan dikarang.
+- `AGENTS.md` didaftarkan di `docs/PETA-DOKUMEN.md` (CONSTRAINTS #31).
+- Aturan ditulis **ringkas & dapat dikerjakan** — rinciannya tetap di
+  `CONSTRAINTS.md`; `AGENTS.md` menunjuk ke sana agar tak jadi salinan yang basi.
+
 ## [Fitur] — ADR-0016: tambah `collections` (arsip soal publik)
 
 ### Ditambahkan
