@@ -124,8 +124,8 @@ export const PERMISSIONS: Record<keyof PermissionMatrix, Record<Role, Access>> =
   },
   "bundle:manage": {
     admin: "yes",
-    teacher: "yes",
-    reviewer: "yes",
+    teacher: "own", // ADR-0009 "Opsi 2": latihan = milik pembuat; koleksi = umum
+    reviewer: "own",
     agent: "no", // agent TIDAK boleh bundle
     machine: "no",
   },

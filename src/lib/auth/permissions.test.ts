@@ -22,7 +22,9 @@ const EXPECTED: Record<Permission, Record<Role, "yes" | "own" | "no">> = {
   "question:flag": { admin: "yes", teacher: "own", reviewer: "yes", agent: "yes", machine: "no" },
   "taxonomy:manage": { admin: "yes", teacher: "own", reviewer: "own", agent: "own", machine: "yes" },
   "reference:manage": { admin: "yes", teacher: "own", reviewer: "own", agent: "own", machine: "no" },
-  "bundle:manage": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "no", machine: "no" },
+  // ADR-0009 "Opsi 2": latihan = milik pembuat (`own`); koleksi (type='source')
+  // ditangani `assertBundleWrite` di service sebagai arsip institusional (umum).
+  "bundle:manage": { admin: "yes", teacher: "own", reviewer: "own", agent: "no", machine: "no" },
   "media:manage": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "no" },
   "settings:manage": { admin: "yes", teacher: "no", reviewer: "no", agent: "no", machine: "no" },
   "user:manage": { admin: "yes", teacher: "no", reviewer: "no", agent: "no", machine: "no" },
@@ -58,6 +60,7 @@ describe("matriks izin — kunci exhaustive", () => {
     );
     expect(ownPerms.sort()).toEqual(
       [
+        "bundle:manage", // ADR-0009 Opsi 2: latihan milik pembuat (createdById)
         "question:delete",
         "question:edit",
         "question:flag",

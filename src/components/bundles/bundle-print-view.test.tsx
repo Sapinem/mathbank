@@ -33,6 +33,7 @@ function bundle(over: Partial<BundleDetail> = {}): BundleDetail {
     durationMinutes: 120,
     instructions: "Kerjakan dengan jujur.",
     status: "ready",
+    createdById: "u1",
     itemCount: 3,
     createdAt: new Date(),
     updatedAt: new Date(),

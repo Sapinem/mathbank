@@ -20,10 +20,17 @@ export const GET = wrapRoute({
   handler: async ({ actor }) => listBundles(actor),
 });
 
-/** POST /api/bundles — buat paket baru (butuh `bundle:manage`). */
+/**
+ * POST /api/bundles — buat paket baru.
+ *
+ * Gerbang route memakai izin **dasar** `question:view` (semua guru punya);
+ * aturan sebenarnya (agent tak boleh) ditegakkan `assertCan(actor,
+ * "bundle:manage")` di `createBundle` — di sana `ownerId` tak relevan karena
+ * barisnya belum ada.
+ */
 export const POST = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
-  permission: "bundle:manage",
+  permission: "question:view",
   body: createSchema,
   idempotent: true, // #4: anti double-submit pembuatan paket
   handler: async ({ body, actor }) => createBundle(body, actor),

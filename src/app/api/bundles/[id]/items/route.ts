@@ -27,7 +27,7 @@ export const GET = wrapRoute({
 /** POST /api/bundles/[id]/items — tambah soal ke paket. */
 export const POST = wrapRoute({
   rateLimit: { capacity: 60, refillPerSec: 2 },
-  permission: "bundle:manage",
+  permission: "question:view", // #35: aturan sebenarnya di service (assertBundleWrite)
   body: postSchema,
   handler: async ({ params, body, actor }) =>
     addItem(params.id, body.questionId, actor, {
@@ -39,7 +39,7 @@ export const POST = wrapRoute({
 /** PUT /api/bundles/[id]/items — susun ulang urutan item. */
 export const PUT = wrapRoute({
   rateLimit: { capacity: 60, refillPerSec: 2 },
-  permission: "bundle:manage",
+  permission: "question:view", // #35: aturan sebenarnya di service (assertBundleWrite)
   body: putSchema,
   handler: async ({ params, body, actor }) => {
     await reorderItems(params.id, body.itemIds, actor);

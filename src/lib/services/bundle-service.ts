@@ -17,7 +17,7 @@ import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions, questionOptions } from "@/lib/db/schema/question";
 import { questionColumns, optionColumns, canSeeAnswerKey } from "@/lib/db/projections/question";
-import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
+import { assertCan, can, hasRole, NotFoundError, ConflictError, ForbiddenError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import type { PublicQuestion } from "./question-service";
 import type { QuestionOption } from "@/lib/db/schema/question";
@@ -40,6 +40,8 @@ export interface BundleRow {
   durationMinutes: number | null;
   instructions: string | null;
   status: "draft" | "review" | "ready" | "archived";
+  /** Pembuat paket — dasar penegakan izin `own` (lihat `assertBundleAccess`). */
+  createdById: string | null;
   itemCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -163,14 +165,68 @@ function bundleColumns() {
     durationMinutes: bundles.durationMinutes,
     instructions: bundles.instructions,
     status: bundles.status,
+    createdById: bundles.createdById,
     createdAt: bundles.createdAt,
     updatedAt: bundles.updatedAt,
   };
 }
 
-/** Daftar paket aktif (belum diarsip) + jumlah soal. */
-export async function listBundles(actor: Actor): Promise<BundleRow[]> {
+/**
+ * Otorisasi per-paket (L5) — di sini, BUKAN di gerbang `permission` route.
+ *
+ * KENAPA: `assertCan(actor, perm)` tanpa `ownerId` **selalu menolak** peran
+ * ber-`own` (CONSTRAINTS #35). Dan perilaku paket bergantung pada **tipe**-nya,
+ * yang baru diketahui setelah baris dibaca dari DB — jadi mustahil dinilai di
+ * gerbang route.
+ *
+ * Aturan (keputusan pemilik produk — ADR-0009 "Opsi 2"):
+ *   - `source` (KOLEKSI/arsip)      → **umum**: guru/penelaah boleh kelola bersama.
+ *   - `exam` | `exercise` (LATIHAN) → **`own`**: hanya PEMBUAT yang boleh ubah.
+ *     Guru lain boleh **melihat** (`assertBundleRead`), tak boleh mengubah.
+ *   - `admin` → selalu boleh.
+ *
+ * ⚠️ CATATAN IMPLEMENTASI: `bundle:manage` sengaja bernilai **`own`** untuk
+ * teacher/reviewer. Karena itu **jangan** memakai `can(actor, "bundle:manage")`
+ * tanpa `ownerId` di sini — nilainya akan selalu `false` untuk guru, termasuk
+ * saat mengelola paket miliknya sendiri. Nilai peran diperiksa langsung.
+ */
+export function assertBundleWrite(bundle: BundleRow, actor: Actor): void {
+  // Admin selalu boleh (union izin: "yes" > "own").
+  if (can(actor, "bundle:manage", { ownerId: null })) return;
+
+  // Koleksi = arsip institusional → boleh dikelola bersama (guru & penelaah).
+  if (bundle.bundleType === "source") {
+    if (hasRole(actor, "teacher") || hasRole(actor, "reviewer")) return;
+  }
+
+  // Latihan/Exam → hanya pembuatnya.
+  if (bundle.createdById && bundle.createdById === actor.id) return;
+
+  throw new ForbiddenError(
+    bundle.createdById
+      ? "Paket latihan ini milik guru lain — hanya pembuatnya yang bisa mengubah."
+      : "Paket latihan tanpa pemilik hanya bisa diubah oleh admin.",
+  );
+}
+
+/**
+ * Otorisasi BACA paket: semua pemegang `question:view` boleh melihat paket —
+ * **termasuk** latihan guru lain (keputusan pemilik produk: "boleh MELIHAT,
+ * tak boleh mengubah").
+ */
+export function assertBundleRead(actor: Actor): void {
   assertCan(actor, "question:view");
+}
+
+/**
+ * Daftar paket aktif (belum diarsip) + jumlah soal.
+ *
+ * ⚠️ Sengaja TIDAK menyaring per-pemilik: guru **boleh melihat** latihan guru
+ * lain (keputusan pemilik produk). Yang dibatasi adalah **mutasi**, ditegakkan
+ * `assertBundleWrite` per-paket.
+ */
+export async function listBundles(actor: Actor): Promise<BundleRow[]> {
+  assertBundleRead(actor);
   const rows = await db
     .select(bundleColumns())
     .from(bundles)
@@ -191,12 +247,21 @@ export async function getBundle(id: string): Promise<BundleRow | null> {
   return withCount!;
 }
 
-/** Buat paket baru (status draft). */
+/**
+ * Buat paket baru (status draft).
+ *
+ * ⚠️ Pengecekan izin **bukan** `assertCan("bundle:manage")`: izin itu ber-`own`
+ * untuk guru, dan di sini `ownerId` **belum ada** (barisnya belum dibuat) →
+ * `assertCan` tanpa `ownerId` akan **selalu menolak** guru (#35). Kita periksa
+ * kemampuan *membuat* secara eksplisit: guru/penelaah boleh, agent/mesin tidak.
+ */
 export async function createBundle(
   input: CreateBundleInput,
   actor: Actor,
 ): Promise<BundleRow> {
-  assertCan(actor, "bundle:manage");
+  if (!(hasRole(actor, "teacher") || hasRole(actor, "reviewer") || hasRole(actor, "admin"))) {
+    throw new ForbiddenError("Tidak berwenang membuat paket.");
+  }
   const slug = await uniqueSlug(input.title);
   const [row] = await db
     .insert(bundles)
@@ -223,15 +288,20 @@ export async function createBundle(
   return (await getBundle(row!.id))!;
 }
 
-/** Perbarui metadata paket. */
+/**
+ * Perbarui metadata paket.
+ *
+ * ⚠️ Izinkan bila aktor boleh UBAH paket ini (`assertBundleWrite`) — latihan
+ * milik guru lain DITOLAK meski `bundle:manage` = "yes" (#35).
+ */
 export async function updateBundle(
   id: string,
   patch: UpdateBundleInput,
   actor: Actor,
 ): Promise<BundleRow> {
-  assertCan(actor, "bundle:manage");
   const existing = await getBundle(id);
   if (!existing) throw new NotFoundError("Paket tidak ditemukan.");
+  assertBundleWrite(existing, actor);
 
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (patch.title !== undefined) {
@@ -259,11 +329,11 @@ export async function updateBundle(
   return (await getBundle(id))!;
 }
 
-/** Arsip paket (soft-delete). */
+/** Arsip paket (soft-delete). Hanya pembuat / admin (`assertBundleWrite`). */
 export async function archiveBundle(id: string, actor: Actor): Promise<void> {
-  assertCan(actor, "bundle:manage");
   const existing = await getBundle(id);
   if (!existing) throw new NotFoundError("Paket tidak ditemukan.");
+  assertBundleWrite(existing, actor);
   await db
     .update(bundles)
     .set({ deletedAt: new Date(), updatedAt: new Date() })
@@ -339,9 +409,9 @@ export async function addItem(
   actor: Actor,
   opts: { role?: BundleItemRole; sectionName?: string | null } = {},
 ): Promise<BundleItemRow> {
-  assertCan(actor, "bundle:manage");
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
+  assertBundleWrite(bundle, actor);
 
   const [q] = await db
     .select({ id: questions.id })
@@ -391,7 +461,9 @@ export async function removeItem(
   itemId: string,
   actor: Actor,
 ): Promise<void> {
-  assertCan(actor, "bundle:manage");
+  const bundle = await getBundle(bundleId);
+  if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
+  assertBundleWrite(bundle, actor);
   const [row] = await db
     .select({ id: bundleItems.id })
     .from(bundleItems)
@@ -411,7 +483,9 @@ export async function reorderItems(
   itemIds: string[],
   actor: Actor,
 ): Promise<void> {
-  assertCan(actor, "bundle:manage");
+  const bundle = await getBundle(bundleId);
+  if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
+  assertBundleWrite(bundle, actor);
   const existing = await db
     .select({ id: bundleItems.id })
     .from(bundleItems)
@@ -496,13 +570,20 @@ export async function validateBundle(id: string): Promise<BundleValidation> {
   };
 }
 
-/** Duplikasi paket (metadata + item) dengan judul baru. */
+/**
+ * Duplikasi paket (metadata + item) dengan judul baru.
+ *
+ * ⚠️ Sumbernya boleh milik siapa pun yang boleh **melihat** (menyalin latihan
+ * guru lain = "fork" sah). Salinannya menjadi milik aktor (`createdById`).
+ * Karena itu cukup izin **baca** — bukan `assertCan("bundle:manage")` yang
+ * ber-`own` dan akan selalu menolak tanpa `ownerId` (#35).
+ */
 export async function duplicateBundle(
   id: string,
   actor: Actor,
   newTitle?: string,
 ): Promise<BundleRow> {
-  assertCan(actor, "bundle:manage");
+  assertBundleRead(actor);
   const src = await getBundle(id);
   if (!src) throw new NotFoundError("Paket tidak ditemukan.");
   const title = newTitle ?? `${src.title} (salinan)`;
