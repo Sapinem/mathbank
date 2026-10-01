@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   Pencil,
@@ -13,7 +14,6 @@ import {
   Sliders,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { QuestionEditor } from "@/components/questions/question-editor";
 import { EnrichButton } from "@/components/questions/enrich-button";
 import { MathContent } from "@/components/math/math-content";
 import { Button } from "@/components/ui/button";
@@ -58,8 +58,8 @@ export function QuestionDetailView() {
   const del = useDeleteQuestion();
   const changeStatus = useChangeQuestionStatus(id);
 
-  const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [selectedSolutionIdx, setSelectedSolutionIdx] = useState(0);
 
   if (isLoading) return <LoadingState label="Memuat soal…" />;
   if (isError)
@@ -76,23 +76,6 @@ export function QuestionDetailView() {
 
   const key = q.answerKey;
   const correctLabels = key?.correct ?? [];
-
-  if (editing) {
-    return (
-      <>
-        <PageHeader
-          title="Sunting Soal"
-          description="Perubahan tersimpan saat Anda menekan Simpan."
-          actions={
-            <Button variant="ghost" onClick={() => setEditing(false)}>
-              Batal
-            </Button>
-          }
-        />
-        <QuestionEditor existing={q} />
-      </>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-0">
@@ -117,7 +100,7 @@ export function QuestionDetailView() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setEditing(true)}
+              render={<Link href={`/questions/${id}/edit`} />}
             >
               <Pencil data-icon="inline-start" /> Sunting
             </Button>
@@ -221,55 +204,131 @@ export function QuestionDetailView() {
             </Card>
 
             {/* KARTU KUNCI & PEMBAHASAN */}
-            <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
-              <CardHeader className="border-b border-border/40 pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Lightbulb className="size-4 text-amber-500 shrink-0" />
-                  Kunci & Pembahasan
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4 pt-4">
-                {/* Kunci Jawaban Singkat */}
-                {key && (correctLabels.length > 0 || key.text) && (
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <span className="text-muted-foreground">Kunci Jawaban:</span>
-                    <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                      {correctLabels.join(", ") || key.text} ✓
-                    </span>
-                  </div>
-                )}
+            {(() => {
+              const solList =
+                q.solutions && q.solutions.length > 0
+                  ? q.solutions
+                  : key?.explanation
+                    ? [
+                        {
+                          id: "legacy",
+                          questionId: q.id,
+                          solutionType: "conceptual",
+                          title: "Pembahasan Konseptual",
+                          contentMarkdown: key.explanation,
+                          authorType: "human",
+                          isPrimary: true,
+                        },
+                      ]
+                    : [];
+              const activeSol =
+                solList[selectedSolutionIdx] || solList[0];
 
-                {/* Pembahasan Detail — Font 20px di Desktop */}
-                {key?.explanation ? (
-                  <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Langkah Penyelesaian
-                    </p>
-                    <div className="text-base lg:text-[20px] lg:leading-[1.75] text-foreground whitespace-pre-wrap">
-                      <MathContent content={key.explanation} className="no-scrollbar" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-6 text-center">
-                    <p className="text-xs text-muted-foreground max-w-sm">
-                      Belum ada naskah pembahasan yang disimpan untuk butir soal ini.
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                        <Pencil data-icon="inline-start" /> Tulis Pembahasan
-                      </Button>
-                      <EnrichButton questionId={id} />
-                    </div>
-                  </div>
-                )}
+              return (
+                <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+                  <CardHeader className="border-b border-border/40 pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Lightbulb className="size-4 text-amber-500 shrink-0" />
+                      Kunci & Pembahasan
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4 pt-4">
+                    {/* Kunci Jawaban Singkat */}
+                    {key && (correctLabels.length > 0 || key.text) && (
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <span className="text-muted-foreground">Kunci Jawaban:</span>
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                          {correctLabels.join(", ") || key.text} ✓
+                        </span>
+                      </div>
+                    )}
 
-                {!key && (
-                  <p className="text-sm text-muted-foreground">
-                    Kunci jawaban tidak ditampilkan untuk peran Anda.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                    {/* Tab Pilihan Solusi bila ada > 1 */}
+                    {solList.length > 1 && (
+                      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-3">
+                        {solList.map((sol, idx) => {
+                          const isSelected =
+                            idx ===
+                            (selectedSolutionIdx < solList.length
+                              ? selectedSolutionIdx
+                              : 0);
+                          return (
+                            <button
+                              key={sol.id || idx}
+                              type="button"
+                              onClick={() => setSelectedSolutionIdx(idx)}
+                              className={cn(
+                                "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+                                isSelected
+                                  ? "border-primary bg-primary/10 text-primary shadow-xs"
+                                  : "border-border/80 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                              )}
+                            >
+                              <span>{sol.title || `Solusi ${idx + 1}`}</span>
+                              {sol.isPrimary && (
+                                <span className="rounded bg-primary/15 px-1 py-0.5 text-[10px] font-bold">
+                                  Utama
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Pembahasan Detail — Font 20px di Desktop */}
+                    {activeSol?.contentMarkdown ? (
+                      <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            {activeSol.title || "Langkah Penyelesaian"}
+                          </p>
+                          {activeSol.solutionType && (
+                            <span className="rounded border border-border/60 bg-background/80 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+                              {activeSol.solutionType === "quick_tip"
+                                ? "Trik / Cara Cepat"
+                                : activeSol.solutionType === "alternative"
+                                ? "Metode Alternatif"
+                                : activeSol.solutionType === "video"
+                                ? "Video / Multimedia"
+                                : "Konseptual"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-base lg:text-[20px] lg:leading-[1.75] text-foreground whitespace-pre-wrap">
+                          <MathContent
+                            content={activeSol.contentMarkdown}
+                            className="no-scrollbar"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-6 text-center">
+                        <p className="text-xs text-muted-foreground max-w-sm">
+                          Belum ada naskah pembahasan yang disimpan untuk butir soal ini.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            render={<Link href={`/questions/${id}/edit`} />}
+                          >
+                            <Pencil data-icon="inline-start" /> Tulis Pembahasan
+                          </Button>
+                          <EnrichButton questionId={id} />
+                        </div>
+                      </div>
+                    )}
+
+                    {!key && (
+                      <p className="text-sm text-muted-foreground">
+                        Kunci jawaban tidak ditampilkan untuk peran Anda.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </div>
 
           {/* KOLOM KANAN (SIDEBAR METADATA & SUMBER) (~32%) */}

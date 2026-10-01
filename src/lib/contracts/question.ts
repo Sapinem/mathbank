@@ -72,6 +72,24 @@ export const optionInputSchema = z.object({
   orderIndex: z.number().int().min(0).default(0),
 });
 
+// ── Pembahasan (Multi-Solution) ──────────────────────────────
+export const solutionTypeSchema = z.enum([
+  "conceptual",
+  "quick_tip",
+  "video",
+  "alternative",
+]);
+
+export const solutionInputSchema = z.object({
+  id: z.string().uuid().optional(),
+  solutionType: solutionTypeSchema.default("conceptual"),
+  title: z.string().min(1).max(150).default("Pembahasan Utuh"),
+  contentMarkdown: z.string().min(1),
+  isPrimary: z.boolean().default(false),
+});
+
+export type SolutionInput = z.infer<typeof solutionInputSchema>;
+
 // ── Buat soal ─────────────────────────────────────────────────
 export const createQuestionSchema = z.object({
   questionType: questionTypeSchema,
@@ -93,6 +111,7 @@ export const createQuestionSchema = z.object({
   eventNotes: z.string().nullable().optional(),
 
   options: z.array(optionInputSchema).default([]),
+  solutions: z.array(solutionInputSchema).optional().default([]),
   topicIds: z.array(z.string().uuid()).default([]),
   tagIds: z.array(z.string().uuid()).default([]),
 });
@@ -162,7 +181,9 @@ export const bulkActionSchema = z.object({
 });
 
 // ── Tipe terinferensi ─────────────────────────────────────────
-export type CreateQuestionInput = z.infer<typeof createQuestionSchema>;
+export type CreateQuestionInput = Omit<z.infer<typeof createQuestionSchema>, "solutions"> & {
+  solutions?: z.infer<typeof solutionInputSchema>[];
+};
 export type UpdateQuestionInput = z.infer<typeof updateQuestionSchema>;
 export type ListQuestionsQuery = z.infer<typeof listQuestionsQuerySchema>;
 export type OptionInput = z.infer<typeof optionInputSchema>;

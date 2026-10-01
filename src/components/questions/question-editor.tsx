@@ -2,7 +2,15 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Send, Loader2, ImagePlus } from "lucide-react";
+import {
+  Save,
+  Send,
+  Loader2,
+  ImagePlus,
+  Lightbulb,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,15 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { MathContent } from "@/components/math/math-content";
 import { Field, FieldGroup } from "@/components/ui/field-group";
 import { useCreateQuestion, useUpdateQuestion } from "@/lib/hooks/use-questions";
@@ -116,7 +117,9 @@ export function QuestionEditor({
   );
   const [content, setContent] = useState(existing?.contentMarkdown ?? "");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState<"content" | "solution">("content");
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  const solutionRef = useRef<HTMLTextAreaElement>(null);
 
   /**
    * Sisipkan shortcode gambar di POSISI KURSOR guru, bukan selalu di akhir.
@@ -155,9 +158,91 @@ export function QuestionEditor({
   const [answerText, setAnswerText] = useState(
     existing?.answerKey?.text ?? "",
   );
-  const [explanation, setExplanation] = useState(
-    existing?.answerKey?.explanation ?? "",
-  );
+
+  interface SolutionDraft {
+    id?: string;
+    title: string;
+    solutionType: "conceptual" | "quick_tip" | "alternative" | "video";
+    contentMarkdown: string;
+    isPrimary: boolean;
+  }
+
+  const [solutions, setSolutions] = useState<SolutionDraft[]>(() => {
+    if (existing?.solutions?.length) {
+      return existing.solutions.map((s) => ({
+        id: s.id.startsWith("virtual-") ? undefined : s.id,
+        title: s.title || "Pembahasan Konseptual",
+        solutionType: s.solutionType ?? "conceptual",
+        contentMarkdown: s.contentMarkdown,
+        isPrimary: s.isPrimary,
+      }));
+    }
+    if (existing?.answerKey?.explanation) {
+      return [
+        {
+          title: "Pembahasan Konseptual",
+          solutionType: "conceptual",
+          contentMarkdown: existing.answerKey.explanation,
+          isPrimary: true,
+        },
+      ];
+    }
+    return [
+      {
+        title: "Pembahasan Konseptual",
+        solutionType: "conceptual",
+        contentMarkdown: "",
+        isPrimary: true,
+      },
+    ];
+  });
+
+  const [activeSolutionIdx, setActiveSolutionIdx] = useState(0);
+
+  function addSolution() {
+    const nextNum = solutions.length + 1;
+    setSolutions((prev) => [
+      ...prev,
+      {
+        title: `Pembahasan Alternatif ${nextNum}`,
+        solutionType: "alternative",
+        contentMarkdown: "",
+        isPrimary: false,
+      },
+    ]);
+    setActiveSolutionIdx(solutions.length);
+  }
+
+  function removeSolution(idx: number) {
+    if (solutions.length <= 1) return;
+    setSolutions((prev) => prev.filter((_, i) => i !== idx));
+    setActiveSolutionIdx((prev) => (prev >= idx ? Math.max(0, prev - 1) : prev));
+  }
+
+  function patchCurrentSolution(patch: Partial<SolutionDraft>) {
+    setSolutions((prev) =>
+      prev.map((s, i) => (i === activeSolutionIdx ? { ...s, ...patch } : s)),
+    );
+  }
+
+  function insertAtSolutionCursor(snippet: string) {
+    const el = solutionRef.current;
+    const current = solutions[activeSolutionIdx]?.contentMarkdown ?? "";
+    if (!el) {
+      patchCurrentSolution({ contentMarkdown: current + snippet });
+      return;
+    }
+    const start = el.selectionStart ?? current.length;
+    const end = el.selectionEnd ?? current.length;
+    const next = current.slice(0, start) + snippet + current.slice(end);
+    patchCurrentSolution({ contentMarkdown: next });
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + snippet.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
   const [parentId, setParentId] = useState<string>(
     existing?.parentId ?? "",
   );
@@ -235,6 +320,10 @@ export function QuestionEditor({
 
   function submit(status: "draft" | "review") {
     const correct = options.filter((o) => o.isCorrect).map((o) => o.label);
+    const validSolutions = solutions.filter((s) => s.contentMarkdown.trim());
+    const primarySolution = validSolutions.find((s) => s.isPrimary) ?? validSolutions[0];
+    const expText = primarySolution?.contentMarkdown.trim() || undefined;
+
     const payload: CreateQuestionInput = {
       questionType: questionType as CreateQuestionInput["questionType"],
       difficulty,
@@ -248,8 +337,8 @@ export function QuestionEditor({
       tagIds: [],
       status,
       answerKey: isText
-        ? { text: answerText.trim(), explanation: explanation.trim() || undefined }
-        : { correct, explanation: explanation.trim() || undefined },
+        ? { text: answerText.trim(), explanation: expText }
+        : { correct, explanation: expText },
       options: usesOptions
         ? options
             .filter((o) => o.contentMarkdown.trim())
@@ -261,6 +350,13 @@ export function QuestionEditor({
               orderIndex: i,
             }))
         : [],
+      solutions: validSolutions.map((s) => ({
+        id: s.id,
+        title: s.title.trim() || "Pembahasan",
+        solutionType: s.solutionType,
+        contentMarkdown: s.contentMarkdown.trim(),
+        isPrimary: s.isPrimary,
+      })),
     };
 
     const onDone = (q: PublicQuestion) => {
@@ -319,6 +415,53 @@ export function QuestionEditor({
         </div>
       )}
 
+      {/* BAR AKSI ATAS (SIMPAN DRAF & MINTA TELAAH) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/80 bg-card p-4 shadow-xs">
+        <div className="flex items-center gap-2">
+          {existing && (
+            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+              Batal
+            </Button>
+          )}
+          <span className="text-xs text-muted-foreground font-mono">
+            {pendingDraft !== null ? "Autosave siap pulih" : "Autosave aktif"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => submit("draft")}
+            disabled={pending || content.trim().length === 0}
+            variant="outline"
+            size="sm"
+          >
+            {pending ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Save data-icon="inline-start" />
+            )}
+            Simpan Draf
+          </Button>
+
+          <Button
+            onClick={() => submit("review")}
+            disabled={pending || !readyToSubmit}
+            size="sm"
+            title={
+              readyToSubmit
+                ? undefined
+                : "Isi pertanyaan & kunci sebelum minta telaah"
+            }
+          >
+            {pending ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Send data-icon="inline-start" />
+            )}
+            Minta Telaah
+          </Button>
+        </div>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* Kolom kiri: isi soal + opsi */}
         <div className="flex flex-col gap-6">
@@ -338,7 +481,10 @@ export function QuestionEditor({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setPickerOpen(true)}
+                  onClick={() => {
+                    setPickerTarget("content");
+                    setPickerOpen(true);
+                  }}
                 >
                   <ImagePlus className="size-4" />
                   Sisip Gambar
@@ -460,10 +606,14 @@ export function QuestionEditor({
           {isText && (
             <Card>
               <CardHeader>
-                <CardTitle>Kunci & Pembahasan</CardTitle>
+                <CardTitle>
+                  {questionType === "essay"
+                    ? "Rambu Jawaban Singkat"
+                    : "Kunci Jawaban"}
+                </CardTitle>
                 <CardDescription>
                   {questionType === "essay"
-                    ? "Rambu-rambu penilaian / kunci esai."
+                    ? "Rambu-rambu penilaian / kunci singkat esai."
                     : "Jawaban singkat yang diharapkan."}
                 </CardDescription>
               </CardHeader>
@@ -506,6 +656,167 @@ export function QuestionEditor({
               </CardContent>
             </Card>
           )}
+
+          {/* Card Pembahasan & Solusi (Mendukung Multi-Pembahasan) */}
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightbulb className="size-5 text-amber-500" />
+                  Kunci & Pembahasan
+                </CardTitle>
+                <CardDescription>
+                  Langkah-langkah penyelesaian rinci. Anda dapat menambahkan beberapa alternatif solusi (misal cara cepat, alternatif).
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addSolution}
+                className="shrink-0"
+              >
+                <Plus className="size-4" />
+                Tambah Pembahasan
+              </Button>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {/* Tabs jika > 1 solusi */}
+              {solutions.length > 1 && (
+                <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+                  {solutions.map((sol, idx) => {
+                    const isActive = idx === activeSolutionIdx;
+                    return (
+                      <div
+                        key={idx}
+                        className={`group flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          isActive
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border/80 bg-background text-muted-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setActiveSolutionIdx(idx)}
+                          className="text-left font-medium cursor-pointer"
+                        >
+                          {sol.title.trim() || `Solusi ${idx + 1}`}
+                          {sol.isPrimary && " (Utama)"}
+                        </button>
+                        {solutions.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeSolution(idx)}
+                            className="ml-1 rounded p-0.5 opacity-60 hover:opacity-100 hover:text-destructive cursor-pointer"
+                            title="Hapus solusi ini"
+                            aria-label={`Hapus ${sol.title}`}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Form Solusi Aktif */}
+              {(() => {
+                const currentSol = solutions[activeSolutionIdx] || solutions[0];
+                if (!currentSol) return null;
+
+                return (
+                  <div className="flex flex-col gap-4">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground mb-1 block">
+                          Judul Pembahasan
+                        </span>
+                        <Input
+                          value={currentSol.title}
+                          onChange={(e) =>
+                            patchCurrentSolution({ title: e.target.value })
+                          }
+                          placeholder="mis. Pembahasan Konseptual, Cara Cepat, dsb."
+                        />
+                      </div>
+                      <div>
+                        <span className="text-xs font-medium text-muted-foreground mb-1 block">
+                          Jenis Pembahasan
+                        </span>
+                        <Select
+                          value={currentSol.solutionType}
+                          onValueChange={(v) =>
+                            patchCurrentSolution({
+                              solutionType: v as SolutionDraft["solutionType"],
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="conceptual">
+                              Konseptual (Utuh)
+                            </SelectItem>
+                            <SelectItem value="quick_tip">
+                              Trik / Cara Cepat
+                            </SelectItem>
+                            <SelectItem value="alternative">
+                              Metode Alternatif
+                            </SelectItem>
+                            <SelectItem value="video">
+                              Video / Interaktif
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Isi Pembahasan (Mendukung KaTeX $...$ dan Markdown)
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setPickerTarget("solution");
+                          setPickerOpen(true);
+                        }}
+                      >
+                        <ImagePlus className="size-4" />
+                        Sisip Gambar
+                      </Button>
+                    </div>
+
+                    <Textarea
+                      ref={solutionRef}
+                      value={currentSol.contentMarkdown}
+                      onChange={(e) =>
+                        patchCurrentSolution({ contentMarkdown: e.target.value })
+                      }
+                      placeholder="Tulis langkah-langkah penyelesaian atau rumus $x = \frac{-b \pm \sqrt{D}}{2a}$ di sini…"
+                      rows={6}
+                      aria-label="Isi Pembahasan"
+                    />
+
+                    {currentSol.contentMarkdown.trim() && (
+                      <div className="rounded-md border border-border bg-muted/30 p-3">
+                        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                          Pratinjau Pembahasan ({currentSol.title})
+                        </p>
+                        <div className="text-base leading-relaxed">
+                          <MathContent content={currentSol.contentMarkdown} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Kolom kanan: metadata + aksi */}
@@ -626,19 +937,6 @@ export function QuestionEditor({
                   </p>
                 </Field>
               )}
-
-              <Separator />
-
-              <p className="text-xs text-muted-foreground">
-                Pembahasan (opsional, tampil setelah dijawab).
-              </p>
-              <Textarea
-                value={explanation}
-                onChange={(e) => setExplanation(e.target.value)}
-                placeholder="Pembahasan singkat…"
-                rows={3}
-                aria-label="Pembahasan"
-              />
               </FieldGroup>
             </CardContent>
           </Card>
@@ -678,7 +976,7 @@ export function QuestionEditor({
                 title={
                   readyToSubmit
                     ? undefined
-                    : "Isi pertanyaan & kunci sebelum kirim telaah"
+                    : "Isi pertanyaan & kunci sebelum minta telaah"
                 }
               >
                 {pending ? (
@@ -686,7 +984,7 @@ export function QuestionEditor({
                 ) : (
                   <Send data-icon="inline-start" />
                 )}
-                Kirim ke Telaah
+                Minta Telaah
               </Button>
               <p className="text-center text-xs text-muted-foreground">
                 {existing ? "Menyunting soal yang ada" : "Soal baru"}
@@ -699,7 +997,11 @@ export function QuestionEditor({
       <AssetPickerModal
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onPick={(shortcode) => insertAtCursor(shortcode)}
+        onPick={(shortcode) =>
+          pickerTarget === "solution"
+            ? insertAtSolutionCursor(shortcode)
+            : insertAtCursor(shortcode)
+        }
       />
     </div>
   );

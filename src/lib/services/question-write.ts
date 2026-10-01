@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions, questionOptions } from "@/lib/db/schema/question";
+import { solutions } from "@/lib/db/schema/solution";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import { isQuestionUsedInBundles } from "./bundle-service";
 import { contentHash } from "@/lib/ingest/hash";
@@ -91,6 +92,19 @@ export async function createQuestion(
         .insert(questionTags)
         .values(input.tagIds.map((tagId) => ({ questionId: row.id, tagId })));
     }
+    if (input.solutions?.length) {
+      await tx.insert(solutions).values(
+        input.solutions.map((s, idx) => ({
+          questionId: row.id,
+          solutionType: s.solutionType,
+          title: s.title || `Pembahasan ${idx + 1}`,
+          contentMarkdown: s.contentMarkdown,
+          isPrimary: s.isPrimary ?? (idx === 0),
+          authorType: "teacher" as const,
+          authorId: actor.id,
+        })),
+      );
+    }
     return row.id;
   });
 
@@ -119,7 +133,7 @@ export async function updateQuestion(
   // Izin: reviewer/admin boleh semua; teacher hanya miliknya sendiri
   assertCan(actor, "question:edit", { ownerId: existing.authorId });
 
-  const { options, topicIds, tagIds, parentId, ...fields } = input;
+  const { options, solutions: solutionInputs, topicIds, tagIds, parentId, ...fields } = input;
 
   await db.transaction(async (tx) => {
     const patch: Partial<typeof questions.$inferInsert> = {};
@@ -138,6 +152,31 @@ export async function updateQuestion(
     if (fields.eventNotes !== undefined) patch.eventNotes = fields.eventNotes;
     if (parentId !== undefined) patch.parentId = parentId;
     if (fields.childOrder !== undefined) patch.childOrder = fields.childOrder;
+
+    if (solutionInputs !== undefined) {
+      await tx.delete(solutions).where(eq(solutions.questionId, id));
+      if (solutionInputs.length) {
+        await tx.insert(solutions).values(
+          solutionInputs.map((s, idx) => ({
+            questionId: id,
+            solutionType: s.solutionType,
+            title: s.title || `Pembahasan ${idx + 1}`,
+            contentMarkdown: s.contentMarkdown,
+            isPrimary: s.isPrimary ?? (idx === 0),
+            authorType: "teacher" as const,
+            authorId: actor.id,
+          })),
+        );
+      }
+      const prim = solutionInputs.find((s) => s.isPrimary) ?? solutionInputs[0];
+      if (prim?.contentMarkdown) {
+        patch.answerKey = {
+          ...(existing.answerKey ?? {}),
+          ...(patch.answerKey ?? {}),
+          explanation: prim.contentMarkdown,
+        };
+      }
+    }
 
     if (Object.keys(patch).length) {
       await tx.update(questions).set(patch).where(eq(questions.id, id));

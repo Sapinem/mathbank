@@ -9,6 +9,7 @@ import {
 import { embedText } from "@/lib/embedding/bge-m3";
 import type { Actor } from "@/lib/auth/actor";
 import { questionSources } from "@/lib/db/schema/question-source";
+import { solutions } from "@/lib/db/schema/solution";
 import {
   questionColumns,
   optionColumns,
@@ -22,6 +23,17 @@ import type { ListQuestionsQuery, AnswerKey } from "@/lib/contracts/question";
  * Fungsi baca murni + proyeksi aman (S3): `answerKey` hanya bila viewer berwenang,
  * `embedding*`/`aiTagged*` selalu dibuang pada jalur publik.
  */
+
+/** Bentuk ringkas solusi/pembahasan untuk respons API. */
+export interface QuestionSolutionView {
+  id: string;
+  solutionType: "conceptual" | "quick_tip" | "video" | "alternative";
+  title: string;
+  contentMarkdown: string;
+  isPrimary: boolean;
+  authorType: "teacher" | "student" | "system" | "ai" | "imported";
+  createdAt: Date;
+}
 
 /**
  * Bentuk soal untuk RESPONS API.
@@ -43,6 +55,8 @@ export type PublicQuestion = Omit<
   answerKey?: AnswerKey;
   /** Provenance (ADR-0012): sumber-sumber butir ini (bisa >1). */
   sources?: QuestionSourceView[];
+  /** Pembahasan terstruktur (bisa >1 cara/metode). */
+  solutions?: QuestionSolutionView[];
   /**
    * Wacana stimulus induk (soal `stimulus`), bila butir ini adalah soal anak.
    * Menyertakan `contentMarkdown` agar UI dapat merender konteks utuh (audit §3.9).
@@ -119,7 +133,43 @@ export async function getQuestion(
 
   const parent = row.parentId ? await getParentStimulus(row.parentId) : null;
 
-  return { ...row, options, sources, parent } as PublicQuestion;
+  // Ambil daftar solusi bila viewer berwenang melihat kunci/pembahasan
+  let solutionList: QuestionSolutionView[] = [];
+  if (withAnswerKey) {
+    const rawSolutions = await db
+      .select({
+        id: solutions.id,
+        solutionType: solutions.solutionType,
+        title: solutions.title,
+        contentMarkdown: solutions.contentMarkdown,
+        isPrimary: solutions.isPrimary,
+        authorType: solutions.authorType,
+        createdAt: solutions.createdAt,
+      })
+      .from(solutions)
+      .where(eq(solutions.questionId, id))
+      .orderBy(desc(solutions.isPrimary), asc(solutions.createdAt));
+
+    solutionList = rawSolutions as QuestionSolutionView[];
+    const answerKey = "answerKey" in row ? (row.answerKey as AnswerKey | undefined) : undefined;
+
+    // Fallback: Jika tabel solutions kosong tapi answerKey.explanation ada, buat solusi virtual
+    if (solutionList.length === 0 && answerKey?.explanation) {
+      solutionList = [
+        {
+          id: `virtual-${row.id}`,
+          solutionType: "conceptual",
+          title: "Pembahasan Utuh",
+          contentMarkdown: answerKey.explanation,
+          isPrimary: true,
+          authorType: "teacher",
+          createdAt: row.createdAt,
+        },
+      ];
+    }
+  }
+
+  return { ...row, options, sources, solutions: solutionList, parent } as PublicQuestion;
 }
 
 /** Ambil wacana stimulus induk (id + contentMarkdown) bila ada. */
