@@ -19,8 +19,9 @@
 | [0009](0009-bundle-pisah-koleksi-dan-latihan.md) | Bundle: **satu tabel** `bundles` (Opsi 2 — pisah 100% di UI) | ✅ Berlaku |
 | [0010](0010-event-jenis-berulang-tahun-di-soal.md) | `event` = jenis berulang; tahun di `questions.event_year` | Diterima |
 | [0011](0011-stimulus-tetap-di-questions.md) | Stimulus tetap di `questions` (`parent_id`) — jangan dipisah | Diterima |
-| [0012](0012-provenance-per-butir-question-sources.md) | Provenance per-butir: tabel `question_sources` (many-to-many, anti-duplikat) | Diterima |
+| [0012](0012-provenance-per-butir-question-sources.md) | Provenance per-butir: tabel `question_sources` (many-to-many, anti-duplikat) | ⚪ Digantikan sebagian oleh ADR-0014 |
 | [0013](0013-pisah-collections-dari-bundles.md) | Pisah tabel `collections` vs `bundles` | 🔴 **DIBATALKAN** (audit: duplikasi `question_sources`) |
+| [0014](0014-sumber-menempel-pada-bundle.md) | Sumber menempel pada **BUNDLE** (bukan soal); `question_sources` dihapus; `event_*` dipertahankan | **Diterima** |
 
 ## Cara menambah ADR
 

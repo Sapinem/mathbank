@@ -1,6 +1,9 @@
 # ADR-0012 — Provenance per-butir: tabel `question_sources` (multi-sumber, anti-duplikat)
 
-- **Status:** ✅ **DITERIMA** (2026-10-01) — dieksekusi T1–T8
+- **Status:** ⚪ **DIGANTIKAN SEBAGIAN oleh [ADR-0014](0014-sumber-menempel-pada-bundle.md)** (2026-10-01)
+  — tabel `question_sources` **dihapus**; sumber menempel pada **bundle**.
+  Prinsip **dedup `contentHash`** tetap berlaku (kini via `bundle_items`).
+- **Status sebelumnya:** ✅ DITERIMA (2026-10-01) — dieksekusi T1–T8
 - **Tanggal:** 2026-10-01
 - **Pengambil keputusan:** Pemilik produk
 - **Terkait:** `docs/ADR/0010-*.md`, QBank `master:src/lib/db/schema/sources.ts` (`question_sources`),
