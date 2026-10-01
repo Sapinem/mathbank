@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { questions, questionOptions } from "@/lib/db/schema/question";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import { isQuestionUsedInBundles } from "./bundle-service";
+import { contentHash } from "@/lib/ingest/hash";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { recordAudit } from "./audit";
@@ -50,6 +51,11 @@ export async function createQuestion(
         cognitiveLevel: input.cognitiveLevel,
         grade: input.grade,
         contentMarkdown: input.contentMarkdown,
+        // Hash konten (ADR-0012) — dedup lintas-sumber.
+        contentHash: contentHash(
+          input.contentMarkdown,
+          input.options.map((o) => o.contentMarkdown),
+        ),
         dataPayload: input.dataPayload,
         answerKey: input.answerKey,
         status: input.status,

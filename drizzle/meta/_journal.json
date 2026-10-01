@@ -57,6 +57,13 @@
       "when": 1790788366947,
       "tag": "0007_furry_darwin",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790819847623,
+      "tag": "0008_cloudy_talos",
+      "breakpoints": true
     }
   ]
 }

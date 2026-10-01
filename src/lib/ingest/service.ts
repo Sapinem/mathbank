@@ -111,15 +111,18 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
     const commit = await commitItems(items, opts.actor, {
       sourceOrigin: item.sourceOrigin,
       sourceUrl: item.sourceUrl,
+      articleTitle: item.title,
+      accessedAt: item.processedAt ?? item.createdAt ?? null,
       grade: opts.grade ?? item.targetGrade ?? null,
       topicId: item.targetTopicId ?? null,
     });
 
     await markDone(item.id, "completed", {
       mediaManifest: toMediaManifest([...cache.values()]),
-      importedQuestionsCount: commit.created,
+      importedQuestionsCount: commit.created + commit.linked,
       aiNotes:
-        `${commit.created} soal dibuat, ${commit.skipped} dilewati` +
+        `${commit.created} soal dibuat, ${commit.linked} soal identik (sumber ditambah), ` +
+        `${commit.skipped} dilewati` +
         (mediaFailed ? `, ${mediaFailed} gambar gagal` : ""),
     });
     return {

@@ -15,7 +15,7 @@ config({ path: ".env" });
 
 /** Harapan minimum skema (rata-rata setelah 0000..0004). */
 const EXPECTED = {
-  tables: 28, // 27 awal + rate_limit (Better Auth, migrasi 0004)
+  tables: 29, // 28 + question_sources (ADR-0012)
   checkConstraints: 2,
   hnswIndexes: 1,
   triggers: 26, // 21 updated_at + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable

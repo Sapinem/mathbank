@@ -3,7 +3,7 @@ import postgres from "postgres";
 import type { Actor } from "@/lib/auth/actor";
 import { enqueue, listQueue, listPending, markProcessing, markDone, countByStatus, getQueueItem } from "./queue";
 import { commitItems, resolveSourceId, existingItemHashes } from "./commit";
-import { articleHash, itemHash } from "./hash";
+import { articleHash, itemHash, contentHash } from "./hash";
 import type { ParsedItem } from "./parsers/types";
 
 /**
@@ -19,14 +19,18 @@ const sql = postgres(url, { max: 4 });
 const machine: Actor = { id: "test-machine", name: "Mesin Uji", roles: ["machine"], via: "apikey" };
 
 async function cleanAll() {
+  await sql`DELETE FROM question_sources`;
   await sql`DELETE FROM question_options`;
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
   await sql`UPDATE questions SET parent_id = NULL`;
   await sql`DELETE FROM questions`;
   await sql`DELETE FROM ingest_queue`;
-  await sql`DELETE FROM sources WHERE slug = 'uji-ingest' OR label = 'uji-ingest'`;
+  await sql`DELETE FROM sources WHERE slug = 'uji-ingest' OR label = 'uji-ingest' OR slug = 'uji-ingest-2' OR label = 'uji-ingest-2'`;
+  // `audit_logs` append-only (trigger immutable) → matikan sementara utk bersih-bersih.
+  await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;
+  await sql`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_immutable`;
 }
 
 function item(over: Partial<ParsedItem> = {}): ParsedItem {
@@ -113,12 +117,50 @@ describe("commit (soal draft)", () => {
     expect(s.kind).toBe("website");
   });
 
-  it("idempoten: soal dengan stem sama tak dibuat ulang", async () => {
+  it("idempoten: soal dengan konten sama (sumber SAMA) tak dibuat ulang", async () => {
     const first = await commitItems([item()], machine, { sourceOrigin: "uji-ingest" });
     expect(first.created).toBe(1);
-    const second = await commitItems([item()], machine, { sourceOrigin: "uji-ingest" });
+    const second = await commitItems([item()], machine, { sourceOrigin: "uji-ingest", sourceUrl: "https://a/1" });
     expect(second.created).toBe(0);
-    expect(second.skipped).toBe(1);
+    expect(second.linked).toBe(1);
+    // Provenance tetap satu baris (UNIQUE question_id+source_id → idempoten).
+    const rows = await sql`SELECT count(*)::int AS n FROM question_sources WHERE question_id = ${first.questionIds[0]}`;
+    expect(rows[0].n).toBe(1);
+  });
+
+  it("MANY-TO-MANY (ADR-0012): konten sama dari sumber BERBEDA → 1 soal, 2 provenance", async () => {
+    const a = await commitItems([item()], machine, { sourceOrigin: "uji-ingest" });
+    const b = await commitItems([item()], machine, {
+      sourceOrigin: "uji-ingest-2",
+      sourceUrl: "https://b/2",
+      articleTitle: "Artikel B",
+    });
+    expect(a.created).toBe(1);
+    expect(b.created).toBe(0); // TIDAK dibuat ulang
+    expect(b.linked).toBe(1); // hanya ditautkan
+    expect(b.questionIds[0]).toBe(a.questionIds[0]); // soal yang SAMA
+
+    const total = await sql`SELECT count(*)::int AS n FROM questions`;
+    expect(total[0].n).toBe(1);
+    const prov = await sql`SELECT count(*)::int AS n FROM question_sources WHERE question_id = ${a.questionIds[0]}`;
+    expect(prov[0].n).toBe(2); // dua sumber
+    // Judul artikel tersimpan di provenance (cacat lama: dibuang).
+    const t = await sql`SELECT title FROM question_sources WHERE question_id = ${a.questionIds[0]} AND title = 'Artikel B'`;
+    expect(t.length).toBe(1);
+  });
+
+  it("provenance artikel (judul + url + waktu akses) TERSIMPAN saat commit", async () => {
+    const at = new Date("2026-10-01T08:00:00Z");
+    const res = await commitItems([item()], machine, {
+      sourceOrigin: "uji-ingest",
+      sourceUrl: "https://sumber/artikel",
+      articleTitle: "Pembahasan Limit",
+      accessedAt: at,
+    });
+    const [p] = await sql`SELECT title, url, accessed_at FROM question_sources WHERE question_id = ${res.questionIds[0]}`;
+    expect(p.title).toBe("Pembahasan Limit");
+    expect(p.url).toBe("https://sumber/artikel");
+    expect(new Date(p.accessed_at).toISOString()).toBe(at.toISOString());
   });
 
   it("kunci kosong tetap draft (tak menebak)", async () => {
@@ -152,7 +194,22 @@ describe("hash (idempotensi)", () => {
     expect(articleHash("<p>x</p>")).toBe(articleHash("<p>x</p>"));
     expect(articleHash("<p>x</p>")).toHaveLength(64);
   });
-  it("itemHash tahan perbedaan spasi", () => {
+  it("itemHash tahan perbedaan spasi (legacy)", () => {
     expect(itemHash("s", "a  b\nc")).toBe(itemHash("s", " a b  c "));
+  });
+  it("contentHash: TANPA sumber — stem+opsi sama walau sumber beda", () => {
+    const a = contentHash("Berapa 1+1?", ["1", "2"]);
+    const b = contentHash("Berapa  1+1?", ["1", "2"]); // spasi beda
+    expect(a).toBe(b);
+    expect(a).toHaveLength(64);
+  });
+  it("contentHash: opsi TERACAK dianggap sama (himpunan, label & urutan diabaikan)", () => {
+    expect(contentHash("S?", ["dua", "satu"])).toBe(contentHash("S?", ["satu", "dua"]));
+  });
+  it("contentHash: opsi BEDA → hash beda (keputusan (b) stem+opsi)", () => {
+    expect(contentHash("S?", ["a", "b"])).not.toBe(contentHash("S?", ["a", "c"]));
+  });
+  it("contentHash: stem beda → hash beda", () => {
+    expect(contentHash("Satu?", ["a"])).not.toBe(contentHash("Dua?", ["a"]));
   });
 });

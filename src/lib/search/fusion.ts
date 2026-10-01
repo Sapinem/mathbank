@@ -103,6 +103,42 @@ function normReasoning(r: string | undefined): string {
   return (r ?? "").trim().toLowerCase();
 }
 
+/** Keputusan dedup satu kandidat (murni). */
+export type DedupVerdict = "exact" | "near-duplicate" | "near-distinct" | "far";
+
+/** Normalisasi penanda penalaran dari nilai apa pun (string/array/undefined). */
+export function normalizeReasoning(key: unknown): string {
+  if (key == null) return "";
+  if (typeof key === "string") return key.trim().toLowerCase();
+  if (Array.isArray(key)) return key.map((x) => String(x)).join(",").trim().toLowerCase();
+  return String(key).trim().toLowerCase();
+}
+
+/**
+ * Klasifikasi satu pasangan berdasar skor + penalaran (murni).
+ *
+ * - `score ≥ exact` → `exact` (praktis identik).
+ * - `near ≤ score < exact` → duplikat **hanya bila penalaran sama**
+ *   (`near-duplicate`), else `near-distinct`.
+ * - `score < near` → `far`.
+ *
+ * 📌 `near` HARUS `< exact` — jika tidak, salah satu ambang jadi logika mati (#42).
+ */
+export function classifyDuplicate(
+  score: number,
+  reasoningA: unknown,
+  reasoningB: unknown,
+  opts: { exact?: number; near?: number } = {},
+): DedupVerdict {
+  const exact = opts.exact ?? DEDUP_EXACT;
+  const near = opts.near ?? DEDUP_NEAR;
+  if (score >= exact) return "exact";
+  if (score < near) return "far";
+  return normalizeReasoning(reasoningA) === normalizeReasoning(reasoningB)
+    ? "near-duplicate"
+    : "near-distinct";
+}
+
 /** Pipeline lengkap: gabung + dedup. */
 export function hybridSearch(
   lists: Candidate[][],

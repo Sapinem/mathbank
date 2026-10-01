@@ -36,6 +36,7 @@ export type PublicQuestion = Omit<
   | "aiTagged"
   | "aiTaggedAt"
   | "answerKey"
+  | "contentHash"
 > & { options: QuestionOption[]; answerKey?: AnswerKey };
 
 /** Soal internal (untuk logika service: FSM, izin) — punya `answerKey`. */

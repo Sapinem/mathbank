@@ -5,7 +5,8 @@
  *   - **SEMUA hasil = `draft`** (walau kunci jelas).
  *   - **Jangan menebak kunci** — kunci kosong + flag lebih baik.
  *   - `sourceId` di-resolve dari `sourceOrigin` (dibuat bila belum ada, kind=website).
- *   - Idempoten: soal dengan `itemHash` sama tak dibuat ulang (via `existingHashes`).
+ *   - Idempoten (ADR-0012): soal dengan **konten sama** (`contentHash` stem+opsi,
+ *     LINTAS-SUMBER) TIDAK dibuat ulang — cukup tambahkan provenance `question_sources`.
  *
  * Menggunakan `createQuestion` (L5) agar seluruh invarian & audit tetap berlaku.
  */
@@ -14,15 +15,21 @@ import { db } from "@/lib/db";
 import { sources } from "@/lib/db/schema/source";
 import { questions } from "@/lib/db/schema/question";
 import { createQuestion } from "@/lib/services/question-service";
+import {
+  addQuestionSource,
+  findQuestionByContentHash,
+} from "@/lib/services/question-source-service";
 import { slugify } from "@/lib/taxonomy/tree";
 import { ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
-import { itemHash } from "./hash";
+import { contentHash, itemHash } from "./hash";
 import type { ParsedItem } from "./parsers/types";
 
 /** Hasil commit satu artikel. */
 export interface CommitResult {
   created: number;
+  /** Soal identik (konten sama, exact) → provenance ditambahkan, soal TIDAK dibuat ulang. */
+  linked: number;
   skipped: number;
   failed: number;
   questionIds: string[];
@@ -34,11 +41,13 @@ export interface CommitOptions {
   /** Sumber (nama, mis. "mathcyber") → di-resolve/buat ke tabel `sources`. */
   sourceOrigin: string;
   sourceUrl?: string | null;
+  /** Judul artikel (provenance butir, ADR-0012) — dari antrean ingest. */
+  articleTitle?: string | null;
+  /** Waktu akses/pengambilan artikel (provenance butir). */
+  accessedAt?: Date | null;
   /** Grade wajib; default "umum" bila kosong. */
   grade?: string | null;
   topicId?: string | null;
-  /** Hash soal yang sudah ada (idempotensi lintas-batch). */
-  existingHashes?: Set<string>;
 }
 
 /** Kelas default & peta tipe → difficulty/cognitive (dapat ditelaah nanti). */
@@ -69,7 +78,10 @@ export async function resolveSourceId(sourceOrigin: string, sourceUrl?: string |
   }
 }
 
-/** Ambil himpunan hash soal yang sudah ada untuk satu sumber (untuk dedup). */
+/**
+ * Himpunan hash soal lama (`itemHash`, source+stem) — DIPERTAHANKAN untuk
+ * kompatibilitas tes lama. ⚠️ Bukan lagi dasar dedup (lihat `contentHash`).
+ */
 export async function existingItemHashes(sourceId: string): Promise<Set<string>> {
   const rows = await db
     .select({ c: questions.contentMarkdown })
@@ -82,7 +94,10 @@ export async function existingItemHashes(sourceId: string): Promise<Set<string>>
 
 /**
  * Commit daftar `ParsedItem` (dari satu artikel) → soal draft.
- * Mengembalikan hitungan + id soal yang dibuat.
+ *
+ * Dedup berbasis `contentHash(stem, opsi)` **tanpa sumber** (ADR-0012):
+ *   - soal ada (konten sama) → **tambahkan provenance**, jangan buat soal baru;
+ *   - soal baru → buat soal + provenance.
  */
 export async function commitItems(
   items: ParsedItem[],
@@ -90,27 +105,45 @@ export async function commitItems(
   opts: CommitOptions,
 ): Promise<CommitResult> {
   const sourceId = await resolveSourceId(opts.sourceOrigin, opts.sourceUrl);
-  const hashes = opts.existingHashes ?? (await existingItemHashes(sourceId));
   const grade = (opts.grade && opts.grade.trim()) || "umum";
 
-  const result: CommitResult = { created: 0, skipped: 0, failed: 0, questionIds: [], errors: [] };
+  const result: CommitResult = {
+    created: 0,
+    linked: 0,
+    skipped: 0,
+    failed: 0,
+    questionIds: [],
+    errors: [],
+  };
 
   for (const it of items) {
-    const h = itemHash(sourceId, it.stem);
-
-    // Idempotensi: soal sama sudah ada → lewati.
-    if (hashes.has(h)) {
-      result.skipped++;
-      continue;
-    }
-
     // Aturan mutu: stem kosong → lewati (jangan simpan sampah).
     if (!it.stem || it.stem.trim().length === 0) {
       result.skipped++;
       continue;
     }
 
+    const hash = contentHash(it.stem, it.options.map((o) => o.text));
+
     try {
+      // 1) Sudah ada soal dengan konten sama? → cukup tambahkan provenance.
+      const existing = await findQuestionByContentHash(hash);
+      if (existing) {
+        await addQuestionSource({
+          questionId: existing.id,
+          sourceId,
+          sourceType: "website",
+          title: opts.articleTitle ?? null,
+          url: opts.sourceUrl ?? null,
+          accessedAt: opts.accessedAt ?? null,
+          grade,
+        });
+        result.linked++;
+        result.questionIds.push(existing.id);
+        continue;
+      }
+
+      // 2) Belum ada → buat soal baru.
       const q = await createQuestion(
         {
           questionType: it.type,
@@ -137,9 +170,18 @@ export async function commitItems(
         },
         actor,
       );
+      // Provenance butir (judul artikel, URL, waktu akses).
+      await addQuestionSource({
+        questionId: q.id,
+        sourceId,
+        sourceType: "website",
+        title: opts.articleTitle ?? null,
+        url: opts.sourceUrl ?? null,
+        accessedAt: opts.accessedAt ?? null,
+        grade,
+      });
       result.created++;
       result.questionIds.push(q.id);
-      hashes.add(h);
     } catch (e) {
       result.failed++;
       result.errors.push(e instanceof Error ? e.message : String(e));

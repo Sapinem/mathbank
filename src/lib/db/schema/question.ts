@@ -9,6 +9,7 @@ import {
   timestamp,
   jsonb,
   index,
+  uniqueIndex,
   check,
   customType,
   type AnyPgColumn,
@@ -21,6 +22,7 @@ import {
 } from "./_enums";
 import { sources } from "./source";
 import { events } from "./event";
+import { questionSources } from "./question-source";
 
 /** Kolom vektor pgvector (dimensi 1024, model BGE-M3). */
 const vector1024 = customType<{ data: number[]; driverData: string }>({
@@ -53,6 +55,8 @@ export const questions = pgTable(
     grade: varchar("grade", { length: 20 }).notNull(),
 
     contentMarkdown: text("content_markdown").notNull(),
+    // Hash konten (stem+opsi, ADR-0012) — dasar anti-duplikat lintas-sumber.
+    contentHash: varchar("content_hash", { length: 64 }),
     dataPayload: jsonb("data_payload")
       .$type<Record<string, unknown>>()
       .default({})
@@ -104,6 +108,10 @@ export const questions = pgTable(
     index("idx_questions_event_id").on(t.eventId),
     index("idx_questions_author_id").on(t.authorId),
     index("idx_questions_deleted_at").on(t.deletedAt),
+    // Anti-duplikat: hash konten unik di antara soal yang belum dihapus (ADR-0012).
+    uniqueIndex("uq_questions_content_hash")
+      .on(t.contentHash)
+      .where(sql`${t.deletedAt} IS NULL AND ${t.contentHash} IS NOT NULL`),
     index("idx_questions_grade_diff_status").on(
       t.grade,
       t.difficulty,
@@ -154,6 +162,7 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
   }),
   event: one(events, { fields: [questions.eventId], references: [events.id] }),
   options: many(questionOptions),
+  sources: many(questionSources),
 }));
 
 export const questionOptionsRelations = relations(questionOptions, ({ one }) => ({

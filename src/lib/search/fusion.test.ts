@@ -4,7 +4,10 @@ import {
   similarity,
   dedup,
   hybridSearch,
+  classifyDuplicate,
   RRF_K,
+  DEDUP_EXACT,
+  DEDUP_NEAR,
 } from "./fusion";
 
 describe("similarity — Jaccard token", () => {
@@ -182,5 +185,42 @@ describe("hybridSearch — pipeline", () => {
       lookupReasoning: (id) => reasons[id],
     });
     expect(out.map((o) => o.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("classifyDuplicate — dedup dua-tingkat (CONSTRAINTS #42, ADR-0012)", () => {
+  it("ambang waras: near < exact (kalau tidak, satu ambang subsumsi = logika mati)", () => {
+    expect(DEDUP_NEAR).toBeLessThan(DEDUP_EXACT);
+  });
+
+  it("score ≥ exact → 'exact' (praktis identik, apa pun penalarannya)", () => {
+    expect(classifyDuplicate(0.99, "A", "B")).toBe("exact");
+    expect(classifyDuplicate(1.0, undefined, undefined)).toBe("exact");
+  });
+
+  it("zona near + penalaran SAMA → 'near-duplicate'", () => {
+    expect(classifyDuplicate(0.9, ["B"], ["B"])).toBe("near-duplicate");
+    expect(classifyDuplicate(0.9, "b", " B ")).toBe("near-duplicate"); // normalisasi
+    expect(classifyDuplicate(0.9, undefined, undefined)).toBe("near-duplicate"); // keduanya kosong
+  });
+
+  it("zona near + penalaran BEDA → 'near-distinct' (pertahankan keduanya, #42)", () => {
+    expect(classifyDuplicate(0.9, ["B"], ["C"])).toBe("near-distinct");
+    expect(classifyDuplicate(0.9, ["B"], undefined)).toBe("near-distinct");
+  });
+
+  it("score < near → 'far'", () => {
+    expect(classifyDuplicate(0.5, ["A"], ["A"])).toBe("far");
+    expect(classifyDuplicate(0.0, undefined, undefined)).toBe("far");
+  });
+
+  it("batas: tepat di near → zona near; tepat di exact → exact", () => {
+    expect(classifyDuplicate(DEDUP_NEAR, ["A"], ["A"])).toBe("near-duplicate");
+    expect(classifyDuplicate(DEDUP_EXACT, ["A"], ["A"])).toBe("exact");
+  });
+
+  it("ambang dapat dikonfigurasi (uji tak bergantung konstanta)", () => {
+    expect(classifyDuplicate(0.8, ["A"], ["A"], { exact: 0.95, near: 0.7 })).toBe("near-duplicate");
+    expect(classifyDuplicate(0.6, ["A"], ["A"], { exact: 0.95, near: 0.7 })).toBe("far");
   });
 });
