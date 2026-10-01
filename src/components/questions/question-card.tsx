@@ -28,10 +28,54 @@ import { StimulusCard } from "@/components/questions/stimulus-card";
 import type { ViewMode } from "@/components/questions/view-mode-toggle";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
-/** Kutipan singkat konten (tanpa memotong rumus). */
-function excerpt(md: string, max = 140): string {
-  const clean = md.replace(/[#*`]/g, "").replace(/\s+/g, " ").trim();
-  return clean.length > max ? clean.slice(0, max) + "…" : clean;
+/**
+ * Kutipan singkat konten yang aman terhadap rumus KaTeX/LaTeX.
+ * Tidak akan pernah memotong di tengah delimiter \(...\), \[...\], $...$, atau $$...$$.
+ */
+export function excerpt(md: string, max = 140): string {
+  const clean = md.replace(/[#*`]/g, "").replace(/\r?\n+/g, " ").trim();
+  if (clean.length <= max) return clean;
+
+  const mathRegex = /(\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\\\([\s\S]*?\\\)|\$[^$\n]+\$)/g;
+  let result = "";
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = mathRegex.exec(clean)) !== null) {
+    const textBefore = clean.slice(lastIndex, match.index);
+    if (textBefore) {
+      if (result.length + textBefore.length >= max) {
+        const remaining = max - result.length;
+        result += textBefore.slice(0, Math.max(0, remaining)).trimEnd() + "…";
+        return result;
+      }
+      result += textBefore;
+    }
+
+    const mathToken = match[0];
+    if (result.length + mathToken.length > max) {
+      if (result.length > 0) {
+        return result.trimEnd() + "…";
+      }
+      // Jika soal diawali rumus panjang, sertakan rumus pertama utuh lalu elipsis
+      return mathToken + "…";
+    }
+
+    result += mathToken;
+    lastIndex = mathRegex.lastIndex;
+  }
+
+  const remainingText = clean.slice(lastIndex);
+  if (remainingText) {
+    if (result.length + remainingText.length > max) {
+      const remaining = max - result.length;
+      result += remainingText.slice(0, Math.max(0, remaining)).trimEnd() + "…";
+      return result;
+    }
+    result += remainingText;
+  }
+
+  return result.length > max ? result.slice(0, max) + "…" : result;
 }
 
 /** Format jenjang kelas ringkas: "10", "11W", "11L", "SMP 08", "SD 04", dsb. */
@@ -194,15 +238,19 @@ export function QuestionCard({
           href={href}
           className="flex-1 min-w-0 px-2 flex items-center justify-between gap-2 group-hover:text-foreground"
         >
-          <div className="flex items-center gap-2 truncate">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             {q.parent && (
               <span className="shrink-0 rounded bg-muted/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground border border-border/60">
                 Wacana
               </span>
             )}
-            <span className="truncate text-xs text-foreground/90 font-normal">
-              <MathContent content={excerpt(q.contentMarkdown, 130)} />
-            </span>
+            <div className="min-w-0 flex-1 truncate text-xs text-foreground/90 font-normal">
+              <MathContent
+                content={excerpt(q.contentMarkdown, 180)}
+                noScroll
+                className="inline truncate max-w-full text-xs text-foreground/90 font-normal"
+              />
+            </div>
           </div>
 
           <ArrowUpRight className="size-4 opacity-30 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground" />
@@ -280,8 +328,12 @@ export function QuestionCard({
         {/* KONTEN UTAMA SOAL */}
         <Link href={href} className="block group-hover:text-foreground">
           <MathContent
-            content={mode === "grid" ? excerpt(q.contentMarkdown, 200) : q.contentMarkdown}
-            className="overflow-x-auto text-xs leading-relaxed text-foreground"
+            content={mode === "grid" ? excerpt(q.contentMarkdown, 240) : q.contentMarkdown}
+            noScroll
+            className={cn(
+              "text-xs leading-relaxed text-foreground overflow-hidden",
+              mode === "grid" ? "line-clamp-4" : "max-h-[380px] overflow-hidden",
+            )}
           />
         </Link>
 
@@ -292,7 +344,7 @@ export function QuestionCard({
               <div
                 key={o.id}
                 className={cn(
-                  "flex items-center gap-2 leading-relaxed transition-colors",
+                  "flex items-center gap-2 leading-relaxed transition-colors min-w-0",
                   o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
                 )}
               >
@@ -308,8 +360,12 @@ export function QuestionCard({
                     {o.label}.
                   </strong>
                 </span>
-                <div className="min-w-0 shrink">
-                  <MathContent content={o.contentMarkdown} />
+                <div className="min-w-0 flex-1 truncate">
+                  <MathContent
+                    content={o.contentMarkdown}
+                    noScroll
+                    className="inline truncate max-w-full text-xs"
+                  />
                 </div>
                 {o.isCorrect && (
                   <span

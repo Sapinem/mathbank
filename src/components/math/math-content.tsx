@@ -1,6 +1,7 @@
 "use client";
 
 import katex from "katex";
+import { cn } from "@/lib/utils";
 
 /**
  * Renderer matematika + markdown ringan (L3/L6).
@@ -101,19 +102,28 @@ export function renderMath(value: string, display: boolean): string {
 /**
  * Komponen render konten soal.
  *
- * Pembungkus punya `overflow-x-auto` (CONSTRAINTS #12) supaya rumus lebar
- * dapat digeser, bukan memecah layout halaman di layar sempit.
+ * Secara default pembungkus memiliki `overflow-x-auto` (CONSTRAINTS #12).
+ * Jika `noScroll={true}` atau `className` mendefinisikan `overflow-hidden` / `truncate`,
+ * scroll horizontal ditiadakan dan teks/rumus dipotong sesuai batas kontainer.
  */
 export function MathContent({
   content,
   className,
+  noScroll = false,
 }: {
   content: string;
   className?: string;
+  noScroll?: boolean;
 }) {
   const tokens = tokenizeMath(content);
   return (
-    <span className={className ? `block overflow-x-auto ${className}` : "block overflow-x-auto"}>
+    <span
+      className={cn(
+        "block",
+        noScroll ? "overflow-hidden" : "overflow-x-auto",
+        className,
+      )}
+    >
       {tokens.map((t, i) => {
         if (t.kind === "img") {
           return <MediaImage key={i} shortId={t.shortId} />;

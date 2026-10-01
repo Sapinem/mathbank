@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { QuestionCard } from "./question-card";
+import { QuestionCard, QuestionTypeIcon, excerpt, formatGradeBadge } from "./question-card";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
 /** Soal uji minimal (hanya field yang dirender kartu). */
@@ -144,5 +144,127 @@ describe("QuestionCard", () => {
       <QuestionCard question={q()} href="/x" mode="masonry" />,
     );
     expect(masonryContainer.firstElementChild?.className).toContain("rounded-xl");
+  });
+});
+
+describe("excerpt (math-aware)", () => {
+  it("mengembalikan teks apa adanya jika lebih pendek dari batas", () => {
+    expect(excerpt("Teks pendek", 50)).toBe("Teks pendek");
+  });
+
+  it("memotong teks biasa dengan elipsis", () => {
+    const res = excerpt("Ini adalah teks yang cukup panjang untuk diuji pemotongannya", 20);
+    expect(res).toContain("…");
+    expect(res.endsWith("…")).toBe(true);
+  });
+
+  it("tidak membelah rumus matematika di tengah delimiter", () => {
+    const input = "Tentukan nilai dari \\(x^2 - 4x + 4 = 0\\) jika diketahui x positif";
+    const res = excerpt(input, 30);
+    expect(res).toBe("Tentukan nilai dari…");
+  });
+
+  it("menyertakan rumus lengkap jika muat sebelum batas", () => {
+    const input = "Hitung \\(2+2\\) sekarang juga";
+    const res = excerpt(input, 50);
+    expect(res).toBe("Hitung \\(2+2\\) sekarang juga");
+  });
+
+  it("menangani rumus display \\[...\\] dan $$...$$", () => {
+    const input = "Rumus: \\[E = mc^2\\] dengan c konstan";
+    const res = excerpt(input, 10);
+    expect(res).toBe("Rumus:…");
+
+    const input2 = "Rumus: $$a^2 + b^2 = c^2$$";
+    expect(excerpt(input2, 10)).toBe("Rumus:…");
+  });
+
+  it("jika soal diawali rumus panjang, mengembalikan rumus pertama utuh dengan elipsis", () => {
+    const input = "\\(x^2 + y^2 = r^2\\) adalah persamaan lingkaran dengan pusat di titik asal";
+    const res = excerpt(input, 10);
+    expect(res).toBe("\\(x^2 + y^2 = r^2\\)…");
+  });
+
+  it("memotong teks sisa setelah rumus jika melebihi batas", () => {
+    const input = "Nilai $x$ adalah bilangan bulat positif yang sangat amat besar sekali";
+    const res = excerpt(input, 20);
+    expect(res).toContain("Nilai $x$ adalah");
+    expect(res.endsWith("…")).toBe(true);
+  });
+});
+
+describe("formatGradeBadge", () => {
+  it("menormalkan jenjang SMP ke format 2 digit", () => {
+    expect(formatGradeBadge("SMP 08")).toBe("08");
+    expect(formatGradeBadge("smp7")).toBe("07");
+    expect(formatGradeBadge("8")).toBe("08");
+  });
+
+  it("menormalkan jenjang SD ke format 2 digit", () => {
+    expect(formatGradeBadge("SD 04")).toBe("04");
+    expect(formatGradeBadge("sd5")).toBe("05");
+    expect(formatGradeBadge("3")).toBe("03");
+  });
+
+  it("mempertahankan SMA dan variasi lain", () => {
+    expect(formatGradeBadge("10")).toBe("10");
+    expect(formatGradeBadge("11W")).toBe("11W");
+    expect(formatGradeBadge("12L")).toBe("12L");
+    expect(formatGradeBadge("utbk")).toBe("UTBK");
+    expect(formatGradeBadge("mandiri")).toBe("MDR");
+    expect(formatGradeBadge("umum")).toBe("UMUM");
+    expect(formatGradeBadge("olimpiade")).toBe("OLIMPIADE");
+  });
+});
+
+describe("QuestionTypeIcon", () => {
+  const types = [
+    "single_choice",
+    "multiple_choice_checkbox",
+    "essay",
+    "short_answer",
+    "matching",
+    "matrix_grid",
+    "quantitative_pq",
+    "combination_1234",
+    "data_sufficiency",
+    "assertion_reason",
+    "stimulus",
+    "unknown_custom_type",
+  ];
+
+  it.each(types)("merender ikon untuk tipe %s tanpa crash", (type) => {
+    const { container } = render(<QuestionTypeIcon type={type} />);
+    expect(container.querySelector("button")).toBeInTheDocument();
+  });
+});
+
+describe("QuestionCard grid & masonry dengan opsi dan stimulus", () => {
+  it("merender kartu dengan opsi dan stimulus pada mode grid", () => {
+    const withParentAndOpts = q({
+      parent: { id: "p1", contentMarkdown: "Wacana utama bacaan" } as any,
+      options: [
+        { id: "o1", questionId: "q1", label: "A", contentMarkdown: "Opsi A", isCorrect: true, distractorRationale: null, orderIndex: 0, createdAt: new Date(), updatedAt: new Date() },
+        { id: "o2", questionId: "q1", label: "B", contentMarkdown: "Opsi B", isCorrect: false, distractorRationale: null, orderIndex: 1, createdAt: new Date(), updatedAt: new Date() },
+      ],
+    });
+    const { container } = render(
+      <QuestionCard question={withParentAndOpts} href="/q/1" mode="grid" onToggleSelect={() => {}} selected />,
+    );
+    expect(container.textContent).toContain("Wacana utama bacaan");
+    expect(container.textContent).toContain("Opsi A");
+    expect(container.textContent).toContain("✓");
+  });
+
+  it("merender kartu dengan opsi pada mode masonry", () => {
+    const withOpts = q({
+      options: [
+        { id: "o1", questionId: "q1", label: "A", contentMarkdown: "Opsi A", isCorrect: false, distractorRationale: null, orderIndex: 0, createdAt: new Date(), updatedAt: new Date() },
+      ],
+    });
+    const { container } = render(
+      <QuestionCard question={withOpts} href="/q/1" mode="masonry" />,
+    );
+    expect(container.textContent).toContain("Opsi A");
   });
 });
