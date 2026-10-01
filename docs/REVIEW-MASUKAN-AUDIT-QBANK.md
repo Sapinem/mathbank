@@ -15,7 +15,7 @@
 |---|---|---|---|
 | A1 | §5.3 PATCH `questions/[id]` masih 403 (`permission` tanpa `ownerId`) | Komentar kode eksplisit "SENGAJA tanpa `permission` (#35)"; `PATCH` **tanpa** gate permission | 🔁 **usang** — sudah diperbaiki (`ad2f6de`) |
 | A2 | §5.4 KaTeX error fallback belum di-escape (XSS) | `math/math-content.tsx:48,74` — `escapeHtml()` diterapkan | 🔁 **usang** — sudah diperbaiki (`35c7716`) |
-| A3 | §5.5 sisa `space-y-*` di `moodle-export-button.tsx` | Terkonfirmasi 1 berkas | ⬜ **belum** — perbaikan kecil |
+| A3 | §5.5 sisa `space-y-*` di `moodle-export-button.tsx` | Ternyata **3 tempat** (bukan 1): 2× `moodle-export-button.tsx` + 1× `question-editor.tsx` | ✅ **selesai** — jadi `flex flex-col gap-*` |
 | A4 | §3.7 `cognitiveLevel` hilang dari kartu soal | `question-card.tsx` tak menampilkan level kognitif | ⬜ **belum** |
 | A5 | `FieldGroup` ghost (laporan lain) | Tak ada `FieldGroup` di seluruh `src/` | 🔁 **tak relevan** |
 
@@ -107,8 +107,8 @@
   18 (kop + watermark + mode) + 12 (audit timeline per butir)
 - **G6 — Kurikulum & Analitik**
   24 (Fase Merdeka + KKO) + 23 (grafik sebaran tipe)
-- **G7 — Bersih kecil**
-  A3 (`space-y-`) + button label
+- **G7 — Bersih kecil** ✅ **selesai 2026-10-01**
+  A3 (`space-y-*` → `flex flex-col gap-*`, 3 tempat) + label tombol (`Filter` → `Saring`, 2 tempat)
 
 ---
 

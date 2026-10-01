@@ -83,7 +83,7 @@ export function MoodleExportButton({ bundleId }: { bundleId: string }) {
               {ok?.written} berkas ditulis ke folder GitSync.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 text-sm">
+          <div className="flex flex-col gap-2 text-sm">
             <div>
               <span className="text-muted-foreground">Folder tujuan: </span>
               <code className="rounded bg-muted px-1.5 py-0.5">{ok?.directory}</code>
@@ -121,7 +121,7 @@ export function MoodleExportButton({ bundleId }: { bundleId: string }) {
             <DialogDescription>{blocked?.message}</DialogDescription>
           </DialogHeader>
           {blocked?.withoutAnswerKey.length ? (
-            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
               {blocked.withoutAnswerKey.slice(0, 12).map((n, i) => (
                 <li key={i}>{n}</li>
               ))}

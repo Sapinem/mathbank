@@ -148,7 +148,7 @@ export function QuestionBankView() {
   const filterContent = (
     <>
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-medium">Filter</span>
+        <span className="text-sm font-medium">Saring</span>
         {activeCount > 0 && (
           <Button
             variant="link"
@@ -250,7 +250,7 @@ export function QuestionBankView() {
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
         <SheetContent side="left" className="w-72 overflow-y-auto p-4">
           <SheetHeader className="mb-2 p-0">
-            <SheetTitle className="text-base">Filter</SheetTitle>
+            <SheetTitle className="text-base">Saring</SheetTitle>
           </SheetHeader>
           {filterContent}
           <Button className="mt-2 w-full" onClick={() => setFiltersOpen(false)}>

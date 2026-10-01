@@ -370,7 +370,7 @@ export function QuestionEditor({
                     {katexDiags.length} rumus tampaknya bermasalah (tetap bisa
                     disimpan):
                   </p>
-                  <ul className="list-inside list-disc space-y-0.5">
+                  <ul className="flex list-inside list-disc flex-col gap-0.5">
                     {katexDiags.map((d, i) => (
                       <li key={i}>
                         baris {d.line}: <code>{d.expression}</code> —{" "}

@@ -238,8 +238,8 @@ describe("QuestionBankView — panel filter mobile (Sheet)", () => {
     render(<QuestionBankView />);
     const openBtn = screen.getByLabelText("Buka filter");
     fireEvent.click(openBtn);
-    // Sheet ter-render (judul "Filter" muncul)
-    expect(screen.getAllByText("Filter").length).toBeGreaterThan(0);
+    // Sheet ter-render (judul "Saring" muncul)
+    expect(screen.getAllByText("Saring").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText("Terapkan"));
     // tak melempar — tertutup
     expect(openBtn).toBeInTheDocument();
