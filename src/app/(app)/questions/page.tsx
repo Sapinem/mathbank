@@ -1,13 +1,13 @@
 import { Suspense } from "react";
-import { BankSoalView } from "@/components/questions/bank-soal-view";
+import { QuestionBankView } from "@/components/questions/question-bank-view";
 import { LoadingState } from "@/components/ui/states";
 
 export const metadata = { title: "Bank Soal — MathBank" };
 
-export default function BankSoalPage() {
+export default function QuestionBankPage() {
   return (
     <Suspense fallback={<LoadingState label="Memuat Bank Soal…" />}>
-      <BankSoalView />
+      <QuestionBankView />
     </Suspense>
   );
 }

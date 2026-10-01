@@ -93,10 +93,10 @@ export async function exportBundleToGitsync(
     }
   }
 
-  const soalItems = items.filter((it) => it.item.role !== "stimulus");
-  const topicPaths = await topicPathsFor(soalItems.map((it) => it.question.id));
+  const questionItems = items.filter((it) => it.item.role !== "stimulus");
+  const topicPaths = await topicPathsFor(questionItems.map((it) => it.question.id));
 
-  const gq: GitsyncQuestion[] = soalItems.map((it) => {
+  const gq: GitsyncQuestion[] = questionItems.map((it) => {
     const key = it.question.answerKey as { correct?: string[]; text?: string; explanation?: string } | undefined;
     // **Sumber kebenaran = `answerKey.correct`** (label). `options.isCorrect`
     // TIDAK dipercaya: data nyata bisa tak sinkron (kunci ada, isCorrect kosong).

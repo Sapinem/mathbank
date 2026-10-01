@@ -30,11 +30,14 @@
     "e2e:manual": "playwright test",
     "e2e:manual:ui": "playwright test --ui",
     "start:lan": "next start -H 0.0.0.0",
-    "check": "pnpm theme:check && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
+    "check": "pnpm theme:check && pnpm lint:names && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
     "security:secrets": "node scripts/secret-scan.mjs --all",
     "security:advisories": "tsx scripts/security-advisories.ts",
     "prepare": "node scripts/install-hooks.mjs",
-    "mcp:stdio": "tsx src/mcp-stdio.ts"
+    "mcp:stdio": "tsx src/mcp-stdio.ts",
+    "backup:db": "node scripts/backup-db.mjs",
+    "restore:check": "node scripts/restore-check.mjs",
+    "lint:names": "node scripts/check-names.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

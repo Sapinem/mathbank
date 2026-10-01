@@ -59,8 +59,8 @@ describe("gitsync berkas (D7 — tanpa ZIP)", () => {
 
   it("berkas soal = XML Moodle valid dengan \\( \\)", () => {
     const r = buildGitsyncFiles([q()]);
-    const soal = r.paths.find((p) => p.endsWith(".xml") && !p.includes("gitsync_category"))!;
-    const xml = fileContent(r, soal);
+    const questionFile = r.paths.find((p) => p.endsWith(".xml") && !p.includes("gitsync_category"))!;
+    const xml = fileContent(r, questionFile);
     expect(xml).toContain("<quiz>");
     expect(xml).toContain("\\(1+1\\)");
     expect(xml).toContain('fraction="100"');

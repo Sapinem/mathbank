@@ -111,8 +111,8 @@ describe("M12 — ekspor GitSync ke disk", () => {
     expect(paths.some((p) => p.startsWith("top/Aljabar/") && p.endsWith(".xml"))).toBe(true);
     expect(paths).toContain("top/Aljabar/gitsync_category.xml");
 
-    const soalRel = paths.find((p) => p.endsWith(".xml") && !p.includes("gitsync_category"))!;
-    const xml = await readFile(join(write!.directory, soalRel), "utf8");
+    const questionRel = paths.find((p) => p.endsWith(".xml") && !p.includes("gitsync_category"))!;
+    const xml = await readFile(join(write!.directory, questionRel), "utf8");
     expect(xml).toContain("<quiz>");
     expect(xml).toContain("\\(2+2\\)"); // $ → \( \)
     expect(xml).toContain('fraction="100"');

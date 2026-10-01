@@ -20,7 +20,7 @@ describe("nav-config", () => {
       "Telaah",
       "Paket Soal",
     ]);
-    expect(kerja.find((i) => i.label === "Telaah")?.badge).toBe("telaah");
+    expect(kerja.find((i) => i.label === "Telaah")?.badge).toBe("review");
   });
 
   it("Referensi memakai URL berprefix /references/*", () => {

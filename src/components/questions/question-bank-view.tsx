@@ -35,7 +35,7 @@ import type { ListQuestionsQuery } from "@/lib/contracts/question";
 const PAGE_SIZE = 20;
 
 /** Halaman Bank Soal — daftar, filter, pencarian (RENCANA-UI §3.2, §4b). */
-export function BankSoalView() {
+export function QuestionBankView() {
   const router = useRouter();
   const params = useSearchParams();
 

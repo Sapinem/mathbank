@@ -34,7 +34,7 @@ import { DIFFICULTY_LABELS } from "@/lib/display/labels";
  * sesuai rencana. Endpoint `/api/settings` hanya menulis kunci umum yang dikenal;
  * kunci secret (AI) tak pernah dikembalikan mentah (lihat `settings-service`).
  */
-export function PengaturanView() {
+export function SettingsView() {
   const { data, isLoading, isError, error } = useSettings();
   const update = useUpdateSettings();
 

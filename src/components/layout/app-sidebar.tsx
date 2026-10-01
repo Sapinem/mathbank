@@ -73,7 +73,7 @@ export function AppSidebar() {
                         <Icon />
                         <span>{item.label}</span>
                       </SidebarMenuButton>
-                      {item.badge === "telaah" && item.badgeCount ? (
+                      {item.badge === "review" && item.badgeCount ? (
                         <SidebarMenuBadge>{item.badgeCount}</SidebarMenuBadge>
                       ) : null}
                     </SidebarMenuItem>

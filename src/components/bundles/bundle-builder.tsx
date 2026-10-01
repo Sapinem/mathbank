@@ -128,7 +128,7 @@ function BundleItemList({
 /**
  * Penyusun paket — panel bank soal (kiri) + isi paket (kanan).
  *
- * Responsif (best practice shadcn, pola sama dengan `bank-soal-view`):
+ * Responsif (best practice shadcn, pola sama dengan `question-bank-view`):
  *  - Desktop (`lg`): dua kolom berdampingan.
  *  - Mobile/tablet: satu kolom; panel bank soal dibuka lewat **Sheet**
  *    (tombol "Tambah Soal"). Kontennya SAMA — hanya chrome berbeda.

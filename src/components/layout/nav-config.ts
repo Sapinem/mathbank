@@ -20,7 +20,7 @@ export interface NavItem {
   href: string;
   icon: LucideIcon;
   /** Tampilkan badge dinamis (mis. jumlah antrean). */
-  badge?: "telaah";
+  badge?: "review";
   /** Nilai badge (jumlah). Kosong = badge tak tampil. */
   badgeCount?: number;
   /** Menu tersembunyi (belum aktif sampai milestone tertentu). */
@@ -40,7 +40,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Dasbor", href: "/", icon: LayoutDashboard },
       { label: "Bank Soal", href: "/questions", icon: BookOpen },
-      { label: "Telaah", href: "/review", icon: ClipboardCheck, badge: "telaah" },
+      { label: "Telaah", href: "/review", icon: ClipboardCheck, badge: "review" },
       { label: "Paket Soal", href: "/bundles", icon: Package },
     ],
   },

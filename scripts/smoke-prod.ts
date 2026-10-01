@@ -31,7 +31,7 @@ function catat(nama: string, lulus: boolean, detail: string) {
   console.log(`${lulus ? "✅" : "❌"} ${nama} — ${detail}`);
 }
 
-async function cekHalaman(path: string, harapStatus: number, tolakRedirectKe?: string) {
+async function checkPage(path: string, harapStatus: number, tolakRedirectKe?: string) {
   try {
     const res = await fetch(`${BASE}${path}`, { redirect: "manual" });
     const ok = res.status === harapStatus;
@@ -54,9 +54,9 @@ async function main() {
   console.log(`\n🔎 Smoke test produksi: ${BASE}\n`);
 
   // 1–3. Halaman
-  await cekHalaman("/login", 200);
-  await cekHalaman("/", 307, "/login");
-  await cekHalaman("/questions", 307, "/login");
+  await checkPage("/login", 200);
+  await checkPage("/", 307, "/login");
+  await checkPage("/questions", 307, "/login");
 
   // 4. API demo-status (publik, read-only)
   try {

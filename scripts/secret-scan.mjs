@@ -48,15 +48,23 @@ const RULES = [
   },
 ];
 
+/** Nama fungsi yang jelas-jelas pemroses nilai (bukan literal rahasia). */
+const FUNCTION_NAME_RE = /^(?:decode|encode|parse|stringify|resolve|build|create|get|load|read|format|merge|pick|make|use|with|from|to)[A-Za-z]*$/;
+
 /** Nilai yang jelas-jelas potongan KODE, bukan rahasia literal. */
 function looksLikeCode(value) {
   if (/[()[\]]/.test(value)) return true; // pemanggilan/indeks: f(...), a[b]
   if (/\./.test(value)) return true; // akses properti: process.env.X, mod.fn
-  if (/^(process|resolve|get|load|read|build|create)/i.test(value)) return true;
+  if (FUNCTION_NAME_RE.test(value)) return true; // nama fungsi (mis. decodeURIComponent)
   // Identifier KONSTANTA (mis. DEMO_PASSWORD, API_KEY_ENV): huruf besar + garis
   // bawah, tanpa huruf kecil → referensi variabel, bukan literal.
   if (/^[A-Z][A-Z0-9_]*$/.test(value)) return true;
   return false;
+}
+
+/** Nilai mengandung interpolasi template (`${…}`) → dinamis, bukan literal. */
+function hasTemplateInterpolation(value) {
+  return /\$\{/.test(value);
 }
 
 /** Nilai yang jelas-jelas placeholder → abaikan. */
@@ -139,9 +147,10 @@ function scanFile(file) {
       let m;
       while ((m = rule.re.exec(line)) !== null) {
         // Aturan ber-`allowPassword`: grup 2 = password. Bila password berupa
-        // placeholder (***, xxx, REDACTED) → ini contoh dokumentasi, lewati.
+        // placeholder (***, xxx, REDACTED) ATAU interpolasi template (`${…}`,
+        // nilai dinamis) → bukan rahasia literal, lewati.
         if (rule.allowPassword) {
-          if (m[2] && rule.allowPassword.test(m[2])) continue;
+          if (m[2] && (rule.allowPassword.test(m[2]) || hasTemplateInterpolation(m[2]))) continue;
           // Password nyata (bukan placeholder) → temuan.
           findings.push({ file, rule: rule.name, line: i + 1 });
           continue;

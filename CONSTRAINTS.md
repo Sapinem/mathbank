@@ -55,7 +55,7 @@
 ## Konvensi
 
 28. **Bahasa dokumen & komentar UI: Indonesia** (konvensi proyek).
-28b. **Nama file, folder, route (URL), & identifier teknis: INGGRIS.** Label teks yang dilihat pengguna tetap Indonesia. Contoh: folder `src/app/(app)/questions/`, URL `/questions`, komponen `bank-soal-view.tsx` boleh dipertahankan bila belum dirapikan; **route baru wajib Inggris** (mis. `/change-password`, `/bundles/[id]/print`).
+28b. **Nama file, folder, route (URL), & identifier teknis: INGGRIS — TANPA KECUALI.** Label teks yang dilihat pengguna tetap Indonesia (mis. `STATUS_LABELS = { draft: "Draf" }`). Contoh benar: folder `src/app/(app)/questions/`, URL `/questions`, komponen `question-bank-view.tsx`, fungsi `createQuestion`. Contoh **SALAH**: `pengaturan-view.tsx`, `telaah-view.tsx`, `bank-soal-view.tsx`, URL `/pengaturan`. **Tidak ada pengecualian** "boleh dipertahankan" — file/route lama yang berbahasa Indonesia WAJIB diganti. Dijaga otomatis oleh `pnpm lint:names` (skrip `scripts/check-names.mjs`) yang gagal bila ada nama file/folder/route ber-kata Indonesia. **Aturan berlaku untuk nama baru DAN perbaikan nama lama.**
 29. **KaTeX: `\( ... \)` inline, `\[ ... \]` display** — dilarang `$`/`$$` di konten soal baru.
 30. **Nama tabel & kolom: snake_case** (Drizzle).
 31. **Setiap dokumen wajib terdaftar di `docs/PETA-DOKUMEN.md`** — dengan status (✅/🟡/🔴/🟠/🟢/📦). Tak ada dokumen berstatus implisit.

@@ -44,7 +44,7 @@ import type { PublicQuestion } from "@/lib/services/question-service";
  * Aksi penelaah: setujui → `ready`, tolak → `draft` (+catatan), lepas tanda.
  * Memakai endpoint FSM (`/status`) & flag yang sudah ada.
  */
-export function TelaahView() {
+export function ReviewView() {
   const [tab, setTab] = useState("review");
   return (
     <div className="flex flex-col gap-0">

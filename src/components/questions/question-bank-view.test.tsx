@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { BankSoalView } from "./bank-soal-view";
+import { QuestionBankView } from "./question-bank-view";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
 // ── Mock navigasi (URL = sumber kebenaran filter) ──
@@ -97,9 +97,9 @@ beforeEach(() => {
   useSourcesMock.mockReturnValue({ data: [] });
 });
 
-describe("BankSoalView — keadaan render", () => {
+describe("QuestionBankView — keadaan render", () => {
   it("menampilkan LoadingState saat memuat", () => {
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByText("Memuat soal…")).toBeInTheDocument();
   });
 
@@ -107,14 +107,14 @@ describe("BankSoalView — keadaan render", () => {
     useQuestionsMock.mockReturnValue(
       dataState({ isError: true, error: new Error("Boom") }),
     );
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByText("Gagal memuat soal")).toBeInTheDocument();
     expect(screen.getByText("Boom")).toBeInTheDocument();
   });
 
   it("EmptyState tanpa filter: ajakan buat soal pertama", () => {
     useQuestionsMock.mockReturnValue(dataState({ data: { items: [], total: 0 } }));
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByText("Tidak ada soal")).toBeInTheDocument();
     expect(screen.getByText(/Belum ada soal/)).toBeInTheDocument();
   });
@@ -122,7 +122,7 @@ describe("BankSoalView — keadaan render", () => {
   it("EmptyState DENGAN filter: saran reset filter", () => {
     currentSearch = "status=ready";
     useQuestionsMock.mockReturnValue(dataState({ data: { items: [], total: 0 } }));
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByText(/Tidak ada soal yang cocok dengan filter/)).toBeInTheDocument();
   });
 
@@ -130,20 +130,20 @@ describe("BankSoalView — keadaan render", () => {
     useQuestionsMock.mockReturnValue(
       dataState({ data: { items: [q("a"), q("b")], total: 2 } }),
     );
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByText("Soal a")).toBeInTheDocument();
     expect(screen.getByText("Soal b")).toBeInTheDocument();
     expect(screen.getByText("2 soal")).toBeInTheDocument();
   });
 });
 
-describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
+describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () => {
   beforeEach(() => {
     useQuestionsMock.mockReturnValue(dataState({ data: { items: [], total: 0 } }));
   });
 
   it("submit pencarian → router.replace dengan q URL-encoded", () => {
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     const input = screen.getByPlaceholderText("Cari soal…");
     fireEvent.change(input, { target: { value: "turunan" } });
     fireEvent.submit(input.closest("form")!);
@@ -151,7 +151,7 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
   });
 
   it("pencarian kosong → q dihapus dari URL", () => {
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     const input = screen.getByPlaceholderText("Cari soal…");
     fireEvent.change(input, { target: { value: "   " } });
     fireEvent.submit(input.closest("form")!);
@@ -159,32 +159,32 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
   });
 
   it("tombol Reset muncul HANYA saat ada filter aktif", () => {
-    const { unmount } = render(<BankSoalView />);
+    const { unmount } = render(<QuestionBankView />);
     expect(screen.queryByText(/Reset/)).not.toBeInTheDocument();
     unmount();
 
     currentSearch = "status=ready&difficulty=3";
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByText(/Reset \(2\)/)).toBeInTheDocument();
   });
 
   it("klik Reset → kembali ke /questions polos", () => {
     currentSearch = "status=ready";
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     fireEvent.click(screen.getByText(/Reset/));
     expect(replace).toHaveBeenCalledWith("/questions");
   });
 
   it("filter dari URL diteruskan ke query hook (limit & offset)", () => {
     currentSearch = "q=abc&status=ready&page=2";
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(useQuestionsMock).toHaveBeenCalledWith(
       expect.objectContaining({ q: "abc", status: "ready", limit: 20, offset: 40 }),
     );
   });
 
   it("mengubah filter Status → menulis ke URL", () => {
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     const selects = screen.getAllByTestId("filter-select");
     // urutan: Status, Tipe Soal, Kesulitan, Topik, Sumber
     fireEvent.change(selects[0], { target: { value: "ready" } });
@@ -193,14 +193,14 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
 
   it("memilih 'Semua' pada filter → menghapus param", () => {
     currentSearch = "status=ready";
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     const selects = screen.getAllByTestId("filter-select");
     fireEvent.change(selects[0], { target: { value: "all" } });
     expect(replace).toHaveBeenCalledWith("/questions?");
   });
 
   it("filter Kesulitan menerima nilai numerik", () => {
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     const selects = screen.getAllByTestId("filter-select");
     fireEvent.change(selects[2], { target: { value: "4" } });
     expect(replace).toHaveBeenCalledWith("/questions?difficulty=4");
@@ -209,19 +209,19 @@ describe("BankSoalView — pencarian & filter (URL = sumber kebenaran)", () => {
   it("opsi Topik & Sumber berasal dari hook referensi", () => {
     useTopicsMock.mockReturnValue({ data: [{ id: "t1", name: "Aljabar", slug: "aljabar", parentId: null, level: 1 }] });
     useSourcesMock.mockReturnValue({ data: [{ id: "s1", kind: "book", label: "Buku A", slug: "buku-a" }] });
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByRole("option", { name: "Aljabar" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Buku A" })).toBeInTheDocument();
   });
 });
 
-describe("BankSoalView — panel filter mobile (Sheet)", () => {
+describe("QuestionBankView — panel filter mobile (Sheet)", () => {
   beforeEach(() => {
     useQuestionsMock.mockReturnValue(dataState({ data: { items: [], total: 0 } }));
   });
 
   it("tombol 'Buka filter' membuka Sheet lalu 'Terapkan' menutupnya", () => {
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     const openBtn = screen.getByLabelText("Buka filter");
     fireEvent.click(openBtn);
     // Sheet ter-render (judul "Filter" muncul)
@@ -233,13 +233,13 @@ describe("BankSoalView — panel filter mobile (Sheet)", () => {
 
   it("badge jumlah filter aktif muncul di tombol filter mobile", () => {
     currentSearch = "status=ready&grade=SMA-11";
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     // activeCount = 2 → badge "2"
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 });
 
-describe("BankSoalView — paginasi", () => {
+describe("QuestionBankView — paginasi", () => {
   beforeEach(() => {
     useQuestionsMock.mockReturnValue(
       dataState({ data: { items: [q("a")], total: 45 } }), // 3 halaman
@@ -248,26 +248,26 @@ describe("BankSoalView — paginasi", () => {
 
   it("menyembunyikan paginasi bila hanya 1 halaman", () => {
     useQuestionsMock.mockReturnValue(dataState({ data: { items: [q("a")], total: 5 } }));
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.queryByText("Sebelumnya")).not.toBeInTheDocument();
   });
 
   it("menampilkan nomor halaman & tombol navigasi", () => {
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByText("Hal. 1/3")).toBeInTheDocument();
     expect(screen.getByText("Sebelumnya")).toBeDisabled(); // halaman 0
     expect(screen.getByText("Berikutnya")).toBeEnabled();
   });
 
   it("klik Berikutnya → set page=1 di URL", () => {
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     fireEvent.click(screen.getByText("Berikutnya"));
     expect(replace).toHaveBeenCalledWith("/questions?page=1");
   });
 
   it("di halaman terakhir: Berikutnya nonaktif, Sebelumnya aktif", () => {
     currentSearch = "page=2";
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     expect(screen.getByText("Hal. 3/3")).toBeInTheDocument();
     expect(screen.getByText("Berikutnya")).toBeDisabled();
     expect(screen.getByText("Sebelumnya")).toBeEnabled();
@@ -275,7 +275,7 @@ describe("BankSoalView — paginasi", () => {
 
   it("ganti filter menghapus page dari URL (kembali ke halaman 1)", () => {
     currentSearch = "q=abc&page=2";
-    render(<BankSoalView />);
+    render(<QuestionBankView />);
     const input = screen.getByPlaceholderText("Cari soal…");
     fireEvent.change(input, { target: { value: "baru" } });
     fireEvent.submit(input.closest("form")!);
