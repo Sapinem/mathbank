@@ -78,7 +78,18 @@ export async function buildQuestionFilter(
     conds.push(inArray(questions.difficulty, query.difficulty));
   if (query.cognitiveLevel)
     conds.push(eq(questions.cognitiveLevel, query.cognitiveLevel));
-  if (query.sourceId) conds.push(eq(questions.sourceId, query.sourceId));
+  // ADR-0014: filter sumber kini berarti "soal yang ada di bundle bersumber X"
+  // (subquery lewat bundle_items ⋈ bundles), bukan kolom questions.source_id.
+  if (query.sourceId)
+    conds.push(
+      sql`EXISTS (
+        SELECT 1 FROM bundle_items bi
+        JOIN bundles b ON b.id = bi.bundle_id
+        WHERE bi.question_id = ${questions.id}
+          AND b.deleted_at IS NULL
+          AND b.source_id = ${query.sourceId}
+      )`,
+    );
   if (query.eventId) conds.push(eq(questions.eventId, query.eventId));
   if (query.flagged !== undefined) conds.push(eq(questions.isFlagged, query.flagged));
 

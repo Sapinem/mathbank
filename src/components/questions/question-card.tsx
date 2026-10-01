@@ -395,7 +395,7 @@ export function QuestionCard({
       {/* FOOTER KARTU */}
       <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2 text-[11px] font-mono text-muted-foreground">
         <span className="truncate max-w-[180px]">
-          {q.sourceId ? (q.sourceId.length > 20 ? "Bank Soal" : q.sourceId) : "Mandiri"}
+          {q.bundles?.[0]?.sourceLabel ?? (q.bundles?.length ? "Naskah" : "Mandiri")}
         </span>
         <Link href={href} className="flex items-center gap-1 hover:text-foreground shrink-0">
           Buka <ArrowUpRight className="size-3.5" />

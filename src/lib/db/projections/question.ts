@@ -30,7 +30,7 @@ export function questionColumns(opts: { withAnswerKey?: boolean } = {}) {
     status: questions.status,
     isFlagged: questions.isFlagged,
     flagNotes: questions.flagNotes,
-    sourceId: questions.sourceId,
+    // ADR-0014: `sourceId` dibuang — sumber menempel pada BUNDLE.
     eventId: questions.eventId,
     eventYear: questions.eventYear,
     eventSubtest: questions.eventSubtest,

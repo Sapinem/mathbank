@@ -24,6 +24,7 @@ async function main() {
   const { db } = await import("../../src/lib/db");
   const { questions } = await import("../../src/lib/db/schema/question");
   const { sources } = await import("../../src/lib/db/schema/source");
+  const { bundles, bundleItems } = await import("../../src/lib/db/schema/bundle");
   const { eq } = await import("drizzle-orm");
 
   const rows = await db
@@ -34,7 +35,9 @@ async function main() {
       sumber: sources.label,
     })
     .from(questions)
-    .leftJoin(sources, eq(sources.id, questions.sourceId));
+    .leftJoin(bundleItems, eq(bundleItems.questionId, questions.id))
+    .leftJoin(bundles, eq(bundles.id, bundleItems.bundleId))
+    .leftJoin(sources, eq(sources.id, bundles.sourceId));
 
   const masalah: Masalah[] = [];
 

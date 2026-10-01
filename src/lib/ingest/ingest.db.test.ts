@@ -20,7 +20,9 @@ const sql = postgres(url, { max: 4 });
 const machine: Actor = { id: "test-machine", name: "Mesin Uji", roles: ["machine"], via: "apikey" };
 
 async function cleanAll() {
-  await sql`DELETE FROM question_sources`;
+  // ADR-0014: `question_sources` dihapus; asal soal kini lewat bundle_items.
+  await sql`DELETE FROM bundle_items`;
+  await sql`DELETE FROM bundles WHERE bundle_type = 'source'`;
   await sql`DELETE FROM question_options`;
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
@@ -107,29 +109,44 @@ describe("queue (ingest_queue)", () => {
 });
 
 describe("commit (soal draft)", () => {
-  it("commitItems membuat soal DRAFT + sumber website", async () => {
+  it("commitItems membuat soal DRAFT + BUNDLE bersumber website (ADR-0014)", async () => {
     const res = await commitItems([item()], machine, { sourceOrigin: "uji-ingest", grade: "umum" });
     expect(res.created).toBe(1);
     expect(res.skipped).toBe(0);
-    const [q] = await sql`SELECT status, content_markdown, source_id FROM questions WHERE id = ${res.questionIds[0]}`;
+    const [q] = await sql`SELECT status, content_markdown FROM questions WHERE id = ${res.questionIds[0]}`;
     expect(q.status).toBe("draft");
-    expect(q.source_id).toBeTruthy();
-    const [s] = await sql`SELECT kind FROM sources WHERE id = ${q.source_id}`;
-    expect(s.kind).toBe("website");
+    // Soal TIDAK lagi punya source_id — asalnya lewat bundle.
+    const cols = await sql`SELECT column_name FROM information_schema.columns
+      WHERE table_name='questions' AND column_name='source_id'`;
+    expect(cols.length).toBe(0);
+    // Bundle dibuat oleh ingest, bertipe `source`, menunjuk sumber website.
+    const [b] = await sql`SELECT b.bundle_type, b.grade, s.kind
+      FROM bundles b
+      JOIN bundle_items bi ON bi.bundle_id = b.id
+      JOIN sources s ON s.id = b.source_id
+      WHERE bi.question_id = ${res.questionIds[0]}`;
+    expect(b.bundle_type).toBe("source");
+    expect(b.grade).toBe("umum");
+    expect(b.kind).toBe("website");
   });
 
-  it("idempoten: soal dengan konten sama (sumber SAMA) tak dibuat ulang", async () => {
-    const first = await commitItems([item()], machine, { sourceOrigin: "uji-ingest" });
+  it("idempoten: naskah SAMA di-ingest dua kali → 1 soal, 1 keanggotaan bundle", async () => {
+    const opts = { sourceOrigin: "uji-ingest", sourceUrl: "https://a/1", articleTitle: "Artikel A" };
+    const first = await commitItems([item()], machine, opts);
     expect(first.created).toBe(1);
-    const second = await commitItems([item()], machine, { sourceOrigin: "uji-ingest", sourceUrl: "https://a/1" });
+    // Ingest ULANG naskah yang sama (URL sama) → bundle dipakai ulang.
+    const second = await commitItems([item()], machine, opts);
     expect(second.created).toBe(0);
     expect(second.linked).toBe(1);
-    // Provenance tetap satu baris (UNIQUE question_id+source_id → idempoten).
-    const rows = await sql`SELECT count(*)::int AS n FROM question_sources WHERE question_id = ${first.questionIds[0]}`;
+    // UNIQUE bundle_id+question_id → tak menggandakan keanggotaan.
+    const rows = await sql`SELECT count(*)::int AS n FROM bundle_items WHERE question_id = ${first.questionIds[0]}`;
     expect(rows[0].n).toBe(1);
+    // Dan bundle-nya memang cuma satu (tak dibuat ulang).
+    const bs = await sql`SELECT count(*)::int AS n FROM bundles WHERE url = 'https://a/1'`;
+    expect(bs[0].n).toBe(1);
   });
 
-  it("MANY-TO-MANY (ADR-0012): konten sama dari sumber BERBEDA → 1 soal, 2 provenance", async () => {
+  it("MANY-TO-MANY (ADR-0014): konten sama dari sumber BERBEDA → 1 soal, 2 bundle", async () => {
     const a = await commitItems([item()], machine, { sourceOrigin: "uji-ingest" });
     const b = await commitItems([item()], machine, {
       sourceOrigin: "uji-ingest-2",
@@ -143,28 +160,30 @@ describe("commit (soal draft)", () => {
 
     const total = await sql`SELECT count(*)::int AS n FROM questions`;
     expect(total[0].n).toBe(1);
-    const prov = await sql`SELECT count(*)::int AS n FROM question_sources WHERE question_id = ${a.questionIds[0]}`;
-    expect(prov[0].n).toBe(2); // dua sumber
-    // Judul artikel tersimpan di provenance (cacat lama: dibuang).
-    const t = await sql`SELECT title FROM question_sources WHERE question_id = ${a.questionIds[0]} AND title = 'Artikel B'`;
+    const prov = await sql`SELECT count(*)::int AS n FROM bundle_items WHERE question_id = ${a.questionIds[0]}`;
+    expect(prov[0].n).toBe(2); // dua naskah → soal yang sama
+    // Judul artikel tersimpan di BUNDLE (bukan lagi per-butir).
+    const t = await sql`SELECT b.title FROM bundles b
+      JOIN bundle_items bi ON bi.bundle_id = b.id
+      WHERE bi.question_id = ${a.questionIds[0]} AND b.title = 'Artikel B'`;
     expect(t.length).toBe(1);
   });
 
-  it("provenance artikel (judul + url + waktu akses) TERSIMPAN saat commit", async () => {
-    const at = new Date("2026-10-01T08:00:00Z");
+  it("bundle (judul + url artikel) TERSIMPAN saat commit — ADR-0014 #3", async () => {
     const res = await commitItems([item()], machine, {
       sourceOrigin: "uji-ingest",
       sourceUrl: "https://sumber/artikel",
       articleTitle: "Pembahasan Limit",
-      accessedAt: at,
     });
-    const [p] = await sql`SELECT title, url, accessed_at FROM question_sources WHERE question_id = ${res.questionIds[0]}`;
-    expect(p.title).toBe("Pembahasan Limit");
-    expect(p.url).toBe("https://sumber/artikel");
-    expect(new Date(p.accessed_at).toISOString()).toBe(at.toISOString());
+    // URL artikel hidup di BUNDLE (`sources.url` = situsnya, bukan artikelnya).
+    const [b] = await sql`SELECT b.title, b.url FROM bundles b
+      JOIN bundle_items bi ON bi.bundle_id = b.id
+      WHERE bi.question_id = ${res.questionIds[0]}`;
+    expect(b.title).toBe("Pembahasan Limit");
+    expect(b.url).toBe("https://sumber/artikel");
   });
 
-  it("T5: getQuestion menyertakan provenance (sources) — multi-sumber", async () => {
+  it("T5: getQuestion menyertakan asal-usul (bundles) — multi-naskah", async () => {
     const a = await commitItems([item()], machine, {
       sourceOrigin: "uji-ingest",
       articleTitle: "Artikel A",
@@ -175,9 +194,9 @@ describe("commit (soal draft)", () => {
     });
     const q = await getQuestion(a.questionIds[0]!, { viewer: machine });
     expect(q).not.toBeNull();
-    expect(q!.sources).toBeDefined();
-    expect(q!.sources!.length).toBe(2);
-    const titles = q!.sources!.map((s) => s.title).sort();
+    expect(q!.bundles).toBeDefined();
+    expect(q!.bundles!.length).toBe(2);
+    const titles = q!.bundles!.map((b) => b.title).sort();
     expect(titles).toEqual(["Artikel A", "Artikel B"]);
   });
 

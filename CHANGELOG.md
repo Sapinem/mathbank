@@ -1,5 +1,53 @@
 # Changelog — MathBank
 
+## [Skema] — ADR-0014: sumber menempel pada BUNDLE, `question_sources` dihapus
+
+### Diubah
+- **`question_sources` DIHAPUS** — informasi yang dibawanya sudah tercakup
+  `bundles.source_id` + `bundle_items` (termasuk `item_number`). Memelihara dua
+  jalur = risiko divergensi.
+- **`questions.source_id` DIHAPUS** — sumber bukan milik soal; soal cukup tahu
+  bundle-nya. **DB 27 → 26 tabel.**
+- **`bundles.url` DITAMBAH** — URL artikel spesifik. Pembagiannya jelas:
+  `sources.url` = situsnya (`defantri.com`), `bundles.url` = artikelnya
+  (`defantri.com/…/persamaan-kuadrat`).
+- **`getQuestion()` kini mengembalikan `bundles`** (bukan `sources`) — asal
+  butir dibaca dari naskah yang memuatnya, lengkap dengan `sourceLabel`,
+  `sourceKind`, `itemNumber`.
+- **Filter `sourceId` TETAP ADA, maknanya berubah** — kini "soal yang ada di
+  bundle bersumber X", diterapkan sebagai `EXISTS (bundle_items ⋈ bundles)`
+  di `filters.ts`. Yang dihapus kolomnya, bukan filternya.
+- **`questions.event_*` DIPERTAHANKAN** (ADR-0010 tetap berlaku) — UTBK = event,
+  defantri = sumber. Konflik dengan `events` yang dulu kelihatan ternyata
+  **bukan konflik**: keduanya beda peran.
+
+### Ingest: sekarang WAJIB membuat bundle
+- **`resolveBundleId()`** — cari/buat naskah; kunci idempotensi `(sourceId, url)`,
+  jatuh ke `(sourceId, title)` bila tanpa URL. Slug menyertakan hash URL supaya
+  dua artikel berjudul sama tak bentrok (`uq_bundles_slug_active`).
+- **`linkQuestionToBundle()`** — pengganti `addQuestionSource()`; idempoten via
+  `UNIQUE (bundle_id, question_id)`.
+- **Dedup lintas-sumber tetap berlaku**: soal yang sama muncul di dua naskah →
+  satu soal, dua keanggotaan bundle. Inilah yang mewujudkan sifat M:N tanpa
+  tabel provenance terpisah.
+- **Tak ada lagi soal "nyasar" tanpa naskah.**
+
+### Kode yang dihapus/dipindah
+- Dihapus: `schema/question-source.ts`, `services/question-source-service.ts`.
+- `findQuestionByContentHash()` pindah ke `ingest/commit.ts` (berkas tuannya
+  dihapus, fungsinya masih dibutuhkan untuk dedup).
+
+### Catatan
+- **Migrasi data (langkah 1–4 di ADR) GUGUR** — saat penerapan DB **0 soal**,
+  jadi tak ada 56 baris yang perlu dipindahkan. Risiko terbesar ADR ini hilang
+  justru karena pengerjaan urutannya benar (bersih-bersih data dulu).
+- **3 bug nyata tertangkap tes**, semuanya didokumentasikan di ADR-0014: urutan
+  hapus `bundle_items` (RESTRICT), slug bundle bentrok, dan `usageCount`/
+  `deleteSource` yang masih memakai `q.source_id` (termasuk `"id"` ambigu di
+  subquery). Gerbang `test:db` menangkap semuanya — bukan lolos ke produksi.
+- Migrasi `0010` idempoten dari nol: diverifikasi via DB baru → 26 tabel,
+  24 trigger, 0 drift.
+
 ## [Data] — Isi katalog `events` (5 ujian nyata)
 
 ### Ditambahkan

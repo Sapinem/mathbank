@@ -32,6 +32,9 @@ function req(method: string, path: string, body?: unknown): Request {
 }
 
 async function cleanAll() {
+  // ADR-0014: bundle_items.question_id = RESTRICT -> harus dihapus lebih dulu.
+  await sql`DELETE FROM bundle_items`;
+  await sql`DELETE FROM bundles WHERE bundle_type = 'source'`;
   await sql`DELETE FROM question_options`;
   await sql`UPDATE questions SET parent_id = NULL`;
   await sql`DELETE FROM questions`;
@@ -111,7 +114,11 @@ describe("alur API ingest", () => {
     expect(json.data.summary.processed).toBe(1);
     expect(json.data.summary.created).toBeGreaterThanOrEqual(1);
 
-    const q = await sql`SELECT status FROM questions WHERE source_id IN (SELECT id FROM sources WHERE slug='uji-api')`;
+    const q = await sql`SELECT q.status FROM questions q
+      JOIN bundle_items bi ON bi.question_id = q.id
+      JOIN bundles b ON b.id = bi.bundle_id
+      JOIN sources s ON s.id = b.source_id
+      WHERE s.slug = 'uji-api'`;
     expect(q.every((r) => r.status === "draft")).toBe(true);
     const iq = await sql`SELECT status, imported_questions_count FROM ingest_queue WHERE source_origin='uji-api'`;
     expect(iq[0].status).toBe("completed");

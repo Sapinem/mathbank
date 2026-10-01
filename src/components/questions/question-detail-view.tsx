@@ -401,8 +401,8 @@ export function QuestionDetailView() {
               </CardContent>
             </Card>
 
-            {/* KARTU ASAL-USUL & SUMBER (SLIDE CAROUSEL BILA > 1, TANPA TAUTAN ASLI) */}
-            <QuestionSourcesCard sources={q.sources} />
+            {/* KARTU ASAL-USUL (ADR-0014: dari BUNDLE/naskah, bukan per-butir) */}
+            <QuestionSourcesCard bundles={q.bundles} />
           </div>
         </div>
       </div>
@@ -445,21 +445,22 @@ export function QuestionDetailView() {
  * Tanpa tautan asli sesuai instruksi pengguna.
  */
 function QuestionSourcesCard({
-  sources = [],
+  bundles = [],
 }: {
-  sources?: Array<{
+  bundles?: Array<{
     id: string;
-    sourceType?: string | null;
     title?: string | null;
-    publisher?: string | null;
-    author?: string | null;
+    bundleType?: string | null;
+    url?: string | null;
     year?: number | null;
+    grade?: string | null;
+    sourceLabel?: string | null;
+    sourceKind?: string | null;
     itemNumber?: string | null;
-    notes?: string | null;
   }>;
 }) {
   const [index, setIndex] = useState(0);
-  const total = sources.length;
+  const total = bundles.length;
 
   if (total === 0) {
     return (
@@ -467,19 +468,19 @@ function QuestionSourcesCard({
         <CardHeader className="border-b border-border/40 pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <BookOpen className="size-4 text-primary shrink-0" />
-            Asal-Usul & Sumber
+            Asal-Usul
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-4 text-xs text-muted-foreground">
-          Belum ada rujukan sumber yang ditautkan ke butir soal ini.
+          Butir ini belum masuk naskah mana pun.
         </CardContent>
       </Card>
     );
   }
 
-  // Jaga index aman jika sources berubah
+  // Jaga index aman bila daftar bundle berubah
   const safeIndex = index < total ? index : 0;
-  const current = sources[safeIndex] ?? sources[0];
+  const current = bundles[safeIndex] ?? bundles[0];
 
   return (
     <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
@@ -487,7 +488,7 @@ function QuestionSourcesCard({
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <BookOpen className="size-4 text-primary shrink-0" />
-            Asal-Usul & Sumber
+            Asal-Usul
           </CardTitle>
           {total > 1 && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -495,7 +496,7 @@ function QuestionSourcesCard({
                 variant="ghost"
                 size="icon-xs"
                 className="h-6 w-6"
-                aria-label="Sumber sebelumnya"
+                aria-label="Naskah sebelumnya"
                 onClick={() => setIndex((prev) => (prev > 0 ? prev - 1 : total - 1))}
               >
                 <ChevronLeft className="size-3.5" />
@@ -507,7 +508,7 @@ function QuestionSourcesCard({
                 variant="ghost"
                 size="icon-xs"
                 className="h-6 w-6"
-                aria-label="Sumber berikutnya"
+                aria-label="Naskah berikutnya"
                 onClick={() => setIndex((prev) => (prev < total - 1 ? prev + 1 : 0))}
               >
                 <ChevronRight className="size-3.5" />
@@ -522,7 +523,7 @@ function QuestionSourcesCard({
             Judul / Dokumen
           </span>
           <span className="font-medium text-foreground text-sm leading-snug">
-            {current?.title || "Mathcyber"}
+            {current?.title || "Tanpa judul"}
           </span>
         </div>
 
@@ -530,7 +531,7 @@ function QuestionSourcesCard({
           <div>
             <span className="text-muted-foreground block text-[11px]">Jenis</span>
             <span className="font-mono text-foreground capitalize">
-              {current?.sourceType || "Website"}
+              {current?.sourceKind || "—"}
             </span>
           </div>
           <div>
@@ -541,20 +542,10 @@ function QuestionSourcesCard({
           </div>
         </div>
 
-        {(current?.author || current?.publisher) && (
-          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
-            {current.author && (
-              <div>
-                <span className="text-muted-foreground block text-[11px]">Penulis</span>
-                <span className="text-foreground">{current.author}</span>
-              </div>
-            )}
-            {current.publisher && (
-              <div>
-                <span className="text-muted-foreground block text-[11px]">Penerbit</span>
-                <span className="text-foreground">{current.publisher}</span>
-              </div>
-            )}
+        {current?.sourceLabel && (
+          <div className="pt-1 border-t border-border/30">
+            <span className="text-muted-foreground block text-[11px]">Sumber</span>
+            <span className="text-foreground">{current.sourceLabel}</span>
           </div>
         )}
 
@@ -565,22 +556,22 @@ function QuestionSourcesCard({
           </div>
         )}
 
-        {current?.notes && (
+        {current?.bundleType && (
           <div className="pt-1 border-t border-border/30">
-            <span className="text-muted-foreground block text-[11px]">Catatan</span>
-            <p className="text-muted-foreground leading-relaxed">{current.notes}</p>
+            <span className="text-muted-foreground block text-[11px]">Jenis naskah</span>
+            <p className="text-muted-foreground capitalize leading-relaxed">{current.bundleType}</p>
           </div>
         )}
 
-        {/* Indikator titik slide bila > 1 sumber */}
+        {/* Indikator titik slide bila > 1 naskah */}
         {total > 1 && (
           <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/30">
-            {sources.map((_, i) => (
+            {bundles.map((_, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => setIndex(i)}
-                aria-label={`Pindah ke sumber ${i + 1}`}
+                aria-label={`Pindah ke naskah ${i + 1}`}
                 className={cn(
                   "h-1.5 rounded-full transition-all",
                   i === safeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",

@@ -13,6 +13,7 @@ async function main() {
   const { db } = await import("../../src/lib/db");
   const { questions } = await import("../../src/lib/db/schema/question");
   const { sources } = await import("../../src/lib/db/schema/source");
+  const { bundles, bundleItems } = await import("../../src/lib/db/schema/bundle");
   const { tokenizeMath } = await import("../../src/components/math/math-content");
   const { eq } = await import("drizzle-orm");
 
@@ -24,7 +25,9 @@ async function main() {
       sumber: sources.label,
     })
     .from(questions)
-    .leftJoin(sources, eq(sources.id, questions.sourceId));
+    .leftJoin(bundleItems, eq(bundleItems.questionId, questions.id))
+    .leftJoin(bundles, eq(bundles.id, bundleItems.bundleId))
+    .leftJoin(sources, eq(sources.id, bundles.sourceId));
 
   const katex = (await import("katex")).default;
 

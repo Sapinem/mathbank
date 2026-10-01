@@ -8,10 +8,11 @@
  * ⚠️ Logika murni (slugify) di `@/lib/taxonomy/tree` — JANGAN impor file ini
  * dari komponen klien (menarik `@/lib/db`).
  */
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sources } from "@/lib/db/schema/source";
 import { events } from "@/lib/db/schema/event";
+import { bundles } from "@/lib/db/schema/bundle";
 import { tags, grades, questionTags } from "@/lib/db/schema/taxonomy";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
@@ -99,9 +100,16 @@ export async function listSources(): Promise<SourceRow[]> {
       bookYear: sources.bookYear,
       city: sources.city,
       isActive: sources.isActive,
+      // ADR-0014: soal tak punya source_id — dihitung lewat bundle.
+      // Kualifikasi `"sources"."id"` WAJIB: subquery punya alias b/bi/q yang
+      // juga berkolom `id`, jadi `${sources.id}` (yang jadi `"id"`) ambigu.
       questionCount: sql<number>`(
-        SELECT count(*)::int FROM questions q
-        WHERE q.source_id = ${sources.id} AND q.deleted_at IS NULL
+        SELECT count(DISTINCT bi.question_id)::int
+        FROM bundles b
+        JOIN bundle_items bi ON bi.bundle_id = b.id
+        JOIN questions q ON q.id = bi.question_id
+        WHERE b.source_id = "sources"."id" AND q.deleted_at IS NULL
+          AND b.deleted_at IS NULL
       )`,
     })
     .from(sources)
@@ -231,12 +239,15 @@ export async function updateSource(
 
 export async function deleteSource(id: string, actor: Actor): Promise<void> {
   assertCan(actor, "reference:manage");
+  // ADR-0014: keberadaan sumber dicek lewat bundle (soal tak punya source_id).
+  // Bila sumber dipakai, FK `bundles.source_id` hanya `set null` — jadi tanpa
+  // penjagaan ini, menghapus sumber akan melepas naskah dari asalnya.
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(sql`questions`)
-    .where(sql`source_id = ${id} AND deleted_at IS NULL`);
+    .from(bundles)
+    .where(and(eq(bundles.sourceId, id), isNull(bundles.deletedAt)));
   if (count > 0) {
-    throw new ConflictError(`Sumber dipakai oleh ${count} soal. Lepas keterkaitannya dulu.`);
+    throw new ConflictError(`Sumber dipakai oleh ${count} naskah. Lepas keterkaitannya dulu.`);
   }
   const res = await db.delete(sources).where(eq(sources.id, id)).returning({ id: sources.id });
   if (res.length === 0) throw new NotFoundError("Sumber tidak ditemukan.");

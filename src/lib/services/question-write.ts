@@ -60,7 +60,6 @@ export async function createQuestion(
         dataPayload: input.dataPayload,
         answerKey: input.answerKey,
         status: input.status,
-        sourceId: input.sourceId ?? null,
         eventId: input.eventId ?? null,
         eventYear: input.eventYear ?? null,
         eventSubtest: input.eventSubtest ?? null,
@@ -144,7 +143,6 @@ export async function updateQuestion(
     if (fields.contentMarkdown !== undefined) patch.contentMarkdown = fields.contentMarkdown;
     if (fields.dataPayload !== undefined) patch.dataPayload = fields.dataPayload;
     if (fields.answerKey !== undefined) patch.answerKey = fields.answerKey;
-    if (fields.sourceId !== undefined) patch.sourceId = fields.sourceId;
     if (fields.eventId !== undefined) patch.eventId = fields.eventId;
     if (fields.eventYear !== undefined) patch.eventYear = fields.eventYear;
     if (fields.eventSubtest !== undefined) patch.eventSubtest = fields.eventSubtest;

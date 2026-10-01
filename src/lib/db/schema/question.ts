@@ -20,9 +20,7 @@ import {
   questionStatusEnum,
   cognitiveLevelEnum,
 } from "./_enums";
-import { sources } from "./source";
 import { events } from "./event";
-import { questionSources } from "./question-source";
 
 /** Kolom vektor pgvector (dimensi 1024, model BGE-M3). */
 const vector1024 = customType<{ data: number[]; driverData: string }>({
@@ -70,10 +68,8 @@ export const questions = pgTable(
     isFlagged: boolean("is_flagged").default(false).notNull(),
     flagNotes: text("flag_notes"),
 
-    // Asal (provenance): wadah fisik + peristiwa nyata
-    sourceId: uuid("source_id").references(() => sources.id, {
-      onDelete: "set null",
-    }),
+    // Asal (provenance): peristiwa nyata saja.
+    // ADR-0014: sumber menempel pada BUNDLE, bukan soal — `source_id` dibuang.
     eventId: uuid("event_id").references(() => events.id, {
       onDelete: "set null",
     }),
@@ -104,7 +100,6 @@ export const questions = pgTable(
     index("idx_questions_status").on(t.status),
     index("idx_questions_grade").on(t.grade),
     index("idx_questions_difficulty").on(t.difficulty),
-    index("idx_questions_source_id").on(t.sourceId),
     index("idx_questions_event_id").on(t.eventId),
     index("idx_questions_author_id").on(t.authorId),
     index("idx_questions_deleted_at").on(t.deletedAt),
@@ -156,13 +151,9 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
     relationName: "questionChildren",
   }),
   children: many(questions, { relationName: "questionChildren" }),
-  source: one(sources, {
-    fields: [questions.sourceId],
-    references: [sources.id],
-  }),
+  // ADR-0014: relasi `source` & `sources` (per-butir) dihapus — sumber via bundle.
   event: one(events, { fields: [questions.eventId], references: [events.id] }),
   options: many(questionOptions),
-  sources: many(questionSources),
 }));
 
 export const questionOptionsRelations = relations(questionOptions, ({ one }) => ({

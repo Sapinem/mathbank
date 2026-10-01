@@ -8,9 +8,10 @@ import {
 } from "@/lib/db/schema/question";
 import { embedText } from "@/lib/embedding/bge-m3";
 import type { Actor } from "@/lib/auth/actor";
-import { questionSources } from "@/lib/db/schema/question-source";
 import { solutions } from "@/lib/db/schema/solution";
 import { questionTopics } from "@/lib/db/schema/taxonomy";
+import { bundles, bundleItems } from "@/lib/db/schema/bundle";
+import { sources } from "@/lib/db/schema/source";
 import {
   questionColumns,
   optionColumns,
@@ -54,8 +55,8 @@ export type PublicQuestion = Omit<
 > & {
   options: QuestionOption[];
   answerKey?: AnswerKey;
-  /** Provenance (ADR-0012): sumber-sumber butir ini (bisa >1). */
-  sources?: QuestionSourceView[];
+  /** Asal-usul (ADR-0014): naskah/bundle yang memuat butir ini (bisa >1). */
+  bundles?: QuestionBundleView[];
   /** Pembahasan terstruktur (bisa >1 cara/metode). */
   solutions?: QuestionSolutionView[];
   /**
@@ -67,20 +68,23 @@ export type PublicQuestion = Omit<
   topicIds?: string[];
 };
 
-/** Bentuk ringkas provenance untuk respons API. */
-export interface QuestionSourceView {
+/** Bentuk ringkas asal-usul butir — kini lewat BUNDLE (ADR-0014). */
+export interface QuestionBundleView {
+  /** ID bundle (naskah) — dulu `question_sources.id`. */
   id: string;
-  sourceId: string | null;
-  sourceType: string;
-  title: string | null;
+  title: string;
+  bundleType: string;
+  /** URL artikel/naskah spesifik (mis. artikel defantri). */
   url: string | null;
-  accessedAt: Date | null;
-  publisher: string | null;
-  author: string | null;
   year: number | null;
   grade: string | null;
+  sourceId: string | null;
+  /** Label sumber (mis. "mathcyber") — dulu per-butir, kini dari bundle. */
+  sourceLabel: string | null;
+  sourceKind: string | null;
+  /** Nomor butir di dalam naskah (`bundle_items.item_number`). */
   itemNumber: string | null;
-  notes: string | null;
+  status: string;
 }
 
 /** Soal internal (untuk logika service: FSM, izin) — punya `answerKey`. */
@@ -115,24 +119,27 @@ export async function getQuestion(
     .where(eq(questionOptions.questionId, id))
     .orderBy(asc(questionOptions.orderIndex));
 
-  const sources = await db
+  // ADR-0014: sumber TIDAK lagi per-butir — ia menempel pada BUNDLE.
+  // Jadi "asal soal" = daftar naskah yang memuatnya (via bundle_items).
+  const originBundles = await db
     .select({
-      id: questionSources.id,
-      sourceId: questionSources.sourceId,
-      sourceType: questionSources.sourceType,
-      title: questionSources.title,
-      url: questionSources.url,
-      accessedAt: questionSources.accessedAt,
-      publisher: questionSources.publisher,
-      author: questionSources.author,
-      year: questionSources.year,
-      grade: questionSources.grade,
-      itemNumber: questionSources.itemNumber,
-      notes: questionSources.notes,
+      id: bundles.id,
+      title: bundles.title,
+      bundleType: bundles.bundleType,
+      url: bundles.url,
+      year: bundles.year,
+      grade: bundles.grade,
+      sourceId: bundles.sourceId,
+      sourceLabel: sources.label,
+      sourceKind: sources.kind,
+      itemNumber: bundleItems.itemNumber,
+      status: bundles.status,
     })
-    .from(questionSources)
-    .where(eq(questionSources.questionId, id))
-    .orderBy(asc(questionSources.createdAt));
+    .from(bundleItems)
+    .innerJoin(bundles, eq(bundleItems.bundleId, bundles.id))
+    .leftJoin(sources, eq(bundles.sourceId, sources.id))
+    .where(and(eq(bundleItems.questionId, id), isNull(bundles.deletedAt)))
+    .orderBy(asc(bundles.createdAt));
 
   const parent = row.parentId ? await getParentStimulus(row.parentId) : null;
 
@@ -179,7 +186,7 @@ export async function getQuestion(
     }
   }
 
-  return { ...row, options, sources, solutions: solutionList, parent, topicIds } as PublicQuestion;
+  return { ...row, options, bundles: originBundles, solutions: solutionList, parent, topicIds } as PublicQuestion;
 }
 
 /** Ambil wacana stimulus induk (id + contentMarkdown) bila ada. */

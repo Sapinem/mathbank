@@ -71,6 +71,13 @@
       "when": 1790872942914,
       "tag": "0009_harsh_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790874220166,
+      "tag": "0010_nifty_nightshade",
+      "breakpoints": true
     }
   ]
 }

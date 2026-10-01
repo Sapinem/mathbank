@@ -25,6 +25,8 @@ export const bundles = pgTable(
     slug: varchar("slug", { length: 255 }).notNull(),
     bundleType: bundleTypeEnum("bundle_type").notNull(),
     sourceId: uuid("source_id").references(() => sources.id, { onDelete: "set null" }),
+    /** URL artikel/naskah spesifik (ADR-0014) — `sources.url` = situsnya. */
+    url: text("url"),
     eventId: uuid("event_id").references(() => events.id, { onDelete: "set null" }),
     year: smallint("year"),
     grade: varchar("grade", { length: 20 }),

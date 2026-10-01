@@ -1,6 +1,7 @@
 # ADR-0014 — Sumber menempel pada **BUNDLE** (bukan soal); `question_sources` dihapus
 
-- **Status:** ✅ **DITERIMA** (2026-10-01)
+- **Status:** ✅ **DITERAPKAN** (2026-10-01) — migrasi `0010`; DB 27 → 26 tabel
+  (langkah migrasi data 1–4 **gugur**: DB sudah 0 soal saat penerapan)
 - **Pengambil keputusan:** Pemilik produk
 - **Terkait:** `docs/ADR/0009-*.md` (bundle satu tabel — ✅ berlaku),
   `docs/ADR/0010-*.md` (**event** = jenis ujian; **tetap berlaku**),
@@ -113,6 +114,21 @@ jadi bila ada kesalahan, data asli belum hilang.
 - **Migrasi data 56 baris** wajib diverifikasi sebelum drop (langkah 4).
 
 ## Catatan
+
+- **⚠️ JEBAKAN saat penerapan (3 bug nyata yang tertangkap tes):**
+  1. **Urutan hapus di `cleanAll` tes** — `bundle_items.question_id` = RESTRICT,
+     jadi `DELETE FROM questions` gagal bila `bundle_items` belum dibersihkan.
+     Urutan: `bundle_items` → `bundles` → `questions`.
+  2. **`uq_bundles_slug_active`** — dua artikel dari sumber sama bisa berjudul
+     sama → slug bentrok. Diperbaiki: slug menyertakan hash URL artikel.
+  3. **`listSources.questionCount` & `deleteSource` masih memakai `q.source_id`**
+     yang sudah dihapus. Diperbaiki lewat subquery bundle. Catatan teknis:
+     `${sources.id}` di dalam subquery yang punya alias `b`/`bi`/`q` jadi `"id"`
+     **ambigu** → wajib ditulis `"sources"."id"`.
+- **Nilai `usageCount` sumber kini = jumlah soal di bundle bersumber itu**
+  (bukan lagi `questions.source_id`), dan `deleteSource` menolak bila sumber
+  masih punya naskah — kalau tidak, FK `set null` akan diam-diam melepas naskah
+  dari asalnya.
 
 - **ADR-0012 ditandai "digantikan sebagian"**: tabel `question_sources` dihapus,
   tetapi prinsip **dedup via `contentHash`** dan **provenance lintas-sumber**

@@ -103,7 +103,7 @@ export const createQuestionSchema = z.object({
   parentId: z.string().uuid().nullable().optional(),
   childOrder: z.number().int().min(0).default(0),
 
-  sourceId: z.string().uuid().nullable().optional(),
+  // ADR-0014: `sourceId` TIDAK lagi di kontrak soal — sumber via bundle.
   eventId: z.string().uuid().nullable().optional(),
   eventYear: z.number().int().nullable().optional(),
   eventSubtest: z.string().max(100).nullable().optional(),
@@ -152,6 +152,11 @@ export const listQuestionsQuerySchema = z.object({
   cognitiveLevel: cognitiveLevelSchema.optional(),
   topicId: asArray(z.string().uuid()),
   tagId: z.string().uuid().optional(),
+  /**
+   * ADR-0014: filter sumber **tetap ada** — maknanya berubah jadi "soal yang
+   * ada di bundle bersumber X" (diterapkan sebagai EXISTS di `filters.ts`).
+   * Yang dihapus adalah `questions.source_id` (kolomnya), bukan filternya.
+   */
   sourceId: z.string().uuid().optional(),
   eventId: z.string().uuid().optional(),
   flagged: z.coerce.boolean().optional(),
