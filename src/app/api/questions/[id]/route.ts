@@ -29,18 +29,29 @@ export const GET = wrapRoute({
   },
 });
 
-/** PATCH /api/questions/[id] — perbarui soal. */
+/**
+ * PATCH /api/questions/[id] — perbarui soal.
+ *
+ * SENGAJA **tanpa** `permission` di gate route (CONSTRAINTS #35): izin
+ * `question:edit` bersifat ber-`own` (guru/penelaah/agen hanya boleh miliknya),
+ * sedang `wrapRoute` memanggil `assertCan(actor, perm)` **tanpa `ownerId`** →
+ * akan menolak 403 semua peran ber-`own`. Otorisasi kepemilikan ditegakkan di
+ * `updateQuestion` (service) yang punya `existing.authorId`.
+ */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "question:edit",
   body: updateQuestionSchema,
   handler: async ({ params, body, actor }) => updateQuestion(params.id, body, actor),
 });
 
-/** DELETE /api/questions/[id] — hapus lunak. */
+/**
+ * DELETE /api/questions/[id] — hapus lunak.
+ *
+ * Alasan sama seperti PATCH: `question:delete` ber-`own`, ditegakkan di
+ * `deleteQuestion` (service), bukan di gate route (#35).
+ */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 10, refillPerSec: 0.2 },
-  permission: "question:delete",
   handler: async ({ params, actor }) => {
     await deleteQuestion(params.id, actor);
     return { ok: true };

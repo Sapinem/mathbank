@@ -44,12 +44,14 @@ export function tokenizeMath(input: string): Token[] {
   return tokens;
 }
 
+/** Escape entitas HTML dasar (anti-XSS). */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 /** Inline markdown ringan: **tebal**, *miring*, `kode`, dan baris baru. */
 function renderText(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
+  return escapeHtml(text)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, "<code>$1</code>")
@@ -57,7 +59,7 @@ function renderText(text: string): string {
 }
 
 /** Render satu potongan rumus ke HTML KaTeX. */
-function renderMath(value: string, display: boolean): string {
+export function renderMath(value: string, display: boolean): string {
   try {
     return katex.renderToString(value, {
       displayMode: display,
@@ -66,7 +68,10 @@ function renderMath(value: string, display: boolean): string {
       output: "html",
     });
   } catch {
-    return `<span class="text-error">${value}</span>`;
+    // KaTeX gagal (langka karena `throwOnError:false`, tapi mungkin pada galat
+    // internal) — JANGAN suntikkan `value` mentah ke dangerouslySetInnerHTML
+    // (celah XSS). Escape dulu (audit MathBankAuditor / defense-in-depth).
+    return `<span class="text-error">${escapeHtml(value)}</span>`;
   }
 }
 
