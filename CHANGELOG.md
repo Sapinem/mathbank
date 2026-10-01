@@ -1,5 +1,62 @@
 # Changelog — MathBank
 
+## [Redesign-UI] — Bank Soal: Filter Bar, 3 View Modes, App Shell Responsif
+
+### Ditambahkan
+- **Filter bar horizontal** (`question-filter-bar.tsx`, C8): semua filter di satu
+  baris ringkas — sebelumnya filter tersebar & memakan ruang vertikal.
+- **Slide-over filter drawer** (`question-filter-drawer.tsx`, C8): panel filter
+  dibuka sesuai permintaan (on-demand), bukan selalu terlihat. Di mobile
+  **auto-close** saat navigasi.
+- **3 view modes** (C6): `list`, `grid` (simetris), & `masonry` (kolom dinamis),
+  diatur `view-mode-toggle` — tahan terhadap variasi panjang soal matematika.
+- **Halaman sunting soal** `/questions/[id]/edit` + `question-edit-view.tsx`
+  (rute terpisah, pola `bundles/[id]/edit`) — URL bisa di-bookmark, Back menutup
+  editor, F5 tetap di editor.
+- **Pembahasan multi-solution di editor** (`question-editor.tsx`): top action bar,
+  editor beberapa pembahasan, & tab. Tipe `conceptual`/`quick_tip`/`video`/
+  `alternative` (`solutionInputSchema`).
+
+### Diperbaiki
+- **Touch target ≥ 44×44px** (#11) pada `SidebarTrigger` & tombol cari mobile.
+- **Auto-close drawer mobile** saat item nav diklik (`app-sidebar.tsx`).
+- **Horizontal scrollbar** pada opsi pilihan ganda, kartu, & detail soal dibersihkan.
+- **Pemotongan rumus LaTeX** memakai elipsis, bukan memecah layout.
+- **Breakpoint `lg` diselaraskan** (#14) + sisa `space-y-*` dibersihkan (#7).
+- **CommandDialog** — perbaikan context provider `cmdk` & deteksi `Ctrl+K`.
+
+### Catatan
+- `MathContent` dapat `noScroll` — pemanggil bisa mematikan `overflow-x-auto`
+  (#12) untuk konteks yang memang perlu memotong, bukan menggeser.
+
+### Diperbaiki (jalur data)
+- **`solutions` ikut tersimpan** (`question-write.ts`) & **dibaca** di proyeksi
+  soal (`question-read.ts`) — sebelumnya pembahasan tambahan tak pernah ditulis.
+- `contracts/question.ts`: `solutionInputSchema` + `solutions` di skema soal.
+
+---
+
+## [Chore] — Pindah Skrip Dev & Keluarkan Media dari Git
+
+### Diubah
+- **7 skrip ad-hoc → `scripts/dev/`**: `audit-katex`, `audit-render`,
+  `diagnose-media`, `diagnose-render`, `dry-run-parse`, `fix-ingest-artifacts`,
+  `ingest-article`. `scripts/` kini bersih dari perkakas ad-hoc (sisa isinya
+  tooling resmi: seed, db, tema, backup, `deploy.sh`). **Tak ada perintah pnpm
+  yang putus** (ketujuhnya tak terdaftar di `package.json`).
+  Impor relatif disesuaikan `../src` → `../../src` (20 impor) + petunjuk pemakaian.
+  Diverifikasi dengan menjalankan `dry-run-parse.ts` pada korpus nyata
+  (56 soal, exit 0) — perubahan impor dinamis tak terjangkau typecheck.
+
+### Diubah (repo hygiene)
+- **`storage/` keluar dari git** (+ `.gitignore`). Media adalah *data runtime*
+  yang diunggah pengguna (nama berkas = SHA-256, dicatat di `media_assets`),
+  bukan kode. 8 berkas lama keluar dari index; **berkas fisik tidak dihapus**.
+  Jalur pemulihan tetap ada: named volume `media_data` (docker-compose) +
+  rsync/restic (`docs/BACKUP-RECOVERY.md` §3, §5).
+
+---
+
 ## [G3] — Kurasi Massal: Bulk Action, Rapid Review, Merge Label
 
 ### Ditambahkan
