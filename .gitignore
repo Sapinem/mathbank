@@ -29,6 +29,11 @@
 # backups DB (dump bisa memuat data nyata — JANGAN di-commit)
 /backups/
 
+# media runtime (diunggah pengguna; data, bukan kode). Jalur backup/recovery:
+# rsync/restic ke lokasi terpisah (docs/BACKUP-RECOVERY.md §3) + named volume
+# `media_data` di docker-compose.yml. Lihat juga konstanta #22 (rahasia tak di kode).
+/storage/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
