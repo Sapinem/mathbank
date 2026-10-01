@@ -19,6 +19,7 @@
 | [0009](0009-bundle-pisah-koleksi-dan-latihan.md) | Bundle: **satu tabel** `bundles` (usulan "pisah" ditolak) | Ditolak |
 | [0010](0010-event-jenis-berulang-tahun-di-soal.md) | `event` = jenis berulang; tahun di `questions.event_year` | Diterima |
 | [0011](0011-stimulus-tetap-di-questions.md) | Stimulus tetap di `questions` (`parent_id`) — jangan dipisah | Diterima |
+| [0012](0012-provenance-per-butir-question-sources.md) | Provenance per-butir: tabel `question_sources` (multi-sumber) | Diusulkan |
 
 ## Cara menambah ADR
 

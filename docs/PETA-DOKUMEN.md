@@ -41,8 +41,9 @@
 | B4 | `SKEMA-DB-DETAIL.md` | ✅ | sumber kebenaran skema |
 | B5 | `L7-TINJAUAN-KRITIS-DATA.md` | ✅ | |
 | B6 | `KAMUS-DATA.md` (glossary) | ✅ | **dibuat** 2026-09-29 — glosarium domain |
-| B7 | `docs/ADR/` | ✅ | **11 ADR** (0001–0008 dibuat 2026-09-29; **0008 = basis UI Base UI**; **0009 = bundle tetap satu tabel** (ditolak: pisah); **0010 = event jenis berulang (tahun di soal)**; **0011 = stimulus tetap di `questions`**) |
+| B7 | `docs/ADR/` | ✅ | **12 ADR** (0001–0008 dibuat 2026-09-29; **0008 = basis UI Base UI**; **0009 = bundle tetap satu tabel** (ditolak: pisah); **0010 = event jenis berulang (tahun di soal)**; **0011 = stimulus tetap di `questions`**; **0012 = provenance per-butir `question_sources`** (diusulkan)) |
 | B8 | `DESAIN-SKEMA-BUNDLE-TERPISAH.md` | 📝 | proposal pembanding (DDL `collections` vs `bundles`) — **belum dieksekusi** |
+| B9 | `RENCANA-QUESTION-SOURCES.md` | 📝 | rencana eksekusi ADR-0012 (`question_sources`) — T1–T8 |
 
 ### Kategori C — Desain & UI
 
