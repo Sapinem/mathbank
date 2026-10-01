@@ -78,6 +78,17 @@ export function excerpt(md: string, max = 140): string {
   return result.length > max ? result.slice(0, max) + "…" : result;
 }
 
+/**
+ * Ratakan lingkungan rumus multi-baris (matrix, cases, aligned, \\)
+ * agar menjadi datar/inline pada baris ikhtisar mode list.
+ */
+export function flattenMathForList(text: string): string {
+  return text
+    .replace(/\\begin\{(?:matrix|pmatrix|bmatrix|cases|aligned|array)\}/g, "")
+    .replace(/\\end\{(?:matrix|pmatrix|bmatrix|cases|aligned|array)\}/g, "")
+    .replace(/\\\\/g, ",\\; ");
+}
+
 /** Format jenjang kelas ringkas: "10", "11W", "11L", "SMP 08", "SD 04", dsb. */
 export function formatGradeBadge(grade: string): string {
   const g = grade.trim();
@@ -201,7 +212,7 @@ export function QuestionCard({
     return (
       <div
         className={cn(
-          "group relative flex items-center gap-2.5 px-4 py-3 transition-colors hover:bg-muted/30 cursor-pointer",
+          "group relative flex h-11 max-h-11 items-center gap-2.5 px-4 transition-colors hover:bg-muted/30 cursor-pointer overflow-hidden",
           selected && "bg-brand/5 border-l-2 border-l-brand",
         )}
       >
@@ -246,7 +257,7 @@ export function QuestionCard({
             )}
             <div className="min-w-0 flex-1 truncate text-xs text-foreground/90 font-normal">
               <MathContent
-                content={excerpt(q.contentMarkdown, 180)}
+                content={excerpt(flattenMathForList(q.contentMarkdown), 180)}
                 noScroll
                 className="inline truncate max-w-full text-xs text-foreground/90 font-normal"
               />

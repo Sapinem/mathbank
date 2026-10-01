@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Pencil, Trash2, Check, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, Lightbulb } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { QuestionEditor } from "@/components/questions/question-editor";
 import { EnrichButton } from "@/components/questions/enrich-button";
 import { MathContent } from "@/components/math/math-content";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import {
@@ -32,12 +31,14 @@ import {
 } from "@/lib/display/labels";
 import { CognitiveBadge, DifficultyBadge } from "@/components/questions/rubric-badge";
 import { StimulusCard } from "@/components/questions/stimulus-card";
+import { formatGradeBadge } from "@/components/questions/question-card";
+import { cn } from "@/lib/utils";
 
 /**
  * Halaman detail soal (M4c) — lihat + edit + ubah status (FSM) + hapus.
  *
- * Mode `view` (default) memakai proyeksi aman (`answerKey` hanya bila viewer
- * berwenang). Mode `edit` memuat editor. Desktop-saja untuk menyunting.
+ * Format naskah dokumen matematika terpadu (soal + opsi menyatu),
+ * bukan format CBT terpisah. Pembahasan KaTeX terstruktur di bawahnya.
  */
 export function QuestionDetailView() {
   const params = useParams<{ id: string }>();
@@ -123,104 +124,140 @@ export function QuestionDetailView() {
         }
       />
 
-      <div className="flex flex-col gap-6 p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge className={statusClass(q.status)}>
-            {STATUS_LABELS[q.status] ?? q.status}
-          </Badge>
-          <Badge variant="outline">{q.grade}</Badge>
-          <DifficultyBadge level={q.difficulty} />
-          <CognitiveBadge level={q.cognitiveLevel} />
-          {q.isFlagged && (
-            <Badge variant="outline" className="border-gold/40 bg-gold/15 text-gold-fg">
-              <AlertTriangle data-icon="inline-start" /> Ditandai
-            </Badge>
-          )}
-        </div>
-
-        {q.parent && <StimulusCard content={q.parent.contentMarkdown} />}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Pertanyaan</CardTitle>
+      <div className="flex flex-col gap-6 p-4 sm:p-6 max-w-5xl">
+        {/* LEMBAR DOKUMEN SOAL (SOAL + OPSI MENYATU) */}
+        <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+          <CardHeader className="border-b border-border/40 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className={statusClass(q.status)}>
+                  {STATUS_LABELS[q.status] ?? q.status}
+                </Badge>
+                <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 font-mono text-xs font-semibold text-foreground/90">
+                  Kelas {formatGradeBadge(q.grade)}
+                </span>
+                <DifficultyBadge level={q.difficulty} />
+                <CognitiveBadge level={q.cognitiveLevel} />
+                {q.isFlagged && (
+                  <Badge variant="outline" className="border-gold/40 bg-gold/15 text-gold-fg">
+                    <AlertTriangle data-icon="inline-start" /> Ditandai
+                  </Badge>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground font-mono">
+                {TYPE_LABELS[q.questionType] ?? q.questionType}
+              </span>
+            </div>
           </CardHeader>
-          <CardContent>
-            <MathContent content={q.contentMarkdown} />
+
+          <CardContent className="flex flex-col gap-5 pt-5">
+            {/* Wacana Stimulus (Bila Ada) */}
+            {q.parent && (
+              <StimulusCard content={q.parent.contentMarkdown} className="text-sm" />
+            )}
+
+            {/* Batang Soal (Stem) */}
+            <div className="text-sm sm:text-base leading-relaxed text-foreground">
+              <MathContent content={q.contentMarkdown} />
+            </div>
+
+            {/* Opsi Pilihan Ganda (Menyatu dalam Dokumen, Format 1 Kolom ke Bawah) */}
+            {q.options && q.options.length > 0 && (
+              <div className="flex flex-col gap-2 border-t border-border/40 pt-4">
+                {q.options.map((o) => {
+                  const isKey = correctLabels.includes(o.label) || o.isCorrect;
+                  return (
+                    <div
+                      key={o.id}
+                      className={cn(
+                        "flex items-start gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors",
+                        isKey ? "bg-emerald-500/5 dark:bg-emerald-950/20" : "",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "font-mono font-semibold text-sm shrink-0",
+                          isKey
+                            ? "text-success text-emerald-600 dark:text-emerald-400 font-bold"
+                            : "text-foreground/70",
+                        )}
+                      >
+                        {o.label}.
+                      </span>
+                      <div className="min-w-0 flex-1 text-sm leading-relaxed">
+                        <MathContent content={o.contentMarkdown} />
+                        {o.distractorRationale && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Pengecoh: {o.distractorRationale}
+                          </p>
+                        )}
+                      </div>
+                      {isKey && (
+                        <span
+                          className="inline-flex items-center text-sm font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
+                          title="Kunci Jawaban"
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {q.options && q.options.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Opsi</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {q.options.map((o) => {
-                const isKey = correctLabels.includes(o.label) || o.isCorrect;
-                return (
-                  <div
-                    key={o.id}
-                    className="flex items-start gap-3 rounded-md border border-border p-3"
-                  >
-                    <span
-                      className={
-                        isKey
-                          ? "grid size-6 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-brand-fg"
-                          : "grid size-6 shrink-0 place-items-center rounded-full border border-border text-xs font-medium text-muted-foreground"
-                      }
-                    >
-                      {o.label}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <MathContent content={o.contentMarkdown} />
-                      {o.distractorRationale && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Pengecoh: {o.distractorRationale}
-                        </p>
-                      )}
-                    </div>
-                    {isKey && (
-                      <Check className="size-4 shrink-0 text-brand" aria-label="Kunci" />
-                    )}
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
+        {/* KARTU KUNCI & PEMBAHASAN */}
+        <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+          <CardHeader className="border-b border-border/40 pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Lightbulb className="size-4 text-amber-500 shrink-0" />
+              Kunci & Pembahasan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 pt-4">
+            {/* Kunci Jawaban Singkat */}
+            {key && (correctLabels.length > 0 || key.text) && (
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <span className="text-muted-foreground">Kunci Jawaban:</span>
+                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  {correctLabels.join(", ") || key.text} ✓
+                </span>
+              </div>
+            )}
 
-        {(key?.text || key?.explanation) && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Kunci & Pembahasan</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {key?.text && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Jawaban</p>
-                  <MathContent content={key.text} />
+            {/* Pembahasan Detail */}
+            {key?.explanation ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Langkah Penyelesaian
+                </p>
+                <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  <MathContent content={key.explanation} />
                 </div>
-              )}
-              {key?.explanation && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Pembahasan
-                    </p>
-                    <MathContent content={key.explanation} />
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-6 text-center">
+                <p className="text-xs text-muted-foreground max-w-sm">
+                  Belum ada naskah pembahasan yang disimpan untuk butir soal ini.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                    <Pencil data-icon="inline-start" /> Tulis Pembahasan
+                  </Button>
+                  <EnrichButton questionId={id} />
+                </div>
+              </div>
+            )}
 
-        {!key && (
-          <p className="text-sm text-muted-foreground">
-            Kunci jawaban tidak ditampilkan untuk peran Anda.
-          </p>
-        )}
+            {!key && (
+              <p className="text-sm text-muted-foreground">
+                Kunci jawaban tidak ditampilkan untuk peran Anda.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>

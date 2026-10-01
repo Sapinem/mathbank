@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { QuestionCard, QuestionTypeIcon, excerpt, formatGradeBadge } from "./question-card";
+import { QuestionCard, QuestionTypeIcon, excerpt, flattenMathForList, formatGradeBadge } from "./question-card";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
 /** Soal uji minimal (hanya field yang dirender kartu). */
@@ -242,7 +242,7 @@ describe("QuestionTypeIcon", () => {
 describe("QuestionCard grid & masonry dengan opsi dan stimulus", () => {
   it("merender kartu dengan opsi dan stimulus pada mode grid", () => {
     const withParentAndOpts = q({
-      parent: { id: "p1", contentMarkdown: "Wacana utama bacaan" } as any,
+      parent: { id: "p1", contentMarkdown: "Wacana utama bacaan" },
       options: [
         { id: "o1", questionId: "q1", label: "A", contentMarkdown: "Opsi A", isCorrect: true, distractorRationale: null, orderIndex: 0, createdAt: new Date(), updatedAt: new Date() },
         { id: "o2", questionId: "q1", label: "B", contentMarkdown: "Opsi B", isCorrect: false, distractorRationale: null, orderIndex: 1, createdAt: new Date(), updatedAt: new Date() },
@@ -266,5 +266,17 @@ describe("QuestionCard grid & masonry dengan opsi dan stimulus", () => {
       <QuestionCard question={withOpts} href="/q/1" mode="masonry" />,
     );
     expect(container.textContent).toContain("Opsi A");
+  });
+});
+
+describe("flattenMathForList", () => {
+  it("meratakan lingkungan matriks dan cases menjadi inline", () => {
+    const input = "\\begin{matrix} a \\\\ b \\end{matrix}";
+    expect(flattenMathForList(input)).toBe(" a ,\\;  b ");
+  });
+
+  it("meratakan pmatrix, bmatrix, dan aligned", () => {
+    const input = "\\begin{pmatrix} 1 \\\\ 2 \\end{pmatrix} dan \\begin{aligned} x \\\\ y \\end{aligned}";
+    expect(flattenMathForList(input)).toBe(" 1 ,\\;  2  dan  x ,\\;  y ");
   });
 });
