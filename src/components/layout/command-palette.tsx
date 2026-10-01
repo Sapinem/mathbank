@@ -26,7 +26,10 @@ export function CommandPalette({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+      if (
+        (e.key === "k" || e.key === "K" || e.code === "KeyK") &&
+        (e.metaKey || e.ctrlKey)
+      ) {
         e.preventDefault();
         onOpenChange(!open);
       }
