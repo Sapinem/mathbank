@@ -46,6 +46,7 @@
 | B9 | `RENCANA-QUESTION-SOURCES.md` | 📝 | rencana eksekusi ADR-0012 (`question_sources`) — T1–T8 |
 | B10 | `REVIEW-MASUKAN-AUDIT-QBANK.md` | ✅ | **dibuat** 2026-10-01 — verifikasi 24 masukan audit QBank + 5 perbaikan; usulan 7 gelombang eksekusi |
 | B11b | `AUDIT-DB-2026-10-01.md` | ✅ | **dibuat** 2026-10-01 — audit 29 tabel: asal (per migrasi), peruntukan, pemakaian kode & isi; temuan tabel gendut; dasar pembatalan ADR-0013 |
+| B11c | `ARSITEKTUR-DAN-ALUR-MATHBANK.md` | ✅ | **dibuat** 2026-10-01 — rujukan arsitektur AKTUAL (9 lapisan, alur data, penggunaan DB, relasi, invarian) dari sumber primer; menggantikan `DESAIN-PER-LAPISAN-*` yang usang |
 | B11 | `RENCANA-G1-PRESENTASI-SOAL.md` | ✅ | **selesai** 2026-10-01 — G1.1 badge C1–C6 + meter kesulitan, G1.2 popover rubrik, G1.3 wacana stimulus, G1.4 filter multi-select |
 | B12 | `RENCANA-GRADE-QBANK.md` | ✅ | **selesai** 2026-10-01 — selaraskan grade dgn QBank (id "1".."12"); endpoint `/api/grades`, UI dari tabel, backfill prod |
 | B13 | `RENCANA-G2-EDITOR-SOAL.md` | ✅ | **selesai** 2026-10-01 — editor: form dinamis (matrix/matching), pemilih stimulus, autosave, KaTeX linter, petunjuk rubrik |
