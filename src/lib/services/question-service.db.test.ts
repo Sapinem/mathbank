@@ -289,10 +289,34 @@ describe("M6 — filter & pencarian", () => {
 
     // Filter pada KATEGORI (induk) harus menemukan soal yang terkait SUB-nya.
     const res = await listQuestions(
-      { topicId: kat.id, limit: 20, offset: 0 } as never,
+      { topicId: [kat.id], limit: 20, offset: 0 } as never,
       teacher,
     );
     expect(res.items.map((i) => i.id)).toContain(q.id);
+  });
+
+  it("filter MULTI-topik (G1.4) — gabungan keturunan beberapa induk", async () => {
+    const katA = await createTopic({ name: `G1 A ${Date.now()}` }, admin);
+    const subA = await createTopic({ name: "G1 Sub A", parentId: katA.id }, admin);
+    const katB = await createTopic({ name: `G1 B ${Date.now()}` }, admin);
+    const subB = await createTopic({ name: "G1 Sub B", parentId: katB.id }, admin);
+
+    const qA = await createQuestion(
+      baseInput({ topicIds: [subA.id], contentMarkdown: `Soal A ${Date.now()}` }),
+      teacher,
+    );
+    const qB = await createQuestion(
+      baseInput({ topicIds: [subB.id], contentMarkdown: `Soal B ${Date.now()}` }),
+      teacher,
+    );
+
+    const res = await listQuestions(
+      { topicId: [katA.id, katB.id], limit: 50, offset: 0 } as never,
+      teacher,
+    );
+    const ids = res.items.map((i) => i.id);
+    expect(ids).toContain(qA.id);
+    expect(ids).toContain(qB.id);
   });
 
   it("collectTopicDescendants mengumpulkan seluruh subtree", async () => {

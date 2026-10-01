@@ -101,14 +101,37 @@ export const createQuestionSchema = z.object({
 export const updateQuestionSchema = createQuestionSchema.partial();
 
 // ── Filter daftar ─────────────────────────────────────────────
+
+/**
+ * Menerima nilai tunggal ATAU daftar (multi-select) → selalu array.
+ * Mendukung `?difficulty=3` maupun `?difficulty=2&difficulty=3` (atau CSV).
+ */
+function asArray<T extends z.ZodTypeAny>(item: T) {
+  return z.preprocess(
+    (v) => {
+      if (v === undefined || v === null || v === "") return undefined;
+      if (Array.isArray(v)) {
+        const arr = v.filter((x) => x !== "");
+        return arr.length ? arr : undefined;
+      }
+      if (typeof v === "string" && v.includes(",")) {
+        const arr = v.split(",").filter(Boolean);
+        return arr.length ? arr : undefined;
+      }
+      return [v];
+    },
+    z.array(item).optional(),
+  );
+}
+
 export const listQuestionsQuerySchema = z.object({
   q: z.string().optional(),
   status: questionStatusSchema.optional(),
-  questionType: questionTypeSchema.optional(),
-  grade: z.string().optional(),
-  difficulty: z.coerce.number().int().min(1).max(5).optional(),
+  questionType: asArray(questionTypeSchema),
+  grade: asArray(z.string()),
+  difficulty: asArray(z.coerce.number().int().min(1).max(5)),
   cognitiveLevel: cognitiveLevelSchema.optional(),
-  topicId: z.string().uuid().optional(),
+  topicId: asArray(z.string().uuid()),
   tagId: z.string().uuid().optional(),
   sourceId: z.string().uuid().optional(),
   eventId: z.string().uuid().optional(),

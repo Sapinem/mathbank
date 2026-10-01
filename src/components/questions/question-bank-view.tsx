@@ -3,17 +3,9 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -30,40 +22,60 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { useQuestions } from "@/lib/hooks/use-questions";
 import { useTopics, useSources } from "@/lib/hooks/use-reference";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/display/labels";
+import { cn } from "@/lib/utils";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
 
 const PAGE_SIZE = 20;
+const GRADES = [
+  "SD-1", "SD-2", "SD-3", "SD-4", "SD-5", "SD-6",
+  "SMP-7", "SMP-8", "SMP-9",
+  "SMA-10", "SMA-11", "SMA-12",
+];
 
-/** Halaman Bank Soal — daftar, filter, pencarian (RENCANA-UI §3.2, §4b). */
+/** Baca daftar nilai dari URL (tunggal maupun banyak, dukung CSV). */
+function readList(params: URLSearchParams, key: string): string[] {
+  return params.getAll(key).flatMap((v) => v.split(",")).filter(Boolean);
+}
+
+/** Halaman Bank Soal — daftar, filter (multi-select), pencarian (G1). */
 export function QuestionBankView() {
   const router = useRouter();
   const params = useSearchParams();
 
-  // Filter dari URL (bookmarkable)
-  const filter: Partial<ListQuestionsQuery> = {
-    q: params.get("q") ?? undefined,
-    status: (params.get("status") as ListQuestionsQuery["status"]) ?? undefined,
-    questionType: (params.get("questionType") as ListQuestionsQuery["questionType"]) ?? undefined,
-    grade: params.get("grade") ?? undefined,
-    difficulty: params.get("difficulty")
-      ? Number(params.get("difficulty"))
-      : undefined,
-    topicId: params.get("topicId") ?? undefined,
-    sourceId: params.get("sourceId") ?? undefined,
-  };
+  // Filter dari URL (bookmarkable). Multi-nilai via getAll.
+  const questionType = readList(params, "questionType") as NonNullable<
+    ListQuestionsQuery["questionType"]
+  >;
+  const grade = readList(params, "grade");
+  const difficulty = readList(params, "difficulty")
+    .map(Number)
+    .filter((n) => !Number.isNaN(n));
+  const topicId = readList(params, "topicId");
+  const status = (params.get("status") as ListQuestionsQuery["status"]) ?? undefined;
+  const sourceId = params.get("sourceId") ?? undefined;
+  const q = params.get("q") ?? undefined;
   const page = Number(params.get("page") ?? "0");
 
-  const [search, setSearch] = useState(params.get("q") ?? "");
+  const [search, setSearch] = useState(q ?? "");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  // Mode tampilan (M6): list padat / grid / masonry — disimpan di URL.
   const mode = (params.get("mode") as ViewMode) ?? "list";
 
-  const query = { ...filter, limit: PAGE_SIZE, offset: page * PAGE_SIZE };
+  const query: Partial<ListQuestionsQuery> = {
+    q,
+    status,
+    questionType,
+    grade,
+    difficulty,
+    topicId,
+    sourceId,
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+  };
   const { data, isLoading, isError, error } = useQuestions(query);
   const { data: topics } = useTopics();
   const { data: sources } = useSources();
 
-  /** Perbarui URL (sumber kebenaran filter). */
+  /** Perbarui satu param tunggal (q, status, sourceId, mode, page). */
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value);
@@ -72,12 +84,30 @@ export function QuestionBankView() {
     router.replace(`/questions?${next.toString()}`);
   }
 
+  /** Tambah/hapus satu nilai pada param multi-nilai (checkbox di panel). */
+  function toggleValue(key: string, value: string) {
+    const next = new URLSearchParams(params.toString());
+    const cur = new Set(readList(params, key));
+    if (cur.has(value)) cur.delete(value);
+    else cur.add(value);
+    next.delete(key);
+    for (const v of cur) next.append(key, v);
+    next.delete("page");
+    router.replace(`/questions?${next.toString()}`);
+  }
+
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
     setParam("q", search.trim() || null);
   }
 
-  const activeCount = Object.values(filter).filter(Boolean).length;
+  const activeCount =
+    questionType.length +
+    grade.length +
+    difficulty.length +
+    topicId.length +
+    (status ? 1 : 0) +
+    (sourceId ? 1 : 0);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -100,36 +130,79 @@ export function QuestionBankView() {
           </Button>
         )}
       </div>
-      <FilterSelect
-        label="Status"
-        value={filter.status}
-        onChange={(v) => setParam("status", v)}
-        options={Object.entries(STATUS_LABELS).map(([v, l]) => ({ v, l }))}
-      />
-      <FilterSelect
-        label="Tipe Soal"
-        value={filter.questionType}
-        onChange={(v) => setParam("questionType", v)}
-        options={Object.entries(TYPE_LABELS).map(([v, l]) => ({ v, l }))}
-      />
-      <FilterSelect
-        label="Kesulitan"
-        value={filter.difficulty ? String(filter.difficulty) : undefined}
-        onChange={(v) => setParam("difficulty", v)}
-        options={[1, 2, 3, 4, 5].map((n) => ({ v: String(n), l: `Level ${n}` }))}
-      />
-      <FilterSelect
-        label="Topik"
-        value={filter.topicId}
-        onChange={(v) => setParam("topicId", v)}
-        options={(topics ?? []).map((t) => ({ v: t.id, l: t.name }))}
-      />
-      <FilterSelect
-        label="Sumber"
-        value={filter.sourceId}
-        onChange={(v) => setParam("sourceId", v)}
-        options={(sources ?? []).map((s) => ({ v: s.id, l: s.label }))}
-      />
+
+      <FilterGroup title="Status">
+        <ToggleRow
+          label="Semua"
+          checked={!status}
+          onChange={() => setParam("status", null)}
+        />
+        {Object.entries(STATUS_LABELS).map(([v, l]) => (
+          <ToggleRow
+            key={v}
+            label={l}
+            checked={status === v}
+            onChange={() => setParam("status", status === v ? null : v)}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup title="Tipe Soal">
+        {Object.entries(TYPE_LABELS).map(([v, l]) => (
+          <ToggleRow
+            key={v}
+            label={l}
+            checked={questionType.includes(v as never)}
+            onChange={() => toggleValue("questionType", v)}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup title="Jenjang">
+        {GRADES.map((g) => (
+          <ToggleRow
+            key={g}
+            label={g}
+            checked={grade.includes(g)}
+            onChange={() => toggleValue("grade", g)}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup title="Kesulitan">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <ToggleRow
+            key={n}
+            label={`Level ${n}`}
+            checked={difficulty.includes(n)}
+            onChange={() => toggleValue("difficulty", String(n))}
+          />
+        ))}
+      </FilterGroup>
+
+      <FilterGroup title="Topik">
+        <TopicPicker
+          topics={topics ?? []}
+          selected={topicId}
+          onToggle={(id) => toggleValue("topicId", id)}
+        />
+      </FilterGroup>
+
+      <FilterGroup title="Sumber">
+        <ToggleRow
+          label="Semua"
+          checked={!sourceId}
+          onChange={() => setParam("sourceId", null)}
+        />
+        {(sources ?? []).map((s) => (
+          <ToggleRow
+            key={s.id}
+            label={s.label}
+            checked={sourceId === s.id}
+            onChange={() => setParam("sourceId", sourceId === s.id ? null : s.id)}
+          />
+        ))}
+      </FilterGroup>
     </>
   );
 
@@ -254,40 +327,105 @@ export function QuestionBankView() {
   );
 }
 
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
+/** Grup filter dengan judul kecil. */
+function FilterGroup({
+  title,
+  children,
 }: {
-  label: string;
-  value: string | undefined;
-  onChange: (v: string | null) => void;
-  options: { v: string; l: string }[];
+  title: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="mb-3">
-      <label className="mb-1 block text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
-      <Select
-        value={value ?? "all"}
-        onValueChange={(v) => onChange(v === "all" ? null : v)}
-      >
-        <SelectTrigger className="w-full" aria-label={label}>
-          <SelectValue placeholder="Semua" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">Semua</SelectItem>
-            {options.map((o) => (
-              <SelectItem key={o.v} value={o.v}>
-                {o.l}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+      <p className="mb-1 text-xs font-medium text-muted-foreground">{title}</p>
+      <div className="flex flex-col gap-0.5">{children}</div>
+    </div>
+  );
+}
+
+/** Baris pilihan (checkbox) di panel filter — tanpa pill di area konten. */
+function ToggleRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-muted/60">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="size-4 shrink-0 accent-[var(--mb-brand)]"
+      />
+      <span className="min-w-0 truncate">{label}</span>
+    </label>
+  );
+}
+
+/** Pemilih topik dengan pencarian mikro (hindari gulir panjang). */
+function TopicPicker({
+  topics,
+  selected,
+  onToggle,
+}: {
+  topics: { id: string; name: string; parentId: string | null; level: number }[];
+  selected: string[];
+  onToggle: (id: string) => void;
+}) {
+  const [term, setTerm] = useState("");
+  const needle = term.trim().toLowerCase();
+  const filtered = needle
+    ? topics.filter((t) => t.name.toLowerCase().includes(needle))
+    : topics;
+
+  return (
+    <div className="rounded-md border border-border">
+      <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
+        <Search className="size-3.5 shrink-0 text-muted-foreground" />
+        <input
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="Cari topik…"
+          aria-label="Cari topik"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+      <div className="max-h-52 overflow-y-auto p-1">
+        {filtered.length === 0 ? (
+          <p className="px-2 py-2 text-xs text-muted-foreground">Tak ada topik.</p>
+        ) : (
+          filtered.map((t) => {
+            const on = selected.includes(t.id);
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onToggle(t.id)}
+                aria-pressed={on}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-muted/60",
+                  on && "text-brand",
+                )}
+                style={{ paddingInlineStart: `${(t.level - 1) * 12 + 8}px` }}
+              >
+                <span
+                  className={cn(
+                    "grid size-3.5 shrink-0 place-items-center rounded border",
+                    on ? "border-brand bg-brand text-brand-fg" : "border-border",
+                  )}
+                >
+                  {on && <Check className="size-2.5" strokeWidth={3} />}
+                </span>
+                <span className="min-w-0 truncate">{t.name}</span>
+              </button>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

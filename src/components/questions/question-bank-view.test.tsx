@@ -27,32 +27,9 @@ vi.mock("@/lib/hooks/use-reference", () => ({
 }));
 
 /**
- * Radix `Select` sulit diuji di jsdom (butuh pointer events + portal).
- * Diganti `<select>` polos agar handler onChange filter benar-benar tercakup —
- * yang diuji adalah LOGIKA filter, bukan Radix-nya (vendor).
+ * Filter kini memakai checkbox (multi-select) — bukan Radix `Select`.
+ * Diuji LOGIKA filter (URL = sumber kebenaran), bukan komponen vendornya.
  */
-vi.mock("@/components/ui/select", () => ({
-  Select: ({
-    value,
-    onValueChange,
-    children,
-  }: {
-    value: string;
-    onValueChange: (v: string) => void;
-    children: React.ReactNode;
-  }) => (
-    <select data-testid="filter-select" value={value} onChange={(e) => onValueChange(e.target.value)}>
-      {children}
-    </select>
-  ),
-  SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectValue: () => null,
-  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
-    <option value={value}>{children}</option>
-  ),
-}));
 
 function q(id: string): PublicQuestion {
   return {
@@ -183,35 +160,63 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
     );
   });
 
-  it("mengubah filter Status → menulis ke URL", () => {
+  it("centang Status → menulis status ke URL", () => {
     render(<QuestionBankView />);
-    const selects = screen.getAllByTestId("filter-select");
-    // urutan: Status, Tipe Soal, Kesulitan, Topik, Sumber
-    fireEvent.change(selects[0], { target: { value: "ready" } });
+    fireEvent.click(screen.getByLabelText("Siap"));
     expect(replace).toHaveBeenCalledWith("/questions?status=ready");
   });
 
-  it("memilih 'Semua' pada filter → menghapus param", () => {
+  it("memilih 'Semua' pada Status → menghapus param", () => {
     currentSearch = "status=ready";
     render(<QuestionBankView />);
-    const selects = screen.getAllByTestId("filter-select");
-    fireEvent.change(selects[0], { target: { value: "all" } });
+    // "Semua" pertama = grup Status
+    fireEvent.click(screen.getAllByLabelText("Semua")[0]);
     expect(replace).toHaveBeenCalledWith("/questions?");
   });
 
-  it("filter Kesulitan menerima nilai numerik", () => {
+  it("centang beberapa Kesulitan → multi-nilai di URL", () => {
+    currentSearch = "difficulty=4";
+    const { unmount } = render(<QuestionBankView />);
+    fireEvent.click(screen.getByLabelText("Level 3"));
+    const url = replace.mock.calls.at(-1)?.[0] as string;
+    expect(url).toContain("difficulty=4");
+    expect(url).toContain("difficulty=3");
+    unmount();
+  });
+
+  it("multi Jenjang → dua nilai grade di URL", () => {
+    currentSearch = "grade=SMA-10";
     render(<QuestionBankView />);
-    const selects = screen.getAllByTestId("filter-select");
-    fireEvent.change(selects[2], { target: { value: "4" } });
-    expect(replace).toHaveBeenCalledWith("/questions?difficulty=4");
+    fireEvent.click(screen.getByLabelText("SMA-11"));
+    const url = replace.mock.calls.at(-1)?.[0] as string;
+    expect(url).toContain("grade=SMA-10");
+    expect(url).toContain("grade=SMA-11");
   });
 
   it("opsi Topik & Sumber berasal dari hook referensi", () => {
-    useTopicsMock.mockReturnValue({ data: [{ id: "t1", name: "Aljabar", slug: "aljabar", parentId: null, level: 1 }] });
-    useSourcesMock.mockReturnValue({ data: [{ id: "s1", kind: "book", label: "Buku A", slug: "buku-a" }] });
+    useTopicsMock.mockReturnValue({
+      data: [{ id: "t1", name: "Aljabar", slug: "aljabar", parentId: null, level: 1 }],
+    });
+    useSourcesMock.mockReturnValue({
+      data: [{ id: "s1", kind: "book", label: "Buku A", slug: "buku-a" }],
+    });
     render(<QuestionBankView />);
-    expect(screen.getByRole("option", { name: "Aljabar" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Buku A" })).toBeInTheDocument();
+    expect(screen.getByText("Aljabar")).toBeInTheDocument();
+    expect(screen.getByText("Buku A")).toBeInTheDocument();
+  });
+
+  it("pemilih topik punya pencarian mikro (filter daftar topik)", () => {
+    useTopicsMock.mockReturnValue({
+      data: [
+        { id: "t1", name: "Aljabar", slug: "aljabar", parentId: null, level: 1 },
+        { id: "t2", name: "Geometri", slug: "geometri", parentId: null, level: 1 },
+      ],
+    });
+    render(<QuestionBankView />);
+    const search = screen.getByLabelText("Cari topik");
+    fireEvent.change(search, { target: { value: "geo" } });
+    expect(screen.getByText("Geometri")).toBeInTheDocument();
+    expect(screen.queryByText("Aljabar")).not.toBeInTheDocument();
   });
 });
 

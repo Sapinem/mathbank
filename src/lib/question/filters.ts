@@ -71,9 +71,11 @@ export async function buildQuestionFilter(
   const conds: SQL[] = [];
   if (!query.includeDeleted) conds.push(isNull(questions.deletedAt));
   if (query.status) conds.push(eq(questions.status, query.status));
-  if (query.questionType) conds.push(eq(questions.questionType, query.questionType));
-  if (query.grade) conds.push(eq(questions.grade, query.grade));
-  if (query.difficulty) conds.push(eq(questions.difficulty, query.difficulty));
+  if (query.questionType?.length)
+    conds.push(inArray(questions.questionType, query.questionType));
+  if (query.grade?.length) conds.push(inArray(questions.grade, query.grade));
+  if (query.difficulty?.length)
+    conds.push(inArray(questions.difficulty, query.difficulty));
   if (query.cognitiveLevel)
     conds.push(eq(questions.cognitiveLevel, query.cognitiveLevel));
   if (query.sourceId) conds.push(eq(questions.sourceId, query.sourceId));
@@ -90,10 +92,14 @@ export async function buildQuestionFilter(
     );
   }
 
-  // Filter topik — TERMASUK anak (rekursif).
-  if (query.topicId) {
-    const topicIds = await collectTopicDescendants(query.topicId);
-    const ids = await questionIdsForTopics(topicIds);
+  // Filter topik — TERMASUK anak (rekursif). Multi-topik = gabungan keturunan.
+  if (query.topicId?.length) {
+    const allIds = new Set<string>();
+    for (const root of query.topicId) {
+      const descendants = await collectTopicDescendants(root);
+      for (const d of descendants) allIds.add(d);
+    }
+    const ids = await questionIdsForTopics([...allIds]);
     if (ids.length === 0) return { where: sql`false`, byRelevance: !!query.q };
     conds.push(inArray(questions.id, ids));
   }

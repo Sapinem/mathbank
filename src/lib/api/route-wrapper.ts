@@ -88,11 +88,18 @@ function clientIp(req: Request): string | null {
 }
 
 /** Bangun objek dari URLSearchParams → plain object untuk Zod. */
-function searchParamsToObject(url: string): Record<string, string> {
+function searchParamsToObject(url: string): Record<string, string | string[]> {
   const params = new URLSearchParams(new URL(url).searchParams);
-  const obj: Record<string, string> = {};
+  const obj: Record<string, string | string[]> = {};
   params.forEach((value, key) => {
-    obj[key] = value;
+    const existing = obj[key];
+    if (existing === undefined) {
+      obj[key] = value;
+    } else if (Array.isArray(existing)) {
+      existing.push(value);
+    } else {
+      obj[key] = [existing, value];
+    }
   });
   return obj;
 }

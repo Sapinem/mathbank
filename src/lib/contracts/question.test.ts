@@ -64,8 +64,30 @@ describe("contracts/question", () => {
 
   it("filter: coerce difficulty & flagged dari string", () => {
     const q = listQuestionsQuerySchema.parse({ difficulty: "4", flagged: "true" });
-    expect(q.difficulty).toBe(4);
+    // Multi-nilai: satu nilai pun dinormalkan jadi array (G1.4).
+    expect(q.difficulty).toEqual([4]);
     expect(q.flagged).toBe(true);
+  });
+
+  it("filter multi-nilai: array, CSV, dan nilai tunggal → array", () => {
+    expect(
+      listQuestionsQuerySchema.parse({ difficulty: ["2", "3"] }).difficulty,
+    ).toEqual([2, 3]);
+    expect(
+      listQuestionsQuerySchema.parse({ difficulty: "2,3" }).difficulty,
+    ).toEqual([2, 3]);
+    expect(
+      listQuestionsQuerySchema.parse({ grade: ["SMA-10", "SMA-11"] }).grade,
+    ).toEqual(["SMA-10", "SMA-11"]);
+    expect(
+      listQuestionsQuerySchema.parse({ questionType: "single_choice" }).questionType,
+    ).toEqual(["single_choice"]);
+  });
+
+  it("filter kosong → undefined (bukan array kosong)", () => {
+    const q = listQuestionsQuerySchema.parse({ difficulty: "", grade: [] });
+    expect(q.difficulty).toBeUndefined();
+    expect(q.grade).toBeUndefined();
   });
 
   it("filter: tolak limit > 100", () => {
