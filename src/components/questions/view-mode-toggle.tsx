@@ -20,7 +20,7 @@ export function modeClass(mode: ViewMode): string {
       return "columns-1 gap-3 p-3 sm:columns-2 sm:p-4 xl:columns-3 [&>*]:mb-3 [&>*]:break-inside-avoid";
     case "list":
     default:
-      return "";
+      return "m-3 sm:m-4 divide-y divide-border/60 rounded-xl border border-border/80 bg-card/40 overflow-hidden shadow-xs";
   }
 }
 
