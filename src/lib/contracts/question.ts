@@ -148,6 +148,19 @@ export const changeStatusSchema = z.object({
   status: questionStatusSchema,
 });
 
+// ── Aksi massal (G3.1) ────────────────────────────────────────
+export const bulkActionSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(200),
+  action: z.enum([
+    "set_ready",
+    "archive",
+    "reject_to_draft",
+    "flag",
+    "unflag",
+  ]),
+  notes: z.string().max(1000).nullable().optional(),
+});
+
 // ── Tipe terinferensi ─────────────────────────────────────────
 export type CreateQuestionInput = z.infer<typeof createQuestionSchema>;
 export type UpdateQuestionInput = z.infer<typeof updateQuestionSchema>;

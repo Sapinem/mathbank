@@ -1,5 +1,24 @@
 # Changelog — MathBank
 
+## [G3] — Kurasi Massal: Bulk Action, Rapid Review, Merge Label
+
+### Ditambahkan
+- **Aksi massal** (G3.1): endpoint `POST /api/questions/batch` + service
+  `bulkQuestionAction` yang **memakai ulang** `changeQuestionStatus`/`setQuestionFlag`
+  per-butir — izin per-tujuan (L1), FSM (L6), & penjagaan balapan (#36) tetap
+  ditegakkan; hasil **per-butir** (`ok`/`failed`). UI: checkbox pada kartu +
+  **bar seleksi mengambang** (Setujui · Tolak→draf · Arsipkan · Tandai · Lepas tanda).
+- **Mode Kilat / Rapid Review** (G3.2): di halaman Telaah — satu soal sekaligus
+  (flashcard) dengan navigasi **`←`/`→`** + tombol, aksi kurasi sama.
+- **Merge label sinonim** (G3.3): `mergeTags(sourceId, targetId)` **atomik** dalam
+  transaksi (pindah `question_tags` ke target, hapus sumber) + endpoint
+  `POST /api/tags/merge` + aksi "Gabungkan…" di halaman Label.
+
+### Catatan
+- Bulk **menghormati FSM**: `draft→ready` & `ready→draft` tak sah — jalur resmi
+  `draft→review→ready` (setujui) & `review→draft` (tolak). Item yang tak lolos
+  dicatat sebagai `failed`, bukan menggagalkan seluruh batch.
+
 ## [G2] — Editor Soal: Form Dinamis, Stimulus, Autosave, KaTeX Linter
 
 ### Ditambahkan

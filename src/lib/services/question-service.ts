@@ -28,3 +28,11 @@ export {
 } from "./question-write";
 
 export { changeQuestionStatus } from "./question-status";
+
+export {
+  bulkQuestionAction,
+  BULK_ACTIONS,
+  BULK_MAX_IDS,
+  type BulkAction,
+  type BulkResult,
+} from "./question-bulk";

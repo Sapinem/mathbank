@@ -21,6 +21,7 @@ const useSourcesMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 const useGradesMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 vi.mock("@/lib/hooks/use-questions", () => ({
   useQuestions: (q: unknown) => useQuestionsMock(q),
+  useBulkQuestionAction: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("@/lib/hooks/use-reference", () => ({
   useTopics: () => useTopicsMock(),

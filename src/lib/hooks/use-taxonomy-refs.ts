@@ -116,3 +116,16 @@ export function useDeleteTag() {
     onSuccess: () => qc.invalidateQueries({ queryKey: refKeys.tags }),
   });
 }
+
+/** Gabungkan label sinonim (G3.3) — pindah relasi soal lalu hapus sumber. */
+export function useMergeTags() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { sourceId: string; targetId: string }) =>
+      api<{ moved: number }>("/api/tags/merge", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: refKeys.tags }),
+  });
+}

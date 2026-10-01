@@ -19,7 +19,7 @@ import {
   type ViewMode,
 } from "@/components/questions/view-mode-toggle";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
-import { useQuestions } from "@/lib/hooks/use-questions";
+import { useQuestions, useBulkQuestionAction, type BulkAction } from "@/lib/hooks/use-questions";
 import { useTopics, useSources, useGrades } from "@/lib/hooks/use-reference";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/display/labels";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,43 @@ export function QuestionBankView() {
   const [search, setSearch] = useState(q ?? "");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const mode = (params.get("mode") as ViewMode) ?? "list";
+
+  // Seleksi massal (G3.1).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const bulk = useBulkQuestionAction();
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function clearSelection() {
+    setSelected(new Set());
+    setBulkMsg(null);
+  }
+  function runBulk(action: BulkAction) {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBulkMsg(null);
+    bulk.mutate(
+      { ids, action },
+      {
+        onSuccess: (res) => {
+          setBulkMsg(
+            `${res.ok.length} berhasil` +
+              (res.failed.length ? `, ${res.failed.length} gagal` : "") +
+              ".",
+          );
+          setSelected(new Set(res.failed.map((f) => f.id)));
+        },
+        onError: (e) => setBulkMsg((e as Error).message),
+      },
+    );
+  }
 
   const query: Partial<ListQuestionsQuery> = {
     q,
@@ -286,7 +323,13 @@ export function QuestionBankView() {
           ) : (
             <div className={modeClass(mode)}>
               {data.items.map((q) => (
-                <QuestionCard key={q.id} question={q} href={`/questions/${q.id}`} />
+                <QuestionCard
+                  key={q.id}
+                  question={q}
+                  href={`/questions/${q.id}`}
+                  selected={selected.has(q.id)}
+                  onToggleSelect={toggleSelect}
+                />
               ))}
             </div>
           )}
@@ -316,6 +359,67 @@ export function QuestionBankView() {
                 Berikutnya
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Bar seleksi massal (G3.1) */}
+        {selected.size > 0 && (
+          <div className="sticky bottom-3 z-10 mx-3 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-popover px-3 py-2 shadow-lg sm:mx-4">
+            <span className="text-sm font-medium">{selected.size} terpilih</span>
+            <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+            <Button
+              size="sm"
+              disabled={bulk.isPending}
+              onClick={() => runBulk("set_ready")}
+            >
+              Setujui
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulk.isPending}
+              onClick={() => runBulk("reject_to_draft")}
+            >
+              Tolak → Draf
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulk.isPending}
+              onClick={() => runBulk("archive")}
+            >
+              Arsipkan
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulk.isPending}
+              onClick={() => runBulk("flag")}
+            >
+              Tandai
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulk.isPending}
+              onClick={() => runBulk("unflag")}
+            >
+              Lepas tanda
+            </Button>
+            {bulkMsg && (
+              <span className="text-xs text-muted-foreground">{bulkMsg}</span>
+            )}
+            {bulk.isPending && (
+              <span className="text-xs text-muted-foreground">Memproses…</span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto"
+              onClick={clearSelection}
+            >
+              <X data-icon="inline-start" /> Batal
+            </Button>
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Merge } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,15 @@ import {
   useCreateTag,
   useUpdateTag,
   useDeleteTag,
+  useMergeTags,
 } from "@/lib/hooks/use-taxonomy-refs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { TagRow } from "@/lib/services/taxonomy-service";
 
 export function LabelsView() {
@@ -43,12 +51,15 @@ export function LabelsView() {
   const create = useCreateTag();
   const update = useUpdateTag();
   const del = useDeleteTag();
+  const merge = useMergeTags();
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<TagRow | null>(null);
   const [name, setName] = useState("");
   const [confirm, setConfirm] = useState<TagRow | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
+  const [merging, setMerging] = useState<TagRow | null>(null);
+  const [mergeTarget, setMergeTarget] = useState<string>("");
 
   function openCreate() {
     setEditing(null);
@@ -129,6 +140,19 @@ export function LabelsView() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
+                        aria-label={`Gabungkan ${t.name}`}
+                        disabled={(data.length ?? 0) < 2}
+                        onClick={() => {
+                          setMerging(t);
+                          setMergeTarget("");
+                          setFormErr(null);
+                        }}
+                      >
+                        <Merge />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         aria-label={`Hapus ${t.name}`}
                         onClick={() => setConfirm(t)}
                       >
@@ -184,6 +208,57 @@ export function LabelsView() {
               }}
             >
               Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={merging !== null} onOpenChange={(o) => !o && setMerging(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gabungkan label</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            Semua soal berlabel &ldquo;{merging?.name}&rdquo; akan dipindah ke label
+            tujuan, lalu label ini dihapus. Tindakan ini tak dapat dibatalkan.
+          </p>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="merge-target" className="text-sm font-medium">
+              Gabungkan ke
+            </label>
+            <Select value={mergeTarget} onValueChange={(v) => v && setMergeTarget(v)}>
+              <SelectTrigger id="merge-target" className="w-full" aria-label="Label tujuan">
+                <SelectValue placeholder="Pilih label tujuan…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(data ?? [])
+                  .filter((t) => t.id !== merging?.id)
+                  .map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name} ({t.usageCount})
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            {formErr && <p className="text-destructive text-sm">{formErr}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMerging(null)}>Batal</Button>
+            <Button
+              disabled={merge.isPending || !mergeTarget}
+              onClick={() => {
+                if (!merging || !mergeTarget) return;
+                setFormErr(null);
+                merge.mutate(
+                  { sourceId: merging.id, targetId: mergeTarget },
+                  {
+                    onSuccess: () => setMerging(null),
+                    onError: (e) => setFormErr((e as Error).message),
+                  },
+                );
+              }}
+            >
+              {merge.isPending ? "Menggabungkan…" : "Gabungkan"}
             </Button>
           </DialogFooter>
         </DialogContent>

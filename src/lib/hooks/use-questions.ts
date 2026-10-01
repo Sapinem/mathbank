@@ -131,3 +131,32 @@ export function useDeleteQuestion() {
     onSuccess: () => qc.invalidateQueries({ queryKey: questionKeys.all }),
   });
 }
+
+export type BulkAction =
+  | "set_ready"
+  | "archive"
+  | "reject_to_draft"
+  | "flag"
+  | "unflag";
+
+export interface BulkResult {
+  ok: string[];
+  failed: { id: string; error: string }[];
+}
+
+/** Aksi massal (G3.1) — kurasi banyak soal sekaligus. */
+export function useBulkQuestionAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      ids: string[];
+      action: BulkAction;
+      notes?: string | null;
+    }) =>
+      apiFetch<BulkResult>("/api/questions/batch", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: questionKeys.all }),
+  });
+}

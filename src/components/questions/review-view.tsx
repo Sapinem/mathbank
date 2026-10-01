@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -8,6 +8,7 @@ import {
   FlagOff,
   AlertTriangle,
   Inbox,
+  Zap,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -46,25 +47,202 @@ import type { PublicQuestion } from "@/lib/services/question-service";
  */
 export function ReviewView() {
   const [tab, setTab] = useState("review");
+  const [rapid, setRapid] = useState(false);
   return (
     <div className="flex flex-col gap-0">
       <PageHeader
         title="Telaah"
         description="Kurasi soal: setujui, tolak, atau tangani yang ditandai."
+        actions={
+          <Button
+            variant={rapid ? "default" : "outline"}
+            size="sm"
+            aria-pressed={rapid}
+            onClick={() => setRapid((v) => !v)}
+          >
+            <Zap data-icon="inline-start" /> Mode Kilat
+          </Button>
+        }
       />
       <div className="p-6">
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList>
-            <TabsTrigger value="review">Perlu Telaah</TabsTrigger>
-            <TabsTrigger value="flagged">Ditandai</TabsTrigger>
-          </TabsList>
-          <TabsContent value="review" className="mt-4">
-            <ReviewQueue />
-          </TabsContent>
-          <TabsContent value="flagged" className="mt-4">
-            <FlaggedQueue />
-          </TabsContent>
-        </Tabs>
+        {rapid ? (
+          <RapidReview />
+        ) : (
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList>
+              <TabsTrigger value="review">Perlu Telaah</TabsTrigger>
+              <TabsTrigger value="flagged">Ditandai</TabsTrigger>
+            </TabsList>
+            <TabsContent value="review" className="mt-4">
+              <ReviewQueue />
+            </TabsContent>
+            <TabsContent value="flagged" className="mt-4">
+              <FlaggedQueue />
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Mode **Kilat** (Rapid Review, G3.2) — satu soal sekaligus (flashcard).
+ *
+ * Navigasi keyboard `←`/`→` (atau tombol). Aksi kurasi tetap sama:
+ * Setujui (→ `ready`), Tolak (→ `draf`), Tandai/Lepas. Memakai endpoint FSM &
+ * flag yang sama — tidak ada jalur pintas.
+ */
+function RapidReview() {
+  const { data, isLoading, isError, error } = useQuestions({
+    status: "review",
+    limit: 50,
+  });
+  const [idx, setIdx] = useState(0);
+
+  const items = data?.items ?? [];
+  const total = items.length;
+  const q = items[Math.min(idx, Math.max(0, total - 1))];
+
+  const status = useChangeQuestionStatus(q?.id ?? "");
+  const flag = useSetQuestionFlag(q?.id ?? "");
+
+  // Navigasi keyboard ←/→.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") setIdx((i) => Math.max(0, i - 1));
+      if (e.key === "ArrowRight") setIdx((i) => Math.min(total - 1, i + 1));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [total]);
+
+  if (isLoading) return <LoadingState label="Memuat antrean telaah…" />;
+  if (isError) return <ErrorState title="Gagal memuat" description={error?.message} />;
+  if (total === 0)
+    return (
+      <EmptyState
+        title="Tidak ada soal menunggu telaah"
+        description="Antrean kosong — kerja bagus!"
+      />
+    );
+
+  const advance = () => setIdx((i) => Math.min(total - 1, i + 1));
+
+  return (
+    <div className="mx-auto flex max-w-3xl flex-col gap-4">
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          Soal {Math.min(idx + 1, total)} dari {total}
+        </span>
+        <span className="hidden sm:inline">Navigasi: ← / →</span>
+      </div>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4 pt-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className={statusClass(q.status)}>
+              {STATUS_LABELS[q.status] ?? q.status}
+            </Badge>
+            <Badge variant="outline">{q.grade}</Badge>
+            <Badge variant="outline">
+              {DIFFICULTY_LABELS[q.difficulty] ?? `Level ${q.difficulty}`}
+            </Badge>
+            {q.isFlagged && (
+              <Badge variant="outline" className="border-gold/40 bg-gold/15 text-gold-fg">
+                <AlertTriangle data-icon="inline-start" /> Ditandai
+              </Badge>
+            )}
+          </div>
+
+          {q.parent && (
+            <div className="rounded-md border border-border bg-muted/30 p-3">
+              <MathContent content={q.parent.contentMarkdown} />
+            </div>
+          )}
+
+          <div className="text-base leading-relaxed">
+            <MathContent content={q.contentMarkdown} />
+          </div>
+
+          {q.options.length > 0 && (
+            <ul className="flex flex-col gap-1.5 text-sm">
+              {q.options.map((o) => (
+                <li
+                  key={o.id}
+                  className={o.isCorrect ? "text-success" : "text-foreground"}
+                >
+                  <strong>{o.label}.</strong> <MathContent content={o.contentMarkdown} />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {q.answerKey?.explanation && (
+            <p className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              Pembahasan: {q.answerKey.explanation}
+            </p>
+          )}
+
+          <Link
+            href={`/questions/${q.id}`}
+            className="text-xs text-brand hover:underline"
+          >
+            Buka detail lengkap →
+          </Link>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={status.isPending}
+              onClick={() => status.mutate("ready", { onSuccess: advance })}
+            >
+              <CheckCircle2 data-icon="inline-start" /> Setujui (Siap)
+            </Button>
+            <Button
+              variant="outline"
+              disabled={status.isPending}
+              onClick={() => status.mutate("draft", { onSuccess: advance })}
+            >
+              Tolak → Draf
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={flag.isPending}
+              onClick={() =>
+                flag.mutate({ flagged: !q.isFlagged, notes: q.flagNotes })
+              }
+            >
+              {q.isFlagged ? (
+                <>
+                  <FlagOff data-icon="inline-start" /> Lepas tanda
+                </>
+              ) : (
+                <>
+                  <Flag data-icon="inline-start" /> Tandai
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={idx === 0}
+          onClick={() => setIdx((i) => Math.max(0, i - 1))}
+        >
+          ← Sebelumnya
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={idx >= total - 1}
+          onClick={() => setIdx((i) => Math.min(total - 1, i + 1))}
+        >
+          Berikutnya →
+        </Button>
       </div>
     </div>
   );
