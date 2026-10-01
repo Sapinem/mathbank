@@ -17,7 +17,7 @@
 | CI | ❌ tak ada `.github/workflows` |
 | Dockerfile/compose | ❌ tak ada |
 | Zero-downtime + rollback | ❌ dokumen saja |
-| RUNBOOK / PANDUAN-OPERASIONAL | ❌ belum ada |
+| RUNBOOK | ❌ belum ada (`PANDUAN-OPERASIONAL.md` = panduan PENGGUNA, milik M17) |
 
 ## 2. Yang dikerjakan (semua ✅)
 

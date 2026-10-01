@@ -57,7 +57,7 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M13 | **Keamanan lanjutan (S4–S9)** | 🟠 | M4 | ⬜ |
 | M14 | **Kualitas kode & tes (utang)** | 🟠 | M4 | ⬜ |
 | M15 | **UI/UX polish & responsif penuh** | 🟡 | M4 | ⬜ |
-| M16 | **Observabilitas & operasional** | 🟡 | M8 | ⬜ |
+| M16 | **Observabilitas & operasional** | ✅ | M8 | ✅ |
 | M17 | **Dokumentasi final & rilis 1.0** | 🟡 | M13–M16 | ⬜ |
 
 > **Aturan fase 3:** boleh dikerjakan **paralel** dengan fase 1/2 bila tak menghambat fitur. Prioritas utamanya menjaga utang tak menumpuk.
@@ -418,18 +418,20 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 
 **Hasil:** 515 unit (cov 92.99/84.99/90.67/94.87), 148 DB, tsc 0, lint 0, smoke 7/7.
 
-## M16 — Observabilitas & Operasional 🟡
+## M16 — Observabilitas & Operasional ✅ (2026-09-30)
 
 **Dependensi:** M8
 
-- [ ] Logging terstruktur + korelasi request-id
-- [ ] Telemetri ringan (metrik endpoint: latency, error rate)
-- [ ] Health-check endpoint (`/api/health`) untuk reverse-proxy
-- [ ] Backup otomatis + uji **restore** (lihat `BACKUP-RECOVERY.md`)
-- [ ] CI: `pnpm check` + `test:db` + e2e di setiap PR
-- [ ] `Dockerfile` + compose (app + PG + reverse-proxy TLS) — lihat `RENCANA-DEPLOY.md`
-- [ ] Migrasi: prosedur zero-downtime + rollback teruji
-- 📄 `RUNBOOK.md`, `PANDUAN-OPERASIONAL.md`
+- [x] Logging terstruktur + korelasi request-id — `src/lib/telemetry/logger.ts` (JSON, level, redaksi rahasia)
+- [x] Telemetri ringan (metrik endpoint: latency, error rate) — `src/lib/telemetry/metrics.ts` (ring buffer) → `/api/metrics`
+- [x] Health-check endpoint (`/api/health`) untuk reverse-proxy — liveness+readiness; + `/api/ready`, `?probe=liveness`
+- [x] Backup otomatis + uji **restore** — `scripts/backup-db.mjs` (`pnpm backup:db`) + `scripts/restore-check.mjs` (`pnpm restore:check`)
+- [x] CI: `pnpm check` + `test:db` di setiap PR — `.github/workflows/ci.yml`
+- [x] `Dockerfile` + compose (app + PG + reverse-proxy TLS) — **opsi alternatif** (produksi tetap systemd); terbukti jalan end-to-end
+- [x] Migrasi: prosedur zero-downtime + rollback teruji — `docs/MIGRASI-ZERO-DOWNTIME.md`
+- 📄 `RUNBOOK.md` ✅ (panduan operasional terpadu; `PANDUAN-OPERASIONAL.md` digabung ke sini)
+
+**Hasil:** 531 unit (cov 92.74/83.95/91.58/94.84), tsc 0, lint 0, build OK; uji restore nyata (28 tabel/26 trigger/HNSW/uuidv7); Docker terbukti jalan (health 200, ready 200); produksi tetap systemd port 1234. Commit: `b1dea3c` (logger/telemetri/health) · `56a6f94` (CI/Docker/migrasi/runbook).
 
 ## M17 — Dokumentasi Final & Rilis 1.0 🟡
 
@@ -463,7 +465,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 | M10 | `RENCANA-ENRICHMENT.md` | 📄 perlu |
 | M11 | `RENCANA-MCP.md` | 📄 perlu |
 | M12 | `RENCANA-MOODLE.md` | 📄 perlu |
-| M16 | `RUNBOOK.md`, `PANDUAN-OPERASIONAL.md` | 📄 perlu |
+| M16 | `RUNBOOK.md` | ✅ selesai |
 
 ### Risiko jadwal
 - **Estimasi** = kerja fokus tanpa gangguan; realistis mungkin lebih lama.

@@ -1,6 +1,48 @@
 # Changelog — MathBank
 
 
+## [M16] — Observabilitas & Operasional
+
+### Ditambahkan — Observabilitas (M16)
+- **Logger terstruktur** `src/lib/telemetry/logger.ts` — JSON satu baris, level
+  (`debug|info|warn|error`), **redaksi rahasia** otomatis, korelasi `requestId`.
+  warn/error → stderr; dibungkam saat tes.
+- **Telemetri in-memory** `src/lib/telemetry/metrics.ts` — ring buffer per
+  `METHOD route` (count, error, p50/p95/max), **nol dependency**.
+- **Endpoint**: `/api/metrics` (JSON, dilindungi `METRICS_TOKEN`),
+  `/api/ready` (readiness eksplisit). `/api/health` dipertahankan sebagai
+  kontrak lama + tambahan `?probe=liveness` (tanpa DB).
+- **Instrumentasi** `src/lib/api/route-wrapper.ts` — timing, `finish()`,
+  `errorResponse(err, requestId, ctx)` + `extractCode`, hapus `console.error`.
+
+### Ditambahkan — Operasional (M16)
+- **Backup + uji restore**: `scripts/backup-db.mjs` (`pnpm backup:db`, retensi)
+  & `scripts/restore-check.mjs` (`pnpm restore:check`, restore → `db:verify`).
+  Uji-restore **terbukti hijau** (28 tabel, 26 trigger, HNSW, uuidv7).
+- **CI** `.github/workflows/ci.yml` — service PostgreSQL 18 + pgvector,
+  `pnpm check` + `pnpm test:db`.
+- **Docker (opsi alternatif)**: `Dockerfile` (multi-stage Next standalone,
+  non-root, healthcheck), `docker-compose.yml` (app + PG pgvector + Caddy TLS),
+  `Caddyfile`, `.env.docker.example`, `.dockerignore`. **Produksi tetap systemd**
+  (port 1234) — Docker hanya opsi untuk host/VPS lain.
+- **Dokumen**: `RUNBOOK.md` (operasi harian/insiden), `MIGRASI-ZERO-DOWNTIME.md`
+  (expand→migrate→contract, rollback).
+
+### Diubah — Kualitas (M16)
+- **Penamaan wajib INGGRIS** (CONSTRAINTS #28b diperketat, tanpa pengecualian):
+  rename `pengaturan-view`→`settings-view`, `telaah-view`→`review-view`,
+  `bank-soal-view`→`question-bank-view`; identifier `*Page`/komponen ke Inggris.
+  Penjaga otomatis `scripts/check-names.mjs` (`pnpm lint:names`, masuk `pnpm check`).
+- **`next.config.ts`**: `output: "standalone"` hanya bila `NEXT_OUTPUT_STANDALONE=true`
+  (produksi systemd tak berubah).
+- **Pemindai rahasia** dikalibrasi (placeholder CI/dummy/template) + tes regresi.
+- **`BACKUP-RECOVERY.md` & `OBSERVABILITAS.md`**: status rencana → **TERIMPLEMENTASI**.
+
+### Hasil (M16)
+- **531 unit pass** (cov 92.74/83.95/91.58/94.84), tsc 0, lint 0, build OK,
+  `lint:names` hijau, secret-scan bersih (493 berkas), smoke produksi 7/7.
+
+
 ## [M15] — UI/UX Polish & Aksesibilitas
 
 ### Ditambahkan — UI/UX (M15)
