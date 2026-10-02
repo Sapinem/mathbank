@@ -9,7 +9,7 @@ import { config } from "dotenv";
 
 config({ path: ".env" });
 
-async function main() {
+async function auditKatex() {
   const { db } = await import("../../src/lib/db");
   const { questions } = await import("../../src/lib/db/schema/question");
   const { sources } = await import("../../src/lib/db/schema/source");
@@ -82,7 +82,7 @@ async function main() {
   process.exit(gagal.length ? 1 : 0);
 }
 
-main().catch((e) => {
+auditKatex().catch((e) => {
   console.error("GAGAL:", e);
   process.exit(1);
 });

@@ -59,7 +59,7 @@ interface QCategory {
   is_active: boolean;
 }
 
-async function main() {
+async function importTopicsFromQbank() {
   const qbank = postgres(QBANK_URL, { max: 2 });
   const mathbank = postgres(MATHBANK_URL!, { max: 2 });
 
@@ -157,7 +157,7 @@ async function main() {
   }
 }
 
-main().catch((e) => {
+importTopicsFromQbank().catch((e) => {
   console.error("Impor gagal:", e instanceof Error ? e.message : e);
   process.exit(1);
 });

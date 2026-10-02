@@ -7,7 +7,7 @@ import { config } from "dotenv";
 
 config({ path: ".env" });
 
-async function main() {
+async function diagnoseMedia() {
   const file = process.argv[2] ?? "/tmp/corpus/mathcyber.html";
   const source = process.argv[3] ?? "mathcyber";
 
@@ -52,7 +52,7 @@ async function main() {
   console.log(`3. Teks sisa '!['       : ${sisa}`);
 }
 
-main().catch((e) => {
+diagnoseMedia().catch((e) => {
   console.error("GAGAL:", e);
   process.exit(1);
 });

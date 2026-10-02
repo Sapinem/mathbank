@@ -13,7 +13,7 @@ import { config } from "dotenv";
 
 config({ path: ".env" });
 
-async function main() {
+async function ingestArticle() {
   const [file, source, title, url] = process.argv.slice(2);
   if (!file || !source || !title) {
     console.error(
@@ -86,7 +86,7 @@ async function main() {
   process.exit(res.created > 0 ? 0 : 1);
 }
 
-main().catch((e) => {
+ingestArticle().catch((e) => {
   console.error("GAGAL:", e);
   process.exit(1);
 });

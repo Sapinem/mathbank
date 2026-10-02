@@ -25,7 +25,7 @@ import type { AnswerKey } from "@/lib/contracts/question";
 import { slugify } from "@/lib/taxonomy/tree";
 import { recordAudit } from "./audit";
 
-export type BundleType = "source" | "exam" | "exercise";
+export type BundleType = "source" | "exam";
 export type BundleItemRole = "question" | "stimulus";
 
 export interface BundleRow {
@@ -181,7 +181,7 @@ function bundleColumns() {
  *
  * Aturan (keputusan pemilik produk — ADR-0009 "Opsi 2"):
  *   - `source` (KOLEKSI/arsip)      → **umum**: guru/penelaah boleh kelola bersama.
- *   - `exam` | `exercise` (LATIHAN) → **`own`**: hanya PEMBUAT yang boleh ubah.
+ *   - `exam` (UJIAN) → **`own`**: hanya PEMBUAT yang boleh ubah.
  *     Guru lain boleh **melihat** (`assertBundleRead`), tak boleh mengubah.
  *   - `admin` → selalu boleh.
  *

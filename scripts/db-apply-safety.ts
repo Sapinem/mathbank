@@ -31,7 +31,7 @@ const MANUAL_DIR = "drizzle/manual";
  */
 const PSQL_ONLY = ["provision-prod.sql"];
 
-async function main() {
+async function dbApplySafety() {
   const url = process.env.DATABASE_URL;
   if (!url) {
     console.error("✗ DATABASE_URL tidak diset (perlu .env).");
@@ -66,7 +66,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+dbApplySafety().catch((err) => {
   console.error("✗ Tak terduga:", err);
   process.exit(1);
 });

@@ -1,5 +1,5 @@
 /**
- * Seeder taksonomi — baca curriculum.yaml (QBank) → seed MathBank DB.
+ * Seeder taksonomi — baca curriculum.yaml (repo ini) → seed MathBank DB.
  * Jalankan: pnpm tsx scripts/seed-taxonomy.ts
  */
 import { readFileSync } from "node:fs";
@@ -11,7 +11,7 @@ import postgres from "postgres";
 config({ path: ".env" });
 
 const CURRICULUM_PATH = resolve(
-  process.env.CURRICULUM_YAML ?? "../qbank/config/curriculum.yaml",
+  process.env.CURRICULUM_YAML ?? "config/curriculum.yaml",
 );
 
 interface Grade {

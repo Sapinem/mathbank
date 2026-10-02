@@ -56,7 +56,7 @@ const EVENTS = [
   },
 ];
 
-async function main() {
+async function seedEvents() {
   const { createEvent, listEvents } = await import("../src/lib/services/taxonomy-service");
 
   const before = await listEvents();
@@ -78,4 +78,4 @@ async function main() {
   }
   process.exit(0);
 }
-main();
+seedEvents();

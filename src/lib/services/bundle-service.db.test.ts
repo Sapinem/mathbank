@@ -79,8 +79,8 @@ describe("createBundle / listBundles", () => {
   });
 
   it("slug unik: judul sama → akhiran -2", async () => {
-    await createBundle({ title: "Latihan", bundleType: "exercise" }, admin);
-    const b2 = await createBundle({ title: "Latihan", bundleType: "exercise" }, admin);
+    await createBundle({ title: "Latihan", bundleType: "exam" }, admin);
+    const b2 = await createBundle({ title: "Latihan", bundleType: "exam" }, admin);
     expect(b2.slug).toBe("latihan-2");
   });
 

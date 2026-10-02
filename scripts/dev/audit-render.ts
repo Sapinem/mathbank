@@ -20,7 +20,7 @@ interface Masalah {
   cuplik: string;
 }
 
-async function main() {
+async function auditRender() {
   const { db } = await import("../../src/lib/db");
   const { questions } = await import("../../src/lib/db/schema/question");
   const { sources } = await import("../../src/lib/db/schema/source");
@@ -124,7 +124,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => {
+auditRender().catch((e) => {
   console.error("GAGAL:", e);
   process.exit(1);
 });

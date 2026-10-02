@@ -13,7 +13,7 @@ import { readdir, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
 const MEDIA_ROOT = "storage/media";
 
-async function main() {
+async function cleanDummy() {
   const { db } = await import("../../src/lib/db");
   const { mediaAssets } = await import("../../src/lib/db/schema/media");
   const { tags } = await import("../../src/lib/db/schema/taxonomy");
@@ -99,4 +99,4 @@ async function main() {
 
   process.exit(0);
 }
-main();
+cleanDummy();

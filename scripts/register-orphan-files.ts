@@ -52,7 +52,7 @@ async function walk(dir: string, out: string[] = []): Promise<string[]> {
  */
 const MIN_BYTES = 100;
 
-async function main() {
+async function registerOrphanFiles() {
   const files = await walk(root);
   console.log(`Menelusuri ${root}`);
   console.log(`Ditemukan ${files.length} berkas gambar\n`);
@@ -115,7 +115,7 @@ async function main() {
   await sql.end();
 }
 
-main().catch(async (e) => {
+registerOrphanFiles().catch(async (e) => {
   console.error("GAGAL:", e);
   await sql.end();
   process.exit(1);

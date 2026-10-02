@@ -8,7 +8,7 @@
  */
 import { readFile } from "node:fs/promises";
 
-async function main() {
+async function dryRunParse() {
   const [file, adapterName] = process.argv.slice(2);
   if (!file || !adapterName) {
     console.error("Pemakaian: pnpm tsx scripts/dev/dry-run-parse.ts <berkas.html> <mathcyber|defantri>");
@@ -59,7 +59,7 @@ async function main() {
   console.log(`Punya bahas   : ${withExpl}/${res.items.length}`);
 }
 
-main().catch((e) => {
+dryRunParse().catch((e) => {
   console.error("GAGAL:", e);
   process.exit(1);
 });

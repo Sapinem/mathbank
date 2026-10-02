@@ -24,6 +24,7 @@
 | [0014](0014-sumber-menempel-pada-bundle.md) | Sumber menempel pada **BUNDLE** (bukan soal); `question_sources` dihapus; `event_*` dipertahankan | **Diterapkan** |
 | [0015](0015-gabung-books-institutions-ke-sources.md) | Gabung `books` & `institutions` ke `sources` (kolom per-`kind`); hapus 2 tabel | **Diterapkan** |
 | [0016](0016-tambah-collections-berdampingan.md) | Tambah `collections` sebagai konsep **berdampingan** (arsip publik); `bundles` tak disentuh | **Diterapkan** |
+| [0017](0017-buang-enum-exercise.md) | Buang nilai enum `exercise` (F7, pasangan `competition`); `bundle_type` = `source`\|`exam` | **Diterapkan** |
 
 ## Cara menambah ADR
 

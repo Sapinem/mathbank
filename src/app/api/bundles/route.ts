@@ -4,7 +4,7 @@ import { listBundles, createBundle } from "@/lib/services/bundle-service";
 
 const createSchema = z.object({
   title: z.string().min(1).max(255),
-  bundleType: z.enum(["source", "exam", "exercise"]),
+  bundleType: z.enum(["source", "exam"]),
   sourceId: z.string().uuid().nullable().optional(),
   eventId: z.string().uuid().nullable().optional(),
   year: z.number().int().min(1900).max(2100).nullable().optional(),

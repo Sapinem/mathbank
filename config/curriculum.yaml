@@ -1,0 +1,263 @@
+# Acuan Kurikulum & Data Referensi Baku QBank
+# Single Source of Truth untuk Jenjang, Kesulitan, dan Taksonomi Bloom C1-C6
+
+grades:
+  - id: "1"
+    label: "Kelas 1 SD"
+    level_group: "sd"
+    curriculum_phase: "Fase A"
+    order_index: 1
+    is_active: true
+  - id: "2"
+    label: "Kelas 2 SD"
+    level_group: "sd"
+    curriculum_phase: "Fase A"
+    order_index: 2
+    is_active: true
+  - id: "3"
+    label: "Kelas 3 SD"
+    level_group: "sd"
+    curriculum_phase: "Fase B"
+    order_index: 3
+    is_active: true
+  - id: "4"
+    label: "Kelas 4 SD"
+    level_group: "sd"
+    curriculum_phase: "Fase B"
+    order_index: 4
+    is_active: true
+  - id: "5"
+    label: "Kelas 5 SD"
+    level_group: "sd"
+    curriculum_phase: "Fase C"
+    order_index: 5
+    is_active: true
+  - id: "6"
+    label: "Kelas 6 SD"
+    level_group: "sd"
+    curriculum_phase: "Fase C"
+    order_index: 6
+    is_active: true
+  - id: "7"
+    label: "Kelas 7 SMP"
+    level_group: "smp"
+    curriculum_phase: "Fase D"
+    order_index: 7
+    is_active: true
+  - id: "8"
+    label: "Kelas 8 SMP"
+    level_group: "smp"
+    curriculum_phase: "Fase D"
+    order_index: 8
+    is_active: true
+  - id: "9"
+    label: "Kelas 9 SMP"
+    level_group: "smp"
+    curriculum_phase: "Fase D"
+    order_index: 9
+    is_active: true
+  - id: "10"
+    label: "Kelas 10 SMA"
+    level_group: "sma"
+    curriculum_phase: "Fase E"
+    order_index: 10
+    is_active: true
+  - id: "11"
+    label: "Kelas 11 SMA"
+    level_group: "sma"
+    curriculum_phase: "Fase F"
+    order_index: 11
+    is_active: true
+  - id: "11w"
+    label: "Kelas 11 SMA (Wajib)"
+    level_group: "sma"
+    curriculum_phase: "Fase F"
+    order_index: 12
+    is_active: true
+  - id: "11l"
+    label: "Kelas 11 SMA (Lanjut)"
+    level_group: "sma"
+    curriculum_phase: "Fase F"
+    order_index: 13
+    is_active: true
+  - id: "12"
+    label: "Kelas 12 SMA"
+    level_group: "sma"
+    curriculum_phase: "Fase F"
+    order_index: 14
+    is_active: true
+  - id: "12w"
+    label: "Kelas 12 SMA (Wajib)"
+    level_group: "sma"
+    curriculum_phase: "Fase F"
+    order_index: 15
+    is_active: true
+  - id: "12l"
+    label: "Kelas 12 SMA (Lanjut)"
+    level_group: "sma"
+    curriculum_phase: "Fase F"
+    order_index: 16
+    is_active: true
+  - id: "utbk"
+    label: "UTBK / SNBT"
+    level_group: "seleksi"
+    curriculum_phase: null
+    order_index: 17
+    is_active: true
+  - id: "mandiri"
+    label: "Seleksi Mandiri PTN"
+    level_group: "seleksi"
+    curriculum_phase: null
+    order_index: 18
+    is_active: true
+  - id: "umum"
+    label: "Umum / Campuran"
+    level_group: "lainnya"
+    curriculum_phase: null
+    order_index: 19
+    is_active: true
+
+difficulties:
+  - value: 1
+    label: "Sangat Mudah"
+    color_token: "diff-1"
+    time_guideline: "< 45 detik"
+    target_success_rate: "> 80%"
+    order_index: 1
+    is_active: true
+    description: |
+      Soal ingatan langsung atau 1 langkah pengerjaan rumus sederhana.
+  - value: 2
+    label: "Mudah"
+    color_token: "diff-2"
+    time_guideline: "1 menit"
+    target_success_rate: "65%–80%"
+    order_index: 2
+    is_active: true
+    description: |
+      Soal rutin dengan 1-2 langkah perhitungan standar.
+  - value: 3
+    label: "Sedang"
+    color_token: "diff-3"
+    time_guideline: "1.5–2 menit"
+    target_success_rate: "40%–65%"
+    order_index: 3
+    is_active: true
+    description: |
+      Membutuhkan 2-3 langkah rumus standar matematika sekolah.
+  - value: 4
+    label: "Sulit"
+    color_token: "diff-4"
+    time_guideline: "2.5–3 menit"
+    target_success_rate: "20%–40%"
+    order_index: 4
+    is_active: true
+    description: |
+      Soal penalaran dengan integrasi dua konsep atau manipulasi aljabar lanjutan.
+  - value: 5
+    label: "Sangat Sulit (HOTS+)"
+    color_token: "diff-5"
+    time_guideline: "> 3.5 menit"
+    target_success_rate: "< 20%"
+    order_index: 5
+    is_active: true
+    description: |
+      Soal non-rutin multi-konsep yang membutuhkan penalaran analitis tinggi.
+
+cognitive_levels:
+  - id: "remember"
+    code: "C1"
+    label: "Remember — Mengingat"
+    short_label: "C1"
+    bloom_equivalent: "C1"
+    color_token: "cog-c1"
+    order_index: 1
+    is_active: true
+    description: |
+      Mengukur kemampuan mengenali atau mengingat kembali fakta, konsep, rumus, dan definisi matematika dasar tanpa modifikasi aljabar.
+    operational_verbs:
+      - menyebutkan
+      - mengenali
+      - mendefinisikan
+      - menuliskan rumus
+      - mengidentifikasi
+  - id: "understand"
+    code: "C2"
+    label: "Understand — Memahami"
+    short_label: "C2"
+    bloom_equivalent: "C2"
+    color_token: "cog-c2"
+    order_index: 2
+    is_active: true
+    description: |
+      Mengukur kemampuan menginterpretasikan, mengklasifikasi, dan menjelaskan konsep matematika atau mengubah representasi (verbal ke grafik/aljabar).
+    operational_verbs:
+      - menjelaskan
+      - mengelompokkan
+      - mengubah representasi
+      - menginterpretasikan
+      - mencontohkan
+  - id: "apply"
+    code: "C3"
+    label: "Apply — Menerapkan"
+    short_label: "C3"
+    bloom_equivalent: "C3"
+    color_token: "cog-c3"
+    order_index: 3
+    is_active: true
+    description: |
+      Mengukur kemampuan menggunakan konsep, metode, atau prosedur baku untuk menyelesaikan soal matematika rutin.
+    operational_verbs:
+      - menghitung
+      - menerapkan rumus
+      - menentukan nilai
+      - menyelesaikan persamaan
+      - mensubstitusi
+  - id: "analyze"
+    code: "C4"
+    label: "Analyze — Menganalisis"
+    short_label: "C4"
+    bloom_equivalent: "C4"
+    color_token: "cog-c4"
+    order_index: 4
+    is_active: true
+    description: |
+      Mengukur kemampuan menguraikan informasi matematis, menganalisis pola, mendeteksi hubungan sebab-akibat antar-unsur, atau membedakan informasi relevan.
+    operational_verbs:
+      - menganalisis
+      - membandingkan
+      - menghubungkan
+      - menemukan pola
+      - menguraikan
+  - id: "evaluate"
+    code: "C5"
+    label: "Evaluate — Mengevaluasi"
+    short_label: "C5"
+    bloom_equivalent: "C5"
+    color_token: "cog-c5"
+    order_index: 5
+    is_active: true
+    description: |
+      Mengukur kemampuan memberikan penilaian, memeriksa konsistensi solusi, mengkritik metode, atau menguji validitas argumentasi matematis.
+    operational_verbs:
+      - memeriksa
+      - menguji
+      - menilai keabsahan
+      - membuktikan
+      - memvalidasi
+  - id: "create"
+    code: "C6"
+    label: "Create — Mencipta"
+    short_label: "C6"
+    bloom_equivalent: "C6"
+    color_token: "cog-c6"
+    order_index: 6
+    is_active: true
+    description: |
+      Mengukur kemampuan mengombinasikan konsep-konsep matematika yang berbeda untuk merumuskan model baru, generalisasi rumus, atau memecahkan masalah non-rutin/HOTS.
+    operational_verbs:
+      - merumuskan
+      - mengonstruksi
+      - mendesain model
+      - mengembangkan metode
+      - menggeneralisasi

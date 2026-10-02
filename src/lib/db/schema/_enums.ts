@@ -82,7 +82,7 @@ export const sourceKindEnum = pgEnum("source_kind", [
 export const bundleTypeEnum = pgEnum("bundle_type", [
   "source",
   "exam",
-  "exercise",
+
 ]);
 
 /** Peran baris di dalam paket. */

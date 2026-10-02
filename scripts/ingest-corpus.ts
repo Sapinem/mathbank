@@ -43,7 +43,7 @@ function decodeEntities(s: string): string {
     .replace(/&nbsp;/g, " ");
 }
 
-async function main() {
+async function ingestCorpus() {
   const { enqueue, listPending } = await import("../src/lib/ingest/queue");
   const { processQueueItem } = await import("../src/lib/ingest/service");
   const { mediaStorageRoot } = await import("../src/lib/ingest/config");
@@ -94,4 +94,4 @@ async function main() {
 
   process.exit(0);
 }
-main();
+ingestCorpus();

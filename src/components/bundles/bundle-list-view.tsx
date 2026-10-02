@@ -50,7 +50,6 @@ import type { BundleRow, BundleType } from "@/lib/services/bundle-service";
 const TYPE_LABELS: Record<BundleType, string> = {
   source: "Sumber",
   exam: "Ujian",
-  exercise: "Latihan",
 };
 
 const STATUS_LABELS: Record<BundleRow["status"], string> = {

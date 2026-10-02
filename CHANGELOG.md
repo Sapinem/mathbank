@@ -1,5 +1,36 @@
 # Changelog — MathBank
 
+## [Skema] — ADR-0017: buang enum `exercise` + `curriculum.yaml` masuk repo
+
+### Diubah
+- **Enum `bundle_type`: 3 → 2 nilai** (`source` | `exam`) — persis keputusan resmi
+  `ARSITEKTUR-DATA-FINAL.md`. `exercise` **tidak ada di keputusan mana pun** dan
+  **0 baris** memakainya; ini pasangan **F7** yang tertinggal setelah
+  `competition` dibuang ADR-0015.
+- Kode: `_enums.ts`, `BundleType`, dua Zod enum (`api/bundles*`),
+  `TYPE_LABELS` UI; tes yang memakai `exercise` sebagai sampel → `exam`.
+
+### Ditambahkan
+- **`config/curriculum.yaml` masuk repo** (dulu dibaca dari `../qbank/config/`) —
+  **ketergantungan taksonomi ke QBank terputus**. Diverifikasi: `pnpm seed:taxonomy`
+  jalan & **idempoten** (19 grades · 5 difficulties · 6 cognitive), termasuk di
+  DB yang dibangun **dari nol**. Menutup temuan audit **F8**.
+
+### Diperbaiki (bug lama yang terbongkar)
+- **10 skrip di `scripts/` semuanya mendeklarasikan `main()`** — `tsc` menyatukan
+  seluruh file, jadi begitu satu skrip diberi nama unik, skrip lain **rusak**
+  (`main is not defined`) dan **`pnpm db:migrate` ikut gagal**. Setiap skrip kini
+  memakai nama fungsi unik, dan **semuanya diverifikasi jalan** — bukan sekadar
+  lolos typecheck. (Ini juga contoh kenapa "typecheck hijau" ≠ "benar".)
+
+### Catatan
+- **Migrasi `0012` butuh 0 baris `exercise`**; konversi enum gagal bila ada.
+  Terbukti saat penerapan: **DB uji punya 2 baris sisa tes** → diubah ke `exam`
+  lebih dulu. Pelajaran ADR-0015/0016 (periksa DB uji **sebelum** migrasi) bekerja.
+- **`bundles` sengaja TIDAK dirombak** — kolom bergantian NULL tetap ada, sesuai
+  keputusan pemilik produk (jangan memutuskan bentuk sebelum jelas).
+- Data uji ingest (40 soal) **sudah dibuang**; kanvas kembali bersih.
+
 ## [Perbaikan] — parser kunci: selaraskan pola dua bahasa (4% → 73%)
 
 ### Diperbaiki

@@ -19,7 +19,7 @@ const APPLY = process.argv.includes("--apply");
 /** Pola placeholder penulis: `\text{..._...}` di dalam rumus. */
 const PLACEHOLDER = /\\text\{[^}]*_[^}]*\}/;
 
-async function main() {
+async function fixIngestArtifacts() {
   const { db } = await import("../../src/lib/db");
   const { questions } = await import("../../src/lib/db/schema/question");
   const { eq } = await import("drizzle-orm");
@@ -129,7 +129,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => {
+fixIngestArtifacts().catch((e) => {
   console.error("GAGAL:", e);
   process.exit(1);
 });

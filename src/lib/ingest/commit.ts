@@ -142,7 +142,7 @@ export async function resolveBundleId(input: {
       // URL-nya (atau judulnya bila tanpa URL) — bukan dari sourceId, karena
       // satu sumber bisa punya banyak artikel berjudul sama.
       slug: slugify(`${input.title}-${itemHash(input.url ?? input.title, "")}`, 255),
-      bundleType: "source", // naskah dari sumber — bukan exam/exercise
+      bundleType: "source", // naskah dari sumber — bukan ujian (exam)
       sourceId: input.sourceId,
       url: input.url,
       grade: input.grade,

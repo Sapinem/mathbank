@@ -6,7 +6,7 @@ import { config } from "dotenv";
 
 config({ path: ".env" });
 
-async function main() {
+async function diagnoseRender() {
   const { db } = await import("../../src/lib/db");
   const { questions } = await import("../../src/lib/db/schema/question");
   const { tokenizeMath } = await import("../../src/components/math/math-content");
@@ -54,7 +54,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => {
+diagnoseRender().catch((e) => {
   console.error("GAGAL:", e);
   process.exit(1);
 });

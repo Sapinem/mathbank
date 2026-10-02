@@ -46,7 +46,7 @@ const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
 /** Sisipkan bundle langsung → id. */
 async function seedBundle(
   ownerId: string | null,
-  bundleType: "source" | "exam" | "exercise",
+  bundleType: "source" | "exam",
 ): Promise<string> {
   const slug = `bauthz-${Math.random().toString(36).slice(2, 10)}`;
   const [row] = await sql`
@@ -69,14 +69,14 @@ afterAll(async () => {
 
 describe("Otorisasi bundle — latihan 'own', koleksi umum (#35/#37)", () => {
   it("guru PATCH latihan MILIKNYA → 200", async () => {
-    const id = await seedBundle(TEACHER, "exercise");
+    const id = await seedBundle(TEACHER, "exam");
     mockActor = teacher;
     const res = await PATCH(req("PATCH", `/api/bundles/${id}`, { title: "Diubah guru" }), ctx(id));
     expect(res.status).toBe(200);
   });
 
   it("guru PATCH latihan ORANG LAIN → 403 (regresi)", async () => {
-    const id = await seedBundle(OTHER, "exercise");
+    const id = await seedBundle(OTHER, "exam");
     mockActor = teacher;
     const res = await PATCH(req("PATCH", `/api/bundles/${id}`, { title: "Coba ubah" }), ctx(id));
     expect(res.status).toBe(403);
@@ -97,21 +97,21 @@ describe("Otorisasi bundle — latihan 'own', koleksi umum (#35/#37)", () => {
   });
 
   it("admin PATCH latihan guru lain → 200", async () => {
-    const id = await seedBundle(OTHER, "exercise");
+    const id = await seedBundle(OTHER, "exam");
     mockActor = admin;
     const res = await PATCH(req("PATCH", `/api/bundles/${id}`, { title: "Admin ubah" }), ctx(id));
     expect(res.status).toBe(200);
   });
 
   it("guru GET latihan orang lain → 200 (boleh MELIHAT, tak boleh ubah)", async () => {
-    const id = await seedBundle(OTHER, "exercise");
+    const id = await seedBundle(OTHER, "exam");
     mockActor = teacher;
     const res = await GET(req("GET", `/api/bundles/${id}`), ctx(id));
     expect(res.status).toBe(200);
   });
 
   it("bundle TANPA pemilik: guru biasa → 403 (hanya admin)", async () => {
-    const id = await seedBundle(null, "exercise");
+    const id = await seedBundle(null, "exam");
     mockActor = teacher;
     const res = await PATCH(req("PATCH", `/api/bundles/${id}`, { title: "Coba" }), ctx(id));
     expect(res.status).toBe(403);
