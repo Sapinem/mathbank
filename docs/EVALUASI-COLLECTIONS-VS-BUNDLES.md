@@ -46,6 +46,57 @@ tautan ini secara tegas.
 **Pola yang terlihat:** topik ini sudah **7× berubah arah** dalam ~1 bulan.
 Itu bukan tanda bodoh — itu tanda **pertanyaannya belum dirumuskan dengan benar**.
 
+## 2b. Referensi industri — **kriterianya jelas**, dan hampir tak dipakai di sini
+
+Pola ini bernama **Single Table Inheritance (STI)** vs **Class/Joined Table
+Inheritance (CTI)**. Semua sumber utama membahasnya — dan **kriterianya konsisten**:
+
+**Kapan GABUNG (STI) tepat** — Oracle/JPA §12.6.1 (dokumentasi resmi):
+
+> Sesuai bila sub-tipe **"differ primarily in behavior only"** (beda **perilaku**,
+> bukan data) dan **"do not have unique data requirements"** (tak punya kebutuhan
+> data unik).
+>
+> **Keunggulan:** *"Simplest to implement · single table to administer · performs
+> better than other inheritance strategies · no complex joins"*
+> **Kelemahan:** *"Unused fields when sub-types have unique properties · sub-type
+> columns must be nullable · harder to enforce constraints · not normalized"*
+
+**Kapan PISAH (CTI) tepat** — GitLab (praktik nyata, skala besar):
+
+> *"always use separate tables instead of polymorphic associations"*
+> Alasan: **tak bisa menegakkan foreign key** · *"a table should have a single
+> responsibility"* (tanggung jawab kolom tercampur) · indeks komposit rumit.
+
+**Dan yang paling penting** — SQLAlchemy 2.0:
+
+> *"The **discriminator** column will store a value which indicates the type of
+> object represented within the row."*
+
+**Kata kuncinya: DISCRIMINATOR.** Di seluruh literatur, kolom pembeda disebut
+**discriminator column** — ia **memang dirancang** untuk itu. Jadi STI **bukan
+anti-pattern**; ia **pola resmi** dengan syarat jelas.
+
+### Uji kriteria itu ke kasus kita
+
+| Kriteria | `exam` vs `source` | Lolos? |
+|---|---|---|
+Beda **perilaku** (izin, cetak, urutan) | ya — `source` publik, `exam` milik guru | ✅ |
+**Tak** punya kebutuhan data unik | ya — kolomnya sama, sebagian NULL | 🟡 |
+FK tetap bisa ditegakkan | ya — `source_id`/`event_id` FK sah | ✅ |
+Sub-tipe punya "kolom harus nullable" | ya — **inilah kelemahannya** | 🟡 |
+
+**Kesimpulan referensi:** kasus kita **cocok STI**, dengan **satu kelemahan
+nyata** (kolom bergantian NULL). Kelemahan itu **bukan alasan otomatis untuk
+pisah** — ia **harga** yang ditukar dengan kesederhanaan. JPA menyarankan
+**`CHECK` constraint** untuk menguranginya (mis. `exam` wajib punya `duration_minutes`).
+
+> ⚠️ **Argumen terkuat untuk PISAH (GitLab) TIDAK berlaku di sini.** GitLab
+> menolak *polymorphic associations* karena **FK tak bisa ditegakkan**. Kasus
+> kita **berbeda**: `bundles.source_id` dan `bundles.event_id` **adalah FK sah**
+> ke tabel nyata — bukan `target_type` + `target_id`. Jadi kelemahan utama
+> GitLab **tidak kita alami**.
+
 ## 3. Apa kata dokumen terkuat (acuan yang paling awal & rinci)
 
 `ARSITEKTUR-DATA-FINAL.md` — keputusan yang **paling rinci & terdokumentasi** —
@@ -175,3 +226,14 @@ Bila kamu tetap memilih pisah, **tiga hal ini wajib** supaya tidak mengulang kek
   memeriksa skema QBank yang sesungguhnya**. Itu kelalaianku, dan sebagian
   kebingungan ini aku penyebabnya.
 - Evaluasi ini **tidak** mengubah apa pun. Semua keputusan menunggu pemilik produk.
+
+## Sumber referensi yang dipakai
+
+| Sumber | Dipakai untuk |
+|---|---|
+| **Martin Fowler**, *PoEAA* — Single/Class Table Inheritance | definisi pola |
+| **Oracle/JPA** §12.6 — Advantages & Disadvantages | **kriteria** kapan STI tepat (*"differ primarily in behavior only"*) |
+| **GitLab** — *"Polymorphic associations: always use separate tables"* | **argumen kuat untuk PISAH** — diuji, **tak berlaku** di kasus kita (FK kita sah) |
+| **SQLAlchemy 2.0** — Inheritance | istilah resmi **"discriminator column"** |
+| **Prisma** — Table inheritance | ringkasan STI vs multi-table |
+| `ARSITEKTUR-DATA-FINAL.md` · QBank `master` · ADR 0009–0017 | keputusan yang sudah ada di proyek |
