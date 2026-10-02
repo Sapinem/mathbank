@@ -1,5 +1,60 @@
 # Changelog — MathBank
 
+## [Perbaikan] — parser kunci: selaraskan pola dua bahasa (4% → 73%)
+
+### Diperbaiki
+- **`extractKey` hanya mengenali `(Jawaban X)`** — satu pola, satu bahasa.
+  Akibatnya **seluruh artikel berbahasa Inggris masuk tanpa kunci**, padahal
+  kuncinya **ADA** di teks, cuma ditulis lain. Ini penyebab sesungguhnya dari
+  temuan "172 soal tanpa kunci" kemarin — **bukan** artikelnya yang tak punya
+  kunci, melainkan **parser kita yang buta**.
+
+- **Empat pola kini dikenali** (semua diverifikasi ke korpus nyata):
+
+  | Pola | Sumber | Bahasa |
+  |---|---|---|
+  | `(Jawaban E)` | mathcyber | ID |
+  | `(Answer B)` | trigonometri, arithmetic | EN |
+  | `Answer: C` | (tanpa kurung) | EN |
+  | `\boxed{A}` | LaTeX | — |
+  | `The true answer is option B` · `You should choose option D` | beaver | EN |
+
+- **Hasil terukur pada korpus nyata** (5 artikel, 136 soal):
+
+  | Artikel | Sebelum | Sesudah |
+  |---|---:|---:|
+  | trigonometric-identities | 0/52 | **38/52** |
+  | arithmetic-series | 0/33 | **32/33** |
+  | arithmetic-word-problems | 0/23 | **15/23** |
+  | beaver-computing | 0/15 | **9/15** |
+  | aproksimasi (ID) | 5/13 | 5/13 |
+  | **TOTAL** | **5/136 (4%)** | **99/136 (73%)** |
+
+- **Divalidasi, bukan sekadar dihitung:** 0 kunci yang salah-tangkap (kunci
+  selalu cocok dengan label opsi yang ada), dan **1 contoh diperiksa manual**
+  ke sumber: parser bilang `B`, artikel bilang *"Cato borrowed Curious George.
+  The true answer is option B"* — cocok.
+
+### Dua jebakan yang ditemukan saat mengerjakan
+1. **Tag HTML di tengah kalimat.** Korpus menulis
+   `The true answer is <strong>option B` — regex yang melarang `<`/`>` **tak
+   akan pernah cocok**. Sebab itu beaver sempat tetap 0/15 walau polanya benar;
+   tag dibuang lebih dulu.
+2. **`option` punya dua makna.** Di artikel beaver:
+   - ✅ `You should choose option D` (menetapkan kunci)
+   - ❌ `the one shown in Option A` (menjelaskan opsi, **bukan** kunci)
+
+   Karena itu daftar kata pemicu **sengaja dibatasi**
+   (`answer|correct|choose|pilih|kunci|jawaban`) — `shown in` TIDAK termasuk.
+   Tanpa pembatasan ini, kunci bisa salah.
+
+### Catatan
+- **7 tes baru** mengunci tiap pola **+ satu tes negatif** untuk
+  `shown in Option A` — supaya pembatasan pemicu tak dilonggarkan tanpa sengaja.
+- Perbaikan ini **melengkapi** perbaikan sebelumnya (`warnings` → `isFlagged`):
+  sekarang soal yang **berhasil** dapat kunci tak lagi ditandai, dan yang
+  benar-benar tanpa kunci **tetap** ditandai untuk ditelaah.
+
 ## [Perbaikan] — peringatan parser kini jadi tanda "perlu telaah" (`isFlagged`)
 
 ### Diperbaiki

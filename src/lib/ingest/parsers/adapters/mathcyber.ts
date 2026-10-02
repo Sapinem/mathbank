@@ -124,10 +124,53 @@ function parseInlineOptions(text: string): { stem: string; options: { label: str
   return { stem, options };
 }
 
-/** Ekstrak label kunci dari pola `(Jawaban X)`. */
+/**
+ * Ekstrak label kunci dari pembahasan — **empat pola, dua bahasa**.
+ *
+ * Bentuk yang ditemukan langsung di korpus (2026-10-02):
+ *
+ * | Sumber | Pola | Jml |
+ * |---|---|---|
+ * | mathcyber (ID) | `(Jawaban E)` | utama |
+ * | trigonometri (EN) | `(Answer B)` | 47 |
+ * | arithmetic-* (EN) | `(Answer X)` | 47 |
+ * | beaver (EN) | `The true answer is **option B**` | 29 |
+ *
+ * **Urutan pengecekan penting**: `(Jawaban|Answer) X` diperiksa lebih dulu
+ * karena ia **tegas** (tanda kurung). `option X` diperiksa **terakhir** dan
+ * hanya bila didahului `answer`/`correct`, sebab di artikel beaver frasa
+ * "shown in Option A" juga muncul saat **menjelaskan** opsi, bukan kunci.
+ */
 function extractKey(html: string): string[] {
-  const m = html.match(/\(Jawaban\s*([A-H])\)/i);
-  if (m) return [m[1]!.toUpperCase()];
+  // 1. Paling tegas & paling umum: `(Jawaban X)` / `(Answer X)`.
+  const paren = html.match(/\((?:Jawaban|Answer)\s*:?\s*([A-H])\)/i);
+  if (paren) return [paren[1]!.toUpperCase()];
+
+  // 2. Tanpa kurung, tapi dengan pemisah jelas: `Answer: B`, `Jawaban B`.
+  const bare = html.match(/\b(?:Jawaban|Answer)\s*:?\s*([A-H])\b/i);
+  if (bare) return [bare[1]!.toUpperCase()];
+
+  // 3. `\boxed{A}` — LaTeX pada pembahasan (bukan jawaban panjang).
+  const boxed = html.match(/\\boxed\s*\{\s*(?:\\text\s*\{\s*)?([A-H])\s*\}?\s*\}/i);
+  if (boxed) return [boxed[1]!.toUpperCase()];
+
+  // 4. Paling lemah — WAJIB didahului kata pemicu yang menandakan PILIHAN.
+  //
+  // ⚠️ Tag HTML harus DIBUANG lebih dulu: korpus menulis
+  //    `The true answer is <strong>option B.` — dengan penanda tag, regex
+  //    yang melarang `<`/`>` tak akan pernah cocok.
+  //
+  // ⚠️ Pemicu sengaja DIBATASI. Di artikel beaver, `option` muncul dalam dua
+  //    makna — dan hanya yang pertama itu kunci:
+  //      ✅ `You should choose option D` · `The true answer is option B`
+  //      ❌ `the one shown in Option A` (menjelaskan, BUKAN kunci)
+  //    Karena itu `shown in` TIDAK masuk daftar pemicu.
+  const text = html.replace(/<[^>]*>/g, " ");
+  const option = text.match(
+    /\b(?:answer|correct|choose|choose\s+the|pilih|kunci|jawaban)\b[^.!?]{0,40}?\boption\s+([A-H])\b/i,
+  );
+  if (option) return [option[1]!.toUpperCase()];
+
   return [];
 }
 

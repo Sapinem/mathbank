@@ -91,6 +91,72 @@ describe("adapter mathcyber", () => {
     expect(it.stem).not.toContain("900");
   });
 
+  // ── Kunci: pola dua bahasa (diselaraskan 2026-10-02) ──────────────
+  // Sebelumnya hanya `(Jawaban X)` yang dikenali, sehingga artikel
+  // berbahasa Inggris (yang memakai `(Answer X)` / `choose option X`)
+  // masuk TANPA kunci. Diukur pada korpus nyata: 4% → 73%.
+  it("kunci pola INDONESIA: (Jawaban X)", () => {
+    const html = `<h2><span>Soal Nomor 1</span></h2><p>$$1+1$$</p>
+      <ol style="list-style-type: upper-alpha"><li>1</li><li>2</li><li>3</li></ol>
+      <div class="sp-wrap"><div class="sp-body">Hasilnya 2. (Jawaban B)</div></div>`;
+    const r = mathcyberAdapter(html, { source: "mathcyber" });
+    expect(r.items[0]!.correct).toEqual(["B"]);
+  });
+
+  it("kunci pola INGGRIS: (Answer X)", () => {
+    const html = `<h2><span>Problem Number 1</span></h2><p>What is $$1+1$$?</p>
+      <ol style="list-style-type: upper-alpha"><li>1</li><li>2</li><li>3</li></ol>
+      <div class="sp-wrap"><div class="sp-body">It is 2. (Answer B)</div></div>`;
+    const r = mathcyberAdapter(html, { source: "mathcyber" });
+    expect(r.items[0]!.correct).toEqual(["B"]);
+  });
+
+  it("kunci INGGRIS tanpa kurung: 'Answer: C'", () => {
+    const html = `<h2><span>Problem Number 1</span></h2><p>$$1+1$$</p>
+      <ol style="list-style-type: upper-alpha"><li>1</li><li>2</li><li>3</li></ol>
+      <div class="sp-wrap"><div class="sp-body">Answer: C is the value.</div></div>`;
+    const r = mathcyberAdapter(html, { source: "mathcyber" });
+    expect(r.items[0]!.correct).toEqual(["C"]);
+  });
+
+  it("kunci teks INGGRIS: 'The true answer is <strong>option B' (tag HTML di tengah)", () => {
+    // Regresi: tag HTML harus dibuang dulu — bila tidak, regex yang melarang
+    // `<`/`>` tak akan pernah cocok (artikel beaver sempat 0 kunci).
+    const html = `<h2><span>Problem Number 1</span></h2><p>$$1+1$$</p>
+      <ol style="list-style-type: upper-alpha"><li>1</li><li>2</li><li>3</li></ol>
+      <div class="sp-wrap"><div class="sp-body">The true answer is <strong>option B. </strong></span></div></div>`;
+    const r = mathcyberAdapter(html, { source: "mathcyber" });
+    expect(r.items[0]!.correct).toEqual(["B"]);
+  });
+
+  it("kunci teks: 'You should choose option D'", () => {
+    const html = `<h2><span>Problem Number 1</span></h2><p>$$1+1$$</p>
+      <ol style="list-style-type: upper-alpha"><li>1</li><li>2</li><li>3</li><li>4</li></ol>
+      <div class="sp-wrap"><div class="sp-body">You should choose option D.</div></div>`;
+    const r = mathcyberAdapter(html, { source: "mathcyber" });
+    expect(r.items[0]!.correct).toEqual(["D"]);
+  });
+
+  it("PENTING: 'shown in Option A' BUKAN kunci (frasa penjelas)", () => {
+    // Di artikel beaver, `option` muncul dalam dua makna. Kalimat "shown in
+    // Option A" hanya MENJELASKAN opsi, bukan menetapkan kunci — bila ikut
+    // ditangkap, kunci jadi salah.
+    const html = `<h2><span>Problem Number 1</span></h2><p>$$1+1$$</p>
+      <ol style="list-style-type: upper-alpha"><li>1</li><li>2</li><li>3</li></ol>
+      <div class="sp-wrap"><div class="sp-body">That tower is the one shown in Option A.</div></div>`;
+    const r = mathcyberAdapter(html, { source: "mathcyber" });
+    expect(r.items[0]!.correct).toEqual([]);
+    expect(r.items[0]!.warnings.join(" ")).toContain("Kunci jawaban tidak ditemukan");
+  });
+
+  it("tanpa pola kunci apa pun → kosong + peringatan (tak menebak)", () => {
+    const html = `<h2><span>Problem Number 1</span></h2><p>$$1+1$$</p>
+      <ol style="list-style-type: upper-alpha"><li>1</li><li>2</li><li>3</li></ol>
+      <div class="sp-wrap"><div class="sp-body">Pembahasan panjang tanpa penanda kunci.</div></div>`;
+    const r = mathcyberAdapter(html, { source: "mathcyber" });
+    expect(r.items[0]!.correct).toEqual([]);
+  });
+
   it("artikel tanpa penanda → kosong + catatan", () => {
     const r = mathcyberAdapter("<p>artikel</p>", { source: "mathcyber" });
     expect(r.items).toHaveLength(0);
