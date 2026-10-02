@@ -42,6 +42,8 @@
 | B5 | `L7-TINJAUAN-KRITIS-DATA.md` | ✅ | |
 | B6 | `KAMUS-DATA.md` (glossary) | ✅ | **dibuat** 2026-09-29 — glosarium domain |
 | B7 | `docs/ADR/` | ✅ | **17 ADR** (0001–0008 dibuat 2026-09-29; **0008 = basis UI Base UI**; **0009 = bundle satu tabel / Opsi 2** (✅ berlaku); **0010 = event jenis berulang (tahun di soal)** (✅ berlaku); **0011 = stimulus tetap di `questions`**; **0012 = `question_sources`** (⚪ digantikan sebagian ADR-0014); **0013 = pisah `collections`** — 🔴 DIBATALKAN (alasan tak berlaku lagi, lihat 0016); **0014 = sumber menempel pada BUNDLE**, `question_sources` dihapus ✅; **0015 = gabung `books`/`institutions` ke `sources`** ✅; **0016 = tambah `collections` berdampingan** (arsip publik) ✅; **0017 = buang enum `exercise`** (F7) ✅) |
+| B8c | `EVALUASI-COLLECTIONS-VS-BUNDLES.md` | 📊 | **evaluasi menyeluruh** 2026-10-02 — akar kebingungan (QBank `v0.9.0` vs `master`); rekomendasi **GABUNG**; bukti: pembeda habis, `collections` 0 baris, biaya pisah ~18 berkas |
+| B8b | `RENCANA-COLLECTIONS-VS-BUNDLES.md` | 📝 | **catatan arah** 2026-10-02 — ingest web → `collections`; **belum diputuskan**; bertentangan dgn ADR-0014 #7 |
 | B8 | `DESAIN-SKEMA-BUNDLE-TERPISAH.md` | 📝 | proposal pembanding (DDL `collections` vs `bundles`) — **sebagian dipakai ADR-0016** (bentuk tabel), tanpa merombak `bundles` |
 | B9 | `RENCANA-QUESTION-SOURCES.md` | 📝 | rencana eksekusi ADR-0012 (`question_sources`) — T1–T8 |
 | B10 | `REVIEW-MASUKAN-AUDIT-QBANK.md` | ✅ | **dibuat** 2026-10-01 — verifikasi 24 masukan audit QBank + 5 perbaikan; usulan 7 gelombang eksekusi |
