@@ -180,6 +180,7 @@ export const listQuestionsQuerySchema = z.object({
 // ── Transisi status ───────────────────────────────────────────
 export const changeStatusSchema = z.object({
   status: questionStatusSchema,
+  notes: z.string().max(1000).nullable().optional(),
 });
 
 // ── Aksi massal (G3.1) ────────────────────────────────────────
@@ -203,3 +204,4 @@ export type UpdateQuestionInput = z.infer<typeof updateQuestionSchema>;
 export type ListQuestionsQuery = z.infer<typeof listQuestionsQuerySchema>;
 export type OptionInput = z.infer<typeof optionInputSchema>;
 export type AnswerKey = z.infer<typeof answerKeySchema>;
+export type ChangeStatusInput = z.infer<typeof changeStatusSchema>;

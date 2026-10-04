@@ -16,5 +16,5 @@ export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
   body: changeStatusSchema,
   handler: async ({ params, body, actor }) =>
-    changeQuestionStatus(params.id, body.status, actor),
+    changeQuestionStatus(params.id, body.status, actor, body.notes),
 });

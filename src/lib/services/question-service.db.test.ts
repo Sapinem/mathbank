@@ -283,6 +283,21 @@ describe("changeQuestionStatus — FSM + kesiapan", () => {
       WHERE entity_id = ${q.id} AND action = 'status_change'`;
     expect(rows.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("menyimpan catatan penolakan pada flag_notes dan audit_logs saat tolak ke draft", async () => {
+    const q = await createQuestion(baseInput({ status: "review" }), admin);
+    const rejectNotes = "Kunci jawaban salah pada opsi C, perbaiki pembahasannya.";
+
+    const rejected = await changeQuestionStatus(q.id, "draft", admin, rejectNotes);
+
+    expect(rejected.status).toBe("draft");
+    expect(rejected.flagNotes).toBe(rejectNotes);
+
+    // Verifikasi tabel audit_logs mencatat catatan penolakan
+    const rows = await sql`SELECT action, change_summary FROM audit_logs WHERE entity_id = ${q.id}`;
+    const statusAudit = rows.find((a) => a.action === "status_change");
+    expect(statusAudit?.change_summary).toContain(rejectNotes);
+  });
 });
 
 describe("setQuestionFlag & deleteQuestion", () => {

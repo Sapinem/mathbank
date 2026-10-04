@@ -19,6 +19,7 @@ export async function changeQuestionStatus(
   id: string,
   to: QuestionStatus,
   actor: Actor,
+  notes?: string | null,
 ): Promise<PublicQuestion> {
   const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
@@ -53,6 +54,7 @@ export async function changeQuestionStatus(
     .set({
       status: to,
       lastReviewedAt: to === "ready" ? new Date() : existing.lastReviewedAt,
+      ...(notes !== undefined ? { flagNotes: notes } : {}),
     })
     .where(and(eq(questions.id, id), eq(questions.status, from)))
     .returning({ id: questions.id });
@@ -67,7 +69,9 @@ export async function changeQuestionStatus(
     entityId: id,
     action: "status_change",
     actor,
-    changeSummary: `Status ${from} → ${to}`,
+    changeSummary: notes
+      ? `Status ${from} → ${to}: ${notes}`
+      : `Status ${from} → ${to}`,
   });
 
   const updated = await getQuestion(id, { viewer: actor });
