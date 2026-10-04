@@ -151,6 +151,7 @@ export function BundleBuilder() {
 
   const [q, setQ] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [isRemoveOpen, setIsRemoveOpen] = useState(false);
   const [confirmRemoveItem, setConfirmRemoveItem] = useState<{ id: string; nomor: number } | null>(null);
   const { data: results, isPending: searchPending } = useQuestions({
     q: q.trim() || undefined,
@@ -261,7 +262,10 @@ export function BundleBuilder() {
             </Button>
             <BundleItemList
               items={bundle.items}
-              onRemove={(id, nomor) => setConfirmRemoveItem({ id, nomor })}
+              onRemove={(id, nomor) => {
+                setConfirmRemoveItem({ id, nomor });
+                setIsRemoveOpen(true);
+              }}
               onReorder={(ids) => reorder.mutate(ids)}
             />
           </CardContent>
@@ -272,7 +276,12 @@ export function BundleBuilder() {
         Di layar kecil: buka &ldquo;Tambah Soal&rdquo; untuk memilih soal.
       </p>
 
-      <Dialog open={!!confirmRemoveItem} onOpenChange={(o) => !o && setConfirmRemoveItem(null)}>
+      <Dialog
+        open={isRemoveOpen}
+        onOpenChange={(open) => {
+          if (!removeItem.isPending) setIsRemoveOpen(open);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Keluarkan soal nomor {confirmRemoveItem?.nomor}?</DialogTitle>
@@ -281,16 +290,20 @@ export function BundleBuilder() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmRemoveItem(null)}>
+            <Button
+              variant="outline"
+              disabled={removeItem.isPending}
+              onClick={() => setIsRemoveOpen(false)}
+            >
               Batal
             </Button>
             <Button
               variant="destructive"
-              disabled={removeItem.isPending}
+              disabled={removeItem.isPending || !confirmRemoveItem}
               onClick={() => {
                 if (confirmRemoveItem) {
                   removeItem.mutate(confirmRemoveItem.id, {
-                    onSuccess: () => setConfirmRemoveItem(null),
+                    onSuccess: () => setIsRemoveOpen(false),
                   });
                 }
               }}

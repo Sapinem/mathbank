@@ -76,9 +76,12 @@ export function QuestionBankView({
     setBulkMsg(null);
   }
 
-  function runBulk(action: BulkAction) {
+  function runBulk(action: BulkAction, onComplete?: () => void) {
     const ids = [...selected];
-    if (ids.length === 0) return;
+    if (ids.length === 0) {
+      onComplete?.();
+      return;
+    }
     setBulkMsg(null);
     bulk.mutate(
       { ids, action },
@@ -90,8 +93,12 @@ export function QuestionBankView({
               ".",
           );
           setSelected(new Set(res.failed.map((f) => f.id)));
+          onComplete?.();
         },
-        onError: (e) => setBulkMsg((e as Error).message),
+        onError: (e) => {
+          setBulkMsg((e as Error).message);
+          onComplete?.();
+        },
       },
     );
   }
@@ -304,7 +311,12 @@ export function QuestionBankView({
         </div>
       )}
 
-      <Dialog open={confirmArchiveOpen} onOpenChange={setConfirmArchiveOpen}>
+      <Dialog
+        open={confirmArchiveOpen}
+        onOpenChange={(open) => {
+          if (!bulk.isPending) setConfirmArchiveOpen(open);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Arsipkan {selected.size} butir soal?</DialogTitle>
@@ -314,18 +326,19 @@ export function QuestionBankView({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmArchiveOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={bulk.isPending}
+              onClick={() => setConfirmArchiveOpen(false)}
+            >
               Batal
             </Button>
             <Button
               variant="destructive"
               disabled={bulk.isPending}
-              onClick={() => {
-                setConfirmArchiveOpen(false);
-                runBulk("archive");
-              }}
+              onClick={() => runBulk("archive", () => setConfirmArchiveOpen(false))}
             >
-              Ya, Arsipkan
+              {bulk.isPending ? "Mengarsipkan…" : "Ya, Arsipkan"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -352,6 +352,7 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Catatan untuk penyusun (opsional)…"
             rows={3}
+            maxLength={1000}
             aria-label="Catatan penolakan"
           />
           <DialogFooter>

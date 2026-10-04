@@ -11,7 +11,14 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/questions",
 }));
 
-const mutate = vi.fn();
+const mutate = vi.fn(
+  (
+    _payload?: unknown,
+    options?: { onSuccess?: (res: { ok: string[]; failed: unknown[] }) => void },
+  ) => {
+    options?.onSuccess?.({ ok: ["q1", "q2"], failed: [] });
+  },
+);
 vi.mock("@/lib/hooks/use-questions", () => ({
   useQuestions: () => ({
     data: {

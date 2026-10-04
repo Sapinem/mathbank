@@ -97,15 +97,16 @@ export function useUpdateQuestion(id: string) {
   });
 }
 
-export type ChangeStatusInput =
+export type ChangeQuestionStatusArgs =
   | QuestionStatus
   | { status: QuestionStatus; notes?: string | null };
+export type ChangeStatusInput = ChangeQuestionStatusArgs;
 
 /** Ubah status (FSM). */
 export function useChangeQuestionStatus(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: ChangeStatusInput) => {
+    mutationFn: (input: ChangeQuestionStatusArgs) => {
       const body = typeof input === "string" ? { status: input } : input;
       return apiFetch<PublicQuestion>(`/api/questions/${id}/status`, {
         method: "PATCH",
