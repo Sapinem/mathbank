@@ -109,6 +109,7 @@ export function QuestionDetailView() {
               size="icon-sm"
               aria-label="Hapus soal"
               onClick={() => setConfirmDelete(true)}
+              className="min-h-[44px] min-w-[44px]"
             >
               <Trash2 />
             </Button>
@@ -494,8 +495,8 @@ function QuestionSourcesCard({
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Button
                 variant="ghost"
-                size="icon-xs"
-                className="h-6 w-6"
+                size="icon-sm"
+                className="min-h-[44px] min-w-[44px]"
                 aria-label="Naskah sebelumnya"
                 onClick={() => setIndex((prev) => (prev > 0 ? prev - 1 : total - 1))}
               >
@@ -506,8 +507,8 @@ function QuestionSourcesCard({
               </span>
               <Button
                 variant="ghost"
-                size="icon-xs"
-                className="h-6 w-6"
+                size="icon-sm"
+                className="min-h-[44px] min-w-[44px]"
                 aria-label="Naskah berikutnya"
                 onClick={() => setIndex((prev) => (prev < total - 1 ? prev + 1 : 0))}
               >

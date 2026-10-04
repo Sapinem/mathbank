@@ -191,26 +191,29 @@ function TopicBranch({
           {depth < 2 && (
             <Button
               variant="ghost"
-              size="icon-xs"
+              size="icon-sm"
               aria-label={`Tambah sub-topik di ${node.name}`}
               onClick={() => onAdd(node.id)}
+              className="min-h-[44px] min-w-[44px]"
             >
               <Plus />
             </Button>
           )}
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             aria-label={`Sunting ${node.name}`}
             onClick={() => onEdit(node)}
+            className="min-h-[44px] min-w-[44px]"
           >
             <Pencil />
           </Button>
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             aria-label={`Hapus ${node.name}`}
             onClick={() => onDelete(node)}
+            className="min-h-[44px] min-w-[44px]"
           >
             <Trash2 />
           </Button>

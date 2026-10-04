@@ -209,8 +209,8 @@ export function BundleListView() {
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   aria-label="Hapus kata kunci"
+                  className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -231,7 +231,7 @@ export function BundleListView() {
                   type="button"
                   onClick={() => setTypeFilter(tab.id)}
                   className={cn(
-                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                    "min-h-[44px] rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                     typeFilter === tab.id
                       ? "bg-background text-foreground shadow-2xs"
                       : "text-muted-foreground hover:text-foreground",
@@ -289,6 +289,7 @@ export function BundleListView() {
                 size="icon-sm"
                 aria-label="Tampilan Kisi Kartu"
                 onClick={() => setViewMode("grid")}
+                className="min-h-[44px] min-w-[44px]"
               >
                 <LayoutGrid className="size-4" />
               </Button>
@@ -297,6 +298,7 @@ export function BundleListView() {
                 size="icon-sm"
                 aria-label="Tampilan Tabel Rinci"
                 onClick={() => setViewMode("list")}
+                className="min-h-[44px] min-w-[44px]"
               >
                 <List className="size-4" />
               </Button>
@@ -404,29 +406,29 @@ export function BundleListView() {
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
-                      size="icon-xs"
+                      size="icon-sm"
                       aria-label={`Cetak ${b.title}`}
                       render={<Link href={`/bundles/${b.id}/print`} />}
                       nativeButton={false}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
                     >
                       <Printer className="size-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon-xs"
+                      size="icon-sm"
                       aria-label={`Duplikat ${b.title}`}
                       onClick={() => duplicate.mutate(b.id)}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
                     >
                       <Copy className="size-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon-xs"
+                      size="icon-sm"
                       aria-label={`Arsipkan ${b.title}`}
                       onClick={() => setConfirm(b)}
-                      className="text-muted-foreground hover:text-destructive"
+                      className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-destructive"
                     >
                       <Archive className="size-3.5" />
                     </Button>
@@ -497,7 +499,7 @@ export function BundleListView() {
                           aria-label={`Cetak ${b.title}`}
                           render={<Link href={`/bundles/${b.id}/print`} />}
                           nativeButton={false}
-                          className="min-h-[36px] min-w-[36px] sm:min-h-[32px] sm:min-w-[32px] text-muted-foreground hover:text-foreground"
+                          className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
                         >
                           <Printer className="size-4" />
                         </Button>
@@ -505,7 +507,7 @@ export function BundleListView() {
                           variant="ghost"
                           size="icon-sm"
                           aria-label={`Duplikat ${b.title}`}
-                          className="min-h-[36px] min-w-[36px] sm:min-h-[32px] sm:min-w-[32px] text-muted-foreground hover:text-foreground"
+                          className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
                           onClick={() => duplicate.mutate(b.id)}
                         >
                           <Copy className="size-4" />
@@ -514,7 +516,7 @@ export function BundleListView() {
                           variant="ghost"
                           size="icon-sm"
                           aria-label={`Arsipkan ${b.title}`}
-                          className="min-h-[36px] min-w-[36px] sm:min-h-[32px] sm:min-w-[32px] text-muted-foreground hover:text-destructive"
+                          className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-destructive"
                           onClick={() => setConfirm(b)}
                         >
                           <Archive className="size-4" />

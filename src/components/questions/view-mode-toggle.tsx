@@ -38,10 +38,11 @@ export function ViewModeToggle({
         <Button
           key={m}
           variant={value === m ? "secondary" : "ghost"}
-          size="icon-sm"
+          size="icon"
           aria-label={label}
           aria-pressed={value === m}
           onClick={() => onChange(m)}
+          className="min-h-[44px] min-w-[44px]"
         >
           <Icon />
         </Button>

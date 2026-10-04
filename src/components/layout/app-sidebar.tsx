@@ -87,6 +87,7 @@ export function AppSidebar() {
                         }
                         isActive={active}
                         tooltip={item.label}
+                        className="min-h-[44px]"
                       >
                         <Icon />
                         <span>{item.label}</span>

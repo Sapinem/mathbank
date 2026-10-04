@@ -356,6 +356,7 @@ export function QuestionBankView({
               size="sm"
               disabled={page === 0}
               onClick={() => setParam("page", String(page - 1))}
+              className="min-h-[44px]"
             >
               Sebelumnya
             </Button>
@@ -364,6 +365,7 @@ export function QuestionBankView({
               size="sm"
               disabled={page + 1 >= totalPages}
               onClick={() => setParam("page", String(page + 1))}
+              className="min-h-[44px]"
             >
               Berikutnya
             </Button>

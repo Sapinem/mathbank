@@ -195,6 +195,7 @@ function RapidReview() {
             <Button
               disabled={status.isPending}
               onClick={() => status.mutate("ready", { onSuccess: advance })}
+              className="min-h-[44px]"
             >
               <CheckCircle2 data-icon="inline-start" /> Setujui (Siap)
             </Button>
@@ -202,6 +203,7 @@ function RapidReview() {
               variant="outline"
               disabled={status.isPending}
               onClick={() => status.mutate("draft", { onSuccess: advance })}
+              className="min-h-[44px]"
             >
               Tolak → Draf
             </Button>
@@ -211,6 +213,7 @@ function RapidReview() {
               onClick={() =>
                 flag.mutate({ flagged: !q.isFlagged, notes: q.flagNotes })
               }
+              className="min-h-[44px]"
             >
               {q.isFlagged ? (
                 <>
@@ -232,6 +235,7 @@ function RapidReview() {
           size="sm"
           disabled={idx === 0}
           onClick={() => setIdx((i) => Math.max(0, i - 1))}
+          className="min-h-[44px]"
         >
           ← Sebelumnya
         </Button>
@@ -240,6 +244,7 @@ function RapidReview() {
           size="sm"
           disabled={idx >= total - 1}
           onClick={() => setIdx((i) => Math.min(total - 1, i + 1))}
+          className="min-h-[44px]"
         >
           Berikutnya →
         </Button>
@@ -307,6 +312,7 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
             size="sm"
             disabled={status.isPending}
             onClick={() => status.mutate("ready")}
+            className="min-h-[44px]"
           >
             <CheckCircle2 data-icon="inline-start" /> Setujui (Siap)
           </Button>
@@ -315,6 +321,7 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
             size="sm"
             disabled={status.isPending}
             onClick={() => setRejectOpen(true)}
+            className="min-h-[44px]"
           >
             Tolak → Draf
           </Button>
@@ -325,6 +332,7 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
             onClick={() =>
               flag.mutate({ flagged: !q.isFlagged, notes: q.flagNotes })
             }
+            className="min-h-[44px]"
           >
             {q.isFlagged ? (
               <>

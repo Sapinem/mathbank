@@ -182,7 +182,7 @@ export function QuestionFilterDrawer({
                   type="button"
                   onClick={() => setTopicSearch("")}
                   aria-label="Hapus pencarian topik"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
                 >
                   <X className="size-3" />
                 </button>
@@ -205,7 +205,7 @@ export function QuestionFilterDrawer({
                       onClick={() => onToggleTopic(t.id)}
                       aria-label={t.name}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-xs transition-colors",
+                        "flex w-full items-center justify-between rounded-md px-2.5 min-h-[44px] text-left text-xs transition-colors",
                         checked
                           ? "bg-brand/15 font-medium text-brand"
                           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -242,7 +242,7 @@ export function QuestionFilterDrawer({
                       onClick={() => onToggleGrade(g.id)}
                       aria-label={g.label}
                       className={cn(
-                        "min-h-[30px] rounded-md border px-2.5 py-1 text-xs transition-colors",
+                        "min-h-[44px] rounded-md border px-2.5 py-1 text-xs transition-colors",
                         checked
                           ? "border-brand bg-brand/15 font-medium text-brand"
                           : "border-border bg-background text-muted-foreground hover:bg-muted/40",
@@ -270,7 +270,7 @@ export function QuestionFilterDrawer({
                       onClick={() => onToggleGrade(g.id)}
                       aria-label={g.label}
                       className={cn(
-                        "min-h-[30px] rounded-md border px-2.5 py-1 text-xs transition-colors",
+                        "min-h-[44px] rounded-md border px-2.5 py-1 text-xs transition-colors",
                         checked
                           ? "border-brand bg-brand/15 font-medium text-brand"
                           : "border-border bg-background text-muted-foreground hover:bg-muted/40",
@@ -309,7 +309,7 @@ export function QuestionFilterDrawer({
                           onClick={() => onToggleGrade(g.id)}
                           aria-label={g.label}
                           className={cn(
-                            "min-h-[30px] rounded-md border px-2.5 py-1 text-xs transition-colors",
+                            "min-h-[44px] rounded-md border px-2.5 py-1 text-xs transition-colors",
                             checked
                               ? "border-brand bg-brand/15 font-medium text-brand"
                               : "border-border bg-background text-muted-foreground hover:bg-muted/40",
@@ -338,7 +338,7 @@ export function QuestionFilterDrawer({
                     onClick={() => onToggleType(v)}
                     aria-label={label}
                     className={cn(
-                      "min-h-[30px] rounded-md border px-2.5 py-1 text-xs transition-colors",
+                      "min-h-[44px] rounded-md border px-2.5 py-1 text-xs transition-colors",
                       checked
                         ? "border-brand bg-brand/15 font-medium text-brand"
                         : "border-border bg-background text-muted-foreground hover:bg-muted/40",
@@ -369,7 +369,7 @@ export function QuestionFilterDrawer({
                     onClick={() => onToggleDifficulty(lvl)}
                     aria-label={`Level ${lvl}`}
                     className={cn(
-                      "flex-1 min-h-[32px] rounded-md border py-1 text-center font-mono text-xs transition-colors",
+                      "flex-1 min-h-[44px] rounded-md border py-1 text-center font-mono text-xs transition-colors",
                       checked
                         ? "border-brand bg-brand/15 font-bold text-brand"
                         : "border-border bg-background text-muted-foreground hover:bg-muted/40",
@@ -395,7 +395,7 @@ export function QuestionFilterDrawer({
                       aria-label={label}
                       title={label}
                       className={cn(
-                        "min-h-[30px] rounded-md border px-2 py-0.5 font-mono text-xs transition-colors",
+                        "min-h-[44px] rounded-md border px-2 py-0.5 font-mono text-xs transition-colors",
                         checked
                           ? "border-brand bg-brand/15 font-bold text-brand"
                           : "border-border bg-background text-muted-foreground hover:bg-muted/40",
@@ -422,7 +422,7 @@ export function QuestionFilterDrawer({
                   onClick={() => onSelectSource(null)}
                   aria-label="Semua"
                   className={cn(
-                    "flex w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-xs transition-colors",
+                    "flex w-full items-center justify-between rounded-md px-2.5 min-h-[44px] text-left text-xs transition-colors",
                     !filters.sourceId
                       ? "bg-brand/15 font-medium text-brand"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -442,7 +442,7 @@ export function QuestionFilterDrawer({
                       onClick={() => onSelectSource(checked ? null : s.id)}
                       aria-label={s.label}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-xs transition-colors",
+                        "flex w-full items-center justify-between rounded-md px-2.5 min-h-[44px] text-left text-xs transition-colors",
                         checked
                           ? "bg-brand/15 font-medium text-brand"
                           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -468,7 +468,7 @@ export function QuestionFilterDrawer({
                 onClick={() => onSelectStatus(null)}
                 aria-label="Semua"
                 className={cn(
-                  "flex-1 min-h-[30px] rounded-md py-1 text-center text-xs transition-colors",
+                  "flex-1 min-h-[44px] rounded-md py-1 text-center text-xs transition-colors",
                   !filters.status
                     ? "bg-background font-medium text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
@@ -485,7 +485,7 @@ export function QuestionFilterDrawer({
                     onClick={() => onSelectStatus(checked ? null : v)}
                     aria-label={label}
                     className={cn(
-                      "flex-1 min-h-[30px] rounded-md py-1 text-center text-xs transition-colors",
+                      "flex-1 min-h-[44px] rounded-md py-1 text-center text-xs transition-colors",
                       checked
                         ? "bg-background font-medium text-foreground shadow-xs"
                         : "text-muted-foreground hover:text-foreground",
