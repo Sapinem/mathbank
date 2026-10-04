@@ -119,6 +119,7 @@
 | D39 | `docs/audit/M11-MODEL-CONTEXT-PROTOCOL-MCP.md` | ✅ | **dibuat** 2026-09-30 — audit MCP (M11); §Catatan Verifikasi 2026-09-30 (koreksi: "Streamable HTTP" bukan SSE; gerbang `assertMcp`/`MCP_CAPABILITIES`) |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
+| D47 | `docs/pedagogy/AUDIT-DISTRACTOR-RATIONALE.md` | 📊 | **dibuat** 2026-10-05 (MAT-33, Faruq) — audit cakupan *distractor rationale* opsi A–E & Pedagogy Contract: **0/52** soal PG ber-rationale lengkap (0,00 %), `answer_key.explanation` 100 %; metrik per bundle/grade, analisis miskonsepsi sampel, roadmap enrichment R1–R7 |
 
 ### Kategori E — Keamanan, Operasi & Kepatuhan
 
