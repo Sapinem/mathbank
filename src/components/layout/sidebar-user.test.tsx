@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { SidebarUser } from "./sidebar-user";
 
@@ -66,5 +66,17 @@ describe("SidebarUser", () => {
     expect(text).toContain("Administrator");
     expect(text).toContain("Penelaah");
     expect(text).toContain(" · ");
+  });
+
+  it("menampilkan menu item Ganti Kata Sandi yang mengarah ke /change-password", () => {
+    mockUser.mockReturnValue({
+      data: { id: "u1", name: "Budi Santoso", roles: ["teacher"], via: "session" },
+      isLoading: false,
+    });
+    renderUser();
+    fireEvent.click(screen.getByRole("button", { name: /menu pengguna/i }));
+    expect(
+      screen.getByRole("menuitem", { name: /ganti kata sandi/i }),
+    ).toHaveAttribute("href", "/change-password");
   });
 });

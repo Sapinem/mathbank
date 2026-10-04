@@ -6,7 +6,7 @@ import {
   ChevronsUpDown,
   LogOut,
   Settings,
-  User,
+  KeyRound,
   RefreshCw,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -89,10 +89,10 @@ export function SidebarUser() {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 render={
-                  <Link href="/system/profile" onClick={handleNavClick} />
+                  <Link href="/change-password" onClick={handleNavClick} />
                 }
               >
-                <User /> Profil
+                <KeyRound /> Ganti Kata Sandi
               </DropdownMenuItem>
               <DropdownMenuItem
                 render={
