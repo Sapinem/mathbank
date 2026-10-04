@@ -64,6 +64,42 @@ function isTlsRelaxed(url: string, hosts: string[]): boolean {
 }
 
 /**
+ * Pengecekan IP & Host privat/loopback/metadata (mitigasi SSRF).
+ * Memblokir loopback, RFC 1918, link-local, dan localhost.
+ */
+export function isPrivateOrBlockedHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().trim();
+  if (host === "localhost" || host === "0.0.0.0") return true;
+
+  // IPv4 regex check
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const a = Number(ipv4[1]);
+    const b = Number(ipv4[2]);
+    if (a === 127) return true; // loopback
+    if (a === 10) return true; // 10.0.0.0/8
+    if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
+    if (a === 192 && b === 168) return true; // 192.168.0.0/16
+    if (a === 169 && b === 254) return true; // 169.254.0.0/16 (link-local AWS metadata)
+    if (a === 0) return true;
+  }
+
+  // IPv6 check
+  if (host === "::1" || host === "[::1]") return true;
+  if (host.startsWith("fe80:") || host.startsWith("[fe80:")) return true;
+  if (
+    host.startsWith("fc") ||
+    host.startsWith("fd") ||
+    host.startsWith("[fc") ||
+    host.startsWith("[fd")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Unduh lewat modul `https`/`http` Node dengan `rejectUnauthorized: false`
  * **hanya** untuk host di `TLS_RELAXED_HOSTS` (sertifikat rusak di sumber).
  * Mengikuti redirect (maks 5).
@@ -127,11 +163,26 @@ function concat(chunks: Uint8Array[]): Uint8Array {
 
 /** Unduh satu gambar. */
 export async function fetchImage(url: string, opts: FetchOptions = {}): Promise<FetchResult> {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    return { ok: false, error: "URL tidak valid" };
+  }
+
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    return { ok: false, error: "Protokol tidak diizinkan (hanya http/https)" };
+  }
+
   const timeoutMs = opts.timeoutMs ?? 15000;
   const maxBytes = opts.maxBytes ?? 10 * 1024 * 1024;
   const retries = opts.retries ?? 2;
   const userAgent = opts.userAgent ?? DEFAULT_UA;
   const relaxedHosts = opts.tlsRelaxedHosts ?? TLS_RELAXED_HOSTS;
+
+  if (isPrivateOrBlockedHost(parsedUrl.hostname) && !isTlsRelaxed(url, relaxedHosts)) {
+    return { ok: false, error: "Akses ke jaringan lokal/privat diblokir (anti-SSRF)" };
+  }
 
   let lastErr = "gagal";
   for (let attempt = 0; attempt <= retries; attempt++) {

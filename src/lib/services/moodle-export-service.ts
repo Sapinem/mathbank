@@ -1,8 +1,8 @@
 import { inArray, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questionTopics, topics } from "@/lib/db/schema/taxonomy";
-import { listBundleItems, getBundle } from "@/lib/services/bundle-service";
-import { assertCan } from "@/lib/auth/guards";
+import { listBundleItems, getBundle, assertBundleWrite } from "@/lib/services/bundle-service";
+import { NotFoundError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { canSeeAnswerKey } from "@/lib/db/projections/question";
 import { buildGitsyncFiles, type GitsyncQuestion, type GitsyncResult } from "@/lib/export/gitsync";
@@ -73,9 +73,9 @@ export async function exportBundleToGitsync(
   bundleId: string,
   actor: Actor,
 ): Promise<{ summary: MoodleExportSummary; result: GitsyncResult; write: WriteResult | null }> {
-  assertCan(actor, "bundle:manage");
   const bundle = await getBundle(bundleId);
-  if (!bundle) throw new Error("Paket tidak ditemukan.");
+  if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
+  assertBundleWrite(bundle, actor);
 
   const items = await listBundleItems(bundleId, actor);
   const canSeeKey = canSeeAnswerKey(actor);

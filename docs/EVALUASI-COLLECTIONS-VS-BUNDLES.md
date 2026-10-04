@@ -135,13 +135,36 @@ schoolId, durationMinutes, instructions, status, createdById
 
 | Tabel | Isi | Dipakai? |
 |---|---:|---|
-| `bundles` | **2** (hasil ingest, `type='source'`) | ✅ jalur ingest + UI `/bundles` |
+| `bundles` | **2** (`type='source'`, hasil ingest) | ✅ jalur ingest + UI `/bundles` |
 | `bundle_items` | **78** | ✅ |
-| `collections` | **0** | ⚠️ **kosong** — tabel & UI ada, tapi tak satu pun dipakai |
+| `collections` | **0** | ⚠️ kosong |
 | `collection_items` | **0** | ⚠️ kosong |
 | `questions` | 90 | — |
 
-**`collections` = 100% kosong, 0 pemakaian.** Yang hidup justru `bundles`.
+> ### ⚠️ KOREKSI PENTING — angka ini **TIDAK boleh** jadi pertimbangan
+>
+> Argumen *"`collections` kosong → jadi biaya memisah lebih besar"* adalah
+> **keliru**, dan sudah dibuang dari rekomendasi.
+>
+> **Kenapa keliru:** tabel baru **selalu** kosong saat dibuat. Kalau "kosong"
+> dianggap bukti salah, maka **9 tabel** di proyek ini "salah" — padahal
+> sebagian besar **wajar**:
+>
+> ```
+> KOSONG: apikey · collection_items · collections · question_media
+>         question_tags · question_topics · solutions · tags · verification
+> ```
+>
+> `question_topics` kosong **padahal 174 topik sudah siap** — hanya karena
+> ingest belum mengisi topik. Itu **bukan** tanda skema buruk.
+>
+> **Yang benar:** arsitektur dinilai dari apakah ia **tepat untuk pemakaian
+> yang akan datang**, bukan dari apa yang **kebetulan** sudah terisi.
+> Proyek ini **masih di tahap arsitektur**; datanya menyusul.
+>
+> Karena itu argumen "kosong" **dibuang sepenuhnya**. Rekomendasi di §7 kini
+> bersandar **hanya** pada: (a) apakah pembeda hakikinya ada, (b) apa kata
+> referensi industri, (c) biaya pemeliharaan jangka panjang — **bukan** angka baris.
 
 ## 5. Analisis: apa bedanya, secara hakikat?
 
@@ -159,17 +182,19 @@ terwakili** oleh kolom yang ada. Bila `collections` kelak punya **semua**
 kemampuan `bundles`, keduanya menjadi **dua tabel untuk satu konsep** — persis
 kekhawatiran yang dulu membatalkan ADR-0013.
 
-## 6. Biaya memisah (terukur, bukan perkiraan)
+## 6. Biaya memisah — **tanpa** memakai angka baris
 
 | Biaya | Besaran |
 |---|---|
 | Tabel bertambah | **+2** (28 → 30) |
 | Berkas disentuh | **~18** (estimasi rancangan sendiri) |
 | **Jalur ganda selamanya** | Ingest, cetak, ekspor, izin, filter, pencarian — **semua** harus punya dua cabang |
-| Risiko divergensi | Dua wadah, satu konsep → lambat laun **berbeda perilaku** (inilah yang terjadi pada `question_sources`) |
+| **Risiko divergensi** | Dua wadah, satu konsep → lambat laun **berbeda perilaku**. Ini **bukan teori**: itulah yang terjadi pada `question_sources` (akhirnya dihapus) |
 | Beban kognitif | **Penyebab kebingungan hari ini** — 7× ganti arah |
-| Yang harus dibuang bila salah | 78 soal + 2 naskah harus dipindah |
-| Manfaat nyata terukur | **0** — `collections` kosong sejak dibuat |
+| Migrasi data | 78 soal + 2 naskah (saat ini kecil, tapi **bertambah** setiap ingest) |
+
+> **Catatan:** biaya di atas **tidak** bergantung pada apakah tabel sudah terisi.
+> Ia berlaku **sekarang** dan **kelak** — bahkan makin besar seiring data bertambah.
 
 ## 7. Rekomendasi
 
@@ -177,16 +202,35 @@ kekhawatiran yang dulu membatalkan ADR-0013.
 
 **Alasan (berurutan kekuatannya):**
 
-1. **Dua sistem independen setuju.** MathBank (`ARSITEKTUR-DATA-FINAL`) &
-   QBank (`master`) — dua tim, dua waktu, **satu kesimpulan**. Menentangnya
-   berarti mengklaim kita lebih tahu daripada dua keputusan yang sudah matang.
-2. **Semua pembeda sudah terwakili.** `bundle_type` (source/exam) untuk jenis;
-   `origin` (ingest/manual) untuk asal; izin per-`bundle_type` untuk publik vs
-   milik guru. **Tak ada informasi yang hilang.**
-3. **Biaya memisah nyata, manfaatnya nol.** `collections` **kosong**; biaya
-   pemisahan **~18 berkas + jalur ganda selamanya**.
-4. **Menyelesaikan kebingungan, bukan menambahnya.** Satu tempat untuk "naskah
-   berisi soal" = satu jawaban untuk "ditaruh di mana".
+1. **Belum ada pembeda hakiki yang bertahan.** Setiap kandidat pembeda **sudah
+   terwakili** kolom yang ada (`bundle_type`, izin per-tipe) atau **bisa
+   diwakili** (`origin`). **Inilah alasan terkuat** — dan ia **tidak**
+   bergantung pada jumlah baris.
+
+2. **Dua keputusan independen setuju.** `ARSITEKTUR-DATA-FINAL.md` (MathBank)
+   & QBank `master` — dua tim, dua waktu, **satu kesimpulan**. Menentangnya =
+   mengklaim kita lebih tahu dari dua keputusan yang sudah matang.
+
+3. **Referensi industri mendukung, dan syaratnya lolos.** Kasus kita cocok
+   **Single Table Inheritance** (JPA: sub-tipe *"beda perilaku saja, tak punya
+   kebutuhan data unik"*). Argumen terkuat untuk **pisah** (GitLab) **tidak
+   berlaku**: mereka menolak *polymorphic association* karena FK tak bisa
+   ditegakkan — **kita punya FK sah** (`source_id`, `event_id`).
+
+4. **Biaya pisah berlaku selamanya, dan bertambah.** Jalur ganda untuk ingest,
+   cetak, ekspor, izin, filter, pencarian — dipelihara **terus**, dan **risiko
+   divergensi terbukti nyata** (`question_sources`).
+
+> ⚠️ **Yang TIDAK dipakai sebagai alasan:** jumlah baris. `collections` kosong
+> **bukan** argumen (lihat koreksi di §4) — tabel baru selalu kosong.
+> Rekomendasi ini **tetap sama** seandainya `collections` sudah berisi 1000 baris.
+
+### Konsekuensi yang harus diterima (jujur)
+
+**Kolom bergantian NULL tetap ada** — itu harga Single Table Inheritance.
+Bisa dikurangi dengan **`CHECK` constraint** (per JPA §12.6.1), mis.
+`exam` wajib punya `duration_minutes`, `source` tak boleh punya `instructions`.
+Itu **opsional**, bukan syarat.
 
 ### Cara menerapkan (jika setuju)
 

@@ -10,6 +10,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import postgres from "postgres";
 import type { Actor } from "@/lib/auth/actor";
+import { ConflictError } from "@/lib/auth/guards";
 
 const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
 if (!url) throw new Error("TEST_DATABASE_URL wajib untuk tes integrasi (DB uji).");
@@ -127,6 +128,24 @@ describe("collections (ADR-0016)", () => {
     await expect(sql`DELETE FROM questions WHERE id = ${q}`).rejects.toThrow(
       /violates foreign key|RESTRICT/i,
     );
+  });
+
+  it("deleteQuestion & hardDeleteQuestion menolak (409 Conflict) bila soal ada di koleksi", async () => {
+    const { createCollection, addCollectionItem } = await import(
+      "@/lib/services/collection-service"
+    );
+    const { deleteQuestion, hardDeleteQuestion } = await import(
+      "@/lib/services/question-service"
+    );
+    const c = await createCollection({ title: "Koleksi E" }, ADMIN);
+    const q = await makeQuestion();
+    await addCollectionItem(c.id, q, ADMIN);
+
+    // Soft delete harus menolak
+    await expect(deleteQuestion(q, ADMIN)).rejects.toBeInstanceOf(ConflictError);
+
+    // Hard delete juga harus menolak dengan ConflictError (bukan unhandled Postgres 500)
+    await expect(hardDeleteQuestion(q, ADMIN)).rejects.toBeInstanceOf(ConflictError);
   });
 
   it("CASCADE: hapus koleksi → soal TETAP ada (hanya arsipnya yang hilang)", async () => {

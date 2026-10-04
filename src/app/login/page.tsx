@@ -101,10 +101,28 @@ export default function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-brand/10 text-2xl font-semibold text-brand">
-            ∑
+          <div className="relative mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl border border-brand/30 bg-brand/10 text-brand shadow-xs dark:bg-brand/15">
+            {/* Kisi koordinat geometris halus */}
+            <svg
+              className="absolute inset-0 size-full text-brand/25 stroke-current"
+              viewBox="0 0 48 48"
+              fill="none"
+              aria-hidden="true"
+            >
+              <line x1="24" y1="6" x2="24" y2="42" strokeDasharray="2 2" strokeWidth="1" />
+              <line x1="6" y1="24" x2="42" y2="24" strokeDasharray="2 2" strokeWidth="1" />
+              <circle cx="24" cy="24" r="14" strokeDasharray="2 2" strokeWidth="0.75" />
+            </svg>
+            {/* Glif Sigma matematika presisi */}
+            <svg
+              className="relative size-5.5 fill-current"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M5 4h14v2.5h-9.5l4.5 5.5-4.5 5.5H19V20H5v-2l5-6-5-6V4z" />
+            </svg>
           </div>
-          <h1 className="text-2xl font-semibold">Masuk ke MathBank</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Masuk ke MathBank</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Bank soal matematika — kurasi, susun, terbitkan.
           </p>
@@ -136,7 +154,7 @@ export default function LoginPage() {
                         aria-pressed={active}
                         title={u.description}
                         className={
-                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors " +
+                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-all active:scale-95 " +
                           (active
                             ? "border-brand bg-brand/10 text-brand"
                             : "border-border text-muted-foreground hover:bg-accent hover:text-foreground")

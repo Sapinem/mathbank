@@ -55,7 +55,7 @@ export interface ArticleMeta {
  * Kontrak tiap adapter: terima HTML (mentah) → hasil segmentasi.
  * Adapter memakai `cleanHtml` di dalam untuk membersihkan blok yang relevan.
  */
-export type ArticleAdapter = (rawHtml: string, meta: ArticleMeta) => SegmentResult;
+export type ArticleAdapter = (rawHtml: string, meta?: ArticleMeta) => SegmentResult;
 
 /**
  * Adapter untuk sumber **JSON terstruktur** (mis. pusmendik_dayaserap) —

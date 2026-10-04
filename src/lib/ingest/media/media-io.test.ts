@@ -26,6 +26,22 @@ describe("fetchImage (mock fetch)", () => {
     expect(r.contentHash).toHaveLength(64);
   });
 
+  it("anti-SSRF: menolak akses ke loopback & private IP", async () => {
+    const targets = [
+      "http://127.0.0.1/test.png",
+      "http://localhost/test.png",
+      "http://169.254.169.254/latest/meta-data",
+      "http://10.0.0.1/secret.png",
+      "http://192.168.1.1/admin.png",
+      "file:///etc/passwd",
+    ];
+    for (const target of targets) {
+      const r = await fetchImage(target, { retries: 0 });
+      expect(r.ok).toBe(false);
+      expect(r.error).toMatch(/diblokir|tidak diizinkan|URL tidak valid/i);
+    }
+  });
+
   it("404 → gagal, tanpa retry", async () => {
     const spy = vi.fn(async () => new Response("no", { status: 404 }));
     vi.stubGlobal("fetch", spy);

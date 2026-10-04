@@ -27,6 +27,8 @@ const { ForbiddenError } = await import("@/lib/auth/guards");
 
 const admin: Actor = { id: "mx-admin", name: "Admin", roles: ["admin"], via: "session" };
 const agent: Actor = { id: "mx-agent", name: "Agen", roles: ["agent"], via: "apikey" };
+const teacher: Actor = { id: "00000000-0000-7000-8000-000000000002", name: "Guru", roles: ["teacher"], via: "session" };
+const otherTeacher: Actor = { id: "00000000-0000-7000-8000-000000000003", name: "Guru Lain", roles: ["teacher"], via: "session" };
 
 async function clean() {
   await sql`DELETE FROM bundle_items`;
@@ -92,6 +94,27 @@ describe("M12 — ekspor GitSync ke disk", () => {
   it("agent TIDAK boleh ekspor (bundle:manage: no untuk agent)", async () => {
     const b = await createBundle({ title: "P", bundleType: "exam" }, admin);
     await expect(exportBundleToGitsync(b.id, agent)).rejects.toThrow(ForbiddenError);
+  });
+
+  it("guru BOLEH mengekspor paket miliknya sendiri", async () => {
+    const topic = await createTopic({ name: "Aljabar Guru" }, admin);
+    const q = await mkQuestion("Hitung $3+3$", true, [topic.id]);
+    const b = await createBundle({ title: "Paket Guru", bundleType: "exam" }, teacher);
+    await addItem(b.id, q.id, teacher, { role: "question" });
+
+    const { summary, result, write } = await exportBundleToGitsync(b.id, teacher);
+    expect(summary.ok).toBe(true);
+    expect(result.exported).toBe(1);
+    expect(write).not.toBeNull();
+  });
+
+  it("guru TIDAK boleh mengekspor paket milik guru lain (ForbiddenError)", async () => {
+    const topic = await createTopic({ name: "Aljabar Privat" }, admin);
+    const q = await mkQuestion("Hitung $4+4$", true, [topic.id]);
+    const b = await createBundle({ title: "Paket Privat", bundleType: "exam" }, teacher);
+    await addItem(b.id, q.id, teacher, { role: "question" });
+
+    await expect(exportBundleToGitsync(b.id, otherTeacher)).rejects.toThrow(ForbiddenError);
   });
 
   it("menulis folder topik + berkas soal ber-LaTeX \\( \\) ke disk", async () => {

@@ -16,7 +16,21 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
       <div className="text-muted-foreground">
-        {icon ?? <Inbox className="size-8" />}
+        {icon ?? (
+          <div className="relative mx-auto flex size-12 items-center justify-center rounded-2xl border border-border/80 bg-muted/40 text-muted-foreground/70 shadow-2xs">
+            {/* Aksen kisi garis koordinat kartesius beropasitas halus */}
+            <svg
+              className="absolute inset-0 size-full text-foreground/5 stroke-current"
+              viewBox="0 0 48 48"
+              fill="none"
+              aria-hidden="true"
+            >
+              <line x1="24" y1="4" x2="24" y2="44" strokeDasharray="2 2" strokeWidth="1" />
+              <line x1="4" y1="24" x2="44" y2="24" strokeDasharray="2 2" strokeWidth="1" />
+            </svg>
+            <Inbox className="relative size-6" aria-hidden="true" />
+          </div>
+        )}
       </div>
       <h3 className="font-medium">{title}</h3>
       {description && (

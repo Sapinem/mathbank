@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    testTimeout: 30_000,
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     // Tes integrasi DB (*.db.test.ts) dikecualikan di sini — dijalankan

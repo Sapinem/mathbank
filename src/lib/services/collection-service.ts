@@ -379,3 +379,16 @@ function inArraySafe(ids: string[]): string[] {
   return [...new Set(ids.filter((x) => typeof x === "string" && x.length > 0))];
 }
 
+/** Apakah sebuah soal dipakai di dalam koleksi publik (ADR-0016 / RESTRICT)? */
+export async function isQuestionUsedInCollections(
+  questionId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: collectionItems.id })
+    .from(collectionItems)
+    .where(eq(collectionItems.questionId, questionId))
+    .limit(1);
+  return Boolean(row);
+}
+
+
