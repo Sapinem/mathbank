@@ -7,6 +7,7 @@ import type {
   UpdateQuestionInput,
 } from "@/lib/contracts/question";
 import type { PublicQuestion } from "@/lib/services/question-service";
+import type { QuestionStatus } from "@/lib/fsm/question-fsm";
 
 /**
  * Hook data soal (L3) — React Query.
@@ -96,15 +97,21 @@ export function useUpdateQuestion(id: string) {
   });
 }
 
+export type ChangeStatusInput =
+  | QuestionStatus
+  | { status: QuestionStatus; notes?: string | null };
+
 /** Ubah status (FSM). */
 export function useChangeQuestionStatus(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (status: string) =>
-      apiFetch<PublicQuestion>(`/api/questions/${id}/status`, {
+    mutationFn: (input: ChangeStatusInput) => {
+      const body = typeof input === "string" ? { status: input } : input;
+      return apiFetch<PublicQuestion>(`/api/questions/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
-      }),
+        body: JSON.stringify(body),
+      });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: questionKeys.all }),
   });
 }

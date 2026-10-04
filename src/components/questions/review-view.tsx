@@ -362,9 +362,15 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
               variant="destructive"
               disabled={status.isPending}
               onClick={() => {
-                status.mutate("draft", {
-                  onSuccess: () => setRejectOpen(false),
-                });
+                status.mutate(
+                  { status: "draft", notes: notes.trim() || null },
+                  {
+                    onSuccess: () => {
+                      setRejectOpen(false);
+                      setNotes("");
+                    },
+                  },
+                );
               }}
             >
               Tolak ke Draf
