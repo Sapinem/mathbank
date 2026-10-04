@@ -64,4 +64,39 @@ describe("QuestionBankView — bulk action bar (G3.1)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Batal/ }));
     expect(screen.queryByText(/terpilih/)).not.toBeInTheDocument();
   });
+
+  it("Arsipkan membuka dialog konfirmasi dan memanggil aksi setelah konfirmasi", () => {
+    render(<QuestionBankView />);
+    const boxes = screen.getAllByLabelText("Pilih soal");
+    fireEvent.click(boxes[0]);
+    fireEvent.click(boxes[1]);
+    expect(screen.getByText("2 terpilih")).toBeInTheDocument();
+
+    // Klik tombol Arsipkan di bar aksi massal
+    fireEvent.click(screen.getByRole("button", { name: "Arsipkan" }));
+
+    // Dialog konfirmasi harus terbuka dengan judul yang menyebutkan jumlah butir
+    expect(screen.getByText("Arsipkan 2 butir soal?")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Soal yang diarsipkan akan disembunyikan dari daftar utama/),
+    ).toBeInTheDocument();
+
+    // Mutate belum terpanggil sebelum konfirmasi
+    expect(mutate).not.toHaveBeenCalled();
+
+    // Klik Batal terlebih dahulu
+    fireEvent.click(screen.getByRole("button", { name: "Batal" }));
+    expect(mutate).not.toHaveBeenCalled();
+
+    // Buka kembali dialog konfirmasi
+    fireEvent.click(screen.getByRole("button", { name: "Arsipkan" }));
+    expect(screen.getByText("Arsipkan 2 butir soal?")).toBeInTheDocument();
+
+    // Klik tombol konfirmasi "Ya, Arsipkan"
+    fireEvent.click(screen.getByRole("button", { name: "Ya, Arsipkan" }));
+    expect(mutate).toHaveBeenCalledWith(
+      { ids: ["q1", "q2"], action: "archive" },
+      expect.any(Object),
+    );
+  });
 });

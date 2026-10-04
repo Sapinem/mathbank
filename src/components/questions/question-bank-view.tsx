@@ -10,6 +10,14 @@ import { modeClass, type ViewMode } from "@/components/questions/view-mode-toggl
 import { QuestionFilterDrawer } from "@/components/questions/question-filter-drawer";
 import { QuestionFilterBar } from "@/components/questions/question-filter-bar";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useQuestions, useBulkQuestionAction, type BulkAction } from "@/lib/hooks/use-questions";
 import { useTopics, useSources, useGrades } from "@/lib/hooks/use-reference";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
@@ -50,6 +58,7 @@ export function QuestionBankView({
 
   // Seleksi massal
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
   const bulk = useBulkQuestionAction();
   const [bulkMsg, setBulkMsg] = useState<string | null>(null);
 
@@ -258,7 +267,7 @@ export function QuestionBankView({
             variant="outline"
             size="sm"
             disabled={bulk.isPending}
-            onClick={() => runBulk("archive")}
+            onClick={() => setConfirmArchiveOpen(true)}
           >
             Arsipkan
           </Button>
@@ -294,6 +303,33 @@ export function QuestionBankView({
           </Button>
         </div>
       )}
+
+      <Dialog open={confirmArchiveOpen} onOpenChange={setConfirmArchiveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Arsipkan {selected.size} butir soal?</DialogTitle>
+            <DialogDescription>
+              Soal yang diarsipkan akan disembunyikan dari daftar utama dan hanya
+              bisa dilihat kembali melalui filter status &ldquo;Arsip&rdquo;.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmArchiveOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={bulk.isPending}
+              onClick={() => {
+                setConfirmArchiveOpen(false);
+                runBulk("archive");
+              }}
+            >
+              Ya, Arsipkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 5. Paginasi — Ringkas, tetap satu baris di mobile */}
       {totalPages > 1 && (

@@ -17,6 +17,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import {
   useBundle,
@@ -35,7 +43,7 @@ function SortableRow({
 }: {
   item: BundleItemView;
   index: number;
-  onRemove: (itemId: string) => void;
+  onRemove: (itemId: string, nomor: number) => void;
 }) {
   const { ref, handleRef, isDragging } = useSortable({ id: item.item.id, index });
   const nomor = index + 1;
@@ -75,7 +83,7 @@ function SortableRow({
         variant="ghost"
         size="icon-sm"
         aria-label={`Keluarkan soal nomor ${nomor}`}
-        onClick={() => onRemove(item.item.id)}
+        onClick={() => onRemove(item.item.id, nomor)}
       >
         <X />
       </Button>
@@ -90,7 +98,7 @@ function BundleItemList({
   onReorder,
 }: {
   items: BundleItemView[];
-  onRemove: (itemId: string) => void;
+  onRemove: (itemId: string, nomor: number) => void;
   onReorder: (ids: string[]) => void;
 }) {
   if (items.length === 0) {
@@ -143,6 +151,7 @@ export function BundleBuilder() {
 
   const [q, setQ] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [confirmRemoveItem, setConfirmRemoveItem] = useState<{ id: string; nomor: number } | null>(null);
   const { data: results, isPending: searchPending } = useQuestions({
     q: q.trim() || undefined,
     limit: 20,
@@ -252,7 +261,7 @@ export function BundleBuilder() {
             </Button>
             <BundleItemList
               items={bundle.items}
-              onRemove={(id) => removeItem.mutate(id)}
+              onRemove={(id, nomor) => setConfirmRemoveItem({ id, nomor })}
               onReorder={(ids) => reorder.mutate(ids)}
             />
           </CardContent>
@@ -262,6 +271,35 @@ export function BundleBuilder() {
         <ListPlus className="size-3.5" />
         Di layar kecil: buka &ldquo;Tambah Soal&rdquo; untuk memilih soal.
       </p>
+
+      <Dialog open={!!confirmRemoveItem} onOpenChange={(o) => !o && setConfirmRemoveItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Keluarkan soal nomor {confirmRemoveItem?.nomor}?</DialogTitle>
+            <DialogDescription>
+              Soal akan dikeluarkan dari susunan paket ujian ini (soal tidak terhapus dari bank soal).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmRemoveItem(null)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={removeItem.isPending}
+              onClick={() => {
+                if (confirmRemoveItem) {
+                  removeItem.mutate(confirmRemoveItem.id, {
+                    onSuccess: () => setConfirmRemoveItem(null),
+                  });
+                }
+              }}
+            >
+              Keluarkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
