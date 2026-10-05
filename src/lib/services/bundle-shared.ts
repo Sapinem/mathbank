@@ -38,6 +38,21 @@ export interface BundleRow {
   updatedAt: Date;
 }
 
+/**
+ * Hasil daftar paket ter-paginasi (**API-05**).
+ *
+ * Amplop seragam dengan `/api/questions`: `{ items, total, limit, offset }`.
+ * `total` = jumlah SELURUH paket yang cocok filter (bukan sekadar panjang
+ * halaman ini), sehingga klien bisa menghitung jumlah halaman tanpa memanggil
+ * ulang tanpa batas.
+ */
+export interface BundleListResult {
+  items: BundleRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface BundleItemRow {
   id: string;
   bundleId: string;

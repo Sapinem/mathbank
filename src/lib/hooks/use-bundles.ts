@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   BundleRow,
+  BundleListResult,
   BundleType,
   BundleOrigin,
   BundleValidation,
@@ -82,8 +83,38 @@ export function useBundles(filter?: BundlesListFilter) {
     queryKey: query
       ? [...bundleKeys.all, filter]
       : bundleKeys.all,
+    queryFn: async () => {
+      // API-05: `GET /api/bundles` kini amplop `{ items, total, limit, offset }`.
+      // Komponen daftar mengonsumsi array — kita unwrap `.items` di sini agar
+      // kontrak `useBundles(): BundleRow[]` tak berubah (tanpa sentuh UI).
+      const page = await api<BundleListResult>(
+        `/api/bundles${query ? `?${query}` : ""}`,
+      );
+      return page.items;
+    },
+  });
+}
+
+/**
+ * Daftar paket dengan amplop paginasi penuh (**API-05**).
+ *
+ * Berbeda dari `useBundles` (yang meng-unwrap `.items` demi kompatibilitas
+ * komponen daftar), hook ini mempertahankan `{ items, total, limit, offset }`
+ * sehingga UI berpaginasi dapat menampilkan total & jumlah halaman.
+ */
+export function useBundlesPage(
+  filter?: BundlesListFilter & { limit?: number; offset?: number },
+) {
+  const qs = new URLSearchParams();
+  if (filter?.bundleType) qs.set("bundleType", filter.bundleType);
+  if (filter?.origin) qs.set("origin", filter.origin);
+  if (filter?.limit != null) qs.set("limit", String(filter.limit));
+  if (filter?.offset != null) qs.set("offset", String(filter.offset));
+  const query = qs.toString();
+  return useQuery({
+    queryKey: [...bundleKeys.all, "page", filter],
     queryFn: () =>
-      api<BundleRow[]>(`/api/bundles${query ? `?${query}` : ""}`),
+      api<BundleListResult>(`/api/bundles${query ? `?${query}` : ""}`),
   });
 }
 

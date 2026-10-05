@@ -105,11 +105,11 @@ describe("createBundle / listBundles", () => {
     await createBundle({ title: "Arsip A", bundleType: "source" }, admin);
     await createBundle({ title: "Ujian A", bundleType: "exam" }, admin);
     const sources = await listBundles(admin, { bundleType: "source" });
-    expect(sources.every((b) => b.bundleType === "source")).toBe(true);
-    expect(sources.length).toBe(1);
+    expect(sources.items.every((b) => b.bundleType === "source")).toBe(true);
+    expect(sources.items.length).toBe(1);
     const exams = await listBundles(admin, { bundleType: "exam" });
-    expect(exams.every((b) => b.bundleType === "exam")).toBe(true);
-    expect(exams.length).toBe(1);
+    expect(exams.items.every((b) => b.bundleType === "exam")).toBe(true);
+    expect(exams.items.length).toBe(1);
   });
 
   it("MAT-39: listBundles filter by origin", async () => {
@@ -122,11 +122,11 @@ describe("createBundle / listBundles", () => {
       admin,
     );
     const ingest = await listBundles(admin, { origin: "ingest" });
-    expect(ingest.every((b) => b.origin === "ingest")).toBe(true);
-    expect(ingest.length).toBe(1);
+    expect(ingest.items.every((b) => b.origin === "ingest")).toBe(true);
+    expect(ingest.items.length).toBe(1);
     const manual = await listBundles(admin, { origin: "manual" });
-    expect(manual.every((b) => b.origin === "manual")).toBe(true);
-    expect(manual.length).toBe(1);
+    expect(manual.items.every((b) => b.origin === "manual")).toBe(true);
+    expect(manual.items.length).toBe(1);
   });
 
   it("MAT-39: updateBundle mengubah origin", async () => {
@@ -157,7 +157,9 @@ describe("createBundle / listBundles", () => {
     const b = await createBundle({ title: "Arsip", bundleType: "exam" }, admin);
     await archiveBundle(b.id, admin);
     const list = await listBundles(admin);
-    expect(list.find((x) => x.id === b.id)).toBeUndefined();
+    expect(list.items.find((x) => x.id === b.id)).toBeUndefined();
+    // API-05: paket ter-soft-delete juga tak dihitung di `total`.
+    expect(list.total).toBe(0);
   });
 });
 
@@ -380,17 +382,44 @@ describe("PERF-05 — paginasi listBundles", () => {
       await createBundle({ title: `Paket Pag ${i}`, bundleType: "exam" }, admin);
     }
     const page1 = await listBundles(admin);
-    expect(page1).toHaveLength(20);
+    expect(page1.items).toHaveLength(20);
 
     const page2 = await listBundles(admin, { limit: 20, offset: 20 });
-    expect(page2.length).toBe(5);
+    expect(page2.items.length).toBe(5);
 
     // Tanpa tumpang tindih antar halaman.
-    const ids1 = new Set(page1.map((b) => b.id));
-    expect(page2.some((b) => ids1.has(b.id))).toBe(false);
+    const ids1 = new Set(page1.items.map((b) => b.id));
+    expect(page2.items.some((b) => ids1.has(b.id))).toBe(false);
 
     // `limit` eksplisit dihormati.
     const small = await listBundles(admin, { limit: 3 });
-    expect(small).toHaveLength(3);
+    expect(small.items).toHaveLength(3);
+  });
+
+  it("API-05: amplop mengembalikan total SELURUH paket + limit/offset ter-echo", async () => {
+    for (let i = 0; i < 7; i++) {
+      await createBundle({ title: `Paket Env ${i}`, bundleType: "exam" }, admin);
+    }
+    const page = await listBundles(admin, { limit: 3, offset: 0 });
+    // `total` = 7 (bukan 3) → klien tahu ada halaman lanjutan.
+    expect(page.total).toBe(7);
+    expect(page.items).toHaveLength(3);
+    expect(page.limit).toBe(3);
+    expect(page.offset).toBe(0);
+
+    // Halaman terakhir: total tetap 7, items = sisa.
+    const last = await listBundles(admin, { limit: 3, offset: 6 });
+    expect(last.total).toBe(7);
+    expect(last.items).toHaveLength(1);
+    expect(last.offset).toBe(6);
+  });
+
+  it("API-05: `total` menghormati filter (bukan total global)", async () => {
+    await createBundle({ title: "Filter Src 1", bundleType: "source" }, admin);
+    await createBundle({ title: "Filter Src 2", bundleType: "source" }, admin);
+    await createBundle({ title: "Filter Exam", bundleType: "exam" }, admin);
+    const src = await listBundles(admin, { bundleType: "source" });
+    expect(src.total).toBe(2);
+    expect(src.items).toHaveLength(2);
   });
 });

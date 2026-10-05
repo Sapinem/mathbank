@@ -96,7 +96,9 @@ describe("Alur API paket (L4)", () => {
     expect(b.title).toBe("Paket API");
 
     const list = (await (await listGET(req("GET", "/api/bundles"))).json()).data;
-    expect(list.some((x: { id: string }) => x.id === b.id)).toBe(true);
+    expect(list.items.some((x: { id: string }) => x.id === b.id)).toBe(true);
+    // API-05: amplop paginasi menyertakan `total`.
+    expect(list.total).toBeGreaterThanOrEqual(1);
   });
 
   it("alur lengkap: buat → tambah soal → GET detail berisi item → validasi → duplikat", async () => {
@@ -137,7 +139,7 @@ describe("Alur API paket (L4)", () => {
     const del = await oneDELETE(req("DELETE", `/api/bundles/${b.id}`), ctx(b.id));
     expect(del.status).toBe(200);
     const list = (await (await listGET(req("GET", "/api/bundles"))).json()).data;
-    expect(list.find((x: { id: string }) => x.id === b.id)).toBeUndefined();
+    expect(list.items.find((x: { id: string }) => x.id === b.id)).toBeUndefined();
   });
 
   it("PUT items menyusun ulang urutan", async () => {

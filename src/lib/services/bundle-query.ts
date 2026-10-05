@@ -24,6 +24,7 @@ import { assertBundleRead, bundleColumns } from "./bundle-shared";
 import type {
   BundleRow,
   BundleCore,
+  BundleListResult,
   BundleItemWithQuestion,
   BundleValidation,
   BundleItemRow,
@@ -68,6 +69,11 @@ async function attachCounts(rows: BundleCore[]): Promise<BundleRow[]> {
  * MAT-39: dukung filter opsional `bundleType` & `origin`.
  * **PERF-05:** dukung paginasi `limit` (default 20) & `offset` agar `GET
  * /api/bundles` tak menarik seluruh paket sekaligus.
+ *
+ * **API-05:** kembalikan amplop ter-paginasi `{ items, total, limit, offset }`
+ * (selaras `/api/questions`) — `total` = jumlah SELURUH paket cocok filter,
+ * bukan sekadar panjang halaman. Sebelumnya fungsi ini mengembalikan array
+ * telanjang sehingga klien tak bisa tahu ada berapa halaman lagi.
  */
 export async function listBundles(
   actor: Actor,
@@ -77,19 +83,32 @@ export async function listBundles(
     limit?: number;
     offset?: number;
   },
-): Promise<BundleRow[]> {
+): Promise<BundleListResult> {
   assertBundleRead(actor);
   const conds = [isNull(bundles.deletedAt)];
   if (filter?.bundleType) conds.push(eq(bundles.bundleType, filter.bundleType));
   if (filter?.origin) conds.push(eq(bundles.origin, filter.origin));
-  const rows = await db
-    .select(bundleColumns())
-    .from(bundles)
-    .where(and(...conds))
-    .orderBy(desc(bundles.updatedAt))
-    .limit(filter?.limit ?? 20)
-    .offset(filter?.offset ?? 0);
-  return attachCounts(rows);
+  const where = and(...conds);
+  const limit = filter?.limit ?? 20;
+  const offset = filter?.offset ?? 0;
+
+  // Hitung total SELURUH baris cocok filter (terpisah dari halaman ini) agar
+  // klien tahu jumlah halaman. Dijalankan paralel dengan kueri halaman.
+  const [[{ total }], rows] = await Promise.all([
+    db
+      .select({ total: sql<number>`COUNT(*)`.mapWith(Number) })
+      .from(bundles)
+      .where(where),
+    db
+      .select(bundleColumns())
+      .from(bundles)
+      .where(where)
+      .orderBy(desc(bundles.updatedAt))
+      .limit(limit)
+      .offset(offset),
+  ]);
+
+  return { items: await attachCounts(rows), total, limit, offset };
 }
 
 /** Ambil satu paket (tanpa item) atau null. */

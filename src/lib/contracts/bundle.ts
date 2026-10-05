@@ -39,6 +39,9 @@ export const updateBundleSchema = z.object({
 export const listBundlesQuerySchema = z.object({
   bundleType: z.enum(["source", "exam"]).optional(),
   origin: z.enum(["ingest", "manual"]).optional(),
+  /** API-05: paginasi — `limit` default 20 (max 100), `offset` default 0. */
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 export type CreateBundleContract = z.infer<typeof createBundleSchema>;

@@ -20,6 +20,7 @@ export type {
   BundleOrigin,
   BundleItemRole,
   BundleRow,
+  BundleListResult,
   BundleItemRow,
   BundleItemWithQuestion,
   CreateBundleInput,
