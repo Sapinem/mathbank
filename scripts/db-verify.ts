@@ -13,12 +13,14 @@ import postgres from "postgres";
 
 config({ path: ".env" });
 
-/** Harapan minimum skema (rata-rata setelah 0000..0004). */
+/** Harapan minimum skema (rata-rata setelah 0000..0014). */
 const EXPECTED = {
-  tables: 28, // 26 + collections + collection_items (ADR-0016)
+  // MAT-39: collections & collection_items dihapus (28 → 26).
+  tables: 26,
   checkConstraints: 2,
   hnswIndexes: 1,
-  triggers: 25, // 20 updated_at (+collections per ADR-0016) + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
+  // MAT-39: collections trigger dihapus (25 → 24).
+  triggers: 24, // 20 updated_at + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
 } as const;
 
 /** Nama constraint/trigger kritis yang WAJIB ada. */
