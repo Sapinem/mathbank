@@ -76,7 +76,10 @@ export const ingestQueue = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("idx_ingest_queue_status").on(t.status)],
+  (t) => [
+    index("idx_ingest_queue_status").on(t.status),
+    index("idx_ingest_queue_target_topic").on(t.targetTopicId),
+  ],
 );
 
 export type AppSetting = typeof appSettings.$inferSelect;

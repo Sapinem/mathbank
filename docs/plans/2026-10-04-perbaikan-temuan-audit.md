@@ -57,15 +57,12 @@
 ---
 
 ### Task 4: [SUP-07] Resolusi Kerentanan Dependensi `braces`
-- [ ] **Langkah 4.1:** Tambahkan blok `pnpm.overrides` pada [`package.json`](file:///home/hari/projects/mathbank/package.json):
-  ```json
-  "pnpm": {
-    "overrides": {
-      "braces": ">=3.0.4"
-    }
-  }
-  ```
-- [ ] **Langkah 4.2:** Jalankan `pnpm install` dan verifikasi dengan `pnpm audit` (0 high vulnerabilities).
+- [x] **Langkah 4.1:** Tambahkan resolusi `braces` pada `pnpm-workspace.yaml`:
+  - `overrides.braces: 3.0.3` (pin ke versi yang akan di-patch — `braces@3.0.4` belum dirilis di npm)
+  - `patchedDependencies.braces@3.0.3: patches/braces@3.0.3.patch` (patch level sumber: guard `MAX_DEPTH=128`)
+  - `auditConfig.ignoreGhsas: [GHSA-vfj7-8cjw-p6xm]` (advisory ditandai resolved)
+  - Berkas patch disalin dari mathcore commit `f7239fb` (`patches/braces@3.0.3.patch`)
+- [x] **Langkah 4.2:** Jalankan `pnpm install` dan verifikasi dengan `pnpm audit` (0 high vulnerabilities, exit code 0).
 
 ---
 

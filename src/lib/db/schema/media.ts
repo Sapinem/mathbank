@@ -55,6 +55,7 @@ export const mediaAssets = pgTable(
   (t) => [
     uniqueIndex("uq_media_short_id").on(t.shortId),
     uniqueIndex("uq_media_content_hash").on(t.contentHash),
+    index("idx_media_parent_asset_id").on(t.parentAssetId),
     index("idx_media_source_origin").on(t.sourceOrigin),
   ],
 );

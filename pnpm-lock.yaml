@@ -6,6 +6,10 @@ settings:
 
 overrides:
   drizzle-kit>@esbuild-kit/esm-loader: npm:tsx@^4.20.4
+  braces: 3.0.3
+
+patchedDependencies:
+  braces@3.0.3: 2a467c690eb3880f7207c8543f01e9c81bd45b7484297c19670ba4045a44afa2
 
 importers:
 
@@ -6238,7 +6242,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  braces@3.0.3:
+  braces@3.0.3(patch_hash=2a467c690eb3880f7207c8543f01e9c81bd45b7484297c19670ba4045a44afa2):
     dependencies:
       fill-range: 7.1.1
 
@@ -7681,7 +7685,7 @@ snapshots:
 
   micromatch@4.0.8:
     dependencies:
-      braces: 3.0.3
+      braces: 3.0.3(patch_hash=2a467c690eb3880f7207c8543f01e9c81bd45b7484297c19670ba4045a44afa2)
       picomatch: 2.3.2
 
   mime-db@1.54.0: {}

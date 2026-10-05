@@ -97,6 +97,7 @@ export const questions = pgTable(
   },
   (t) => [
     index("idx_questions_parent_id").on(t.parentId),
+    index("idx_questions_question_type").on(t.questionType),
     index("idx_questions_status").on(t.status),
     index("idx_questions_grade").on(t.grade),
     index("idx_questions_difficulty").on(t.difficulty),

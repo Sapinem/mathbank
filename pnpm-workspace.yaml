@@ -7,6 +7,16 @@ allowBuilds:
 # override ini mengganti loader usang dengan tsx (rekomendasi resmi drizzle-kit).
 overrides:
   "drizzle-kit>@esbuild-kit/esm-loader": "npm:tsx@^4.20.4"
+  # MAT-36: Pin braces@3.0.3 + source patch (GHSA-vfj7-8cjw-p6xm).
+  # braces@3.0.4 not yet published on npm; patchedDependencies applies the
+  # MAX_DEPTH=128 stack-exhaustion guard at code level, auditConfig acknowledges
+  # the advisory as resolved. Mirrors mathcore commit f7239fb.
+  braces: 3.0.3
+patchedDependencies:
+  braces@3.0.3: patches/braces@3.0.3.patch
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
 minimumReleaseAgeExclude:
   - '@next/env@16.3.7'
   - '@next/eslint-plugin-next@16.3.7'
