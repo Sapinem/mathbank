@@ -101,6 +101,8 @@ export const questions = pgTable(
     index("idx_questions_status").on(t.status),
     index("idx_questions_grade").on(t.grade),
     index("idx_questions_difficulty").on(t.difficulty),
+    // PERF-08: filter taksonomi Bloom (C1–C6) sering dipakai di daftar soal.
+    index("idx_questions_cognitive_level").on(t.cognitiveLevel),
     index("idx_questions_event_id").on(t.eventId),
     index("idx_questions_author_id").on(t.authorId),
     index("idx_questions_deleted_at").on(t.deletedAt),

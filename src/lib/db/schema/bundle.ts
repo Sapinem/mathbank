@@ -50,6 +50,9 @@ export const bundles = pgTable(
     index("idx_bundles_source_id").on(t.sourceId),
     index("idx_bundles_event_id").on(t.eventId),
     index("idx_bundles_status").on(t.status),
+    // PERF-08: daftar paket aktif selalu `deleted_at IS NULL` + urut `updated_at
+    // DESC` → indeks komposit menutup filter + urutan sekaligus.
+    index("idx_bundles_deleted_updated").on(t.deletedAt, t.updatedAt),
   ],
 );
 

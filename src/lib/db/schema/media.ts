@@ -57,6 +57,8 @@ export const mediaAssets = pgTable(
     uniqueIndex("uq_media_content_hash").on(t.contentHash),
     index("idx_media_parent_asset_id").on(t.parentAssetId),
     index("idx_media_source_origin").on(t.sourceOrigin),
+    // PERF-08: galeri mengurutkan `created_at DESC` → indeks menutup urutan itu.
+    index("idx_media_created_at").on(t.createdAt),
   ],
 );
 
