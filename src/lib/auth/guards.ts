@@ -152,3 +152,30 @@ export class ConflictError extends Error {
     this.name = "ConflictError";
   }
 }
+
+/** Payload/permintaan tak valid (HTTP 400, code `BAD_REQUEST`). */
+export class BadRequestError extends Error {
+  readonly code = "BAD_REQUEST";
+  constructor(message = "Permintaan tidak valid") {
+    super(message);
+    this.name = "BadRequestError";
+  }
+}
+
+/** Media/tipe berkas tak didukung (HTTP 415, code `UNSUPPORTED_MEDIA_TYPE`). */
+export class UnsupportedMediaTypeError extends Error {
+  readonly code = "UNSUPPORTED_MEDIA_TYPE";
+  constructor(message = "Tipe media tidak didukung") {
+    super(message);
+    this.name = "UnsupportedMediaTypeError";
+  }
+}
+
+/** Payload melebihi batas (HTTP 413, code `PAYLOAD_TOO_LARGE`). */
+export class PayloadTooLargeError extends Error {
+  readonly code = "PAYLOAD_TOO_LARGE";
+  constructor(message = "Ukuran muatan melebihi batas") {
+    super(message);
+    this.name = "PayloadTooLargeError";
+  }
+}

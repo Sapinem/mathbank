@@ -6,7 +6,12 @@ import { NextResponse } from "next/server";
  */
 export function GET() {
   return NextResponse.json(
-    { error: "Collections API has been removed. Use /api/bundles?bundleType=source instead." },
+    {
+      error: {
+        code: "RESOURCE_GONE",
+        message: "Collections API has been removed. Use /api/bundles?bundleType=source instead.",
+      },
+    },
     { status: 410 },
   );
 }

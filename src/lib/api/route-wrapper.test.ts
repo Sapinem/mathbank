@@ -23,6 +23,9 @@ import {
   ForbiddenError,
   NotFoundError,
   ConflictError,
+  BadRequestError,
+  UnsupportedMediaTypeError,
+  PayloadTooLargeError,
 } from "@/lib/auth/guards";
 import { InvalidTransitionError, NotReadyError } from "@/lib/fsm/question-fsm";
 import { MemoryStore, setStore } from "./rate-limit";
@@ -123,6 +126,9 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
     ["403 Forbidden", new ForbiddenError("tak boleh"), 403],
     ["404 NotFound", new NotFoundError("hilang"), 404],
     ["409 Conflict", new ConflictError("bentrok"), 409],
+    ["400 BadRequest (API-04)", new BadRequestError("muatan salah"), 400],
+    ["413 PayloadTooLarge (API-04)", new PayloadTooLargeError("terlalu besar"), 413],
+    ["415 UnsupportedMediaType (API-04)", new UnsupportedMediaTypeError("tipe salah"), 415],
     ["409 InvalidTransition", new InvalidTransitionError("draft", "ready"), 409],
     ["422 NotReady", new NotReadyError("belum siap"), 422],
   ];

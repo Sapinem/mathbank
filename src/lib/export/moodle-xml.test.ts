@@ -29,6 +29,46 @@ describe("moodle-xml", () => {
     expect(r.xml).toContain("<single>false</single>");
   });
 
+  it("API-02: checkbox 2 jawaban benar → fraksi dibagi rata (total 100)", () => {
+    const r = buildMoodleXml([
+      q({
+        type: "multiple_choice_checkbox",
+        options: [
+          { label: "A", content: "1", isCorrect: true },
+          { label: "B", content: "2", isCorrect: true },
+          { label: "C", content: "3", isCorrect: false },
+        ],
+      }),
+    ]);
+    // 100 / 2 = 50.00000 per opsi benar; salah tetap 0.
+    expect(r.xml).toContain('fraction="50.00000"');
+    expect(r.xml).toContain('fraction="0.00000"');
+    // Regresi: tak boleh lagi ada opsi benar bernilai 100 penuh.
+    expect(r.xml).not.toContain('fraction="100.00000"');
+  });
+
+  it("API-02: checkbox 3 jawaban benar → 33.33333 masing-masing", () => {
+    const r = buildMoodleXml([
+      q({
+        type: "multiple_choice_checkbox",
+        options: [
+          { label: "A", content: "1", isCorrect: true },
+          { label: "B", content: "2", isCorrect: true },
+          { label: "C", content: "3", isCorrect: true },
+          { label: "D", content: "4", isCorrect: false },
+        ],
+      }),
+    ]);
+    const correctCount = (r.xml.match(/fraction="33\.33333"/g) ?? []).length;
+    expect(correctCount).toBe(3);
+  });
+
+  it("API-02: single_choice tetap 100/0 (tak berubah)", () => {
+    const r = buildMoodleXml([q()]);
+    expect(r.xml).toContain('fraction="100"');
+    expect(r.xml).toContain('fraction="0"');
+  });
+
   it("rumus dinormalisasi ke \\( \\) (bukan $)", () => {
     const r = buildMoodleXml([q({ content: "Hitung $x^2$" })]);
     expect(r.xml).toContain("\\(x^2\\)");

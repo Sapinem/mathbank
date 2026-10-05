@@ -36,7 +36,7 @@ export const GET = wrapRoute({
         .from(questions)
         .where(and(isNull(questions.deletedAt), eq(questions.status, "review"))),
       db.select({ n: count() }).from(questions).where(eq(questions.isFlagged, true)),
-      db.select({ n: count() }).from(bundles),
+      db.select({ n: count() }).from(bundles).where(isNull(bundles.deletedAt)),
       db.select({ n: count() }).from(sources),
       db
         .select({ key: questions.difficulty, n: count() })

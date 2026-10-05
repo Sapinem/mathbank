@@ -37,7 +37,7 @@ export const enrichFieldSchema = z.enum([
 
 /** Enrich 1 soal. */
 export const aiEnrichSchema = z.object({
-  questionId: z.string().min(1),
+  questionId: z.string().uuid(),
   /** Kunci yang boleh diusulkan (default: semua yang didukung). */
   fields: z.array(enrichFieldSchema).optional(),
 });
@@ -46,11 +46,11 @@ export type AiEnrichInput = z.infer<typeof aiEnrichSchema>;
 /** Enrich: satu soal ATAU batch (union). */
 export const aiEnrichBodySchema = z.union([
   z.object({
-    questionId: z.string().min(1),
+    questionId: z.string().uuid(),
     fields: z.array(enrichFieldSchema).optional(),
   }),
   z.object({
-    questionIds: z.array(z.string().min(1)).min(1).max(200),
+    questionIds: z.array(z.string().uuid()).min(1).max(200),
     fields: z.array(enrichFieldSchema).optional(),
   }),
 ]);
@@ -58,14 +58,14 @@ export type AiEnrichBody = z.infer<typeof aiEnrichBodySchema>;
 
 /** Batch enrichment. */
 export const aiEnrichBatchSchema = z.object({
-  questionIds: z.array(z.string().min(1)).min(1).max(200),
+  questionIds: z.array(z.string().uuid()).min(1).max(200),
   fields: z.array(enrichFieldSchema).optional(),
 });
 export type AiEnrichBatchInput = z.infer<typeof aiEnrichBatchSchema>;
 
 /** Embed 1 soal (atau beberapa). */
 export const aiEmbedSchema = z.object({
-  questionIds: z.array(z.string().min(1)).min(1).max(100),
+  questionIds: z.array(z.string().uuid()).min(1).max(100),
 });
 export type AiEmbedInput = z.infer<typeof aiEmbedSchema>;
 

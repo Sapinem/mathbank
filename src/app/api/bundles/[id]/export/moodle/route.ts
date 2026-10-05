@@ -45,13 +45,15 @@ export async function POST(
     const { summary, result, write } = await exportBundleToGitsync(id, actor);
 
     // D4: ada soal tanpa kunci → tolak (jangan tulis berkas cacat).
+    // API-01: CONSTRAINT #17 — error TIDAK boleh menyertakan `data`.
+    // Ringkasan dipindah ke `error.details`.
     if (!result.ok) {
       return json(422, {
         error: {
           code: "EXPORT_BLOCKED",
           message: "Ekspor dibatalkan: ada soal tanpa kunci jawaban.",
+          details: summary,
         },
-        data: summary,
       });
     }
 
@@ -60,8 +62,8 @@ export async function POST(
         error: {
           code: "NOTHING_EXPORTED",
           message: "Tak ada soal yang bisa diekspor (tipe tak didukung).",
+          details: summary,
         },
-        data: summary,
       });
     }
 
@@ -90,6 +92,6 @@ export async function POST(
     if (err instanceof NotFoundError)
       return json(404, { error: { code: err.code, message: err.message } });
     console.error("[moodle-export] error:", (err as Error).message);
-    return json(500, { error: { code: "INTERNAL", message: "Gagal menyusun ekspor." } });
+    return json(500, { error: { code: "INTERNAL_ERROR", message: "Gagal menyusun ekspor." } });
   }
 }

@@ -9,6 +9,9 @@ import {
   InvalidJsonError,
   NotFoundError,
   ConflictError,
+  BadRequestError,
+  UnsupportedMediaTypeError,
+  PayloadTooLargeError,
   assertCan,
 } from "@/lib/auth/guards";
 import {
@@ -167,6 +170,31 @@ function errorResponse(
       NextResponse.json(
         { error: { code: err.code, message: err.message } },
         { status: 403 },
+      ),
+    );
+  }
+  // API-04: semantik HTTP yang benar untuk muatan tak valid / tak didukung / terlalu besar.
+  if (err instanceof BadRequestError) {
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 400 },
+      ),
+    );
+  }
+  if (err instanceof PayloadTooLargeError) {
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 413 },
+      ),
+    );
+  }
+  if (err instanceof UnsupportedMediaTypeError) {
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 415 },
       ),
     );
   }

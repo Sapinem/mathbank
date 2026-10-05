@@ -53,6 +53,31 @@ export interface BuildMoodleResult {
 const FRACTION_CORRECT = "100";
 const FRACTION_WRONG = "0";
 
+/**
+ * Format fraksi Moodle (5 desimal, selaras Moodle XML v4/v5).
+ * Nilai `-0` dinormalkan menjadi `0`.
+ */
+function moodleFraction(value: number): string {
+  const v = Object.is(value, -0) ? 0 : value;
+  return v.toFixed(5);
+}
+
+/**
+ * Hitung fraksi per opsi untuk soal **multi-jawaban** (checkbox,
+ * `<single>false</single>`).
+ *
+ * API-02: sebelumnya setiap opsi benar bernilai `100` sehingga memilih dua
+ * opsi benar menghasilkan total 200%. Standar Moodle mengharuskan total fraksi
+ * jawaban benar = 100%, jadi fraksi dibagi rata (`100 / jumlah benar`).
+ * Opsi salah tetap `0` (tanpa penalti negatif) agar kebijakan penilaian tak
+ * berubah diam-diam.
+ */
+function checkboxFractions(options: { isCorrect: boolean }[]): number[] {
+  const correctCount = options.filter((o) => o.isCorrect).length;
+  const perCorrect = correctCount > 0 ? 100 / correctCount : 0;
+  return options.map((o) => (o.isCorrect ? perCorrect : 0));
+}
+
 /** Susun `<questiontext>`: stimulus (bila ada) + konten soal (LaTeX dinormalisasi). */
 function questionText(q: MoodleQuestion): string {
   const parts: string[] = [];
@@ -89,15 +114,17 @@ function buildQuestion(q: MoodleQuestion): string {
     lines.push(`    <single>${single ? "true" : "false"}</single>`);
     lines.push(`    <shuffleanswers>true</shuffleanswers>`);
     lines.push(`    <answernumbering>ABC</answernumbering>`);
-    for (const o of q.options) {
-      const frac = o.isCorrect ? FRACTION_CORRECT : FRACTION_WRONG;
+    const fractions = single ? null : checkboxFractions(q.options);
+    q.options.forEach((o, i) => {
+      // API-02: single → 100/0; checkbox → fraksi proporsional (total benar = 100).
+      const frac = fractions ? moodleFraction(fractions[i]!) : o.isCorrect ? FRACTION_CORRECT : FRACTION_WRONG;
       // Moodle memakai HTML (bukan Markdown) — tebalkan label secara eksplisit.
       lines.push(
         `    <answer fraction="${frac}" format="html">${textEl(
           `<strong>${o.label}.</strong> ${toMoodleLatex(o.content)}`,
         )}</answer>`,
       );
-    }
+    });
   } else if (mtype === "shortanswer") {
     // Satu jawaban benar; Moodle mencocokkan teks (case-insensitive by default).
     const ans = q.answerText?.trim() ? toMoodleLatex(q.answerText.trim()) : "*";

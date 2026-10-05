@@ -1,7 +1,11 @@
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { uploadMedia } from "@/lib/services/media-service";
 import { mediaStorageRoot } from "@/lib/ingest/config";
-import { ForbiddenError } from "@/lib/auth/guards";
+import {
+  BadRequestError,
+  PayloadTooLargeError,
+  UnsupportedMediaTypeError,
+} from "@/lib/auth/guards";
 
 /**
  * POST /api/media — unggah gambar manual (editor soal / galeri).
@@ -32,18 +36,18 @@ export const POST = wrapRoute({
     const file = form.get("file");
 
     if (!(file instanceof File)) {
-      throw new ForbiddenError("Field 'file' wajib berisi berkas gambar.");
+      throw new BadRequestError("Field 'file' wajib berisi berkas gambar.");
     }
     if (!ALLOWED.has(file.type)) {
-      throw new ForbiddenError(
+      throw new UnsupportedMediaTypeError(
         `Tipe berkas tidak didukung: ${file.type || "tak dikenal"}. Gunakan PNG/JPG/GIF/WebP/SVG/AVIF.`,
       );
     }
     if (file.size === 0) {
-      throw new ForbiddenError("Berkas kosong.");
+      throw new BadRequestError("Berkas kosong.");
     }
     if (file.size > MAX_BYTES) {
-      throw new ForbiddenError(
+      throw new PayloadTooLargeError(
         `Ukuran berkas melebihi batas ${MAX_BYTES / 1024 / 1024} MB.`,
       );
     }
