@@ -6,6 +6,7 @@
 @import "../styles/print.css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant pointer-coarse (@media (pointer: coarse));
 
 @theme inline {
   --color-background: var(--background);
