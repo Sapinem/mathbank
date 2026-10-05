@@ -76,5 +76,10 @@ jobs:
       - name: Gate mutu (theme, penamaan, tsc, lint, coverage, build)
         run: pnpm check
 
+      - name: Verifikasi skema (zero drift + drizzle-kit check)
+        run: |
+          pnpm db:verify
+          pnpm exec drizzle-kit check
+
       - name: Tes integrasi DB
         run: pnpm test:db
