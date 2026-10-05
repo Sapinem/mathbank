@@ -19,6 +19,11 @@ const STATUS_LABELS: Record<string, string> = {
   archived: "Arsip",
 };
 
+const ORIGIN_LABELS: Record<string, string> = {
+  manual: "Manual",
+  ingest: "Ingest",
+};
+
 /** Detail paket: pratinjau naskah + peringatan validasi. */
 export function BundleDetailView() {
   const params = useParams<{ id: string }>();
@@ -38,16 +43,26 @@ export function BundleDetailView() {
         description={`${bundle.items.length} soal · ${bundle.durationMinutes ?? 0} menit`}
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" render={<Link href="/bundles" />} nativeButton={false}>
+            <Button
+              variant="outline"
+              render={<Link href="/bundles" />}
+              nativeButton={false}
+              className="min-h-[44px]"
+            >
               ← Daftar
             </Button>
-            <Button render={<Link href={`/bundles/${bundleId}/edit`} />} nativeButton={false}>
+            <Button
+              render={<Link href={`/bundles/${bundleId}/edit`} />}
+              nativeButton={false}
+              className="min-h-[44px]"
+            >
               <Pencil data-icon="inline-start" /> Sunting
             </Button>
             <Button
               variant="outline"
               render={<Link href={`/bundles/${bundleId}/print`} />}
               nativeButton={false}
+              className="min-h-[44px]"
             >
               <Printer data-icon="inline-start" /> Cetak
             </Button>
@@ -74,10 +89,23 @@ export function BundleDetailView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Pratinjau Naskah</CardTitle>
-          <CardDescription>
-            Status: <Badge variant="outline">{STATUS_LABELS[bundle.status] ?? bundle.status}</Badge>
-          </CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle>Pratinjau Naskah</CardTitle>
+            <Badge variant="outline" className="text-xs font-normal">
+              {STATUS_LABELS[bundle.status] ?? bundle.status}
+            </Badge>
+            <Badge variant="secondary" className="text-xs font-normal">
+              {bundle.bundleType === "exam" ? "Ujian" : "Sumber"}
+            </Badge>
+            <Badge variant="secondary" className="text-xs font-normal">
+              {ORIGIN_LABELS[bundle.origin] ?? bundle.origin}
+            </Badge>
+          </div>
+          {bundle.instructions && (
+            <CardDescription className="mt-2 whitespace-pre-wrap text-xs leading-relaxed">
+              {bundle.instructions}
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           {bundle.items.length === 0 ? (

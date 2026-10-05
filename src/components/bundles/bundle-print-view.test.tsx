@@ -177,4 +177,52 @@ describe("BundlePrintView (M8 — halaman cetak)", () => {
     expect(screen.getByRole("button", { name: /Tandai tebal/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Lembar terpisah/i })).toBeDisabled();
   });
+
+  it("MAT-40: opsi 2 kolom merender grid 2-kolom untuk opsi jawaban", () => {
+    render(<BundlePrintView />);
+    // Klik tombol "2 kolom"
+    fireEvent.click(screen.getByRole("button", { name: /2 kolom/i }));
+    // Cari list opsi (ul) — harus punya class grid-cols-2 saat mode 2-kolom
+    const optionsList = document.querySelector("ul.grid");
+    expect(optionsList).not.toBeNull();
+    expect(optionsList?.className).toContain("grid-cols-2");
+  });
+
+  it("MAT-40: tombol pembahasan dinonaktifkan bila tak ada explanation", () => {
+    render(<BundlePrintView />);
+    expect(screen.getByRole("button", { name: /Tanpa pembahasan/i })).toBeDisabled();
+  });
+
+  it("MAT-40: tombol pembahasan aktif bila ada explanation", () => {
+    const b = bundle();
+    // Tambah explanation ke soal q1
+    const q1 = b.items.find((it) => it.item.id === "i1")!;
+    q1.question.answerKey = {
+      ...q1.question.answerKey!,
+      explanation: "Karena 2+2=4.",
+    };
+    useBundleMock.mockReturnValue({ data: b, isPending: false, isError: false });
+    render(<BundlePrintView />);
+    const btn = screen.getByRole("button", { name: /Tanpa pembahasan/i });
+    expect(btn).not.toBeDisabled();
+    // Klik untuk menyertakan pembahasan
+    fireEvent.click(btn);
+    // Section pembahasan punya class print-sheet-explanation
+    const explSection = document.querySelector(".print-sheet-explanation");
+    expect(explSection).not.toBeNull();
+    expect(explSection?.textContent).toContain("Karena 2+2=4.");
+  });
+
+  it("MAT-40: semua tombol aksi kontrol memenuhi touch target 44px (min-h-[44px])", () => {
+    render(<BundlePrintView />);
+    // Semua tombol di bilah kontrol no-print harus punya min-h-[44px]
+    const controlBar = document.querySelector(".no-print");
+    const buttons = controlBar?.querySelectorAll("button") ?? [];
+    expect(buttons.length).toBeGreaterThan(0);
+    buttons.forEach((btn) => {
+      const cls = btn.className;
+      // Tombol berukuran "sm" pakai class min-h-[44px] di className
+      expect(cls).toMatch(/min-h-\[44px\]|h-11/);
+    });
+  });
 });

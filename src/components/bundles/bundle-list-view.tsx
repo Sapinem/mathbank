@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus,
   Copy,
@@ -54,7 +55,7 @@ import {
   useArchiveBundle,
   useDuplicateBundle,
 } from "@/lib/hooks/use-bundles";
-import type { BundleRow, BundleType } from "@/lib/services/bundle-service";
+import type { BundleRow, BundleType, BundleOrigin } from "@/lib/services/bundle-service";
 
 const TYPE_LABELS: Record<BundleType, string> = {
   source: "Sumber",
@@ -83,23 +84,70 @@ function statusBadgeClass(status: BundleRow["status"]): string {
   }
 }
 
+/**
+ * Tab jenis paket — sinkron dengan URL `?type=`.
+ * MAT-40: sub-tab instan antara "Bank Sumber" dan "Naskah Ujian".
+ */
+const TYPE_TABS: { id: "all" | BundleType; label: string; param: string }[] = [
+  { id: "all", label: "Semua", param: "" },
+  { id: "exam", label: "Naskah Ujian", param: "exam" },
+  { id: "source", label: "Bank Sumber", param: "source" },
+];
+
+/**
+ * Tab asal paket — sinkron dengan URL `?origin=`.
+ */
+const ORIGIN_TABS: { id: "all" | BundleOrigin; label: string; param: string }[] = [
+  { id: "all", label: "Semua Asal", param: "" },
+  { id: "manual", label: "Manual", param: "manual" },
+  { id: "ingest", label: "Ingest", param: "ingest" },
+];
+
 export function BundleListView() {
-  const { data, isPending, isError, error } = useBundles();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ── URL-driven filter state (MAT-40) ──────────────────────
+  const typeParam = searchParams.get("type") as BundleType | null;
+  const originParam = searchParams.get("origin") as BundleOrigin | null;
+  const typeFilter: "all" | BundleType =
+    typeParam === "exam" || typeParam === "source" ? typeParam : "all";
+  const originFilter: "all" | BundleOrigin =
+    originParam === "ingest" || originParam === "manual" ? originParam : "all";
+
+  // Fetch dengan filter API-side bila type/origin di-URL
+  const { data, isPending, isError, error } = useBundles({
+    bundleType: typeFilter !== "all" ? typeFilter : undefined,
+    origin: originFilter !== "all" ? originFilter : undefined,
+  });
   const create = useCreateBundle();
   const archive = useArchiveBundle();
   const duplicate = useDuplicateBundle();
 
+  // Dialog & local-only state (status, search, view mode)
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<BundleType>("exam");
+  const [type, setType] = useState<BundleType>(typeFilter !== "all" ? typeFilter : "exam");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<BundleRow | null>(null);
 
-  // Filter & tampilan
+  // Status & search: client-side filtering (tidak URL-driven — UX detail)
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | BundleType>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | BundleRow["status"]>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  /** Push filter ke URL (single source of truth untuk type/origin). */
+  function updateUrl(next: { type?: "all" | BundleType; origin?: "all" | BundleOrigin }) {
+    const params = new URLSearchParams(searchParams.toString());
+    const nextType = next.type ?? typeFilter;
+    const nextOrigin = next.origin ?? originFilter;
+    if (nextType === "all") params.delete("type");
+    else params.set("type", nextType);
+    if (nextOrigin === "all") params.delete("origin");
+    else params.set("origin", nextOrigin);
+    const qs = params.toString();
+    router.replace(`/bundles${qs ? `?${qs}` : ""}`, { scroll: false });
+  }
 
   function submit() {
     setFormErr(null);
@@ -115,15 +163,14 @@ export function BundleListView() {
     );
   }
 
-  // Statistik ringkas
+  // Statistik ringkas (total seluruh paket, bukan filtered)
   const totalBundles = data?.length ?? 0;
   const examCount = data?.filter((b) => b.bundleType === "exam").length ?? 0;
   const sourceCount = data?.filter((b) => b.bundleType === "source").length ?? 0;
   const totalItems = data?.reduce((acc, b) => acc + (b.itemCount ?? 0), 0) ?? 0;
 
-  // Filter data (dihitung langsung tanpa useMemo sesuai CONSTRAINTS #6)
+  // Filter sisi klien: search & status
   const filtered = (data ?? []).filter((b) => {
-    if (typeFilter !== "all" && b.bundleType !== typeFilter) return false;
     if (statusFilter !== "all" && b.status !== statusFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -134,7 +181,8 @@ export function BundleListView() {
     return true;
   });
 
-  const hasFilterActive = search.trim() !== "" || typeFilter !== "all" || statusFilter !== "all";
+  const hasFilterActive =
+    search.trim() !== "" || statusFilter !== "all" || typeFilter !== "all" || originFilter !== "all";
 
   return (
     <>
@@ -192,7 +240,56 @@ export function BundleListView() {
           </div>
         </div>
 
-        {/* TOOLBAR PENCARIAN & FILTER */}
+        {/* TAB FILTER URL-DRIVEN: Jenis & Asal (MAT-40) */}
+        <div className="flex flex-col gap-3">
+          {/* Sub-tab Jenis Paket */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Jenis Paket</span>
+            <div className="inline-flex w-fit rounded-lg border border-border p-0.5 bg-muted/20">
+              {TYPE_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => updateUrl({ type: tab.id })}
+                  aria-pressed={typeFilter === tab.id}
+                  className={cn(
+                    "min-h-[44px] rounded-md px-3 py-1 text-xs font-medium motion-safe:transition-colors",
+                    typeFilter === tab.id
+                      ? "bg-background text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sub-tab Asal Paket */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">Asal Paket</span>
+            <div className="inline-flex w-fit rounded-lg border border-border p-0.5 bg-muted/20">
+              {ORIGIN_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => updateUrl({ origin: tab.id })}
+                  aria-pressed={originFilter === tab.id}
+                  className={cn(
+                    "min-h-[44px] rounded-md px-3 py-1 text-xs font-medium motion-safe:transition-colors",
+                    originFilter === tab.id
+                      ? "bg-background text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* TOOLBAR PENCARIAN & STATUS */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-2">
             {/* Input Cari */}
@@ -215,31 +312,6 @@ export function BundleListView() {
                   <X className="size-3.5" />
                 </button>
               )}
-            </div>
-
-            {/* Filter Jenis Paket */}
-            <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/20">
-              {(
-                [
-                  { id: "all", label: "Semua" },
-                  { id: "exam", label: "Ujian" },
-                  { id: "source", label: "Sumber" },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setTypeFilter(tab.id)}
-                  className={cn(
-                    "min-h-[44px] rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                    typeFilter === tab.id
-                      ? "bg-background text-foreground shadow-2xs"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
             </div>
 
             {/* Filter Status */}
@@ -268,8 +340,8 @@ export function BundleListView() {
                 size="sm"
                 onClick={() => {
                   setSearch("");
-                  setTypeFilter("all");
                   setStatusFilter("all");
+                  updateUrl({ type: "all", origin: "all" });
                 }}
                 className="h-9 text-xs text-muted-foreground hover:text-foreground"
               >
@@ -330,8 +402,8 @@ export function BundleListView() {
                 variant="outline"
                 onClick={() => {
                   setSearch("");
-                  setTypeFilter("all");
                   setStatusFilter("all");
+                  updateUrl({ type: "all", origin: "all" });
                 }}
                 className="mt-2"
               >
@@ -345,7 +417,7 @@ export function BundleListView() {
             {filtered.map((b) => (
               <article
                 key={b.id}
-                className="group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card/60 p-4 transition-all duration-150 hover:border-border hover:bg-card hover:shadow-xs dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                className="group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card/60 p-4 motion-safe:transition-all motion-safe:duration-150 hover:border-border hover:bg-card hover:shadow-xs dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
               >
                 <div className="flex flex-col gap-3">
                   {/* Top Bar Kartu: Chip Jenis & Status */}
@@ -358,6 +430,11 @@ export function BundleListView() {
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
                           <BookOpen className="size-3" /> Sumber
+                        </span>
+                      )}
+                      {b.origin === "ingest" && (
+                        <span className="inline-flex items-center gap-0.5 rounded-md bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          Ingest
                         </span>
                       )}
                       {b.year && (
@@ -377,7 +454,7 @@ export function BundleListView() {
                   {/* Judul Paket */}
                   <Link
                     href={`/bundles/${b.id}`}
-                    className="font-semibold text-sm leading-snug group-hover:text-brand transition-colors line-clamp-2"
+                    className="font-semibold text-sm leading-snug group-hover:text-brand motion-safe:transition-colors line-clamp-2"
                   >
                     {b.title}
                   </Link>
@@ -445,6 +522,7 @@ export function BundleListView() {
                 <TableRow>
                   <TableHead className="min-w-[200px]">Judul Naskah</TableHead>
                   <TableHead>Jenis</TableHead>
+                  <TableHead className="hidden sm:table-cell">Asal</TableHead>
                   <TableHead className="hidden sm:table-cell">Tahun</TableHead>
                   <TableHead className="text-right">Soal</TableHead>
                   <TableHead className="hidden sm:table-cell text-right">Durasi</TableHead>
@@ -473,6 +551,9 @@ export function BundleListView() {
                       <Badge variant="secondary" className="font-normal text-xs">
                         {TYPE_LABELS[b.bundleType]}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
+                      {b.origin === "ingest" ? "Ingest" : "Manual"}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground tabular-nums">
                       {b.year ?? "—"}

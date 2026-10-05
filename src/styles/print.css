@@ -10,9 +10,8 @@
 
 @page {
   size: A4;
-  /* Margin fisik halaman. Chrome/Firefox punya opsi "margin: default" di dialog
-   * yang menimpa ini — arahkan pengguna pilih "Margins: Default/None". */
-  margin: 18mm 16mm;
+  /* MAT-40: margin 15mm sesuai standar mutu cetak Math My Id. */
+  margin: 15mm;
 }
 
 /* Hanya berlaku saat mencetak. */
@@ -59,8 +58,18 @@
     page-break-inside: avoid;
   }
 
-  /* Lembar kunci/pembahasan selalu mulai di halaman baru. */
+  /* MAT-40: KaTeX inline terisolasi — tidak meluap di kertas A4. */
+  .katex-inline {
+    display: inline-block;
+    max-width: 100%;
+    overflow-x: auto;
+    vertical-align: middle;
+    scrollbar-width: thin;
+  }
+
+  /* MAT-40: lembar kunci jawaban & pembahasan terpisah mulai di halaman baru. */
   .print-sheet-answerkey,
+  .print-sheet-explanation,
   .print-sheet-answers {
     break-before: page;
     page-break-before: always;

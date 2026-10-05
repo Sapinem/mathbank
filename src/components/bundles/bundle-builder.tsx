@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { GripVertical, Search, X, ArrowLeft, LayoutList, Loader2, Plus, ListPlus } from "lucide-react";
+import { GripVertical, Search, X, ArrowLeft, LayoutList, Loader2, Plus, ListPlus, Clock } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
@@ -31,6 +32,7 @@ import {
   useAddBundleItem,
   useRemoveBundleItem,
   useReorderBundleItems,
+  useUpdateBundle,
   type BundleItemView,
 } from "@/lib/hooks/use-bundles";
 import { useQuestions } from "@/lib/hooks/use-questions";
@@ -148,11 +150,28 @@ export function BundleBuilder() {
   const addItem = useAddBundleItem(bundleId);
   const removeItem = useRemoveBundleItem(bundleId);
   const reorder = useReorderBundleItems(bundleId);
+  const updateBundle = useUpdateBundle(bundleId);
 
   const [q, setQ] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState(false);
   const [confirmRemoveItem, setConfirmRemoveItem] = useState<{ id: string; nomor: number } | null>(null);
+
+  // MAT-40: pengaturan durasi & petunjuk pengerjaan (editable, auto-save).
+  // Pattern: derived state dari bundle + local override untuk editing.
+  // Reset saat bundle berubah (id baru) dengan key-based remount pattern.
+  const [durationDraft, setDurationDraft] = useState<string>("");
+  const [instructionsDraft, setInstructionsDraft] = useState<string>("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [lastBundleId, setLastBundleId] = useState<string | null>(null);
+
+  // Sync draft saat bundle ID berubah (bukan tiap render — hanya saat id ganti)
+  if (bundle && bundle.id !== lastBundleId) {
+    setLastBundleId(bundle.id);
+    setDurationDraft(bundle.durationMinutes ? String(bundle.durationMinutes) : "");
+    setInstructionsDraft(bundle.instructions ?? "");
+  }
+
   const { data: results, isPending: searchPending } = useQuestions({
     q: q.trim() || undefined,
     limit: 20,
@@ -164,6 +183,18 @@ export function BundleBuilder() {
   if (isError)
     return <ErrorState title="Gagal memuat paket" description={(error as Error).message} />;
   if (!bundle) return null;
+
+  /** Simpan pengaturan durasi & petunjuk. */
+  function saveSettings() {
+    const patch: Record<string, unknown> = {};
+    const dur = durationDraft.trim() === "" ? null : parseInt(durationDraft, 10);
+    if (dur !== null && (!Number.isFinite(dur) || dur < 1 || dur > 600)) return;
+    if (dur !== (bundle!.durationMinutes ?? null)) patch.durationMinutes = dur ?? undefined;
+    const instr = instructionsDraft.trim() === "" ? null : instructionsDraft.trim();
+    if (instr !== (bundle!.instructions ?? null)) patch.instructions = instr;
+    if (Object.keys(patch).length === 0) return;
+    updateBundle.mutate(patch);
+  }
 
   /** Panel bank soal — dipakai di desktop (aside) & mobile (Sheet). */
   const pickerContent = (
@@ -222,6 +253,78 @@ export function BundleBuilder() {
       />
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Kiri: bank soal (desktop) */}
+
+        {/* Kiri: pengaturan naskah (durasi & petunjuk) */}
+        <Card>
+          <CardHeader>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((v) => !v)}
+              aria-expanded={settingsOpen}
+              className="flex min-h-[44px] items-center justify-between gap-2 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="size-4" />
+                <div>
+                  <CardTitle className="text-base">Pengaturan Naskah</CardTitle>
+                  <CardDescription className="text-xs">
+                    Durasi ujian & petunjuk pengerjaan
+                  </CardDescription>
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {settingsOpen ? "Sembunyikan" : "Tampilkan"}
+              </span>
+            </button>
+          </CardHeader>
+          {settingsOpen && (
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="b-duration" className="text-sm font-medium">Durasi (menit)</label>
+                <Input
+                  id="b-duration"
+                  type="number"
+                  min={1}
+                  max={600}
+                  value={durationDraft}
+                  onChange={(e) => setDurationDraft(e.target.value)}
+                  placeholder="mis. 120"
+                  className="max-w-32"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="b-instructions" className="text-sm font-medium">Petunjuk Pengerjaan</label>
+                <Textarea
+                  id="b-instructions"
+                  value={instructionsDraft}
+                  onChange={(e) => setInstructionsDraft(e.target.value)}
+                  placeholder="Petunjuk pengerjaan soal untuk siswa…"
+                  rows={4}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={saveSettings}
+                  disabled={updateBundle.isPending}
+                  className="min-h-[44px]"
+                >
+                  {updateBundle.isPending ? "Menyimpan…" : "Simpan Pengaturan"}
+                </Button>
+                {updateBundle.isError && (
+                  <span className="text-xs text-destructive">
+                    {(updateBundle.error as Error).message}
+                  </span>
+                )}
+                {updateBundle.isSuccess && (
+                  <span className="text-xs text-success">Tersimpan</span>
+                )}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Bank soal (desktop) */}
         <Card className="hidden lg:block">
           <CardHeader>
             <CardTitle>Bank Soal</CardTitle>

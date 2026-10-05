@@ -1,7 +1,9 @@
-import { CollectionListView } from "@/components/collections/collection-list-view";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Koleksi — MathBank" };
-
+/**
+ * MAT-40: `/collections` DIHAPUS — wadah naskah digabung ke `/bundles`.
+ * Semua arsip/koleksi sekarang ditangani oleh antarmuka Bundles terpadu.
+ */
 export default function CollectionsPage() {
-  return <CollectionListView />;
+  redirect("/bundles");
 }

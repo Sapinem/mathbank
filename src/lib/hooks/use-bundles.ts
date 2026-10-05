@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   BundleRow,
   BundleType,
+  BundleOrigin,
   BundleValidation,
 } from "@/lib/services/bundle-service";
 import { api } from "@/lib/api/fetcher";
@@ -13,6 +14,8 @@ import { api } from "@/lib/api/fetcher";
  *
  * ⚠️ Hanya memanggil `/api/**` lewat fetch; TIDAK mengimpor service (yang
  * menarik `@/lib/db`). Tipe diimpor `import type` (terhapus saat build).
+ *
+ * MAT-40: dukung filter URL-driven `?type=source|exam` & `?origin=ingest|manual`.
  */
 export const bundleKeys = {
   all: ["bundles"] as const,
@@ -61,10 +64,26 @@ export interface BundleDetail extends BundleRow {
   items: BundleItemView[];
 }
 
-export function useBundles() {
+/**
+ * Filter opsional untuk `useBundles` (MAT-40 — URL-driven).
+ * Meneruskan `bundleType` & `origin` ke API sebagai query string.
+ */
+export interface BundlesListFilter {
+  bundleType?: BundleType;
+  origin?: BundleOrigin;
+}
+
+export function useBundles(filter?: BundlesListFilter) {
+  const qs = new URLSearchParams();
+  if (filter?.bundleType) qs.set("bundleType", filter.bundleType);
+  if (filter?.origin) qs.set("origin", filter.origin);
+  const query = qs.toString();
   return useQuery({
-    queryKey: bundleKeys.all,
-    queryFn: () => api<BundleRow[]>("/api/bundles"),
+    queryKey: query
+      ? [...bundleKeys.all, filter]
+      : bundleKeys.all,
+    queryFn: () =>
+      api<BundleRow[]>(`/api/bundles${query ? `?${query}` : ""}`),
   });
 }
 
