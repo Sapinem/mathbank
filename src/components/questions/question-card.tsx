@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import {
   Flag,
@@ -153,7 +154,7 @@ export function QuestionTypeIcon({ type }: { type: string }) {
           <button
             type="button"
             aria-label={label}
-            className="flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border border-border/70 bg-muted/40 text-muted-foreground transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand"
+            className="flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border border-border/70 bg-muted/40 text-muted-foreground transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand pointer-coarse:min-h-[44px] pointer-coarse:min-w-[44px]"
           >
             <Icon className="size-3.5" />
           </button>
@@ -191,7 +192,7 @@ export function StatusIndicator({ status }: { status: string }) {
 }
 
 /** Komponen kartu butir soal adaptif (List, Grid, Masonry). */
-export function QuestionCard({
+function QuestionCardInner({
   question,
   href,
   selected,
@@ -216,15 +217,17 @@ export function QuestionCard({
           selected && "bg-brand/5 border-l-2 border-l-brand",
         )}
       >
-        {/* 1. Checkbox Seleksi */}
+        {/* 1. Checkbox Seleksi — area sentuh ≥ 44px (CRIT-03) */}
         {onToggleSelect && (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={() => onToggleSelect(q.id)}
-            aria-label="Pilih soal"
-            className="size-4 shrink-0 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
-          />
+          <label className="flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect(q.id)}
+              aria-label="Pilih soal"
+              className="size-4 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
+            />
+          </label>
         )}
 
         {/* 2. Ikon Tipe Soal (Paling Kiri) */}
@@ -236,8 +239,8 @@ export function QuestionCard({
         </span>
 
         {/* 4. Taksonomi: Kognitif & Kesulitan */}
-        <CognitiveBadge level={q.cognitiveLevel} />
-        <DifficultyBadge level={q.difficulty} />
+        <CognitiveBadge level={q.cognitiveLevel} className="pointer-coarse:min-h-[44px]" />
+        <DifficultyBadge level={q.difficulty} className="pointer-coarse:min-h-[44px]" />
 
         {/* Indikator Flag */}
         {q.isFlagged && (
@@ -247,7 +250,7 @@ export function QuestionCard({
         {/* 5. Batang Soal KaTeX & Tautan Utama (Satu elemen link untuk seluruh baris konten) */}
         <Link
           href={href}
-          className="flex-1 min-w-0 px-2 flex items-center justify-between gap-2 group-hover:text-foreground"
+          className="flex-1 min-w-0 px-2 self-stretch flex items-center justify-between gap-2 group-hover:text-foreground"
         >
           <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             {q.parent && (
@@ -310,8 +313,8 @@ export function QuestionCard({
             <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground/90">
               {formatGradeBadge(q.grade)}
             </span>
-            <CognitiveBadge level={q.cognitiveLevel} />
-            <DifficultyBadge level={q.difficulty} />
+            <CognitiveBadge level={q.cognitiveLevel} className="pointer-coarse:min-h-[44px]" />
+            <DifficultyBadge level={q.difficulty} className="pointer-coarse:min-h-[44px]" />
             {q.isFlagged && (
               <Flag className="size-3.5 text-gold shrink-0" role="img" aria-label="Ditandai" />
             )}
@@ -320,13 +323,15 @@ export function QuestionCard({
           <div className="flex items-center gap-2">
             <StatusIndicator status={q.status} />
             {onToggleSelect && (
-              <input
-                type="checkbox"
-                checked={selected}
-                onChange={() => onToggleSelect(q.id)}
-                aria-label="Pilih soal"
-                className="size-4 shrink-0 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
-              />
+              <label className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={() => onToggleSelect(q.id)}
+                  aria-label="Pilih soal"
+                  className="size-4 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
+                />
+              </label>
             )}
           </div>
         </div>
@@ -397,10 +402,57 @@ export function QuestionCard({
         <span className="truncate max-w-[180px]">
           {q.bundles?.[0]?.sourceLabel ?? (q.bundles?.length ? "Naskah" : "Mandiri")}
         </span>
-        <Link href={href} className="flex items-center gap-1 hover:text-foreground shrink-0">
+        <Link
+          href={href}
+          className="inline-flex min-h-[44px] items-center gap-1 hover:text-foreground shrink-0"
+        >
           Buka <ArrowUpRight className="size-3.5" />
         </Link>
       </div>
     </article>
   );
 }
+
+/**
+ * PERF-02 — `React.memo` dengan pembanding prop selektif.
+ *
+ * Saat guru mencentang/menggeser seleksi, `QuestionBankView` me-render ulang
+ * seluruh daftar. Tanpa memo, setiap kartu (beserta puluhan token KaTeX)
+ * di-render ulang dan memblokir main thread. Pembanding ini hanya menandai
+ * kartu berubah bila `selected` kartu itu sendiri berubah, atau identitas
+ * `question`/`href`/`mode` berubah — sehingga kartu yang tak tersentuh seleksi
+ * tidak dirender ulang (O(1) alih-alih O(n) per klik).
+ *
+ * CATATAN `onToggleSelect` SENGAJA tidak dibandingkan: handler dari
+ * `QuestionBankView` memakai pembaruan state fungsional (`setSelected(prev => …)`)
+ * sehingga **perilakunya stabil** walau identitas fungsinya berubah tiap render.
+ * Memasukkan perbandingan identitasnya akan menggagalkan memo setiap render dan
+ * menghidupkan kembali freeze yang justru ingin dihilangkan. `question` stabil
+ * selama data query React Query belum berubah (referensi objek dipertahankan).
+ */
+function areCardPropsEqual(
+  prev: {
+    question: PublicQuestion;
+    href: string;
+    selected?: boolean;
+    onToggleSelect?: (id: string) => void;
+    mode?: ViewMode;
+  },
+  next: {
+    question: PublicQuestion;
+    href: string;
+    selected?: boolean;
+    onToggleSelect?: (id: string) => void;
+    mode?: ViewMode;
+  },
+): boolean {
+  return (
+    prev.question === next.question &&
+    prev.href === next.href &&
+    prev.mode === next.mode &&
+    prev.selected === next.selected
+  );
+}
+
+export const QuestionCard = memo(QuestionCardInner, areCardPropsEqual);
+

@@ -3,13 +3,15 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionCard } from "@/components/questions/question-card";
 import { modeClass, type ViewMode } from "@/components/questions/view-mode-toggle";
 import { QuestionFilterDrawer } from "@/components/questions/question-filter-drawer";
 import { QuestionFilterBar } from "@/components/questions/question-filter-bar";
-import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
+import { ErrorState, EmptyState } from "@/components/ui/states";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +29,58 @@ const PAGE_SIZE = 20;
 /** Baca daftar nilai dari URL (tunggal maupun banyak, dukung CSV). */
 function readList(params: URLSearchParams, key: string): string[] {
   return params.getAll(key).flatMap((v) => v.split(",")).filter(Boolean);
+}
+
+/**
+ * MAJ — Skeleton loader daftar soal (menekan CLS).
+ *
+ * Tinggi tiap baris disamakan dengan `QuestionCard` mode list (`h-11`) agar
+ * transisi skeleton → konten nyata tidak menggeser tata letak (zero layout
+ * shift). Untuk mode grid/masonry dipakai kartu setinggi `min-h-[280px]`.
+ */
+function QuestionListSkeleton({ mode }: { mode: ViewMode }) {
+  if (mode === "grid" || mode === "masonry") {
+    return (
+      <div className={modeClass(mode)} aria-hidden="true">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex min-h-[280px] flex-col gap-3 rounded-xl border border-border/70 bg-card/60 p-4"
+          >
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-6 rounded-md" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-5/6" />
+            <Skeleton className="h-3 w-4/6" />
+            <div className="mt-auto flex flex-col gap-2">
+              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div
+      className="m-3 divide-y divide-border/60 overflow-hidden rounded-xl border border-border/80 bg-card/40 sm:m-4"
+      aria-hidden="true"
+    >
+      {Array.from({ length: 10 }).map((_, i) => (
+        <div key={i} className="flex h-11 items-center gap-2.5 px-4">
+          <Skeleton className="size-4 rounded" />
+          <Skeleton className="size-6 rounded-md" />
+          <Skeleton className="h-4 w-8" />
+          <Skeleton className="h-4 w-10" />
+          <Skeleton className="h-3 flex-1" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** Halaman Bank Soal — daftar, filter slide-over drawer, compound filter bar, 3 view modes (G1). */
@@ -87,16 +141,23 @@ export function QuestionBankView({
       { ids, action },
       {
         onSuccess: (res) => {
-          setBulkMsg(
+          const msg =
             `${res.ok.length} berhasil` +
-              (res.failed.length ? `, ${res.failed.length} gagal` : "") +
-              ".",
-          );
+            (res.failed.length ? `, ${res.failed.length} gagal` : "") +
+            ".";
+          setBulkMsg(msg);
+          if (res.failed.length > 0) {
+            toast.warning(msg);
+          } else {
+            toast.success(msg);
+          }
           setSelected(new Set(res.failed.map((f) => f.id)));
           onComplete?.();
         },
         onError: (e) => {
-          setBulkMsg((e as Error).message);
+          const message = (e as Error).message;
+          setBulkMsg(message);
+          toast.error("Aksi massal gagal", { description: message });
           onComplete?.();
         },
       },
@@ -206,7 +267,7 @@ export function QuestionBankView({
       {/* 3. Daftar Kartu Soal (100% Lebar Penuh) */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <LoadingState label="Memuat soal…" />
+          <QuestionListSkeleton mode={mode} />
         ) : isError ? (
           <ErrorState title="Gagal memuat soal" description={error?.message} />
         ) : !data || data.items.length === 0 ? (

@@ -112,7 +112,7 @@ export function QuestionFilterBar({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Cari soal…"
             aria-label="Cari soal"
-            className="h-9 pl-8 text-sm bg-muted/20"
+            className="h-9 pl-8 text-sm bg-muted/20 pointer-coarse:min-h-[44px]"
           />
           {search && (
             <button

@@ -2,8 +2,19 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
+/**
+ * CRIT-03 — Target sentuh WCAG 2.2 AA (≥ 44×44px).
+ *
+ * Semua varian tombol (default/outline/ghost/icon/…) mengekspansi area
+ * sentuhnya menjadi minimal 44×44px **hanya pada perangkat pointer kasar
+ * (sentuh)**, memakai varian resmi Tailwind v4 `pointer-coarse:`. Pendekatan
+ * ini menjaga kepadatan desktop (ikon 32px tetap ringkas dengan mouse) sekaligus
+ * menjamin kepatuhan ergonomi jempol di tablet/telepon tanpa menduplikasi kelas
+ * `min-h-[44px]` di ratusan pemanggil. Ukuran eksplisit tetap dapat ditimpa
+ * oleh pemanggil (mis. `size="touch"`).
+ */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px active:not-aria-[haspopup]:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap motion-safe:transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px active:not-aria-[haspopup]:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 pointer-coarse:min-h-[44px] pointer-coarse:min-w-[44px] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -30,6 +41,9 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        // Eksplisit: target sentuh 44px di SEMUA pointer (mis. tombol aksi
+        // utama di area padat). Gunakan bila `pointer-coarse` belum cukup.
+        touch: "min-h-[44px] min-w-[44px] gap-1.5 px-3",
       },
     },
     defaultVariants: {

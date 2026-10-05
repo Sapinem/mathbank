@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,7 +128,12 @@ export function TopicsView() {
               onClick={() => {
                 if (!confirmDelete) return;
                 del.mutate(confirmDelete.id, {
-                  onSuccess: () => setConfirmDelete(null),
+                  onSuccess: () => {
+                    setConfirmDelete(null);
+                    toast.success("Topik dihapus.");
+                  },
+                  onError: (e) =>
+                    toast.error("Gagal menghapus topik", { description: e.message }),
                 });
               }}
             >
@@ -159,18 +165,23 @@ function TopicBranch({
   return (
     <li>
       <div
-        className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
+        className="group flex min-h-[44px] items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50"
         style={{ paddingLeft: `${depth * 20 + 8}px` }}
       >
         <button
           type="button"
           aria-label={open ? "Tutup" : "Buka"}
+          aria-expanded={hasChildren ? open : undefined}
           onClick={() => setOpen((v) => !v)}
-          className="grid size-5 place-items-center text-muted-foreground"
+          className="grid min-h-[44px] min-w-[44px] place-items-center text-muted-foreground"
         >
           {hasChildren ? (
             <ChevronRight
-              className={open ? "size-4 rotate-90 transition-transform" : "size-4 transition-transform"}
+              className={
+                open
+                  ? "size-4 rotate-90 motion-safe:transition-transform"
+                  : "size-4 motion-safe:transition-transform"
+              }
             />
           ) : (
             <span className="size-4" />
@@ -187,7 +198,10 @@ function TopicBranch({
           </span>
         )}
 
-        <span className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+        {/* MAJ — aksi selalu terlihat di perangkat sentuh; reveal-on-hover
+            hanya pada pointer presisi (desktop) agar pohon topik tetap rapi.
+            (CONSTRAINT #11: target sentuh ≥ 44px.) */}
+        <span className="ml-auto flex items-center gap-1 opacity-100 pointer-fine:opacity-0 pointer-fine:transition-opacity pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100">
           {depth < 2 && (
             <Button
               variant="ghost"
@@ -272,9 +286,24 @@ function TopicDialog({
       parentId: parent,
     };
     if (mode === "create") {
-      create.mutate(input, { onSuccess: onClose });
+      create.mutate(input, {
+        onSuccess: () => {
+          toast.success("Topik baru dibuat.");
+          onClose();
+        },
+        onError: (e) => toast.error("Gagal membuat topik", { description: e.message }),
+      });
     } else if (topic) {
-      update.mutate({ id: topic.id, input }, { onSuccess: onClose });
+      update.mutate(
+        { id: topic.id, input },
+        {
+          onSuccess: () => {
+            toast.success("Perubahan topik disimpan.");
+            onClose();
+          },
+          onError: (e) => toast.error("Gagal menyimpan topik", { description: e.message }),
+        },
+      );
     }
   }
 

@@ -175,7 +175,7 @@ export function QuestionFilterDrawer({
                 onChange={(e) => setTopicSearch(e.target.value)}
                 placeholder="Cari topik (mis. Trigo, Aljabar)…"
                 aria-label="Cari topik"
-                className="h-8 pl-8 text-xs bg-muted/30"
+                className="h-8 pl-8 text-xs bg-muted/30 pointer-coarse:min-h-[44px]"
               />
               {topicSearch && (
                 <button

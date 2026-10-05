@@ -1,5 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { tokenizeMath, renderMath } from "./math-content";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  tokenizeMath,
+  renderMath,
+  mathCacheSize,
+  clearMathCache,
+} from "./math-content";
 
 describe("tokenizeMath", () => {
   it("mengenali $...$ (inline)", () => {
@@ -67,5 +72,45 @@ describe("renderMath — anti-XSS pada fallback galat (audit MathBankAuditor)", 
     const inner = html.replace(/^<span[^>]*>/, "").replace(/<\/span>$/, "");
     expect(inner).not.toContain("<");
     spy.mockRestore();
+  });
+});
+
+describe("renderMath — cache LRU in-memory (PERF-02)", () => {
+  beforeEach(() => clearMathCache());
+
+  it("mengembalikan hasil identik dari cache tanpa kompilasi ulang", async () => {
+    const katex = await import("katex");
+    const spy = vi.spyOn(katex.default, "renderToString");
+    const first = renderMath("x^2 + 1", false);
+    const callsAfterFirst = spy.mock.calls.length;
+    const second = renderMath("x^2 + 1", false);
+    // Panggilan kedua harus dilayani cache (tidak memanggil KaTeX lagi).
+    expect(spy.mock.calls.length).toBe(callsAfterFirst);
+    expect(second).toBe(first);
+    spy.mockRestore();
+  });
+
+  it("membedakan kunci inline vs display untuk rumus yang sama", async () => {
+    const katex = await import("katex");
+    const spy = vi.spyOn(katex.default, "renderToString");
+    renderMath("a+b", false);
+    renderMath("a+b", true);
+    // Dua mode = dua entri cache = dua kompilasi.
+    expect(spy.mock.calls.length).toBe(2);
+    spy.mockRestore();
+  });
+
+  it("menghitung entri cache yang tersimpan", () => {
+    clearMathCache();
+    renderMath("p", false);
+    renderMath("q", false);
+    expect(mathCacheSize()).toBe(2);
+  });
+
+  it("membatasi ukuran cache (eviction LRU)", () => {
+    clearMathCache();
+    // Melebihi kapasitas 2000 → entri tertua dibuang, ukuran tak tumbuh tanpa batas.
+    for (let i = 0; i < 2100; i++) renderMath(`k_{${i}}`, false);
+    expect(mathCacheSize()).toBeLessThanOrEqual(2000);
   });
 });

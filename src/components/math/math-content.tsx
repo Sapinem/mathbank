@@ -9,6 +9,13 @@ import { cn } from "@/lib/utils";
  * Catatan CONSTRAINTS: `useMemo` dilarang (React Compiler). Karena itu kita
  * TIDAK memakai useMemo — komputasi token dilakukan langsung saat render.
  * (Daftar token dihitung murni dari `content` yang stabil.)
+ *
+ * PERF-02 — In-memory cache (LRU) untuk hasil kompilasi KaTeX:
+ * `katex.renderToString` sinkron memblokir main thread. Saat guru menggeser
+ * seleksi antar-kartu soal, rumus yang sama dikompilasi ulang berulang kali.
+ * Cache modul-level ini mengembalikan HTML yang sudah jadi sehingga pergantian
+ * kartu instan tanpa jank. Cache bertahan lintas render & komponen (bukan
+ * state React) dan dibatasi kapasitas agar tak bocor memori pada sesi panjang.
  */
 
 /** Pisahkan teks menjadi potongan teks, rumus, & gambar. */
@@ -19,6 +26,33 @@ type Token =
 
 /** Shortcode media `{{img:<shortId>}}` — sinkron dengan src/lib/media/shortcode.ts. */
 const IMG_SHORTCODE = /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})\s*\}\}/g;
+
+/** Kapasitas maksimum entri cache KaTeX (LRU). */
+const MATH_CACHE_MAX = 2000;
+
+/**
+ * LRU in-memory cache untuk HTML hasil KaTeX.
+ *
+ * `Map` mempertahankan urutan penyisipan; `get` memindahkan entri ke paling
+ * akhir (baru dipakai). Saat kapasitas lewat batas, entri paling awal (paling
+ * lama tak dipakai) dibuang — O(1) amortized. Aman karena hasil `renderToString`
+ * murni (deterministik dari `value` + `display`).
+ */
+const mathHtmlCache = new Map<string, string>();
+
+function cacheKey(value: string, display: boolean): string {
+  return (display ? "d\u0000" : "i\u0000") + value;
+}
+
+/** Jumlah entri cache saat ini (dipakai tes & diagnosa). */
+export function mathCacheSize(): number {
+  return mathHtmlCache.size;
+}
+
+/** Kosongkan cache KaTeX (dipakai tes / invalidasi eksplisit). */
+export function clearMathCache(): void {
+  mathHtmlCache.clear();
+}
 
 export function tokenizeMath(input: string): Token[] {
   const tokens: Token[] = [];
@@ -82,10 +116,20 @@ function renderText(text: string): string {
     .replace(/\n/g, "<br/>");
 }
 
-/** Render satu potongan rumus ke HTML KaTeX. */
+/** Render satu potongan rumus ke HTML KaTeX (dengan cache LRU in-memory). */
 export function renderMath(value: string, display: boolean): string {
+  const key = cacheKey(value, display);
+  const cached = mathHtmlCache.get(key);
+  if (cached !== undefined) {
+    // LRU: tandai baru dipakai dengan memindahkan ke ujung urutan.
+    mathHtmlCache.delete(key);
+    mathHtmlCache.set(key, cached);
+    return cached;
+  }
+
+  let html: string;
   try {
-    return katex.renderToString(value, {
+    html = katex.renderToString(value, {
       displayMode: display,
       throwOnError: false,
       strict: false,
@@ -95,8 +139,16 @@ export function renderMath(value: string, display: boolean): string {
     // KaTeX gagal (langka karena `throwOnError:false`, tapi mungkin pada galat
     // internal) — JANGAN suntikkan `value` mentah ke dangerouslySetInnerHTML
     // (celah XSS). Escape dulu (audit MathBankAuditor / defense-in-depth).
-    return `<span class="text-error">${escapeHtml(value)}</span>`;
+    html = `<span class="text-error">${escapeHtml(value)}</span>`;
   }
+
+  // Simpan hasil (sukses maupun fallback ter-escape) lalu terapkan batas LRU.
+  mathHtmlCache.set(key, html);
+  if (mathHtmlCache.size > MATH_CACHE_MAX) {
+    const oldest = mathHtmlCache.keys().next().value;
+    if (oldest !== undefined) mathHtmlCache.delete(oldest);
+  }
+  return html;
 }
 
 /**
@@ -133,6 +185,15 @@ export function MathContent({
         ) : (
           <span
             key={i}
+            // Skill §4: isolasi rumus inline dengan `.katex-inline` agar
+            // ekspresi panjang menggulir di dalam kontainernya (bukan memaksa
+            // viewport 360px menggulir horizontal). Utilitas Tailwind dipakai
+            // langsung agar kontrak terjamin tanpa bergantung file CSS global.
+            className={
+              t.display
+                ? undefined
+                : "katex-inline inline-block max-w-full overflow-x-auto align-middle [scrollbar-width:thin]"
+            }
             dangerouslySetInnerHTML={{ __html: renderMath(t.value, t.display) }}
           />
         );

@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -547,18 +548,24 @@ export function QuestionEditor({
                     className="flex flex-col gap-2 rounded-md border border-border p-3"
                   >
                     <div className="flex items-start gap-2">
+                      {/* CRIT-03: radio kunci A–E dengan area sentuh ≥ 44px */}
                       <button
                         type="button"
                         onClick={() => toggleCorrect(o.label)}
                         aria-pressed={o.isCorrect}
                         aria-label={`Tandai opsi ${o.label} sebagai kunci`}
-                        className={
-                          o.isCorrect
-                            ? "mt-1.5 grid size-5 shrink-0 place-items-center rounded-full border border-brand bg-brand text-[10px] font-bold text-brand-fg"
-                            : "mt-1.5 grid size-5 shrink-0 place-items-center rounded-full border border-border text-[10px] font-medium text-muted-foreground hover:border-muted-foreground"
-                        }
+                        className="relative flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center"
                       >
-                        {o.label}
+                        <span
+                          className={cn(
+                            "grid size-5 place-items-center rounded-full border text-[10px]",
+                            o.isCorrect
+                              ? "border-brand bg-brand font-bold text-brand-fg"
+                              : "border-border font-medium text-muted-foreground hover:border-muted-foreground",
+                          )}
+                        >
+                          {o.label}
+                        </span>
                       </button>
                       <Textarea
                         value={o.contentMarkdown}

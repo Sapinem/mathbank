@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   Plus,
   Copy,
@@ -157,10 +158,23 @@ export function BundleListView() {
         onSuccess: () => {
           setOpen(false);
           setTitle("");
+          toast.success("Paket baru dibuat.");
         },
-        onError: (e) => setFormErr((e as Error).message),
+        onError: (e) => {
+          const message = (e as Error).message;
+          setFormErr(message);
+          toast.error("Gagal membuat paket", { description: message });
+        },
       },
     );
+  }
+
+  /** Duplikat paket dengan umpan balik toast (MAJ — pasca-mutasi). */
+  function duplicateBundle(id: string, title: string) {
+    duplicate.mutate(id, {
+      onSuccess: () => toast.success(`Paket "${title}" diduplikat.`),
+      onError: (e) => toast.error("Gagal menduplikat paket", { description: (e as Error).message }),
+    });
   }
 
   // Statistik ringkas (total seluruh paket, bukan filtered)
@@ -495,7 +509,7 @@ export function BundleListView() {
                       variant="ghost"
                       size="icon-sm"
                       aria-label={`Duplikat ${b.title}`}
-                      onClick={() => duplicate.mutate(b.id)}
+                      onClick={() => duplicateBundle(b.id, b.title)}
                       className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
                     >
                       <Copy className="size-3.5" />
@@ -589,7 +603,7 @@ export function BundleListView() {
                           size="icon-sm"
                           aria-label={`Duplikat ${b.title}`}
                           className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
-                          onClick={() => duplicate.mutate(b.id)}
+                          onClick={() => duplicateBundle(b.id, b.title)}
                         >
                           <Copy className="size-4" />
                         </Button>
@@ -682,8 +696,15 @@ export function BundleListView() {
               onClick={() => {
                 if (!confirm) return;
                 archive.mutate(confirm.id, {
-                  onSuccess: () => setConfirm(null),
-                  onError: (e) => setFormErr((e as Error).message),
+                  onSuccess: () => {
+                    setConfirm(null);
+                    toast.success("Paket diarsipkan.");
+                  },
+                  onError: (e) => {
+                    const message = (e as Error).message;
+                    setFormErr(message);
+                    toast.error("Gagal mengarsipkan paket", { description: message });
+                  },
                 });
               }}
             >

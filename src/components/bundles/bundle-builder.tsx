@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ErrorState, LoadingState } from "@/components/ui/states";
+import { MathContent } from "@/components/math/math-content";
 import {
   useBundle,
   useAddBundleItem,
@@ -69,7 +70,11 @@ function SortableRow({
         {nomor}.
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm">{item.question.contentMarkdown}</p>
+        <MathContent
+          content={item.question.contentMarkdown}
+          noScroll
+          className="truncate text-sm"
+        />
         <div className="mt-1 flex gap-1">
           <Badge variant="outline" className="text-[10px]">
             {item.question.questionType}
@@ -221,9 +226,11 @@ export function BundleBuilder() {
             const sudah = usedIds.has(item.id);
             return (
               <li key={item.id} className="flex items-center gap-3 rounded-md border px-3 py-2">
-                <span className="min-w-0 flex-1 truncate text-sm">
-                  {item.contentMarkdown}
-                </span>
+                <MathContent
+                  content={item.contentMarkdown}
+                  noScroll
+                  className="min-w-0 flex-1 truncate text-sm"
+                />
                 <Button
                   size="sm"
                   variant={sudah ? "ghost" : "outline"}

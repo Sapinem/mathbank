@@ -78,9 +78,12 @@ beforeEach(() => {
 });
 
 describe("QuestionBankView — keadaan render", () => {
-  it("menampilkan LoadingState saat memuat", () => {
-    render(<QuestionBankView />);
-    expect(screen.getByText("Memuat soal…")).toBeInTheDocument();
+  it("menampilkan skeleton loader saat memuat (menekan CLS)", () => {
+    const { container } = render(<QuestionBankView />);
+    // MAJ: loading kini berupa skeleton (bukan spinner ber-teks) agar tata
+    // letak tak bergeser saat konten tiba. Skeleton ditandai aria-hidden.
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
   });
 
   it("menampilkan ErrorState saat gagal (dengan pesan)", () => {
