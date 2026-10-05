@@ -49,9 +49,12 @@ export function MoodleExportButton({ bundleId }: { bundleId: string }) {
       if (res.ok && body?.data) {
         setOk(body.data as ExportOk);
       } else {
+        // API-01 (CONSTRAINT #17): respons 422 hanya membawa `error` —
+        // ringkasan (termasuk `withoutAnswerKey`) ada di `error.details`,
+        // bukan lagi di `data`.
         setBlocked({
           message: body?.error?.message ?? "Gagal menyusun ekspor.",
-          withoutAnswerKey: body?.data?.withoutAnswerKey ?? [],
+          withoutAnswerKey: body?.error?.details?.withoutAnswerKey ?? [],
         });
       }
     } catch (err) {
