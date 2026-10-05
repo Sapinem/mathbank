@@ -125,6 +125,19 @@ export const DEFAULT_POLICY: RateLimitPolicy = {
 };
 
 /**
+ * **PERF-03:** kebijakan khusus penyajian gambar (`/img/{shortId}`).
+ *
+ * Burst dinaikkan ke **300** karena satu paket soal (40–50 soal) memuat
+ * puluhan gambar sekaligus dalam satu burst saat halaman/pratinjau dibuka —
+ * kebijakan default (60) memicu HTTP 429 palsu. Refill tetap 1/detik agar
+ * laju berkelanjutan tak berubah.
+ */
+export const IMAGE_POLICY: RateLimitPolicy = {
+  capacity: 300,
+  refillPerSec: 1,
+};
+
+/**
  * Cek & pakai token untuk `key`. Murni terhadap store terpasang.
  * @param now injeksi waktu (tes deterministik); default `Date.now()`.
  */

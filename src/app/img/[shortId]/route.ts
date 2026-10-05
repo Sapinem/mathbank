@@ -19,7 +19,7 @@ import { join, resolve, sep } from "node:path";
 import { findAssetByShortId } from "@/lib/services/media-service";
 import { mediaStorageRoot } from "@/lib/ingest/config";
 import { isValidShortId } from "@/lib/media/short-id";
-import { checkRateLimit, rateLimitKey, DEFAULT_POLICY } from "@/lib/api/rate-limit";
+import { checkRateLimit, rateLimitKey, IMAGE_POLICY } from "@/lib/api/rate-limit";
 import { log } from "@/lib/telemetry/logger";
 
 /** Header khusus SVG — cegah skrip di dalamnya dieksekusi. */
@@ -46,7 +46,9 @@ export async function GET(
   const { shortId } = await params;
 
   // 1) Rate limit (CONSTRAINTS #33) — route publik, key per IP.
-  const rl = checkRateLimit(rateLimitKey(null, clientIp(req), "media:serve"), DEFAULT_POLICY);
+  //    PERF-03: pakai IMAGE_POLICY (burst 300) agar memuat paket 40–50 soal
+  //    (puluhan gambar sekaligus) tak memicu HTTP 429 palsu.
+  const rl = checkRateLimit(rateLimitKey(null, clientIp(req), "media:serve"), IMAGE_POLICY);
   if (!rl.allowed) {
     return errorJson("RATE_LIMITED", "Terlalu banyak permintaan.", 429);
   }

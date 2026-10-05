@@ -2,13 +2,33 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { mkdtemp, rm, readFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fetchImage } from "./fetch";
+
+/**
+ * SEC-01: `fetchImage` melakukan resolusi DNS pra-koneksi. Di tes unit kita
+ * ganti resolver modul dengan alamat PUBLIK agar tes tetap hermetik (tanpa
+ * jaringan) dan tidak bergantung DNS nyata untuk nama contoh.
+ */
+vi.mock("node:dns/promises", () => {
+  const lookup = vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]);
+  return { lookup, default: { lookup } };
+});
+
+import { fetchImage, type DnsResolver } from "./fetch";
 import { storeImage, relativePath } from "./store";
 import { ingestArticleMedia, collectUrls, type MediaCache } from "./ingest-media";
 
 const PNG = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 ]);
+
+/**
+ * Resolver DNS tiruan (SEC-01) — tes tak boleh bergantung DNS nyata.
+ * Default: alamat publik.
+ */
+const PUBLIC_IP = "93.184.216.34";
+function dns(ips: string[] = [PUBLIC_IP]): DnsResolver {
+  return async () => ips;
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -20,7 +40,7 @@ describe("fetchImage (mock fetch)", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(PNG, {
       status: 200, headers: { "content-type": "image/png" },
     })));
-    const r = await fetchImage("https://a.com/x.png", { retries: 0 });
+    const r = await fetchImage("https://a.com/x.png", { retries: 0, dnsResolver: dns() });
     expect(r.ok).toBe(true);
     expect(r.contentType).toBe("image/png");
     expect(r.contentHash).toHaveLength(64);
@@ -36,16 +56,70 @@ describe("fetchImage (mock fetch)", () => {
       "file:///etc/passwd",
     ];
     for (const target of targets) {
-      const r = await fetchImage(target, { retries: 0 });
+      const r = await fetchImage(target, { retries: 0, dnsResolver: dns() });
       expect(r.ok).toBe(false);
       expect(r.error).toMatch(/diblokir|tidak diizinkan|URL tidak valid/i);
     }
   });
 
+  it("SEC-01: DNS rebinding — domain publik yang resolve ke 127.0.0.1 DIBLOKIR", async () => {
+    const spy = vi.fn(async () => new Response(PNG, {
+      status: 200, headers: { "content-type": "image/png" },
+    }));
+    vi.stubGlobal("fetch", spy);
+    // `evil.example` tampak publik, tapi DNS-nya menunjuk loopback.
+    const r = await fetchImage("https://evil.example/x.png", {
+      retries: 0,
+      dnsResolver: dns(["127.0.0.1"]),
+    });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/diblokir|anti-SSRF/i);
+    expect(spy).not.toHaveBeenCalled(); // tak pernah menyentuh jaringan
+  });
+
+  it("SEC-01: metadata AWS via DNS (169.254.169.254) DIBLOKIR sebelum koneksi", async () => {
+    const spy = vi.fn(async () => new Response(PNG, {
+      status: 200, headers: { "content-type": "image/png" },
+    }));
+    vi.stubGlobal("fetch", spy);
+    const r = await fetchImage("https://metadata.example/latest/meta-data", {
+      retries: 0,
+      dnsResolver: dns(["169.254.169.254"]),
+    });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/anti-SSRF/i);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("SEC-01: redirect (manual) ke host privat DIBLOKIR", async () => {
+    // Hop 1: 302 → http://127.0.0.1/secret. Hop privat harus ditolak.
+    const spy = vi.fn(async () =>
+      new Response(null, { status: 302, headers: { location: "http://127.0.0.1/secret.png" } }),
+    );
+    vi.stubGlobal("fetch", spy);
+    const r = await fetchImage("https://a.com/redir.png", { retries: 0, dnsResolver: dns() });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/diblokir|anti-SSRF|redirect/i);
+  });
+
+  it("SEC-01: redirect manual diikuti untuk host publik (tiap hop divalidasi)", async () => {
+    let n = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      n++;
+      if (n === 1) {
+        return new Response(null, { status: 301, headers: { location: "/final.png" } });
+      }
+      return new Response(PNG, { status: 200, headers: { "content-type": "image/png" } });
+    }));
+    const r = await fetchImage("https://a.com/start.png", { retries: 0, dnsResolver: dns() });
+    expect(r.ok).toBe(true);
+    expect(n).toBe(2);
+  });
+
   it("404 → gagal, tanpa retry", async () => {
     const spy = vi.fn(async () => new Response("no", { status: 404 }));
     vi.stubGlobal("fetch", spy);
-    const r = await fetchImage("https://a.com/x.png", { retries: 2 });
+    const r = await fetchImage("https://a.com/x.png", { retries: 2, dnsResolver: dns() });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("404");
     expect(spy).toHaveBeenCalledTimes(1); // 4xx tak di-retry
@@ -55,7 +129,7 @@ describe("fetchImage (mock fetch)", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("<!DOCTYPE html>x", {
       status: 200, headers: { "content-type": "text/html" },
     })));
-    const r = await fetchImage("https://a.com/x", { retries: 0 });
+    const r = await fetchImage("https://a.com/x", { retries: 0, dnsResolver: dns() });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("bukan gambar");
   });
@@ -66,7 +140,7 @@ describe("fetchImage (mock fetch)", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(big, {
       status: 200, headers: { "content-type": "image/png" },
     })));
-    const r = await fetchImage("https://a.com/x", { retries: 0, maxBytes: 50 });
+    const r = await fetchImage("https://a.com/x", { retries: 0, maxBytes: 50, dnsResolver: dns() });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("besar");
   });
@@ -78,7 +152,7 @@ describe("fetchImage (mock fetch)", () => {
       if (n === 1) throw new Error("jaringan");
       return new Response(PNG, { status: 200, headers: { "content-type": "image/png" } });
     }));
-    const r = await fetchImage("https://a.com/x", { retries: 2 });
+    const r = await fetchImage("https://a.com/x", { retries: 2, dnsResolver: dns() });
     expect(r.ok).toBe(true);
     expect(n).toBe(2);
   });
@@ -207,6 +281,28 @@ describe("fetchImage — jalur TLS dilonggarkan (server lokal)", () => {
         });
         expect(r.ok).toBe(false);
         expect(r.error).toContain("404");
+      },
+    );
+  });
+
+  it("SEC-01: host relaxed yang redirect ke host privat tetap DIBLOKIR", async () => {
+    await withServer(
+      (res) => {
+        if (res.req.url === "/evil") {
+          res.writeHead(302, { location: "http://169.254.169.254/latest/meta-data" });
+          res.end();
+        } else {
+          res.writeHead(200, { "content-type": "image/png" });
+          res.end(Buffer.from(PNG));
+        }
+      },
+      async (port) => {
+        const r = await fetchImage(`http://127.0.0.1:${port}/evil`, {
+          retries: 0,
+          tlsRelaxedHosts: ["127.0.0.1"],
+        });
+        expect(r.ok).toBe(false);
+        expect(r.error).toMatch(/diblokir|anti-SSRF/i);
       },
     );
   });

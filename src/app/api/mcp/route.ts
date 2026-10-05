@@ -2,6 +2,8 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import type { NextRequest } from "next/server";
 import { createMcpServer } from "@/lib/mcp/server";
 import { actorFromMcpHeaders } from "@/lib/mcp/actor";
+import type { Actor } from "@/lib/auth/actor";
+import { checkRateLimit, rateLimitKey, type RateLimitPolicy } from "@/lib/api/rate-limit";
 
 /**
  * /api/mcp — transport **Streamable HTTP** (M11).
@@ -10,14 +12,24 @@ import { actorFromMcpHeaders } from "@/lib/mcp/actor";
  * identitas pemanggil datang dari API key per-request. Tidak ada state lintas
  * request yang disimpan di proses (aman untuk serverless/multi-worker).
  *
- * Auth: `x-api-key` (atau `Authorization: Bearer <key>`). Tanpa kunci valid → 401.
+ * Auth: `x-api-key` (atau `Authorization: Bearer *** Tanpa kunci valid → 401.
  * Izin: matriks L1 lewat `policy.ts` (agen tak pernah lihat `answer_key`).
+ * Rate limit (SEC-02, CONSTRAINT #33): token bucket per-aktor → 429 saat lewat.
  *
  * Catatan: Next.js App Router memakai Web `Request`/`Response`, jadi kita pakai
  * `WebStandardStreamableHTTPServerTransport` (bukan varian Node `IncomingMessage`).
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Kebijakan rate limit panggilan MCP (SEC-02). Agen biasanya memanggil
+ * berurutan (bukan burst besar); burst 60 dengan isi 2/detik cukup lega.
+ */
+export const MCP_RATE_POLICY: RateLimitPolicy = {
+  capacity: 60,
+  refillPerSec: 2, // ≈ 120/menit steady-state
+};
 
 /** Bungkus error jadi jawaban JSON-RPC yang sah. */
 function jsonRpcError(httpStatus: number, code: number, message: string): Response {
@@ -27,16 +39,45 @@ function jsonRpcError(httpStatus: number, code: number, message: string): Respon
   );
 }
 
+/** IP klien dari header proxy (pola sama dengan route-wrapper). */
+function clientIp(req: Request): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]!.trim();
+  return req.headers.get("x-real-ip");
+}
+
 async function handleMcp(req: NextRequest): Promise<Response> {
   // 1. Autentikasi (API key) → aktor `agent`.
-  let actor;
+  let actor: Actor;
   try {
     actor = await actorFromMcpHeaders(req.headers);
   } catch {
     return jsonRpcError(401, -32001, "Unauthorized: API key tidak valid");
   }
 
-  // 2. Server + transport di-scope ke request ini (stateless).
+  // 2. Rate limit per-aktor (SEC-02). Kunci pakai id aktor; fallback IP.
+  const rl = checkRateLimit(
+    rateLimitKey(actor.id, clientIp(req), "mcp:call"),
+    MCP_RATE_POLICY,
+  );
+  if (!rl.allowed) {
+    return new Response(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        error: { code: -32000, message: "Terlalu banyak permintaan. Coba lagi nanti." },
+        id: null,
+      }),
+      {
+        status: 429,
+        headers: {
+          "content-type": "application/json",
+          "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)),
+        },
+      },
+    );
+  }
+
+  // 3. Server + transport di-scope ke request ini (stateless).
   const server = createMcpServer(actor);
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless
@@ -72,3 +113,4 @@ export async function GET(): Promise<Response> {
 export async function DELETE(): Promise<Response> {
   return jsonRpcError(405, -32000, "Method Not Allowed (stateless MCP: gunakan POST)");
 }
+

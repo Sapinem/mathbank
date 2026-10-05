@@ -5,6 +5,7 @@ import {
   rateLimitKey,
   setStore,
   RateLimitError,
+  IMAGE_POLICY,
   type RateLimitPolicy,
 } from "./rate-limit";
 
@@ -92,5 +93,16 @@ describe("RateLimitError", () => {
     const e = new RateLimitError(1500);
     expect(e.code).toBe("RATE_LIMITED");
     expect(e.retryAfterMs).toBe(1500);
+  });
+});
+
+describe("IMAGE_POLICY (PERF-03)", () => {
+  it("burst = 300 agar paket 40–50 soal tak memicu 429", () => {
+    expect(IMAGE_POLICY.capacity).toBe(300);
+    // Beban satu paket (50 gambar) harus lolos tanpa penolakan.
+    const t = 1_000_000;
+    for (let i = 0; i < 50; i++) {
+      expect(checkRateLimit("media:serve:ip", IMAGE_POLICY, t).allowed).toBe(true);
+    }
   });
 });

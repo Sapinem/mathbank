@@ -141,9 +141,12 @@ describe("M11 — MCP tools", () => {
 
   it("role machine DITOLAK baca soal (hanya ingest)", async () => {
     const { client: mc, server: ms } = await connect(mesin);
+    // ARC-06: tool tak berkapabilitas tak didaftarkan → tak muncul di list.
+    const list = await mc.listTools();
+    expect(list.tools.map((t) => t.name)).not.toContain("search_questions");
     const r = await call(mc, "search_questions", { q: "apa" });
     expect(r.isError).toBe(true);
-    expect(r.text).toMatch(/question\.read|izin|kapabilitas/i);
+    expect(r.text).toMatch(/not found|question\.read|izin|kapabilitas/i);
     await mc.close();
     await ms.close();
   });
@@ -157,5 +160,41 @@ describe("M11 — MCP tools", () => {
     const id = rows[0].id as string;
     const r = await call(client, "enrich_question", { questionId: id });
     expect(r.isError).toBe(true);
+  });
+
+  it("ARC-06: agent (izin penuh) melihat SELURUH tool yang diizinkan", async () => {
+    const list = await client.listTools();
+    const names = list.tools.map((t) => t.name);
+    for (const n of [
+      "search_questions",
+      "get_question",
+      "create_question",
+      "list_topics",
+      "list_sources",
+      "enrich_question",
+      "embed_questions",
+    ]) {
+      expect(names).toContain(n);
+    }
+  });
+
+  it("ARC-06: API key menyempit → tool di luar izin TIDAK didaftarkan", async () => {
+    // Agen dengan izin `question` hanya baca → tak punya create/enrichment.
+    const sempit: Actor = {
+      id: "srv-mcp-sempit",
+      name: "Agen Sempit",
+      roles: ["agent"],
+      via: "apikey",
+      apiKeyPermissions: { question: ["read"] },
+    };
+    const { client: sc, server: ss } = await connect(sempit);
+    const names = (await sc.listTools()).tools.map((t) => t.name);
+    expect(names).toContain("search_questions");
+    expect(names).toContain("get_question");
+    expect(names).not.toContain("create_question");
+    expect(names).not.toContain("enrich_question");
+    expect(names).not.toContain("embed_questions");
+    await sc.close();
+    await ss.close();
   });
 });
