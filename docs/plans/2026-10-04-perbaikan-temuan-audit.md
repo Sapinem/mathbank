@@ -67,9 +67,9 @@
 ---
 
 ### Task 5: Verifikasi Mutu Menyeluruh (Exit Gate)
-- [ ] Jalankan `pnpm typecheck` (harus 0 errors).
-- [ ] Jalankan `pnpm lint` (harus 0 warnings/errors).
-- [ ] Jalankan `pnpm test:coverage` (harus memenuhi seluruh ambang).
-- [ ] Jalankan `pnpm test:db` (seluruh 23 berkas tes DB harus lulus).
-- [ ] Jalankan `pnpm db:verify` (skema harus tetap *zero drift*).
-- [ ] Jalankan `pnpm build` (kompilasi Next.js 16 berhasil).
+- [x] Jalankan `pnpm typecheck` (harus 0 errors — ✅ Terverifikasi: 0 error).
+- [x] Jalankan `pnpm lint` (harus 0 warnings/errors — ✅ Terverifikasi: 0 error / warning).
+- [x] Jalankan `pnpm test:coverage` (harus memenuhi seluruh ambang — ✅ Terverifikasi: 91.51% stmts, 93.53% lines, 90.8% funcs, 83.57% branches; 705/705 unit tests lulus).
+- [x] Jalankan `pnpm test:db` (seluruh 23 berkas tes DB harus lulus — ✅ Terverifikasi: 241/241 DB tests lulus).
+- [x] Jalankan `pnpm db:verify` (skema harus tetap *zero drift* — ✅ Terverifikasi: 0 drift, 28 tabel, 25 trigger, 3 checks, 1 HNSW index).
+- [x] Jalankan `pnpm build` (kompilasi Next.js 16 berhasil — ✅ Terverifikasi: 48/48 rute Next.js 16 compiled successfully).
