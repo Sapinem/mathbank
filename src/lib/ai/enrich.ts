@@ -203,7 +203,13 @@ export function extractMathSegments(markdown: string): MathSegment[] {
   return out;
 }
 
-/** Kedalaman kurung kurawal (mengabaikan `\{` `\}` yang di-escape). */
+/**
+ * Kedalaman kurung kurawal (mengabaikan `\{` `\}` yang di-escape).
+ *
+ * CORR-04: begitu kedalaman **negatif** (kurung penutup muncul tanpa pembuka,
+ * mis. pola terbalik `}{`), langsung kembalikan `-1`. Versi lama menyeimbangkan
+ * kembali `}{` menjadi 0 sehingga rumus cacat lolos validasi.
+ */
 function braceDepth(expr: string): number {
   let depth = 0;
   for (let i = 0; i < expr.length; i++) {
@@ -213,17 +219,161 @@ function braceDepth(expr: string): number {
       continue;
     }
     if (c === "{") depth++;
-    else if (c === "}") depth--;
+    else if (c === "}") {
+      depth--;
+      if (depth < 0) return -1;
+    }
   }
   return depth;
 }
 
-/** Deteksi `\frac` / `\dfrac` / `\tfrac` dengan argumen kosong. */
+/**
+ * Offset karakter kurung kurawal bermasalah pertama — kurung terbalik
+ * (kedalaman negatif) atau kurung pembuka yang tak pernah ditutup.
+ * `-1` = seluruh kurung seimbang. Dipakai hanya untuk **lokasi galat**
+ * (nomor baris + cuplikan); keputusan lolos/tidak tetap dari `braceDepth`.
+ */
+function firstBraceFault(expr: string): number {
+  const open: number[] = [];
+  for (let i = 0; i < expr.length; i++) {
+    const c = expr[i];
+    if (c === "\\") {
+      i++;
+      continue;
+    }
+    if (c === "{") open.push(i);
+    else if (c === "}") {
+      if (open.length === 0) return i;
+      open.pop();
+    }
+  }
+  return open.length ? open[0] : -1;
+}
+
+/**
+ * Baca `count` grup `{ ... }` berturut-turut mulai `from`, dengan
+ * penghitungan kedalaman sehingga **kurung bersarang** ikut terbaca utuh
+ * (mis. `\frac{\sqrt{2}}{}` → `["\sqrt{2}", ""]`).
+ * `null` = argumen tak lengkap / bukan grup (biar validator sintaks KaTeX
+ * yang melaporkannya, bukan pemeriksa pecahan kosong).
+ */
+function readBraceGroups(expr: string, from: number, count: number): string[] | null {
+  const groups: string[] = [];
+  let i = from;
+  for (let k = 0; k < count; k++) {
+    while (i < expr.length && /\s/.test(expr[i])) i++;
+    if (expr[i] !== "{") return null;
+    let depth = 0;
+    const start = i + 1;
+    let closed = false;
+    for (; i < expr.length; i++) {
+      const c = expr[i];
+      if (c === "\\") {
+        i++;
+        continue;
+      }
+      if (c === "{") depth++;
+      else if (c === "}") {
+        depth--;
+        if (depth === 0) {
+          groups.push(expr.slice(start, i));
+          i++;
+          closed = true;
+          break;
+        }
+      }
+    }
+    if (!closed) return null;
+  }
+  return groups;
+}
+
+/**
+ * Deteksi `\frac` / `\dfrac` / `\tfrac` dengan pembilang atau penyebut kosong.
+ *
+ * CORR-05: versi lama memakai regex yang menuntut pembilang tanpa kurung
+ * (`\{[^{}]*\}`), sehingga `\frac{\sqrt{2}}{}` lolos. Kini argumen dibaca
+ * dengan pencocokan kurung berkedalaman → fraksi bersarang pun tertangkap.
+ */
 function hasEmptyFrac(expr: string): boolean {
-  return (
-    /\\(?:d|t)?frac\s*\{\s*\}/.test(expr) || // numerator kosong
-    /\\(?:d|t)?frac\s*\{[^{}]*\}\s*\{\s*\}/.test(expr) // denominator kosong
-  );
+  const re = /\\(?:d|t)?frac\b/g;
+  while (re.exec(expr) !== null) {
+    const args = readBraceGroups(expr, re.lastIndex, 2);
+    if (!args) continue; // argumen tak lengkap → ditangani galat sintaks KaTeX
+    if (args.some((a) => a.trim() === "")) return true;
+  }
+  return false;
+}
+
+/**
+ * CORR-01 — delimiter KaTeX terbuka tanpa penutup.
+ *
+ * `MATH_RE` hanya mencocokkan delimiter **berpasangan**, jadi rumus cacat
+ * seperti `\(x^2+1` (tanpa `\)`) tidak pernah masuk `extractMathSegments` dan
+ * lolos validasi (pelanggaran CONSTRAINT #29). Fungsi ini memindai seluruh
+ * teks dengan tumpukan: tiap `\(` `\[` `$` harus punya penutup `\)` `\]` `$`.
+ *
+ * `\\` (escape) dilewati sehingga `\\(` / `\$` tidak dihitung sebagai delimiter.
+ */
+export function hasUnmatchedDelimiters(text: string): boolean {
+  return firstUnmatchedDelimiterOffset(text) >= 0;
+}
+
+/** Offset delimiter pembuka pertama yang tak berpenutup (`-1` = semua berpasangan). */
+function firstUnmatchedDelimiterOffset(text: string): number {
+  let inline = -1;
+  let display = -1;
+  let dollar = -1;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === "\\") {
+      const n = text[i + 1];
+      if (n === "(") {
+        if (inline < 0) inline = i;
+        i++;
+      } else if (n === ")") {
+        inline = -1;
+        i++;
+      } else if (n === "[") {
+        if (display < 0) display = i;
+        i++;
+      } else if (n === "]") {
+        display = -1;
+        i++;
+      } else {
+        i++; // escape lain (\{ \} \frac …) — lewati satu karakter
+      }
+      continue;
+    }
+    if (c === "$") dollar = dollar < 0 ? i : -1;
+  }
+  const pending = [inline, display, dollar].filter((x) => x >= 0);
+  return pending.length ? Math.min(...pending) : -1;
+}
+
+/**
+ * Ganti tiap segmen matematika berdelimiter dengan spasi (baris baru
+ * dipertahankan) sehingga panjang & offset teks tak berubah. Dipakai untuk
+ * memeriksa **rumus telanjang** di luar delimiter (mis. `\frac{\sqrt{2}}{}`
+ * atau `}{`) tanpa menandai kurung sah di dalam `\(...\)`.
+ */
+function maskMathSegments(markdown: string): string {
+  let out = "";
+  let last = 0;
+  MATH_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = MATH_RE.exec(markdown)) !== null) {
+    out += markdown.slice(last, m.index);
+    out += m[0].replace(/[^\n]/g, " ");
+    last = m.index + m[0].length;
+  }
+  return out + markdown.slice(last);
+}
+
+/** Cuplikan satu baris mulai `offset` (untuk pesan galat). */
+function snippetAt(text: string, offset: number, len = 60): string {
+  const from = Math.max(0, offset);
+  return text.slice(from, from + len).split("\n")[0].trim();
 }
 
 /** Bersihkan pesan galat KaTeX dari tag HTML. */
@@ -259,17 +409,40 @@ export function findForbiddenMacros(markdown: string): KatexIssue[] {
 
 /**
  * Validator KaTeX murni: deteksi galat sintaks, kurung tak seimbang,
- * `\frac` kosong, dan macro terlarang — SEBELUM soal disimpan.
+ * `\frac` kosong, delimiter tak berpasangan, dan macro terlarang —
+ * SEBELUM soal disimpan.
+ *
+ * Empat celah audit ditutup di sini:
+ *  - **CORR-01** `\(x+1` (delimiter terbuka) → isu `syntax` lewat
+ *    `hasUnmatchedDelimiters` (CONSTRAINT #29).
+ *  - **CORR-04** `}{` (kurung terbalik) → isu `unbalanced_braces`.
+ *  - **CORR-05** `\frac{\sqrt{2}}{}` (penyebut kosong bersarang) → isu `empty_frac`.
+ *  - **CORR-06** rumus **telanjang** tanpa delimiter (`\frac{\sqrt{2}}{}`, `}{`)
+ *    ikut diperiksa lewat `maskMathSegments` — bukan hanya isi `\(...\)`.
  */
 export function validateKatexContract(markdown: string): KatexContractResult {
   const issues: KatexIssue[] = [];
   const src = markdown ?? "";
 
+  // CORR-01 — delimiter terbuka tanpa penutup (rumus telanjang dari delimiternya).
+  const unmatchedAt = firstUnmatchedDelimiterOffset(src);
+  if (unmatchedAt >= 0) {
+    issues.push({
+      kind: "syntax",
+      expression: snippetAt(src, unmatchedAt),
+      message:
+        "Delimiter KaTeX terbuka tanpa penutup (CONSTRAINT #29): setiap `\\(`/`\\[`/`$` " +
+        "wajib berpasangan dengan `\\)`/`\\]`/`$`.",
+      line: lineAt(src, unmatchedAt),
+    });
+  }
+
   for (const seg of extractMathSegments(src)) {
     if (braceDepth(seg.value) !== 0) {
+      const fault = firstBraceFault(seg.value);
       issues.push({
         kind: "unbalanced_braces",
-        expression: seg.value,
+        expression: fault >= 0 ? snippetAt(seg.value, fault) : seg.value,
         message: "Kurung kurawal tidak seimbang pada rumus.",
         line: seg.line,
       });
@@ -299,6 +472,26 @@ export function validateKatexContract(markdown: string): KatexContractResult {
         line: seg.line,
       });
     }
+  }
+
+  // CORR-06 — rumus TELANJANG di luar delimiter tetap harus bersih.
+  const bare = maskMathSegments(src);
+  const bareFault = firstBraceFault(bare);
+  if (bareFault >= 0) {
+    issues.push({
+      kind: "unbalanced_braces",
+      expression: snippetAt(bare, bareFault),
+      message: "Kurung kurawal tidak seimbang pada rumus (tanpa delimiter KaTeX).",
+      line: lineAt(src, bareFault),
+    });
+  }
+  if (hasEmptyFrac(bare)) {
+    issues.push({
+      kind: "empty_frac",
+      expression: snippetAt(bare, Math.max(0, bare.indexOf("\\frac"))),
+      message: "\\frac memiliki pembilang/penyebut kosong.",
+      line: lineAt(src, Math.max(0, bare.indexOf("\\frac"))),
+    });
   }
 
   issues.push(...findForbiddenMacros(src));

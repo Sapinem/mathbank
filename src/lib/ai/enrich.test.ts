@@ -10,6 +10,7 @@ import {
   MIN_RATIONALE_LENGTH,
   extractMathSegments,
   findForbiddenMacros,
+  hasUnmatchedDelimiters,
   validateKatexContract,
   isKatexContractValid,
   validateDistractorRationales,
@@ -219,6 +220,100 @@ describe("ai/enrich — KaTeX contract (validator murni)", () => {
     const segs = extractMathSegments("a \\(x\\) b \\[y\\] c $z$ d $$w$$");
     expect(segs.map((s) => s.value)).toEqual(["x", "y", "z", "w"]);
     expect(segs.map((s) => s.display)).toEqual([false, true, false, true]);
+  });
+
+  // ── CORR-01: delimiter terbuka tanpa penutup (CONSTRAINT #29) ──────────
+  describe("CORR-01 — hasUnmatchedDelimiters", () => {
+    it("menandai delimiter inline/display/dollar yang tak berpasangan", () => {
+      expect(hasUnmatchedDelimiters("\\(x^2+1")).toBe(true);
+      expect(hasUnmatchedDelimiters("\\[\\int_0^1 x^2")).toBe(true);
+      expect(hasUnmatchedDelimiters("Hitung $x^2$ lalu $y")).toBe(true);
+      expect(hasUnmatchedDelimiters("Nilai \\(x\\) saja.")).toBe(false);
+      expect(hasUnmatchedDelimiters("\\[x\\] dan \\(y\\) dan $z$")).toBe(false);
+      expect(hasUnmatchedDelimiters("tanpa rumus sama sekali")).toBe(false);
+    });
+
+    it("tidak menghitung escape \\\\( sebagai delimiter", () => {
+      expect(hasUnmatchedDelimiters("Teks memuat \\\\( literal.")).toBe(false);
+      expect(hasUnmatchedDelimiters("Harga \\$100 tanpa rumus.")).toBe(false);
+    });
+
+    it("validateKatexContract MENOLAK rumus dengan delimiter terbuka", () => {
+      const r = validateKatexContract("Diketahui \\(x^2 + 5x = 0");
+      expect(r.ok).toBe(false);
+      expect(r.issues.some((i) => i.kind === "syntax")).toBe(true);
+      expect(isKatexContractValid("Diketahui \\(x^2 + 5x = 0")).toBe(false);
+      expect(isKatexContractValid("\\[x^2 + 1")).toBe(false);
+      expect(isKatexContractValid("Hitung $1+1")).toBe(false);
+    });
+
+    it("tidak menghasilkan positif palsu pada konten berdelimiter sah", () => {
+      expect(isKatexContractValid("Nilai \\(x = 2\\) dan \\[\\frac{1}{2}\\] benar.")).toBe(true);
+    });
+  });
+
+  // ── CORR-04: kurung terbalik / kedalaman negatif ──────────────────────
+  describe("CORR-04 — braceDepth underflow", () => {
+    it("menolak pola kurung terbalik \\(}{ di dalam delimiter", () => {
+      const r = validateKatexContract("\\(x}{y\\)");
+      expect(r.ok).toBe(false);
+      expect(r.issues.some((i) => i.kind === "unbalanced_braces")).toBe(true);
+    });
+
+    it("menolak kurung terbalik walau jumlah buka = jumlah tutup", () => {
+      // Dua pasang seimbang secara cacah, tetapi urutannya terbalik.
+      expect(isKatexContractValid("\\(}{}\\)")).toBe(false);
+      expect(isKatexContractValid("\\(x^{2}{y\\)")).toBe(false);
+    });
+
+    it("melaporkan nomor baris lokasi kurung terbalik", () => {
+      const r = validateKatexContract("Baris satu valid\n\\(x}{y\\)");
+      expect(r.issues.find((i) => i.kind === "unbalanced_braces")?.line).toBe(2);
+    });
+
+    it("tetap meloloskan kurung bersarang yang sah", () => {
+      expect(isKatexContractValid("\\(x^{2^{3}}\\)")).toBe(true);
+      expect(isKatexContractValid("\\(\\frac{\\sqrt{2}}{2}\\)")).toBe(true);
+    });
+  });
+
+  // ── CORR-05: fraksi bersarang dengan argumen kosong ───────────────────
+  describe("CORR-05 — hasEmptyFrac pada kurung bersarang", () => {
+    it("menolak \\frac{\\sqrt{2}}{} (penyebut kosong, pembilang bersarang)", () => {
+      const r = validateKatexContract("\\(\\frac{\\sqrt{2}}{}\\)");
+      expect(r.ok).toBe(false);
+      expect(r.issues.some((i) => i.kind === "empty_frac")).toBe(true);
+    });
+
+    it("menolak pembilang bersarang yang kosong", () => {
+      expect(isKatexContractValid("\\(\\frac{}{\\sqrt{2}}\\)")).toBe(false);
+      expect(isKatexContractValid("\\(\\dfrac{\\frac{1}{2}}{}\\)")).toBe(false);
+      expect(isKatexContractValid("\\(\\tfrac{}{3}\\)")).toBe(false);
+    });
+
+    it("tetap meloloskan fraksi bersarang yang lengkap", () => {
+      expect(isKatexContractValid("\\(\\frac{\\sqrt{2}}{2}\\)")).toBe(true);
+      expect(isKatexContractValid("\\(\\frac{\\frac{1}{2}}{3}\\)")).toBe(true);
+    });
+  });
+
+  // ── CORR-06: rumus TELANJANG (tanpa delimiter) ikut divalidasi ────────
+  describe("CORR-06 — rumus telanjang tanpa delimiter", () => {
+    it("menolak kurung terbalik tanpa delimiter", () => {
+      const r = validateKatexContract("Nilai dari }{ tidak sah.");
+      expect(r.ok).toBe(false);
+      expect(r.issues.some((i) => i.kind === "unbalanced_braces")).toBe(true);
+    });
+
+    it("menolak \\frac kosong tanpa delimiter", () => {
+      const r = validateKatexContract("Rumus: \\frac{\\sqrt{2}}{}");
+      expect(r.ok).toBe(false);
+      expect(r.issues.some((i) => i.kind === "empty_frac")).toBe(true);
+    });
+
+    it("tidak menandai kurung di luar rumus pada teks biasa", () => {
+      expect(isKatexContractValid("Gunakan himpunan {1, 2, 3} sebagai contoh.")).toBe(true);
+    });
   });
 });
 

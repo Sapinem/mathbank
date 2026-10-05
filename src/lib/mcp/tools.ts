@@ -8,6 +8,7 @@ import { listTopics } from "@/lib/services/topic-service";
 import { listSources } from "@/lib/services/taxonomy-service";
 import { enrichQuestion, embedQuestions } from "@/lib/services/enrichment-service";
 import { createQuestionSchema, listQuestionsQuerySchema } from "@/lib/contracts/question";
+import { enrichFieldSchema } from "@/lib/contracts/ai";
 
 /**
  * Tool MCP (M11, L9) — tipis: validasi input → panggil SERVICE yang sudah ada.
@@ -149,20 +150,28 @@ export function registerTools(server: McpServer, actor: Actor): void {
       }),
   );
 
-  // ── Enrichment AI (usulan metadata) ──────────────────────────
+  // ── Enrichment AI (usulan metadata + kontrak pedagogi MAT-41) ─
   server.registerTool(
     "enrich_question",
     {
       title: "Enrich soal dengan AI",
       description:
-        "Minta AI mengusulkan topik/kesulitan/kognitif/tags untuk SATU soal lalu menerapkannya " +
-        "(status draft→review). answer_key TIDAK diubah.",
+        "Minta AI mengusulkan metadata (topik/kesulitan/kognitif/tags) dan kontrak pedagogi MAT-41 " +
+        "(distractorRationale A–E untuk tiap pengecoh + rubric penilaian esai) untuk SATU soal lalu " +
+        "menerapkannya (status draft→review). Field pedagogi bersifat opt-in: sertakan " +
+        "'distractorRationale' dan/atau 'rubric' di `fields`; tanpa `fields` hanya metadata yang diusulkan. " +
+        "answer_key TIDAK diubah (rubrik ditambahkan, kunci tetap).",
       inputSchema: {
         questionId: z.string().uuid(),
-        fields: z
-          .array(z.enum(["topics", "difficulty", "cognitiveLevel", "tags"]))
+        // SATU sumber kebenaran: enum kanonikal `@/lib/contracts/ai` (MAT-41),
+        // bukan daftar terpisah yang bisa menyimpang dari HTTP API.
+        fields: enrichFieldSchema
+          .array()
           .optional()
-          .describe("Field yang di-enrich (default semua)"),
+          .describe(
+            "Field yang di-enrich: topics · difficulty · cognitiveLevel · tags · " +
+              "distractorRationale · rubric (default: metadata saja)",
+          ),
       },
     },
     async ({ questionId, fields }) =>
