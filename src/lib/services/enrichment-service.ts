@@ -11,7 +11,7 @@
  */
 import { eq, inArray, and, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { questions } from "@/lib/db/schema/question";
+import { questions, questionOptions } from "@/lib/db/schema/question";
 import { questionTopics, questionTags, topics, tags } from "@/lib/db/schema/taxonomy";
 import type { Actor } from "@/lib/auth/actor";
 import { assertCan, NotFoundError } from "@/lib/auth/guards";
@@ -21,6 +21,7 @@ import {
   buildSystemPrompt,
   buildUserPrompt,
   normalizeProposal,
+  evaluatePedagogyContract,
   ALL_FIELDS,
   type EnrichField,
 } from "@/lib/ai/enrich";
@@ -38,6 +39,20 @@ export interface EnrichOutcome {
   error?: string;
   /** Status soal sesudah (review bila sukses dari draft). */
   status?: string;
+  /**
+   * Laporan kontrak pedagogi (MAT-41): galat KaTeX, rationale pengecoh yang
+   * belum lengkap, dan rubrik esai yang belum sah. `ok` kontrak = semua bersih.
+   */
+  pedagogy?: {
+    ok: boolean;
+    katexIssues: number;
+    rationaleIssues: number;
+    rubricIssues: number;
+    /** Jumlah opsi pengecoh yang rationale-nya diterapkan dari usulan AI. */
+    rationaleApplied: number;
+    /** True bila rubrik diterapkan dari usulan AI. */
+    rubricApplied: boolean;
+  };
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -122,6 +137,8 @@ export async function enrichQuestion(
     .select({
       id: questions.id,
       contentMarkdown: questions.contentMarkdown,
+      questionType: questions.questionType,
+      answerKey: questions.answerKey,
       status: questions.status,
       authorId: questions.authorId,
     })
@@ -139,11 +156,23 @@ export async function enrichQuestion(
     return { questionId, ok: false, error: "AI belum siap (cek Pengaturan → AI)." };
   }
 
+  // Opsi soal (untuk rationale pengecoh) — hanya opsi salah yang diusulkan.
+  const optionRows = await db
+    .select({
+      label: questionOptions.label,
+      contentMarkdown: questionOptions.contentMarkdown,
+      isCorrect: questionOptions.isCorrect,
+    })
+    .from(questionOptions)
+    .where(eq(questionOptions.questionId, questionId))
+    .orderBy(questionOptions.orderIndex);
+
   const [topicNames, tagNames] = await Promise.all([listTopicNames(), listTagNames()]);
   const prompt = buildUserPrompt({
     content: q.contentMarkdown,
     ctx: { topics: topicNames, tags: tagNames },
     fields,
+    options: optionRows,
   });
 
   const ai = await chatJson<unknown>(cfg, [
@@ -156,6 +185,15 @@ export async function enrichQuestion(
 
   const newStatus = q.status === "draft" ? transition("draft", "review") : q.status;
 
+  // Terapkan rationale hanya ke opsi SALAH (label A–E). Kunci tak disentuh.
+  const incorrect = optionRows.filter((o) => !o.isCorrect);
+  const rationaleByLabel = new Map<string, string>();
+  for (const o of incorrect) {
+    const text = proposal.distractorRationale[o.label.toUpperCase()];
+    if (text) rationaleByLabel.set(o.label.toUpperCase(), text);
+  }
+  const rubricApplied = proposal.rubric !== null && fields.includes("rubric");
+
   await db.transaction(async (tx) => {
     const set: Record<string, unknown> = {
       aiTagged: true,
@@ -165,7 +203,18 @@ export async function enrichQuestion(
     if (proposal.difficulty !== null) set.difficulty = proposal.difficulty;
     if (proposal.cognitiveLevel !== null) set.cognitiveLevel = proposal.cognitiveLevel;
     if (q.status === "draft") set.status = newStatus;
+    if (rubricApplied) {
+      const key = (q.answerKey ?? {}) as Record<string, unknown>;
+      set.answerKey = { ...key, rubric: proposal.rubric };
+    }
     await tx.update(questions).set(set).where(eq(questions.id, questionId));
+
+    for (const [label, rationale] of rationaleByLabel) {
+      await tx
+        .update(questionOptions)
+        .set({ distractorRationale: rationale, updatedAt: new Date() })
+        .where(and(eq(questionOptions.questionId, questionId), eq(questionOptions.label, label)));
+    }
 
     if (proposal.topics.length) {
       for (const name of proposal.topics) {
@@ -181,16 +230,50 @@ export async function enrichQuestion(
     }
   });
 
+  // Evaluasi kontrak pedagogi pasca-terap: KaTeX murni, rationale lengkap, rubrik.
+  const mergedOptions = optionRows.map((o) => ({
+    label: o.label,
+    isCorrect: o.isCorrect,
+    contentMarkdown: o.contentMarkdown,
+    distractorRationale: rationaleByLabel.get(o.label.toUpperCase()) ?? null,
+  }));
+  const report = evaluatePedagogyContract({
+    contentMarkdown: q.contentMarkdown,
+    questionType: q.questionType,
+    options: mergedOptions,
+    answerKey: { rubric: rubricApplied ? proposal.rubric : null },
+  });
+
   await recordAudit({
     actor,
     entityType: "question",
     entityId: questionId,
     action: "update",
     changeSummary: `Enrichment AI (${fields.join(", ")})`,
-    diffPayload: { source: "ai_enrichment", fields, proposal, statusFrom: q.status, statusTo: newStatus },
+    diffPayload: {
+      source: "ai_enrichment",
+      fields,
+      proposal,
+      statusFrom: q.status,
+      statusTo: newStatus,
+      pedagogy: report,
+    },
   });
 
-  return { questionId, ok: true, proposal, status: newStatus };
+  return {
+    questionId,
+    ok: true,
+    proposal,
+    status: newStatus,
+    pedagogy: {
+      ok: report.ok,
+      katexIssues: report.katex.length,
+      rationaleIssues: report.rationale.length,
+      rubricIssues: report.rubric.length,
+      rationaleApplied: rationaleByLabel.size,
+      rubricApplied,
+    },
+  };
 }
 
 /** Batch: enrich banyak soal, kembalikan ringkasan. */

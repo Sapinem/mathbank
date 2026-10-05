@@ -25,13 +25,21 @@ export const aiSettingsSchema = z.object({
 });
 export type AiSettingsInput = z.infer<typeof aiSettingsSchema>;
 
+/** Field enrichment yang didukung (metadata D3 + pedagogi MAT-41). */
+export const enrichFieldSchema = z.enum([
+  "topics",
+  "difficulty",
+  "cognitiveLevel",
+  "tags",
+  "distractorRationale",
+  "rubric",
+]);
+
 /** Enrich 1 soal. */
 export const aiEnrichSchema = z.object({
   questionId: z.string().min(1),
   /** Kunci yang boleh diusulkan (default: semua yang didukung). */
-  fields: z
-    .array(z.enum(["topics", "difficulty", "cognitiveLevel", "tags"]))
-    .optional(),
+  fields: z.array(enrichFieldSchema).optional(),
 });
 export type AiEnrichInput = z.infer<typeof aiEnrichSchema>;
 
@@ -39,15 +47,11 @@ export type AiEnrichInput = z.infer<typeof aiEnrichSchema>;
 export const aiEnrichBodySchema = z.union([
   z.object({
     questionId: z.string().min(1),
-    fields: z
-      .array(z.enum(["topics", "difficulty", "cognitiveLevel", "tags"]))
-      .optional(),
+    fields: z.array(enrichFieldSchema).optional(),
   }),
   z.object({
     questionIds: z.array(z.string().min(1)).min(1).max(200),
-    fields: z
-      .array(z.enum(["topics", "difficulty", "cognitiveLevel", "tags"]))
-      .optional(),
+    fields: z.array(enrichFieldSchema).optional(),
   }),
 ]);
 export type AiEnrichBody = z.infer<typeof aiEnrichBodySchema>;
@@ -55,9 +59,7 @@ export type AiEnrichBody = z.infer<typeof aiEnrichBodySchema>;
 /** Batch enrichment. */
 export const aiEnrichBatchSchema = z.object({
   questionIds: z.array(z.string().min(1)).min(1).max(200),
-  fields: z
-    .array(z.enum(["topics", "difficulty", "cognitiveLevel", "tags"]))
-    .optional(),
+  fields: z.array(enrichFieldSchema).optional(),
 });
 export type AiEnrichBatchInput = z.infer<typeof aiEnrichBatchSchema>;
 

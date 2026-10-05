@@ -59,6 +59,20 @@ async function makeQuestion(stem = "Tentukan turunan dari $x^2$."): Promise<stri
   return r.id;
 }
 
+/** Soal PG dengan opsi A–E (A kunci, B–E pengecoh) untuk uji rationale. */
+async function makePgQuestion(stem = "Berapa $1+1$?"): Promise<string> {
+  const [r] = await sql`
+    INSERT INTO questions (question_type, difficulty, cognitive_level, grade, content_markdown, answer_key, status, author_id)
+    VALUES ('single_choice', 2, 'apply', 'sma-10', ${stem}, '{"correct":["A"]}'::jsonb, 'draft', ${guru.id})
+    RETURNING id`;
+  const labels = ["A", "B", "C", "D", "E"];
+  for (let i = 0; i < labels.length; i++) {
+    await sql`INSERT INTO question_options (question_id, label, content_markdown, is_correct, order_index)
+      VALUES (${r.id}, ${labels[i]}, ${String(i + 1)}, ${i === 0}, ${i})`;
+  }
+  return r.id;
+}
+
 beforeAll(async () => {
   await sql`SELECT 1`;
 });
@@ -160,6 +174,97 @@ describe("enrichment — enrichQuestion", () => {
     const r = await enrichQuestions([a, b], guru, ["difficulty"]);
     expect(r.ok).toBe(2);
     expect(r.failed).toBe(0);
+  });
+});
+
+describe("enrichment — kontrak pedagogi (MAT-41)", () => {
+  const RATIONALE = {
+    B: "Siswa keliru menganggap turunan x^2 menjadi x sehingga memilih nilai yang terlalu kecil.",
+    C: "Siswa lupa menambahkan konstanta sehingga hasilnya bergeser satu satuan dari jawaban benar.",
+    D: "Siswa tertukar urutan operasi sehingga mengalikan sebelum menjumlahkan dan hasilnya salah.",
+    E: "Siswa membalik tanda saat memindahkan ruas sehingga memperoleh nilai negatif yang keliru.",
+  };
+
+  it("menerapkan distractor_rationale ke SETIAP opsi salah saja (kunci utuh)", async () => {
+    const id = await makePgQuestion();
+    mockChatJson.mockResolvedValue({
+      ok: true,
+      data: { distractorRationale: RATIONALE, notes: "ok" },
+    });
+    const r = await enrichQuestion(id, guru, ["distractorRationale"]);
+    expect(r.ok).toBe(true);
+    expect(r.pedagogy?.rationaleApplied).toBe(4);
+
+    const rows = await sql`SELECT label, is_correct, distractor_rationale FROM question_options WHERE question_id = ${id} ORDER BY order_index`;
+    // Opsi benar (A) TIDAK diisi rationale.
+    expect(rows.find((o) => o.label === "A")!.distractor_rationale).toBeNull();
+    // Semua pengecoh (B–E) terisi.
+    for (const label of ["B", "C", "D", "E"]) {
+      expect(rows.find((o) => o.label === label)!.distractor_rationale).toBeTruthy();
+    }
+    // Kunci tidak berubah.
+    const [q] = await sql`SELECT answer_key FROM questions WHERE id = ${id}`;
+    expect(q.answer_key.correct).toEqual(["A"]);
+  });
+
+  it("laporan kontrak pedagogi ok bila rationale lengkap & KaTeX bersih", async () => {
+    const id = await makePgQuestion();
+    mockChatJson.mockResolvedValue({ ok: true, data: { distractorRationale: RATIONALE } });
+    const r = await enrichQuestion(id, guru, ["distractorRationale"]);
+    expect(r.pedagogy?.ok).toBe(true);
+    expect(r.pedagogy?.katexIssues).toBe(0);
+    expect(r.pedagogy?.rationaleIssues).toBe(0);
+  });
+
+  it("laporan kontrak pedagogi menandai rationale yang belum lengkap", async () => {
+    const id = await makePgQuestion();
+    // Hanya B yang diisi → C, D, E belum ber-rationale.
+    mockChatJson.mockResolvedValue({ ok: true, data: { distractorRationale: { B: RATIONALE.B } } });
+    const r = await enrichQuestion(id, guru, ["distractorRationale"]);
+    expect(r.pedagogy?.rationaleApplied).toBe(1);
+    expect(r.pedagogy?.rationaleIssues).toBe(3);
+    expect(r.pedagogy?.ok).toBe(false);
+  });
+
+  it("menerapkan rubrik ke answer_key.rubric tanpa mengubah kunci", async () => {
+    const id = await makePgQuestion();
+    mockChatJson.mockResolvedValue({
+      ok: true,
+      data: {
+        rubric: {
+          totalPoints: 5,
+          criteria: [
+            { description: "Menuliskan model persamaan yang benar", points: 3 },
+            { description: "Menyelesaikan dan menafsirkan hasil", points: 2 },
+          ],
+        },
+      },
+    });
+    const r = await enrichQuestion(id, guru, ["rubric"]);
+    expect(r.pedagogy?.rubricApplied).toBe(true);
+    const [q] = await sql`SELECT answer_key FROM questions WHERE id = ${id}`;
+    expect(q.answer_key.rubric.totalPoints).toBe(5);
+    expect(q.answer_key.rubric.criteria).toHaveLength(2);
+    expect(q.answer_key.correct).toEqual(["A"]); // kunci tak tersentuh
+  });
+
+  it("menandai galat KaTeX pada konten soal lewat laporan pedagogi", async () => {
+    const id = await makePgQuestion("Rumus rusak: $\\frac{1}$");
+    mockChatJson.mockResolvedValue({ ok: true, data: { difficulty: 2 } });
+    const r = await enrichQuestion(id, guru, ["difficulty"]);
+    expect(r.pedagogy?.katexIssues).toBeGreaterThan(0);
+    expect(r.pedagogy?.ok).toBe(false);
+  });
+
+  it("esai tanpa rubrik → laporan pedagogi menandai rubrik kosong", async () => {
+    const [row] = await sql`
+      INSERT INTO questions (question_type, difficulty, cognitive_level, grade, content_markdown, answer_key, status, author_id)
+      VALUES ('essay', 3, 'analyze', 'sma-11', 'Uraikan pembuktiannya.', '{}'::jsonb, 'draft', ${guru.id})
+      RETURNING id`;
+    mockChatJson.mockResolvedValue({ ok: true, data: { difficulty: 4 } });
+    const r = await enrichQuestion(row.id, guru, ["difficulty"]);
+    expect(r.pedagogy?.rubricIssues).toBeGreaterThan(0);
+    expect(r.pedagogy?.ok).toBe(false);
   });
 });
 

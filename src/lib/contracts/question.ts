@@ -48,6 +48,28 @@ export function isOptionBased(type: z.infer<typeof questionTypeSchema>): boolean
   return (OPTION_BASED_TYPES as readonly string[]).includes(type);
 }
 
+// ── Rubrik penilaian esai/isian (MAT-41) ─────────────────────
+// Skema rubrik analitik bertingkat: kriteria langkah matematis + poin.
+// Disimpan di dalam `answer_key.rubric` (tanpa kolom DB baru).
+
+export const rubricCriterionSchema = z.object({
+  /** Id stabil opsional (untuk referensi UI/audit). */
+  id: z.string().max(50).optional(),
+  /** Deskripsi langkah/kriteria yang dinilai (mis. "Menuliskan model persamaan"). */
+  description: z.string().min(10).max(500),
+  /** Poin kriteria (bilangan positif). */
+  points: z.number().positive().max(100),
+});
+
+export const rubricSchema = z.object({
+  /** Total poin (harus sama dengan jumlah poin kriteria). */
+  totalPoints: z.number().positive().max(1000).optional(),
+  criteria: z.array(rubricCriterionSchema).min(1).max(20),
+});
+
+export type Rubric = z.infer<typeof rubricSchema>;
+export type RubricCriterion = z.infer<typeof rubricCriterionSchema>;
+
 // ── answer_key per tipe (L7) ──────────────────────────────────
 // Sebagian besar tipe = pilihan ganda biasa (content_markdown + options).
 // `data_payload` hanya untuk matrix_grid & matching (UI interaktif).
@@ -59,7 +81,28 @@ export const answerKeySchema = z.object({
   text: z.string().optional(),
   /** Pembahasan singkat jawaban. */
   explanation: z.string().optional(),
+  /** Rubrik penilaian (wajib untuk esai/isian — ditegakkan gate pedagogi). */
+  rubric: rubricSchema.nullable().optional(),
 });
+
+// ── Metadata pedagogi (MAT-41) ────────────────────────────────
+// Taksonomi kognitif (Bloom C1–C6 / Webb's DOK) & status kepatuhan Haladyna.
+// Bagian dari kontrak enrichment (bukan kolom DB) — dipakai gate mutu + audit.
+
+export const dokLevelSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
+
+export const pedagogyMetaSchema = z.object({
+  /** Webb's Depth of Knowledge (1–4). */
+  dokLevel: dokLevelSchema.optional(),
+  /** Bloom C1–C6 (turunan dari `cognitiveLevel`). */
+  bloomLevel: z.enum(["C1", "C2", "C3", "C4", "C5", "C6"]).optional(),
+  /** Seluruh kaidah Haladyna terpenuhi (hasil evaluator pedagogi). */
+  haladynaCompliant: z.boolean().optional(),
+  /** Cakupan rationale pengecoh: 0–1 (rasio opsi salah ber-rationale). */
+  rationaleCoverage: z.number().min(0).max(1).optional(),
+});
+
+export type PedagogyMeta = z.infer<typeof pedagogyMetaSchema>;
 
 export const dataPayloadSchema = z.record(z.string(), z.unknown()).default({});
 
@@ -124,6 +167,13 @@ export const createQuestionSchema = z.object({
   solutions: z.array(solutionInputSchema).optional().default([]),
   topicIds: z.array(z.string().uuid()).default([]),
   tagIds: z.array(z.string().uuid()).default([]),
+
+  /**
+   * Metadata pedagogi (MAT-41): DOK/Bloom/Haladyna + cakupan rationale.
+   * Diturunkan oleh pipeline enrichment (bukan diisi manual); opsional &
+   * tidak dipersistensi langsung (dipakai gate mutu + laporan).
+   */
+  pedagogyMeta: pedagogyMetaSchema.optional(),
 });
 
 // ── Perbarui soal ─────────────────────────────────────────────
