@@ -11,7 +11,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
-import { bundleTypeEnum, bundleItemRoleEnum, questionStatusEnum } from "./_enums";
+import { bundleTypeEnum, bundleOriginEnum, bundleItemRoleEnum, questionStatusEnum } from "./_enums";
 import { questions } from "./question";
 import { sources } from "./source";
 import { events } from "./event";
@@ -24,6 +24,8 @@ export const bundles = pgTable(
     title: varchar("title", { length: 255 }).notNull(),
     slug: varchar("slug", { length: 255 }).notNull(),
     bundleType: bundleTypeEnum("bundle_type").notNull(),
+    /** Asal-usul paket (MAT-39): `ingest` = pipeline naskah; `manual` = guru/admin. */
+    origin: bundleOriginEnum("origin").default("manual").notNull(),
     sourceId: uuid("source_id").references(() => sources.id, { onDelete: "set null" }),
     /** URL artikel/naskah spesifik (ADR-0014) — `sources.url` = situsnya. */
     url: text("url"),
@@ -44,6 +46,7 @@ export const bundles = pgTable(
       .on(t.slug)
       .where(sql`${t.deletedAt} IS NULL`),
     index("idx_bundles_type").on(t.bundleType),
+    index("idx_bundles_origin").on(t.origin),
     index("idx_bundles_source_id").on(t.sourceId),
     index("idx_bundles_event_id").on(t.eventId),
     index("idx_bundles_status").on(t.status),

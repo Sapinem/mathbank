@@ -4,7 +4,6 @@ import { questions, questionOptions } from "@/lib/db/schema/question";
 import { solutions } from "@/lib/db/schema/solution";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import { isQuestionUsedInBundles } from "./bundle-service";
-import { isQuestionUsedInCollections } from "./collection-service";
 import { contentHash } from "@/lib/ingest/hash";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
@@ -261,17 +260,13 @@ export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
 
   assertCan(actor, "question:delete", { ownerId: existing.authorId });
 
-  // RESTRICT: soal yang dipakai paket AKTIF (M7) atau koleksi (ADR-0016) tak boleh dihapus.
+  // RESTRICT: soal yang dipakai paket AKTIF (M7) tak boleh dihapus.
   // T-M7-3: paket TERARSIP tidak memblokir — jika tidak, soal mustahil dihapus
   // setelah paket yang memakainya diarsipkan (dead-end).
+  // MAT-39: koleksi dihapus — `bundles` kini satu-satunya wadah (origin/bundle_type).
   if (await isQuestionUsedInBundles(id)) {
     throw new ConflictError(
       "Soal ini dipakai di paket soal — keluarkan dari paket dulu.",
-    );
-  }
-  if (await isQuestionUsedInCollections(id)) {
-    throw new ConflictError(
-      "Soal ini dipakai di koleksi soal — keluarkan dari koleksi dulu.",
     );
   }
 
@@ -312,15 +307,11 @@ export async function hardDeleteQuestion(id: string, actor: Actor): Promise<void
     );
   }
 
-  // T-M7-3: hanya paket AKTIF yang memblokir hapus permanen; koleksi publik selalu memblokir.
+  // T-M7-3: hanya paket AKTIF yang memblokir hapus permanen.
+  // MAT-39: koleksi dihapus — `bundles` kini satu-satunya wadah.
   if (await isQuestionUsedInBundles(id)) {
     throw new ConflictError(
       "Soal ini dipakai di paket soal — keluarkan dari paket dulu.",
-    );
-  }
-  if (await isQuestionUsedInCollections(id)) {
-    throw new ConflictError(
-      "Soal ini dipakai di koleksi soal — keluarkan dari koleksi dulu.",
     );
   }
 

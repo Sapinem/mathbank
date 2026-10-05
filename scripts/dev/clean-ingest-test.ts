@@ -10,7 +10,6 @@ async function cleanIngestTest() {
   const { db } = await import("../../src/lib/db");
   const { questions } = await import("../../src/lib/db/schema/question");
   const { bundles, bundleItems } = await import("../../src/lib/db/schema/bundle");
-  const { collectionItems } = await import("../../src/lib/db/schema/collection");
   const { ingestQueue } = await import("../../src/lib/db/schema/system");
   const { mediaAssets } = await import("../../src/lib/db/schema/media");
   const { deleteAsset } = await import("../../src/lib/services/media-service");
@@ -19,8 +18,7 @@ async function cleanIngestTest() {
   const before = await db.select({ n: sql<number>`count(*)::int` }).from(questions);
   console.log(`Soal sebelum: ${before[0]?.n ?? 0}`);
 
-  // 1. Isi paket & koleksi (keduanya RESTRICT ke questions).
-  await db.delete(collectionItems);
+  // 1. Isi paket (RESTRICT ke questions). MAT-39: koleksi dihapus, hanya bundle_items.
   await db.delete(bundleItems);
   // 2. Paket/naskah.
   await db.delete(bundles);

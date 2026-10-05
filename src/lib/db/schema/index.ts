@@ -7,7 +7,6 @@ export * from "./question";
 export * from "./solution";
 export * from "./taxonomy";
 export * from "./bundle";
-export * from "./collection";
 export * from "./media";
 export * from "./system";
 export * from "./auth";

@@ -5,6 +5,7 @@ import { listBundles, createBundle } from "@/lib/services/bundle-service";
 const createSchema = z.object({
   title: z.string().min(1).max(255),
   bundleType: z.enum(["source", "exam"]),
+  origin: z.enum(["ingest", "manual"]).optional(),
   sourceId: z.string().uuid().nullable().optional(),
   eventId: z.string().uuid().nullable().optional(),
   year: z.number().int().min(1900).max(2100).nullable().optional(),
@@ -13,11 +14,24 @@ const createSchema = z.object({
   instructions: z.string().max(5000).nullable().optional(),
 });
 
-/** GET /api/bundles — daftar paket aktif. */
+const listQuerySchema = z.object({
+  bundleType: z.enum(["source", "exam"]).optional(),
+  origin: z.enum(["ingest", "manual"]).optional(),
+});
+
+/**
+ * GET /api/bundles — daftar paket aktif.
+ * MAT-39: dukung filter `bundleType` & `origin` via query string.
+ */
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
-  handler: async ({ actor }) => listBundles(actor),
+  query: listQuerySchema,
+  handler: async ({ actor, query }) =>
+    listBundles(actor, {
+      bundleType: query?.bundleType,
+      origin: query?.origin,
+    }),
 });
 
 /**

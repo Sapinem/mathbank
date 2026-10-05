@@ -54,6 +54,7 @@ export async function createBundle(
       title: input.title,
       slug,
       bundleType: input.bundleType,
+      origin: input.origin ?? "manual",
       sourceId: input.sourceId ?? null,
       eventId: input.eventId ?? null,
       year: input.year ?? null,
@@ -94,6 +95,7 @@ export async function updateBundle(
     set.slug = await uniqueSlug(patch.title, id);
   }
   if (patch.bundleType !== undefined) set.bundleType = patch.bundleType;
+  if (patch.origin !== undefined) set.origin = patch.origin;
   if (patch.sourceId !== undefined) set.sourceId = patch.sourceId;
   if (patch.eventId !== undefined) set.eventId = patch.eventId;
   if (patch.year !== undefined) set.year = patch.year;
@@ -156,6 +158,7 @@ export async function duplicateBundle(
     {
       title,
       bundleType: src.bundleType,
+      origin: src.origin,
       sourceId: src.sourceId,
       eventId: src.eventId,
       year: src.year,

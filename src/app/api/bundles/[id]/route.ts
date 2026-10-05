@@ -11,6 +11,7 @@ import { NotFoundError } from "@/lib/auth/guards";
 const patchSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   bundleType: z.enum(["source", "exam"]).optional(),
+  origin: z.enum(["ingest", "manual"]).optional(),
   sourceId: z.string().uuid().nullable().optional(),
   eventId: z.string().uuid().nullable().optional(),
   year: z.number().int().min(1900).max(2100).nullable().optional(),

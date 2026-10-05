@@ -15,6 +15,7 @@ import type { Actor } from "@/lib/auth/actor";
 import { slugify } from "@/lib/taxonomy/tree";
 
 export type BundleType = "source" | "exam";
+export type BundleOrigin = "ingest" | "manual";
 export type BundleItemRole = "question" | "stimulus";
 
 export interface BundleRow {
@@ -22,6 +23,7 @@ export interface BundleRow {
   title: string;
   slug: string;
   bundleType: BundleType;
+  origin: BundleOrigin;
   sourceId: string | null;
   eventId: string | null;
   year: number | null;
@@ -77,6 +79,7 @@ export type BundleCore = Omit<BundleRow, "itemCount">;
 export interface CreateBundleInput {
   title: string;
   bundleType: BundleType;
+  origin?: BundleOrigin;
   sourceId?: string | null;
   eventId?: string | null;
   year?: number | null;
@@ -88,6 +91,7 @@ export interface CreateBundleInput {
 export interface UpdateBundleInput {
   title?: string;
   bundleType?: BundleType;
+  origin?: BundleOrigin;
   sourceId?: string | null;
   eventId?: string | null;
   year?: number | null;
@@ -116,6 +120,7 @@ export function bundleColumns() {
     title: bundles.title,
     slug: bundles.slug,
     bundleType: bundles.bundleType,
+    origin: bundles.origin,
     sourceId: bundles.sourceId,
     eventId: bundles.eventId,
     year: bundles.year,

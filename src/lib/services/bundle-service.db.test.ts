@@ -29,9 +29,16 @@ const admin: Actor = { id: "b-admin", name: "Admin", roles: ["admin"], via: "ses
 const teacher: Actor = { id: "b-teacher", name: "Guru", roles: ["teacher"], via: "session" };
 
 async function clean() {
-  await sql`DELETE FROM bundle_items`;
-  await sql`DELETE FROM bundles`;
-  await sql`DELETE FROM questions`;
+  // Use Drizzle db (same pool as service code) so deletes see all
+  // committed data from previous test. MAT-39: nullify parent_id first
+  // (self-ref FK is RESTRICT).
+  const { db } = await import("@/lib/db");
+  const { bundles, bundleItems } = await import("@/lib/db/schema/bundle");
+  const { questions } = await import("@/lib/db/schema/question");
+  await db.delete(bundleItems);
+  await db.delete(bundles);
+  await db.update(questions).set({ parentId: null });
+  await db.delete(questions);
 }
 
 async function mkQuestion(content = "Soal contoh $1+1$?", withKey = true) {
@@ -76,6 +83,68 @@ describe("createBundle / listBundles", () => {
     expect(b.slug).toBe("uts-matematika-kelas-x");
     expect(b.status).toBe("draft");
     expect(b.itemCount).toBe(0);
+  });
+
+  it("MAT-39: origin default 'manual' bila tak disebut", async () => {
+    const b = await createBundle(
+      { title: "Paket Default Origin", bundleType: "exam" },
+      admin,
+    );
+    expect(b.origin).toBe("manual");
+  });
+
+  it("MAT-39: origin 'ingest' bila diberikan", async () => {
+    const b = await createBundle(
+      { title: "Paket Ingest", bundleType: "source", origin: "ingest" },
+      admin,
+    );
+    expect(b.origin).toBe("ingest");
+  });
+
+  it("MAT-39: listBundles filter by bundleType", async () => {
+    await createBundle({ title: "Arsip A", bundleType: "source" }, admin);
+    await createBundle({ title: "Ujian A", bundleType: "exam" }, admin);
+    const sources = await listBundles(admin, { bundleType: "source" });
+    expect(sources.every((b) => b.bundleType === "source")).toBe(true);
+    expect(sources.length).toBe(1);
+    const exams = await listBundles(admin, { bundleType: "exam" });
+    expect(exams.every((b) => b.bundleType === "exam")).toBe(true);
+    expect(exams.length).toBe(1);
+  });
+
+  it("MAT-39: listBundles filter by origin", async () => {
+    await createBundle(
+      { title: "Manual Paket", bundleType: "exam" },
+      admin,
+    );
+    await createBundle(
+      { title: "Ingest Paket", bundleType: "source", origin: "ingest" },
+      admin,
+    );
+    const ingest = await listBundles(admin, { origin: "ingest" });
+    expect(ingest.every((b) => b.origin === "ingest")).toBe(true);
+    expect(ingest.length).toBe(1);
+    const manual = await listBundles(admin, { origin: "manual" });
+    expect(manual.every((b) => b.origin === "manual")).toBe(true);
+    expect(manual.length).toBe(1);
+  });
+
+  it("MAT-39: updateBundle mengubah origin", async () => {
+    const b = await createBundle(
+      { title: "Paket Ubah Origin", bundleType: "source" },
+      admin,
+    );
+    const updated = await updateBundle(b.id, { origin: "ingest" }, admin);
+    expect(updated.origin).toBe("ingest");
+  });
+
+  it("MAT-39: duplicateBundle menyalin origin", async () => {
+    const b = await createBundle(
+      { title: "Paket Asli Origin", bundleType: "source", origin: "ingest" },
+      admin,
+    );
+    const copy = await duplicateBundle(b.id, admin);
+    expect(copy.origin).toBe("ingest");
   });
 
   it("slug unik: judul sama → akhiran -2", async () => {

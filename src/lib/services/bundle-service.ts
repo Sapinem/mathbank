@@ -17,6 +17,7 @@
 // Tipe publik (re-export).
 export type {
   BundleType,
+  BundleOrigin,
   BundleItemRole,
   BundleRow,
   BundleItemRow,

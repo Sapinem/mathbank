@@ -26,6 +26,7 @@ function bundle(over: Partial<BundleDetail> = {}): BundleDetail {
     title: "Pemantapan ASTS I",
     slug: "pemantapan-asts-i",
     bundleType: "exam",
+    origin: "manual",
     sourceId: null,
     eventId: null,
     year: 2026,

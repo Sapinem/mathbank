@@ -78,12 +78,21 @@ export const sourceKindEnum = pgEnum("source_kind", [
   "school",
 ]);
 
-/** Jenis paket soal. */
+/**
+ * Jenis paket soal (wadah naskah digabung — MAT-39):
+ * `source` = arsip/bahan; `exam` = naskah ujian.
+ */
 export const bundleTypeEnum = pgEnum("bundle_type", [
   "source",
   "exam",
-
 ]);
+
+/**
+ * Asal-usul paket (MAT-39): dipakai bersama `bundle_type` untuk
+ * membedakan jalur pembuatan. `ingest` = dari pipeline naskah;
+ * `manual` = dibuat guru/admin langsung.
+ */
+export const bundleOriginEnum = pgEnum("bundle_origin", ["ingest", "manual"]);
 
 /** Peran baris di dalam paket. */
 export const bundleItemRoleEnum = pgEnum("bundle_item_role", [
@@ -126,7 +135,7 @@ export const auditActionEnum = pgEnum("audit_action", [
 export const auditEntityEnum = pgEnum("audit_entity", [
   "question",
   "bundle",
-  "collection", // ADR-0016
+  // MAT-39: `collection` dihapus — wadah naskah digabung ke `bundles`.
   "topic",
   "source",
   "event",

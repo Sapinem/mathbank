@@ -30,10 +30,6 @@ export interface PermissionMatrix {
   "reference:manage": Access;
   /** Kelola paket soal. */
   "bundle:manage": Access;
-  /** Lihat koleksi (arsip publik, ADR-0016) — semua peran. */
-  "collection:view": Access;
-  /** Kelola koleksi (arsip publik) — guru/reviewer/admin. */
-  "collection:manage": Access;
   /** Kelola aset media. */
   "media:manage": Access;
   /** Kelola pengaturan sistem. */
@@ -131,23 +127,6 @@ export const PERMISSIONS: Record<keyof PermissionMatrix, Record<Role, Access>> =
     teacher: "own", // ADR-0009 "Opsi 2": latihan = milik pembuat; koleksi = umum
     reviewer: "own",
     agent: "no", // agent TIDAK boleh bundle
-    machine: "no",
-  },
-  // ADR-0016: `collections` = arsip PUBLIK — beda hakikat dari `bundles` (own).
-  // Karena tak ada `ownerId`, izin ini BERLAKU di gerbang route (CONSTRAINTS #35
-  // hanya mengikat izin ber-`own`).
-  "collection:view": {
-    admin: "yes",
-    teacher: "yes",
-    reviewer: "yes",
-    agent: "yes", // arsip boleh dicari agent
-    machine: "yes",
-  },
-  "collection:manage": {
-    admin: "yes",
-    teacher: "yes", // publik/institusional: semua guru boleh kelola
-    reviewer: "yes",
-    agent: "no",
     machine: "no",
   },
   "media:manage": {

@@ -64,13 +64,21 @@ async function attachCounts(rows: BundleCore[]): Promise<BundleRow[]> {
  * ⚠️ Sengaja TIDAK menyaring per-pemilik: guru **boleh melihat** latihan guru
  * lain (keputusan pemilik produk). Yang dibatasi adalah **mutasi**, ditegakkan
  * `assertBundleWrite` per-paket.
+ *
+ * MAT-39: dukung filter opsional `bundleType` & `origin`.
  */
-export async function listBundles(actor: Actor): Promise<BundleRow[]> {
+export async function listBundles(
+  actor: Actor,
+  filter?: { bundleType?: "source" | "exam"; origin?: "ingest" | "manual" },
+): Promise<BundleRow[]> {
   assertBundleRead(actor);
+  const conds = [isNull(bundles.deletedAt)];
+  if (filter?.bundleType) conds.push(eq(bundles.bundleType, filter.bundleType));
+  if (filter?.origin) conds.push(eq(bundles.origin, filter.origin));
   const rows = await db
     .select(bundleColumns())
     .from(bundles)
-    .where(isNull(bundles.deletedAt))
+    .where(and(...conds))
     .orderBy(desc(bundles.updatedAt));
   return attachCounts(rows);
 }
