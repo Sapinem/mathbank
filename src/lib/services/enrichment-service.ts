@@ -69,59 +69,75 @@ async function listTagNames(): Promise<string[]> {
   return rows.map((r) => r.name);
 }
 
-/** slug sederhana (batas 200 char, sesuai kolom). */
-function slugify(s: string): string {
+/**
+ * Slug sederhana. **CORR-02:** batas **100** char karena `tags.slug` adalah
+ * `varchar(100)` (topics 255, tapi ambil batas terketat agar satu fungsi aman).
+ * `normalize("NFKD")` bisa MEMPERPANJANG string (ligatur `ﬃ`→`ffi`), jadi potong
+ * SETELAH normalisasi & buang `-` ekor sesudah potong — bukan sebelum.
+ */
+function slugify(s: string, maxLength = 100): string {
   const base = s
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 200);
-  return base.replace(/-+$/g, "") || "untitled";
+    .slice(0, maxLength)
+    .replace(/-+$/g, "");
+  return base || "untitled";
 }
 
 /** Cari/buat topik berdasarkan nama (case-insensitive), dalam transaksi. */
 async function findOrCreateTopicTx(tx: Tx, name: string): Promise<string> {
+  const slug = slugify(name);
+  // **CORR-03:** cocokkan nama ATAU slug. Tabrakan bisa pada `uq_topics_slug`
+  // (dua nama berbeda → slug sama), bukan hanya pada nama.
   const [existing] = await tx
     .select({ id: topics.id })
     .from(topics)
-    .where(sql`lower(${topics.name}) = lower(${name})`)
+    .where(sql`lower(${topics.name}) = lower(${name}) OR ${topics.slug} = ${slug}`)
     .limit(1);
   if (existing) return existing.id;
   const [row] = await tx
     .insert(topics)
-    .values({ name, slug: slugify(name), level: 1 })
+    .values({ name, slug, level: 1 })
     .onConflictDoNothing()
     .returning({ id: topics.id });
   if (row) return row.id;
   const [again] = await tx
     .select({ id: topics.id })
     .from(topics)
-    .where(sql`lower(${topics.name}) = lower(${name})`)
+    .where(sql`lower(${topics.name}) = lower(${name}) OR ${topics.slug} = ${slug}`)
     .limit(1);
-  return again!.id;
+  // Tanpa non-null assertion: lebih baik galat jelas daripada `TypeError`.
+  if (!again) throw new Error(`Gagal membuat/menemukan topik: ${name}`);
+  return again.id;
 }
 
 /** Cari/buat tag berdasarkan nama, dalam transaksi. */
 async function findOrCreateTagTx(tx: Tx, name: string): Promise<string> {
+  const slug = slugify(name);
+  // **CORR-03:** fallback kueri OR (nama ATAU slug) — tabrakan unik `tags` bisa
+  // pada `uq_tags_name` maupun `uq_tags_slug`.
   const [existing] = await tx
     .select({ id: tags.id })
     .from(tags)
-    .where(sql`lower(${tags.name}) = lower(${name})`)
+    .where(sql`lower(${tags.name}) = lower(${name}) OR ${tags.slug} = ${slug}`)
     .limit(1);
   if (existing) return existing.id;
   const [row] = await tx
     .insert(tags)
-    .values({ name, slug: slugify(name) })
+    .values({ name, slug })
     .onConflictDoNothing()
     .returning({ id: tags.id });
   if (row) return row.id;
   const [again] = await tx
     .select({ id: tags.id })
     .from(tags)
-    .where(sql`lower(${tags.name}) = lower(${name})`)
+    .where(sql`lower(${tags.name}) = lower(${name}) OR ${tags.slug} = ${slug}`)
     .limit(1);
-  return again!.id;
+  // Tanpa non-null assertion: cegah runtime `TypeError` bila benar-benar gagal.
+  if (!again) throw new Error(`Gagal membuat/menemukan tag: ${name}`);
+  return again.id;
 }
 
 /**

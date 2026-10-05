@@ -12,9 +12,9 @@
  * `collectTopicDescendants` tetap diekspor di sini untuk kompatibilitas
  * pemanggil lama (mis. `question-service.db.test.ts`).
  */
-import { eq, inArray } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { questionTopics, questionTags, topics } from "@/lib/db/schema/taxonomy";
+import { questionTags, topics } from "@/lib/db/schema/taxonomy";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
 import {
   collectDescendantsFrom,
@@ -38,22 +38,20 @@ export async function collectTopicDescendants(
   return collectDescendantsFrom(all as TopicEdge[], rootId);
 }
 
-/** Ambil id soal yang terkait sekumpulan topik (M:N). */
-async function questionIdsForTopics(topicIds: string[]): Promise<string[]> {
-  if (topicIds.length === 0) return [];
+/**
+ * Pastikan tag ada (dipakai sebagai penjaga otorisasi/filter).
+ *
+ * **PERF-01:** daftar id soal TIDAK lagi ditarik ke Node.js — filter tag
+ * dieksekusi PostgreSQL lewat semi-join `EXISTS` (lihat `filters-builder.ts`).
+ * Fungsi ini hanya memverifikasi tag ada; tak mengembalikan id soal.
+ */
+async function tagExists(tagId: string): Promise<boolean> {
   const rows = await db
-    .select({ id: questionTopics.questionId })
-    .from(questionTopics)
-    .where(inArray(questionTopics.topicId, topicIds));
-  return [...new Set(rows.map((r) => r.id))];
-}
-
-async function questionIdsForTag(tagId: string): Promise<string[]> {
-  const rows = await db
-    .select({ id: questionTags.questionId })
+    .select({ tagId: questionTags.tagId })
     .from(questionTags)
-    .where(eq(questionTags.tagId, tagId));
-  return [...new Set(rows.map((r) => r.id))];
+    .where(eq(questionTags.tagId, tagId))
+    .limit(1);
+  return rows.length > 0;
 }
 
 /** Re-export tipe & builder murni agar pemanggil lama tetap kompatibel. */
@@ -71,13 +69,16 @@ export {
  *
  * Fungsi ini adalah cangkang: ia memecah resolusi topik/tag (DB) dari
  * pembangunan kondisi (pure, di `filters-builder.ts`).
+ *
+ * **PERF-01:** hasil resolusi yang diteruskan ke builder hanya DAFTAR ID TOPIK
+ * (biasanya kecil) — bukan ribuan id soal. Semi-join `EXISTS` di SQL yang
+ * menyaring soal, sehingga tak ada tarikan UUID raksasa ke memori Node.js.
  */
 export async function buildQuestionFilter(
   query: ListQuestionsQuery,
 ): Promise<BuiltFilter> {
   // ── Resolusi topik (DB) ──────────────────────────────────────
   let resolvedTopicIds: string[] | undefined;
-  let questionIdsForTopicsResolved: string[] | undefined;
 
   if (query.topicId?.length) {
     const allIds = new Set<string>();
@@ -90,19 +91,18 @@ export async function buildQuestionFilter(
       for (const d of descendants) allIds.add(d);
     }
     resolvedTopicIds = [...allIds];
-    questionIdsForTopicsResolved = await questionIdsForTopics(resolvedTopicIds);
   }
 
   // ── Resolusi tag (DB) ────────────────────────────────────────
-  let questionIdsForTagResolved: string[] | undefined;
+  // PERF-01: cukup pastikan tag ada; penyaringan dilakukan lewat EXISTS.
+  // Tag yang tak dikenal → hasil kosong (paritas dengan perilaku lama).
+  let tagMissing = false;
   if (query.tagId) {
-    questionIdsForTagResolved = await questionIdsForTag(query.tagId);
+    tagMissing = !(await tagExists(query.tagId));
   }
 
   // ── Bangun kondisi (pure) ───────────────────────────────────
-  return buildFilterFrom(query, {
-    resolvedTopicIds,
-    questionIdsForTopics: questionIdsForTopicsResolved,
-    questionIdsForTag: questionIdsForTagResolved,
-  });
+  const built = buildFilterFrom(query, { resolvedTopicIds });
+  if (tagMissing) return { where: sql`false`, byRelevance: built.byRelevance };
+  return built;
 }

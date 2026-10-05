@@ -390,6 +390,41 @@ describe("M6 — filter & pencarian", () => {
     expect(ids).toContain(a.id);
   });
 
+  it("PERF-01: filter tag memakai semi-join EXISTS (ditemukan & terisolasi)", async () => {
+    const [tag] = await sql`
+      INSERT INTO tags (name, slug) VALUES (${`perf1-${Date.now()}`}, ${`perf1-${Date.now()}`})
+      RETURNING id`;
+    const [other] = await sql`
+      INSERT INTO tags (name, slug) VALUES (${`perf1b-${Date.now()}`}, ${`perf1b-${Date.now()}`})
+      RETURNING id`;
+
+    const withTag = await createQuestion(
+      baseInput({ tagIds: [tag.id], contentMarkdown: `Soal bertag ${Date.now()}` }),
+      teacher,
+    );
+    await createQuestion(
+      baseInput({ tagIds: [other.id], contentMarkdown: `Soal tag lain ${Date.now()}` }),
+      teacher,
+    );
+
+    const res = await listQuestions(
+      { tagId: tag.id, limit: 20, offset: 0 } as never,
+      teacher,
+    );
+    const ids = res.items.map((i) => i.id);
+    expect(ids).toContain(withTag.id);
+    expect(ids).toHaveLength(1);
+
+    // Tag tak dikenal → hasil kosong (paritas perilaku lama).
+    const none = await listQuestions(
+      { tagId: "00000000-0000-0000-0000-000000000000", limit: 20, offset: 0 } as never,
+      teacher,
+    );
+    expect(none.items).toHaveLength(0);
+    await sql`DELETE FROM question_tags WHERE tag_id IN (${tag.id}, ${other.id})`;
+    await sql`DELETE FROM tags WHERE id IN (${tag.id}, ${other.id})`;
+  });
+
   it("pencarian trigram toleran typo ringan", async () => {
     await createQuestion(
       baseInput({ contentMarkdown: "Tentukan hasil dari limit fungsi trigonometri" }),

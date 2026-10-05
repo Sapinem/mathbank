@@ -6,13 +6,19 @@
  *
  * Tanggung jawab:
  *  - BFS pengumpulan keturunan topik dari snapshot datar (pure).
- *  - Bangun kondisi WHERE dari param query + hasil resolusi topik/tag.
+ *  - Bangun kondisi WHERE dari param query + hasil resolusi topik.
+ *
+ * **PERF-01:** filter topik & tag memakai **semi-join `EXISTS`** yang dieksekusi
+ * PostgreSQL, bukan `IN (…ribuan uuid…)` hasil tarik ke memori Node.js. Dengan
+ * begitu kueri tetap satu putaran, tak memblokir event loop, dan tak menyusun
+ * daftar id raksasa.
  *
  * Tidak mengimpor `@/lib/db` — hanya `drizzle-orm` (SQL builder, murni) dan
  * tipe dari skema/kontrak.
  */
 import { and, eq, isNull, inArray, sql, type SQL } from "drizzle-orm";
 import { questions } from "@/lib/db/schema/question";
+import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
 
 /** Bentuk ringkas node topik untuk perhitungan pure. */
@@ -59,20 +65,19 @@ export interface BuiltFilter {
 }
 
 /**
- * Param tambahan hasil resolusi DB (topik/tag → daftar id soal).
+ * Param tambahan hasil resolusi DB (topik → daftar id topik + keturunannya).
  * Pemanggil (executor) mengisi ini sebelum memanggil `buildFilterFrom`.
+ *
+ * **PERF-01:** executor hanya perlu mengirim DAFTAR ID TOPIK (biasanya kecil),
+ * bukan daftar id soal. Filter soal→topik dieksekusi DB lewat `EXISTS`.
  */
 export interface FilterResolution {
   /** Id seluruh topik + keturunan (gabungan bila multi-topik). */
   resolvedTopicIds?: string[];
-  /** Id soal yang terkait topik di atas (dari `question_topics`). */
-  questionIdsForTopics?: string[];
-  /** Id soal yang terkait tag (dari `question_tags`). */
-  questionIdsForTag?: string[];
 }
 
 /**
- * Bangun kondisi WHERE dari param + hasil resolusi topik/tag.
+ * Bangun kondisi WHERE dari param + hasil resolusi topik.
  *
  * Pure: tidak menyentuh DB. `resolution` diisi oleh executor (`filters.ts`).
  * `byRelevance` true bila ada `q` (pencarian teks, mode non-semantic) —
@@ -114,22 +119,32 @@ export function buildFilterFrom(
   if (query.q && query.mode !== "semantic") {
     const term = query.q.trim();
     conds.push(
-      sql`(${questions.contentMarkdown} % ${term} OR ${questions.contentMarkdown} ILIKE ${"%" + term + "%"})`,
+      sql`(${questions.contentMarkdown} % ${term} OR ${questions.contentMarkdown} ILIKE ${`%${term}%`})`,
     );
   }
 
-  // Filter topik — pakai hasil resolusi dari executor.
+  // Filter topik — semi-join EXISTS (PERF-01): DB menyaring, bukan Node.
   if (query.topicId?.length) {
-    const ids = resolution.questionIdsForTopics;
+    const ids = resolution.resolvedTopicIds;
     if (!ids || ids.length === 0)
       return { where: sql`false`, byRelevance: !!query.q };
-    conds.push(inArray(questions.id, ids));
+    conds.push(
+      sql`EXISTS (
+        SELECT 1 FROM ${questionTopics}
+        WHERE ${questionTopics.questionId} = ${questions.id}
+          AND ${inArray(questionTopics.topicId, ids)}
+      )`,
+    );
   }
+  // Filter tag — semi-join EXISTS (PERF-01).
   if (query.tagId) {
-    const ids = resolution.questionIdsForTag;
-    if (!ids || ids.length === 0)
-      return { where: sql`false`, byRelevance: !!query.q };
-    conds.push(inArray(questions.id, ids));
+    conds.push(
+      sql`EXISTS (
+        SELECT 1 FROM ${questionTags}
+        WHERE ${questionTags.questionId} = ${questions.id}
+          AND ${questionTags.tagId} = ${query.tagId}
+      )`,
+    );
   }
 
   return {
