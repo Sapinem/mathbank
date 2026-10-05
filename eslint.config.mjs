@@ -84,6 +84,9 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "playwright-report/**",
     "test-results/**",
+    // Build artifacts dari dev server alternatif (bukan kode sumber):
+    ".next-mat47/**",
+    ".next-*/**",
   ]),
   // CONSTRAINT #34 — berlaku khusus jalur API.
   {
