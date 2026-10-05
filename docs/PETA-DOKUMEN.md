@@ -48,3 +48,5 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
 - `docs/PRD.md`: *Product Requirements Document* tingkat tinggi MathBank.
 - `docs/RUNBOOK.md`: Panduan operasional deployment, maintenance, dan disaster recovery server.
 - `docs/KEAMANAN.md`: Protokol mitigasi kerentanan (anti-SSRF, sanitasi input KaTeX, auth guard).
+- `docs/plans/`: *Implementation Plans* terstruktur untuk perbaikan audit dan fitur baru.
+

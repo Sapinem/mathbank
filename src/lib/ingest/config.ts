@@ -7,5 +7,7 @@ import { join, isAbsolute } from "node:path";
 export function mediaStorageRoot(): string {
   const p = process.env.MEDIA_STORAGE_PATH?.trim();
   if (!p) return join(process.cwd(), "storage", "media");
-  return isAbsolute(p) ? p : join(process.cwd(), p);
+  // PERF-09: path storage runtime dinamis (di luar bundel). Anotasi
+  // `turbopackIgnore` mencegah Turbopack men-trace seluruh proyek.
+  return isAbsolute(p) ? p : join(/*turbopackIgnore: true*/ process.cwd(), p);
 }

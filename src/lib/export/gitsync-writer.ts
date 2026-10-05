@@ -69,12 +69,15 @@ export async function writeGitsyncFolder(
   opts: { commit?: boolean; message?: string } = {},
 ): Promise<WriteResult> {
   const doCommit = opts.commit ?? true;
-  const dir = join(exportRoot(), slugify(bundleTitle));
+  // PERF-09: folder ekspor berada DI LUAR bundel (runtime data, bukan aset).
+  // Anotasi `turbopackIgnore` mencegah Turbopack men-trace seluruh proyek
+  // hanya karena path ini dinamis (mempercepat build & mengecilkan output).
+  const dir = join(/*turbopackIgnore: true*/ exportRoot(), slugify(bundleTitle));
 
   // Bersihkan folder paket (kecuali `.git` agar riwayat commit tetap ada).
   await mkdir(dir, { recursive: true });
   for (const rel of ["top"]) {
-    await rm(join(dir, rel), { recursive: true, force: true });
+    await rm(join(/*turbopackIgnore: true*/ dir, rel), { recursive: true, force: true });
   }
 
   // Tulis semua berkas.
@@ -83,7 +86,7 @@ export async function writeGitsyncFolder(
     // Cegah path traversal: tolak `..` dan jalur absolut.
     const safeRel = f.path.replace(/\\/g, "/").replace(/^\/+/, "");
     if (safeRel.split("/").includes("..")) continue;
-    const target = join(dir, safeRel);
+    const target = join(/*turbopackIgnore: true*/ dir, safeRel);
     await mkdir(dirname(target), { recursive: true });
     await writeFile(target, f.content, "utf8");
     written++;

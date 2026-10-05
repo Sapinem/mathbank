@@ -104,7 +104,7 @@ describe("fetchImage (mock fetch)", () => {
 
   it("SEC-01: redirect manual diikuti untuk host publik (tiap hop divalidasi)", async () => {
     let n = 0;
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    vi.stubGlobal("fetch", vi.fn(async () => {
       n++;
       if (n === 1) {
         return new Response(null, { status: 301, headers: { location: "/final.png" } });
