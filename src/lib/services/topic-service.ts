@@ -14,7 +14,7 @@ import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
 import { recordAudit } from "./audit";
 import type { Actor } from "@/lib/auth/actor";
-import { buildTree, slugify, type TopicNode, type TopicTree } from "@/lib/taxonomy/tree";
+import { buildTree, slugify, type TopicNode, type TopicTree, resolveLevel, isSelfOrDescendant, descendantIds, subtreeMaxDepth, type TreeEdgeWithLevel, TopicParentNotFoundError, TopicMaxDepthError } from "@/lib/taxonomy/tree";
 
 export type { TopicNode, TopicTree };
 export { buildTree };
@@ -52,101 +52,8 @@ export async function getTopic(id: string): Promise<TopicNode | null> {
   return row ?? null;
 }
 
-/**
- * Level yang benar untuk sebuah induk: tak ada induk → 1; ada → induk.level+1
- * (maks 3). Melempar bila melebihi kedalaman 3.
- *
- * `rows` = snapshot seluruh topik (agar tak query berulang).
- */
-function resolveLevelFrom(
-  rows: { id: string; parentId: string | null; level: number }[],
-  parentId: string | null | undefined,
-): number {
-  if (!parentId) return 1;
-  const parent = rows.find((r) => r.id === parentId);
-  if (!parent) throw new NotFoundError("Induk topik tidak ditemukan.");
-  const level = parent.level + 1;
-  if (level > 3) {
-    throw new ConflictError(
-      "Kedalaman taksonomi maksimum 3 level (Kategori › Topik › SubTopik).",
-    );
-  }
-  return level;
-}
-
-/**
- * Apakah `candidateId` = `nodeId` atau keturunannya? (anti-siklus)
- * Dihitung dari snapshot di memori — tanpa query berulang.
- */
-function isSelfOrDescendantFrom(
-  rows: { id: string; parentId: string | null }[],
-  nodeId: string,
-  candidateId: string,
-): boolean {
-  if (nodeId === candidateId) return true;
-  const parentOf = new Map(rows.map((r) => [r.id, r.parentId]));
-  let cursor: string | null = candidateId;
-  const guard = new Set<string>();
-  while (cursor) {
-    if (guard.has(cursor)) break;
-    guard.add(cursor);
-    if (cursor === nodeId) return true;
-    cursor = parentOf.get(cursor) ?? null;
-  }
-  return false;
-}
-
-/** Kumpulkan id SELURUH keturunan `id` (tak termasuk dirinya) dari snapshot. */
-function descendantIdsFrom(
-  rows: { id: string; parentId: string | null }[],
-  id: string,
-): string[] {
-  const childrenOf = new Map<string, string[]>();
-  for (const r of rows) {
-    if (r.parentId) {
-      const arr = childrenOf.get(r.parentId) ?? [];
-      arr.push(r.id);
-      childrenOf.set(r.parentId, arr);
-    }
-  }
-  const out: string[] = [];
-  const stack = [...(childrenOf.get(id) ?? [])];
-  const seen = new Set<string>();
-  while (stack.length > 0) {
-    const cur = stack.pop()!;
-    if (seen.has(cur)) continue;
-    seen.add(cur);
-    out.push(cur);
-    stack.push(...(childrenOf.get(cur) ?? []));
-  }
-  return out;
-}
-
-/** Kedalaman maksimum subtree di bawah `id` dari snapshot (0 = tanpa anak). */
-function subtreeMaxDepthFrom(
-  rows: { id: string; parentId: string | null }[],
-  id: string,
-): number {
-  const childrenOf = new Map<string, string[]>();
-  for (const r of rows) {
-    if (r.parentId) {
-      const arr = childrenOf.get(r.parentId) ?? [];
-      arr.push(r.id);
-      childrenOf.set(r.parentId, arr);
-    }
-  }
-  const walk = (nodeId: string): number => {
-    const kids = childrenOf.get(nodeId) ?? [];
-    if (kids.length === 0) return 0;
-    return 1 + Math.max(...kids.map(walk));
-  };
-  return walk(id);
-}
-
-/** Snapshot ringan seluruh topik (id/parent/level) untuk perhitungan in-memory. */
-async function topicSnapshot(): Promise<
-  { id: string; parentId: string | null; level: number }[]
-> {
+/** Snapshot ringkas seluruh topik (id/parent/level) untuk perhitungan in-memory. */
+async function topicSnapshot(): Promise<TreeEdgeWithLevel[]> {
   return db
     .select({ id: topics.id, parentId: topics.parentId, level: topics.level })
     .from(topics);
@@ -158,7 +65,14 @@ export async function createTopic(
   actor: Actor,
 ): Promise<TopicNode> {
   assertCan(actor, "taxonomy:manage");
-  const level = resolveLevelFrom(await topicSnapshot(), input.parentId);
+  let level: number;
+  try {
+    level = resolveLevel(await topicSnapshot(), input.parentId);
+  } catch (e) {
+    if (e instanceof TopicParentNotFoundError) throw new NotFoundError(e.message);
+    if (e instanceof TopicMaxDepthError) throw new ConflictError(e.message);
+    throw e;
+  }
   const [row] = await withUniqueGuard(
     () =>
       db
@@ -205,18 +119,25 @@ export async function updateTopic(
 
   if (input.parentId !== undefined) {
     const nextParent = input.parentId ?? null;
-    if (nextParent && isSelfOrDescendantFrom(snapshot, id, nextParent)) {
+    if (nextParent && isSelfOrDescendant(snapshot, id, nextParent)) {
       throw new ConflictError(
         "Tak bisa memindahkan topik ke bawah dirinya sendiri atau keturunannya (siklus).",
       );
     }
     patch.parentId = nextParent;
-    const nextLevel = resolveLevelFrom(snapshot, nextParent);
+    let nextLevel: number;
+    try {
+      nextLevel = resolveLevel(snapshot, nextParent);
+    } catch (e) {
+      if (e instanceof TopicParentNotFoundError) throw new NotFoundError(e.message);
+      if (e instanceof TopicMaxDepthError) throw new ConflictError(e.message);
+      throw e;
+    }
     patch.level = nextLevel;
     // Kedalaman maksimum SUBTREE yang dipindah harus tetap ≤ 3 setelah bergeser.
     const delta = nextLevel - existingRow.level;
     if (delta !== 0) {
-      const maxDepth = subtreeMaxDepthFrom(snapshot, id);
+      const maxDepth = subtreeMaxDepth(snapshot, id);
       if (existingRow.level + maxDepth + delta > 3) {
         throw new ConflictError(
           "Pemindahan membuat keturunan melebihi kedalaman 3 level.",
@@ -230,8 +151,8 @@ export async function updateTopic(
   // atomik: node sendiri + keturunan dalam SATU transaksi.
   const delta =
     patch.level !== undefined ? patch.level - existingRow.level : 0;
-  const descendantIds =
-    delta !== 0 ? descendantIdsFrom(snapshot, id) : [];
+  const descendantIdsResolved =
+    delta !== 0 ? descendantIds(snapshot, id) : [];
 
   const [row] = await withUniqueGuard(
     () =>
@@ -241,7 +162,7 @@ export async function updateTopic(
           .set({ ...patch, updatedAt: new Date() })
           .where(eq(topics.id, id))
           .returning(COLS);
-        if (descendantIds.length > 0) {
+        if (descendantIdsResolved.length > 0) {
           // level + delta untuk SEMUA keturunan (tetap konsisten dgn induk baru).
           await tx
             .update(topics)
@@ -249,7 +170,7 @@ export async function updateTopic(
               level: sql`${topics.level} + ${delta}`,
               updatedAt: new Date(),
             })
-            .where(inArray(topics.id, descendantIds));
+            .where(inArray(topics.id, descendantIdsResolved));
         }
         return updated;
       }),
@@ -261,7 +182,7 @@ export async function updateTopic(
     action: "update", // T-M5-1: dulu salah "create"
     actor,
     changeSummary: `Topik diperbarui: ${row.name}${
-      delta !== 0 ? ` (subtree ${descendantIds.length} ikut bergeser ${delta})` : ""
+      delta !== 0 ? ` (subtree ${descendantIdsResolved.length} ikut bergeser ${delta})` : ""
     }`,
   });
   return row;

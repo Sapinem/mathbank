@@ -43,6 +43,7 @@
 | B6 | `KAMUS-DATA.md` (glossary) | ✅ | **dibuat** 2026-09-29 — glosarium domain |
 | B7 | `docs/ADR/` | ✅ | **17 ADR** (0001–0008 dibuat 2026-09-29; **0008 = basis UI Base UI**; **0009 = bundle satu tabel / Opsi 2** (✅ berlaku); **0010 = event jenis berulang (tahun di soal)** (✅ berlaku); **0011 = stimulus tetap di `questions`**; **0012 = `question_sources`** (⚪ digantikan sebagian ADR-0014); **0013 = pisah `collections`** — 🔴 DIBATALKAN (alasan tak berlaku lagi, lihat 0016); **0014 = sumber menempel pada BUNDLE**, `question_sources` dihapus ✅; **0015 = gabung `books`/`institutions` ke `sources`** ✅; **0016 = tambah `collections` berdampingan** (arsip publik) ✅; **0017 = buang enum `exercise`** (F7) ✅) |
 | B8e | `AUDIT-DATABASE-MENYELURUH.md` | 📊 | **audit DB menyeluruh** 2026-10-02 — 291 kolom · 246 constraint · 88 index (bukan sampel); temuan D1 (question_type difilter 10× tanpa index), D2 (3 CHECK), D3 (PK user - perlu cek), D4 (8 JSONB); **§3 metode kolom-mati GAGAL** (dicatat jujur) |
+| B8f | `docs/plans/2026-10-04-perbaikan-temuan-audit.md` | ✅ | **rencana implementasi audit** 2026-10-04 — SEC-01, SEC-02, SEC-04 selesai teruji; SUP-07 & sisa temuan DB/arsitektur disiapkan |
 | B8d | `AUDIT-ARSITEKTUR-MENYELURUH.md` | 📊 | **audit menyeluruh** 2026-10-02 — 28 tabel · 51 endpoint · 9 lapisan; 10 temuan (A1 8 service >300 baris, A2 L6 sentuh DB, A3 `year`×4/`grade`×3, A4 bundles vs collections, A5 3 FK tanpa index) + daftar **yang sudah baik** |
 | B8c | `EVALUASI-COLLECTIONS-VS-BUNDLES.md` | 📊 | **evaluasi menyeluruh** 2026-10-02 — akar kebingungan (QBank `v0.9.0` vs `master`); rekomendasi **GABUNG**; bukti: pembeda habis, `collections` 0 baris, biaya pisah ~18 berkas |
 | B8b | `RENCANA-COLLECTIONS-VS-BUNDLES.md` | 📝 | **catatan arah** 2026-10-02 — ingest web → `collections`; **belum diputuskan**; bertentangan dgn ADR-0014 #7 |
@@ -119,6 +120,7 @@
 | D39 | `docs/audit/M11-MODEL-CONTEXT-PROTOCOL-MCP.md` | ✅ | **dibuat** 2026-09-30 — audit MCP (M11); §Catatan Verifikasi 2026-09-30 (koreksi: "Streamable HTTP" bukan SSE; gerbang `assertMcp`/`MCP_CAPABILITIES`) |
 | D19 | `STATUS-UI-MENGGANTUNG.md` | 🟡 | perlu ditinjau ulang |
 | D20 | `CATATAN-INTERVIEW-ARSITEKTUR.md` | 🟡 | catatan mentah — perlu dirapikan/diarsipkan |
+| D46 | `docs/plans/2026-10-04-perbaikan-temuan-audit.md` | ✅ | **rencana & status eksekusi temuan audit** 2026-10-04 — SEC-01, SEC-02, SEC-04 terverifikasi selesai; sisa temuan dipecah ke spesialis (Salman, Ichsan, Faruq) |
 | D47 | `docs/pedagogy/AUDIT-DISTRACTOR-RATIONALE.md` | 📊 | **dibuat** 2026-10-05 (MAT-33, Faruq) — audit cakupan *distractor rationale* opsi A–E & Pedagogy Contract: **0/52** soal PG ber-rationale lengkap (0,00 %), `answer_key.explanation` 100 %; metrik per bundle/grade, analisis miskonsepsi sampel, roadmap enrichment R1–R7 |
 
 ### Kategori E — Keamanan, Operasi & Kepatuhan

@@ -1,39 +1,41 @@
 /**
- * Pembangun filter soal (M6) — mengubah param query menjadi kondisi SQL.
+ * Eksekutor filter soal (L5) — pecahan dari `filters.ts` lama.
  *
- * Menggantikan filter in-line di `question-service.listQuestions`.
- * **Proyeksi tetap aman (S3)**: modul ini hanya membangun WHERE, bukan SELECT.
+ * Modul ini adalah **cangkang imperatif** (imperative shell): menangani I/O DB
+ * (snapshot topik, `question_topics`, `question_tags`) lalu meneruskan hasilnya
+ * ke pembangun MURNI (`filters-builder.ts`, L6) yang tak menyentuh DB.
+ *
+ * Pemisahan ini mengikuti pola *Functional Core, Imperative Shell* (Gary
+ * Bernhardt): inti logika (builder) bisa diuji cepat tanpa DB; cangkang ini
+ * tetap di L5 dan boleh menyentuh `@/lib/db`.
+ *
+ * `collectTopicDescendants` tetap diekspor di sini untuk kompatibilitas
+ * pemanggil lama (mis. `question-service.db.test.ts`).
  */
-import { and, eq, isNull, inArray, sql, type SQL } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { questions } from "@/lib/db/schema/question";
 import { questionTopics, questionTags, topics } from "@/lib/db/schema/taxonomy";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
+import {
+  collectDescendantsFrom,
+  buildFilterFrom,
+  type BuiltFilter,
+  type TopicEdge,
+} from "./filters-builder";
 
-/** Kumpulkan id topik + seluruh keturunannya (rekursif, BFS). */
-export async function collectTopicDescendants(rootId: string): Promise<string[]> {
+/**
+ * Kumpulkan id topik + seluruh keturunannya (rekursif, BFS).
+ *
+ * Mengambil snapshot topik dari DB, lalu memanggil fungsi pure
+ * `collectDescendantsFrom` untuk traversal.
+ */
+export async function collectTopicDescendants(
+  rootId: string,
+): Promise<string[]> {
   const all = await db
     .select({ id: topics.id, parentId: topics.parentId })
     .from(topics);
-  const childrenOf = new Map<string, string[]>();
-  for (const t of all) {
-    if (t.parentId) {
-      const arr = childrenOf.get(t.parentId) ?? [];
-      arr.push(t.id);
-      childrenOf.set(t.parentId, arr);
-    }
-  }
-  const ids: string[] = [];
-  const queue = [rootId];
-  const seen = new Set<string>();
-  while (queue.length) {
-    const cur = queue.shift()!;
-    if (seen.has(cur)) continue;
-    seen.add(cur);
-    ids.push(cur);
-    for (const c of childrenOf.get(cur) ?? []) queue.push(c);
-  }
-  return ids;
+  return collectDescendantsFrom(all as TopicEdge[], rootId);
 }
 
 /** Ambil id soal yang terkait sekumpulan topik (M:N). */
@@ -54,74 +56,53 @@ async function questionIdsForTag(tagId: string): Promise<string[]> {
   return [...new Set(rows.map((r) => r.id))];
 }
 
-/** Hasil: kondisi SQL + opsi pengurutan (relevansi bila ada pencarian). */
-export interface BuiltFilter {
-  where: SQL | undefined;
-  /** Bila true, urutkan berdasar relevansi teks (bukan createdAt). */
-  byRelevance: boolean;
-}
+/** Re-export tipe & builder murni agar pemanggil lama tetap kompatibel. */
+export type { BuiltFilter } from "./filters-builder";
+export {
+  collectDescendantsFrom,
+  buildFilterFrom,
+  type TopicEdge,
+  type FilterResolution,
+} from "./filters-builder";
 
 /**
  * Bangun kondisi WHERE dari param. `byRelevance` true bila ada `q` (pencarian
  * teks) — pemanggil memakai similarity trigram untuk pengurutan.
+ *
+ * Fungsi ini adalah cangkang: ia memecah resolusi topik/tag (DB) dari
+ * pembangunan kondisi (pure, di `filters-builder.ts`).
  */
 export async function buildQuestionFilter(
   query: ListQuestionsQuery,
 ): Promise<BuiltFilter> {
-  const conds: SQL[] = [];
-  if (!query.includeDeleted) conds.push(isNull(questions.deletedAt));
-  if (query.status) conds.push(eq(questions.status, query.status));
-  if (query.questionType?.length)
-    conds.push(inArray(questions.questionType, query.questionType));
-  if (query.grade?.length) conds.push(inArray(questions.grade, query.grade));
-  if (query.difficulty?.length)
-    conds.push(inArray(questions.difficulty, query.difficulty));
-  if (query.cognitiveLevel)
-    conds.push(eq(questions.cognitiveLevel, query.cognitiveLevel));
-  // ADR-0014: filter sumber kini berarti "soal yang ada di bundle bersumber X"
-  // (subquery lewat bundle_items ⋈ bundles), bukan kolom questions.source_id.
-  if (query.sourceId)
-    conds.push(
-      sql`EXISTS (
-        SELECT 1 FROM bundle_items bi
-        JOIN bundles b ON b.id = bi.bundle_id
-        WHERE bi.question_id = ${questions.id}
-          AND b.deleted_at IS NULL
-          AND b.source_id = ${query.sourceId}
-      )`,
-    );
-  if (query.eventId) conds.push(eq(questions.eventId, query.eventId));
-  if (query.flagged !== undefined) conds.push(eq(questions.isFlagged, query.flagged));
+  // ── Resolusi topik (DB) ──────────────────────────────────────
+  let resolvedTopicIds: string[] | undefined;
+  let questionIdsForTopicsResolved: string[] | undefined;
 
-  // Pencarian teks: trigram typo-tolerant (pg_trgm). `word_similarity` agar
-  // kata sebagian tetap cocok; ambang 0.3 cukup longgar untuk typo ringan.
-  // Pada mode **semantic**, filter trigram DINONAKTIFKAN (pencocokan lewat vektor).
-  if (query.q && query.mode !== "semantic") {
-    const term = query.q.trim();
-    conds.push(
-      sql`(${questions.contentMarkdown} % ${term} OR ${questions.contentMarkdown} ILIKE ${"%" + term + "%"})`,
-    );
-  }
-
-  // Filter topik — TERMASUK anak (rekursif). Multi-topik = gabungan keturunan.
   if (query.topicId?.length) {
     const allIds = new Set<string>();
+    // Ambil snapshot SEKALI untuk seluruh root (hindari query per-root).
+    const edges = (
+      await db.select({ id: topics.id, parentId: topics.parentId }).from(topics)
+    ) as TopicEdge[];
     for (const root of query.topicId) {
-      const descendants = await collectTopicDescendants(root);
+      const descendants = collectDescendantsFrom(edges, root);
       for (const d of descendants) allIds.add(d);
     }
-    const ids = await questionIdsForTopics([...allIds]);
-    if (ids.length === 0) return { where: sql`false`, byRelevance: !!query.q };
-    conds.push(inArray(questions.id, ids));
-  }
-  if (query.tagId) {
-    const ids = await questionIdsForTag(query.tagId);
-    if (ids.length === 0) return { where: sql`false`, byRelevance: !!query.q };
-    conds.push(inArray(questions.id, ids));
+    resolvedTopicIds = [...allIds];
+    questionIdsForTopicsResolved = await questionIdsForTopics(resolvedTopicIds);
   }
 
-  return {
-    where: conds.length ? and(...conds) : undefined,
-    byRelevance: !!query.q && query.mode !== "semantic",
-  };
+  // ── Resolusi tag (DB) ────────────────────────────────────────
+  let questionIdsForTagResolved: string[] | undefined;
+  if (query.tagId) {
+    questionIdsForTagResolved = await questionIdsForTag(query.tagId);
+  }
+
+  // ── Bangun kondisi (pure) ───────────────────────────────────
+  return buildFilterFrom(query, {
+    resolvedTopicIds,
+    questionIdsForTopics: questionIdsForTopicsResolved,
+    questionIdsForTag: questionIdsForTagResolved,
+  });
 }

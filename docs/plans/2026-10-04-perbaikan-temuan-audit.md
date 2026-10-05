@@ -22,37 +22,37 @@
 ## 2. Tahapan Eksekusi (Bite-Sized Tasks)
 
 ### Task 1: [SEC-01] Otorisasi Kepemilikan Ekspor Moodle
-- [ ] **Langkah 1.1 (TDD Red):** Tambahkan skenario uji guru pada [`src/lib/services/moodle-export.db.test.ts`](file:///home/hari/projects/mathbank/src/lib/services/moodle-export.db.test.ts):
+- [x] **Langkah 1.1 (TDD Red):** Tambahkan skenario uji guru pada [`src/lib/services/moodle-export.db.test.ts`](file:///home/hari/projects/mathbank/src/lib/services/moodle-export.db.test.ts):
   - Guru dapat mengekspor paket naskah yang dibuatnya sendiri.
   - Guru ditolak 403 Forbidden bila mencoba mengekspor paket naskah milik guru lain.
-- [ ] **Langkah 1.2 (Verifikasi Red):** Jalankan `pnpm test:db src/lib/services/moodle-export.db.test.ts` dan amati kegagalan (guru ditolak pada paket miliknya).
-- [ ] **Langkah 1.3 (TDD Green):** Di [`src/lib/services/moodle-export-service.ts`](file:///home/hari/projects/mathbank/src/lib/services/moodle-export-service.ts):
+- [x] **Langkah 1.2 (Verifikasi Red):** Jalankan `pnpm test:db src/lib/services/moodle-export.db.test.ts` dan amati kegagalan (guru ditolak pada paket miliknya).
+- [x] **Langkah 1.3 (TDD Green):** Di [`src/lib/services/moodle-export-service.ts`](file:///home/hari/projects/mathbank/src/lib/services/moodle-export-service.ts):
   - Impor `assertBundleWrite` dari `@/lib/services/bundle-service`.
   - Ambil `bundle = await getBundle(bundleId)` di awal fungsi.
   - Lempar `NotFoundError` bila `!bundle`.
   - Panggil `assertBundleWrite(bundle, actor)` menggantikan `assertCan(actor, "bundle:manage")`.
-- [ ] **Langkah 1.4 (Verifikasi Green):** Jalankan ulang `pnpm test:db src/lib/services/moodle-export.db.test.ts` hingga seluruh pengujian lulus.
+- [x] **Langkah 1.4 (Verifikasi Green):** Jalankan ulang `pnpm test:db src/lib/services/moodle-export.db.test.ts` hingga seluruh pengujian lulus (✅ Terverifikasi: 241/241 DB test lulus).
 
 ---
 
 ### Task 2: [SEC-02] Proteksi Hapus Soal yang Tertaut ke Koleksi Publik
-- [ ] **Langkah 2.1 (TDD Red):** Di [`src/lib/services/collection-service.db.test.ts`](file:///home/hari/projects/mathbank/src/lib/services/collection-service.db.test.ts):
+- [x] **Langkah 2.1 (TDD Red):** Di [`src/lib/services/collection-service.db.test.ts`](file:///home/hari/projects/mathbank/src/lib/services/collection-service.db.test.ts):
   - Buat tes `deleteQuestion` dan `hardDeleteQuestion` pada soal yang masuk ke koleksi.
   - Pastikan operasi melempar `ConflictError` (HTTP 409), bukan melempar galat PostgreSQL 23503 tak tertangani.
-- [ ] **Langkah 2.2 (Verifikasi Red):** Jalankan tes dan amati kegagalan.
-- [ ] **Langkah 2.3 (TDD Green):**
+- [x] **Langkah 2.2 (Verifikasi Red):** Jalankan tes dan amati kegagalan.
+- [x] **Langkah 2.3 (TDD Green):**
   - Di [`src/lib/services/collection-service.ts`](file:///home/hari/projects/mathbank/src/lib/services/collection-service.ts), implementasikan fungsi `isQuestionUsedInCollections(questionId: string): Promise<boolean>`.
   - Di [`src/lib/services/question-write.ts`](file:///home/hari/projects/mathbank/src/lib/services/question-write.ts), periksa `await isQuestionUsedInCollections(id)` pada fungsi `deleteQuestion` dan `hardDeleteQuestion`.
-- [ ] **Langkah 2.4 (Verifikasi Green):** Jalankan tes integrasi DB dan buktikan status 409 Conflict tertangani rapi.
+- [x] **Langkah 2.4 (Verifikasi Green):** Jalankan tes integrasi DB dan buktikan status 409 Conflict tertangani rapi (✅ Terverifikasi: 409 Conflict dilempar saat soal terkait koleksi dihapus).
 
 ---
 
 ### Task 3: [SEC-04] Pengerasan Jaringan Anti-SSRF pada `fetchImage`
-- [ ] **Langkah 3.1 (TDD Red):** Di [`src/lib/ingest/media/media-io.test.ts`](file:///home/hari/projects/mathbank/src/lib/ingest/media/media-io.test.ts):
+- [x] **Langkah 3.1 (TDD Red):** Di [`src/lib/ingest/media/media-io.test.ts`](file:///home/hari/projects/mathbank/src/lib/ingest/media/media-io.test.ts):
   - Buat tes penolakan URL yang mengarah ke loopback (`127.0.0.1`), metadata server (`169.254.169.254`), dan private IP (`10.0.0.1`).
-- [ ] **Langkah 3.2 (TDD Green):** Di [`src/lib/ingest/media/fetch.ts`](file:///home/hari/projects/mathbank/src/lib/ingest/media/fetch.ts):
+- [x] **Langkah 3.2 (TDD Green):** Di [`src/lib/ingest/media/fetch.ts`](file:///home/hari/projects/mathbank/src/lib/ingest/media/fetch.ts):
   - Implementasikan pengecekan hostname & IP anti-SSRF sebelum melakukan koneksi HTTP.
-- [ ] **Langkah 3.3 (Verifikasi Green):** Jalankan `pnpm test src/lib/ingest/media/media-io.test.ts`.
+- [x] **Langkah 3.3 (Verifikasi Green):** Jalankan `pnpm test src/lib/ingest/media/media-io.test.ts` (✅ Terverifikasi: 12/12 unit test lulus).
 
 ---
 
