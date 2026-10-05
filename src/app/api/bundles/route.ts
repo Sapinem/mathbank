@@ -14,14 +14,21 @@ const createSchema = z.object({
   instructions: z.string().max(5000).nullable().optional(),
 });
 
+/**
+ * Filter + paginasi daftar paket (MAT-39 + **PERF-05**).
+ * `limit` default 20; `coerce` karena query string selalu teks.
+ */
 const listQuerySchema = z.object({
   bundleType: z.enum(["source", "exam"]).optional(),
   origin: z.enum(["ingest", "manual"]).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 /**
  * GET /api/bundles — daftar paket aktif.
  * MAT-39: dukung filter `bundleType` & `origin` via query string.
+ * PERF-05: dukung `limit` (default 20) & `offset`.
  */
 export const GET = wrapRoute({
   rateLimit: true,
@@ -31,6 +38,8 @@ export const GET = wrapRoute({
     listBundles(actor, {
       bundleType: query?.bundleType,
       origin: query?.origin,
+      limit: query?.limit,
+      offset: query?.offset,
     }),
 });
 

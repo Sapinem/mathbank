@@ -372,3 +372,25 @@ describe("error paths", () => {
     expect(b.title).toBe("Paket Guru");
   });
 });
+
+describe("PERF-05 — paginasi listBundles", () => {
+  it("default limit 20 & offset menghormati urutan updatedAt desc", async () => {
+    // Buat 25 paket → default hanya 20 pertama yang kembali.
+    for (let i = 0; i < 25; i++) {
+      await createBundle({ title: `Paket Pag ${i}`, bundleType: "exam" }, admin);
+    }
+    const page1 = await listBundles(admin);
+    expect(page1).toHaveLength(20);
+
+    const page2 = await listBundles(admin, { limit: 20, offset: 20 });
+    expect(page2.length).toBe(5);
+
+    // Tanpa tumpang tindih antar halaman.
+    const ids1 = new Set(page1.map((b) => b.id));
+    expect(page2.some((b) => ids1.has(b.id))).toBe(false);
+
+    // `limit` eksplisit dihormati.
+    const small = await listBundles(admin, { limit: 3 });
+    expect(small).toHaveLength(3);
+  });
+});

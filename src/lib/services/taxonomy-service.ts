@@ -383,21 +383,24 @@ export async function deleteEvent(id: string, actor: Actor): Promise<void> {
 
 // ── Tag / Label ───────────────────────────────────────────────
 
+/**
+ * Daftar label + jumlah pemakaian.
+ *
+ * **PERF-04:** memakai kolom denormalisasi `tags.usage_count` (dijaga trigger DB
+ * `trg_question_tags_usage`) — satu pemindaian tabel, bukan subquery berkorelasi
+ * per-baris (O(N) → O(1) per baris). Cermin pola `cleanUnusedTags` yang sudah
+ * memakai kolom yang sama.
+ */
 export async function listTags(): Promise<TagRow[]> {
-  const rows = await db
+  return db
     .select({
       id: tags.id,
       name: tags.name,
       slug: tags.slug,
-      usageCount: sql<number>`(
-        SELECT count(*)::int FROM question_tags qt
-        JOIN questions q ON q.id = qt.question_id
-        WHERE qt.tag_id = ${tags.id} AND q.deleted_at IS NULL
-      )`,
+      usageCount: tags.usageCount,
     })
     .from(tags)
     .orderBy(asc(tags.name));
-  return rows.map((r) => ({ ...r, usageCount: r.usageCount ?? 0 }));
 }
 
 export async function createTag(

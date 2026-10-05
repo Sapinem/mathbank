@@ -126,13 +126,19 @@ export async function reorderItems(
     );
   }
   // Transaksi: perbarui seluruh urutan secara atomik (gagal parsial → rollback).
+  // **PERF-06:** satu pernyataan SQL `CASE` untuk seluruh item (batch), bukan
+  // N `UPDATE` berurutan → menghilangkan latensi pulang-pergi per item.
   await db.transaction(async (tx) => {
-    for (let i = 0; i < itemIds.length; i++) {
-      await tx
-        .update(bundleItems)
-        .set({ orderIndex: i + 1 })
-        .where(eq(bundleItems.id, itemIds[i]!));
-    }
+    const cases = itemIds.map(
+      (id, i) => sql`WHEN ${bundleItems.id} = ${id}::uuid THEN ${i + 1}::int`,
+    );
+    const inList = itemIds.map((id) => sql`${id}::uuid`);
+    await tx.execute(sql`
+      UPDATE ${bundleItems}
+         SET order_index = CASE ${sql.join(cases, sql` `)} END
+       WHERE ${bundleItems.bundleId} = ${bundleId}::uuid
+         AND ${bundleItems.id} IN (${sql.join(inList, sql`, `)})
+    `);
     await tx
       .update(bundles)
       .set({ updatedAt: new Date() })

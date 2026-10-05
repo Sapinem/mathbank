@@ -66,10 +66,17 @@ async function attachCounts(rows: BundleCore[]): Promise<BundleRow[]> {
  * `assertBundleWrite` per-paket.
  *
  * MAT-39: dukung filter opsional `bundleType` & `origin`.
+ * **PERF-05:** dukung paginasi `limit` (default 20) & `offset` agar `GET
+ * /api/bundles` tak menarik seluruh paket sekaligus.
  */
 export async function listBundles(
   actor: Actor,
-  filter?: { bundleType?: "source" | "exam"; origin?: "ingest" | "manual" },
+  filter?: {
+    bundleType?: "source" | "exam";
+    origin?: "ingest" | "manual";
+    limit?: number;
+    offset?: number;
+  },
 ): Promise<BundleRow[]> {
   assertBundleRead(actor);
   const conds = [isNull(bundles.deletedAt)];
@@ -79,7 +86,9 @@ export async function listBundles(
     .select(bundleColumns())
     .from(bundles)
     .where(and(...conds))
-    .orderBy(desc(bundles.updatedAt));
+    .orderBy(desc(bundles.updatedAt))
+    .limit(filter?.limit ?? 20)
+    .offset(filter?.offset ?? 0);
   return attachCounts(rows);
 }
 
