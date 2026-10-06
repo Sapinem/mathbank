@@ -79,7 +79,7 @@ describe("QuestionBankView — bulk action bar (G3.1)", () => {
     fireEvent.click(boxes[1]);
     expect(screen.getByText("2 terpilih")).toBeInTheDocument();
 
-    // Klik tombol Arsipkan di bar aksi massal
+    // Klik tombol Arsip di bar aksi massal (label dipersingkat di MAT-55)
     fireEvent.click(screen.getByRole("button", { name: "Arsipkan" }));
 
     // Dialog konfirmasi harus terbuka dengan judul yang menyebutkan jumlah butir
