@@ -275,7 +275,7 @@ export function QuestionFilterBar({
           <button
             type="button"
             onClick={onResetAll}
-            className="ml-auto inline-flex min-h-[44px] items-center gap-1 rounded-sm px-1 text-[11px] text-muted-foreground hover:text-destructive"
+            className="relative ml-auto inline-flex items-center gap-1 rounded-sm px-1 py-1 text-[11px] text-muted-foreground hover:text-destructive after:absolute after:-inset-2 after:content-['']"
           >
             <RotateCcw className="size-3" />
             Reset ({activeCount})

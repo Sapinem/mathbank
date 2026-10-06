@@ -167,8 +167,16 @@ export function QuestionTypeIcon({ type }: { type: string }) {
   );
 }
 
-/** Indikator status alur soal (Siap/Draf/Telaah) dengan dot semantik. */
-export function StatusIndicator({ status }: { status: string }) {
+/** Indikator status alur soal (Siap/Draf/Telaah) dengan dot semantik.
+ *  `compact` — di mobile mode list, sembunyikan label teks agar teks soal
+ *  mendapat ruang ≥ 180px pada layar 360px. */
+export function StatusIndicator({
+  status,
+  compact = false,
+}: {
+  status: string;
+  compact?: boolean;
+}) {
   const label = STATUS_LABELS[status] ?? status;
   let dotColor = "bg-muted-foreground";
   if (status === "ready") dotColor = "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
@@ -178,15 +186,17 @@ export function StatusIndicator({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium border tabular-nums",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border tabular-nums",
+        compact ? "px-1.5 py-0.5 text-[11px] font-medium" : "px-2.5 py-0.5 text-[11px] font-medium",
         status === "ready" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
         status === "draft" && "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
         status === "review" && "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
         !["ready", "draft", "review"].includes(status) && "border-border bg-muted text-muted-foreground",
       )}
+      aria-label={compact ? label : undefined}
     >
       <span className={cn("size-1.5 rounded-full", dotColor)} />
-      {label}
+      <span className={compact ? "hidden md:inline" : undefined}>{label}</span>
     </span>
   );
 }
@@ -288,8 +298,8 @@ function QuestionCardInner({
           </div>
         )}
 
-        {/* 6. Status Soal di Paling Kanan */}
-        <StatusIndicator status={q.status} />
+        {/* 6. Status Soal di Paling Kanan — compact di mobile agar teks soal leluasa */}
+        <StatusIndicator status={q.status} compact />
       </div>
     );
   }

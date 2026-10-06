@@ -344,7 +344,7 @@ export function QuestionBankView({
                 onClick={() => setConfirmArchiveOpen(true)}
                 className="shrink-0 min-h-[44px]"
               >
-                Arsip
+                Arsipkan
               </Button>
               <Button
                 variant="outline"

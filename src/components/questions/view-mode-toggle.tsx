@@ -33,7 +33,7 @@ export function ViewModeToggle({
   onChange: (m: ViewMode) => void;
 }) {
   return (
-    // Tampil di semua viewport: ikon-only + touch-friendly (≥44px)
+    // Tampil di semua viewport: ikon-only + touch-friendly (≥44px via after: pseudo-element)
     <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-border p-0.5">
       {MODES.map(({ value: m, label, Icon }) => (
         <Button
@@ -43,7 +43,7 @@ export function ViewModeToggle({
           aria-label={label}
           aria-pressed={value === m}
           onClick={() => onChange(m)}
-          className="min-h-[44px] min-w-[44px]"
+          className="relative size-8 after:absolute after:-inset-1 after:content-[''] sm:min-h-[44px] sm:min-w-[44px]"
         >
           <Icon />
         </Button>
