@@ -66,7 +66,9 @@ export const defantriAdapter: ArticleAdapter = (rawHtml): SegmentResult => {
     // membungkus stem (bukan opsi saja) → buang TAG-nya, isi tetap.
     const firstRadio = group.search(/<input\b[^>]*type="radio"/i);
     const stemSource = firstRadio === -1 ? group : group.slice(0, firstRadio);
-    const stem = cleanHtml(stemSource.replace(/<\/?div\b[^>]*>/gi, "\n")).text.trim();
+    const stemCleaned = cleanHtml(stemSource.replace(/<\/?div\b[^>]*>/gi, "\n"));
+    const stem = stemCleaned.text.trim();
+    const mediaUrls = [...stemCleaned.media];
 
     // OPSI (hanya radio yang name-nya cocok).
     const opts: { label?: string; text: string }[] = [];
@@ -78,7 +80,11 @@ export const defantriAdapter: ArticleAdapter = (rawHtml): SegmentResult => {
     let lm: RegExpExecArray | null;
     while ((lm = optRe.exec(group)) !== null) {
       const val = lm[1]!.trim().toLowerCase();
-      let text = cleanHtml(lm[2]!).text;
+      const optCleaned = cleanHtml(lm[2]!);
+      let text = optCleaned.text;
+      for (const mUrl of optCleaned.media) {
+        if (!mediaUrls.includes(mUrl)) mediaUrls.push(mUrl);
+      }
       let label: string | undefined;
       // Label di depan: dari `$(A)$` → setelah cleaning jadi `\((A)` … `\)`.
       // Buang pembuka `\((A)` dan penutup `\)` yang menjadi sisa.
@@ -86,8 +92,12 @@ export const defantriAdapter: ArticleAdapter = (rawHtml): SegmentResult => {
         label = letter.toUpperCase();
         return "";
       });
-      // Sisa LaTeX pembuka/penutup `\(` `\)` di tepi (dari `$…$`).
-      text = text.replace(/^\s*\\?\(\s*/, "").replace(/\s*\\?\)\s*$/, "").trim();
+      text = text.trim();
+      // Buang `\)` penutup yatim bila tersisa di paling akhir setelah label dibuang
+      text = text.replace(/\s*\\?\)\s*$/, "").trim();
+      if (text.startsWith("\\") && !text.startsWith("\\(") && !text.startsWith("\\[")) {
+        text = `\\( ${text} \\)`;
+      }
       if (text) {
         opts.push({ label, text });
         if (CORRECT_VALUES.includes(val) && label) correct.push(label);
@@ -99,7 +109,11 @@ export const defantriAdapter: ArticleAdapter = (rawHtml): SegmentResult => {
       continue;
     }
 
-    items.push(finalizeItem(stem, opts, correct, undefined, { index: idx, heading: undefined }, []));
+    // mediaUrls tidak diteruskan ke finalizeItem — cleanHtml sudah menyematkan
+    // gambar sebagai ![alt](url) di dalam stem/opsi (teks), dan pipeline media
+    // akan mengambilnya dari sana. Meneruskan mediaUrls sebagai extraWarnings
+    // (param ke-6) akan mencemari flag soal dengan URL gambar.
+    items.push(finalizeItem(stem, opts, correct, undefined, { index: idx, heading: undefined }));
   }
 
   return { items, skipped, warnings };

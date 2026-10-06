@@ -143,6 +143,7 @@ export async function resolveBundleId(input: {
       // satu sumber bisa punya banyak artikel berjudul sama.
       slug: slugify(`${input.title}-${itemHash(input.url ?? input.title, "")}`, 255),
       bundleType: "source", // naskah dari sumber — bukan ujian (exam)
+      origin: "ingest",     // ADR-0014: pipeline ingest, bukan input manual
       sourceId: input.sourceId,
       url: input.url,
       grade: input.grade,
