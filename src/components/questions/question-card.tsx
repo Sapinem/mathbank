@@ -238,9 +238,9 @@ function QuestionCardInner({
           {formatGradeBadge(q.grade)}
         </span>
 
-        {/* 4. Taksonomi: Kognitif & Kesulitan */}
-        <CognitiveBadge level={q.cognitiveLevel} className="pointer-coarse:min-h-[44px]" />
-        <DifficultyBadge level={q.difficulty} className="pointer-coarse:min-h-[44px]" />
+        {/* 4. Taksonomi: Kognitif & Kesulitan — disembunyikan di mobile (<md) agar teks soal punya ruang lega */}
+        <CognitiveBadge level={q.cognitiveLevel} className="hidden md:inline-flex pointer-coarse:min-h-[44px]" />
+        <DifficultyBadge level={q.difficulty} className="hidden md:inline-flex pointer-coarse:min-h-[44px]" />
 
         {/* Indikator Flag */}
         {q.isFlagged && (
@@ -343,14 +343,23 @@ function QuestionCardInner({
 
         {/* KONTEN UTAMA SOAL */}
         <Link href={href} className="block group-hover:text-foreground">
-          <MathContent
-            content={mode === "grid" ? excerpt(q.contentMarkdown, 240) : q.contentMarkdown}
-            noScroll
-            className={cn(
-              "text-xs leading-relaxed text-foreground overflow-hidden",
-              mode === "grid" ? "line-clamp-4" : "max-h-[380px] overflow-hidden",
-            )}
-          />
+          {mode === "grid" ? (
+            <div className="relative max-h-[140px] overflow-hidden">
+              <MathContent
+                content={excerpt(q.contentMarkdown, 240)}
+                noScroll
+                className="text-xs leading-relaxed text-foreground overflow-hidden"
+              />
+              {/* Gradien fade-out agar token KaTeX tidak terpotong secara kasar */}
+              <span className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-card to-transparent" aria-hidden="true" />
+            </div>
+          ) : (
+            <MathContent
+              content={q.contentMarkdown}
+              noScroll
+              className="text-xs leading-relaxed text-foreground overflow-hidden max-h-[380px] overflow-hidden"
+            />
+          )}
         </Link>
 
         {/* OPSI PILIHAN GANDA (FORMAT DOKUMEN NASKAH 1 KOLOM KE BAWAH) */}

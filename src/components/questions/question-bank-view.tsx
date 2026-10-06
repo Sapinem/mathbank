@@ -265,7 +265,7 @@ export function QuestionBankView({
       />
 
       {/* 3. Daftar Kartu Soal (100% Lebar Penuh) */}
-      <div className="flex-1 overflow-y-auto">
+      <div className={selected.size > 0 ? "flex-1 overflow-y-auto pb-28 sm:pb-4" : "flex-1 overflow-y-auto"}>
         {isLoading ? (
           <QuestionListSkeleton mode={mode} />
         ) : isError ? (
@@ -313,62 +313,74 @@ export function QuestionBankView({
 
       {/* 4. Bar Seleksi Massal */}
       {selected.size > 0 && (
-        <div className="sticky bottom-3 z-10 mx-3 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-popover px-3 py-2 shadow-lg sm:mx-4">
-          <span className="text-sm font-medium">{selected.size} terpilih</span>
-          <span className="mx-1 h-5 w-px bg-border" aria-hidden />
-          <Button
-            size="sm"
-            disabled={bulk.isPending}
-            onClick={() => runBulk("set_ready")}
-          >
-            Setujui
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={bulk.isPending}
-            onClick={() => runBulk("reject_to_draft")}
-          >
-            Tolak → Draf
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={bulk.isPending}
-            onClick={() => setConfirmArchiveOpen(true)}
-          >
-            Arsipkan
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={bulk.isPending}
-            onClick={() => runBulk("flag")}
-          >
-            Tandai
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={bulk.isPending}
-            onClick={() => runBulk("unflag")}
-          >
-            Lepas tanda
-          </Button>
-          {bulkMsg && (
-            <span className="text-xs text-muted-foreground">{bulkMsg}</span>
+        <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-lg border border-border bg-popover shadow-lg sm:mx-4">
+          {/* Baris atas: jumlah terpilih + tombol aksi utama */}
+          <div className="flex items-center gap-2 px-3 py-2">
+            <span className="shrink-0 text-sm font-medium">{selected.size} terpilih</span>
+            <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
+            {/* Aksi — single row, overflow-x-auto di mobile agar tidak wrap */}
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
+              <Button
+                size="sm"
+                disabled={bulk.isPending}
+                onClick={() => runBulk("set_ready")}
+                className="shrink-0 min-h-[44px]"
+              >
+                Setujui
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulk.isPending}
+                onClick={() => runBulk("reject_to_draft")}
+                className="shrink-0 min-h-[44px]"
+              >
+                Tolak
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulk.isPending}
+                onClick={() => setConfirmArchiveOpen(true)}
+                className="shrink-0 min-h-[44px]"
+              >
+                Arsip
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulk.isPending}
+                onClick={() => runBulk("flag")}
+                className="shrink-0 min-h-[44px]"
+              >
+                Tandai
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulk.isPending}
+                onClick={() => runBulk("unflag")}
+                className="shrink-0 min-h-[44px] hidden sm:inline-flex"
+              >
+                Lepas tanda
+              </Button>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto shrink-0 min-h-[44px] min-w-[44px]"
+              aria-label="Batal pilih"
+              onClick={clearSelection}
+            >
+              <X />
+            </Button>
+          </div>
+          {/* Pesan status (hanya muncul bila ada teks) */}
+          {(bulkMsg || bulk.isPending) && (
+            <div className="border-t border-border/40 px-3 pb-2 pt-1 text-xs text-muted-foreground">
+              {bulk.isPending ? "Memproses…" : bulkMsg}
+            </div>
           )}
-          {bulk.isPending && (
-            <span className="text-xs text-muted-foreground">Memproses…</span>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto"
-            onClick={clearSelection}
-          >
-            <X data-icon="inline-start" /> Batal
-          </Button>
         </div>
       )}
 

@@ -33,7 +33,8 @@ export function ViewModeToggle({
   onChange: (m: ViewMode) => void;
 }) {
   return (
-    <div className="hidden shrink-0 items-center gap-0.5 rounded-lg border border-border p-0.5 sm:flex">
+    // Tampil di semua viewport: ikon-only + touch-friendly (≥44px)
+    <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-border p-0.5">
       {MODES.map(({ value: m, label, Icon }) => (
         <Button
           key={m}

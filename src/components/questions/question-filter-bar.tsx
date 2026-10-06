@@ -158,7 +158,7 @@ export function QuestionFilterBar({
               <button
                 type="button"
                 onClick={onClearStatus}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm hover:text-foreground"
+                className="relative flex items-center justify-center rounded-sm hover:text-foreground after:absolute after:-inset-1.5 after:content-['']"
                 aria-label="Hapus filter status"
               >
                 <X className="size-3" />
@@ -176,7 +176,7 @@ export function QuestionFilterBar({
               <button
                 type="button"
                 onClick={() => onRemoveTopic(id)}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                className="relative flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground after:absolute after:-inset-1.5 after:content-['']"
                 aria-label="Hapus filter topik"
               >
                 <X className="size-3" />
@@ -194,7 +194,7 @@ export function QuestionFilterBar({
               <button
                 type="button"
                 onClick={() => onRemoveGrade(id)}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                className="relative flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground after:absolute after:-inset-1.5 after:content-['']"
                 aria-label="Hapus filter jenjang"
               >
                 <X className="size-3" />
@@ -212,7 +212,7 @@ export function QuestionFilterBar({
               <button
                 type="button"
                 onClick={() => onRemoveDifficulty(lvl)}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                className="relative flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground after:absolute after:-inset-1.5 after:content-['']"
                 aria-label="Hapus filter kesulitan"
               >
                 <X className="size-3" />
@@ -230,7 +230,7 @@ export function QuestionFilterBar({
               <button
                 type="button"
                 onClick={() => onRemoveCognitive?.(k)}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                className="relative flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground after:absolute after:-inset-1.5 after:content-['']"
                 aria-label="Hapus filter bloom"
               >
                 <X className="size-3" />
@@ -248,7 +248,7 @@ export function QuestionFilterBar({
               <button
                 type="button"
                 onClick={() => onRemoveType(t)}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                className="relative flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground after:absolute after:-inset-1.5 after:content-['']"
                 aria-label="Hapus filter tipe soal"
               >
                 <X className="size-3" />
@@ -263,7 +263,7 @@ export function QuestionFilterBar({
               <button
                 type="button"
                 onClick={onClearSource}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                className="relative flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground after:absolute after:-inset-1.5 after:content-['']"
                 aria-label="Hapus filter sumber"
               >
                 <X className="size-3" />
