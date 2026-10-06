@@ -1,9 +1,9 @@
 # ADR-0016 — Tambah `collections` sebagai konsep berdampingan (arsip naskah publik)
 
-- **Status:** ✅ **DITERAPKAN** (2026-10-02) — migrasi `0011`; DB 26 → **28 tabel**,
-  25 trigger. Skema + service + API + izin **selesai & teruji** (13 tes); **UI menyusul**
-- **Pengambil keputusan:** Pemilik produk
-- **Terkait:** `docs/ADR/0013-*.md` (**sebagian dilanjutkan** — lihat §"Kenapa 0013
+- **Status:** 🔴 **DIGANTIKAN OLEH ADR-0018** (2026-10-05, MAT-39) — Dihapus kembali via migrasi `0014` karena 0 baris pemakaian di produksi dan fungsinya disatukan ke `bundles.origin` (DB 28 → 26 tabel).
+- **Pengambil keputusan:** Pemilik produk & Software Architect
+- **Terkait:** `docs/ADR/0018-drop-collections-origin-discriminator.md` (**pengganti resmi**),
+  `docs/ADR/0013-*.md` (**sebagian dilanjutkan** — lihat §"Kenapa 0013
   dulu dibatalkan, dan kenapa alasan itu tak berlaku lagi"),
   `docs/ADR/0009-*.md` (**tetap berlaku** untuk `bundles` — tak diubah),
   `docs/DESAIN-SKEMA-BUNDLE-TERPISAH.md` (rancangan teknis),

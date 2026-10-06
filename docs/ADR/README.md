@@ -23,8 +23,13 @@
 | [0013](0013-pisah-collections-dari-bundles.md) | Pisah tabel `collections` vs `bundles` | 🔴 **DIBATALKAN** (audit: duplikasi `question_sources`) |
 | [0014](0014-sumber-menempel-pada-bundle.md) | Sumber menempel pada **BUNDLE** (bukan soal); `question_sources` dihapus; `event_*` dipertahankan | **Diterapkan** |
 | [0015](0015-gabung-books-institutions-ke-sources.md) | Gabung `books` & `institutions` ke `sources` (kolom per-`kind`); hapus 2 tabel | **Diterapkan** |
-| [0016](0016-tambah-collections-berdampingan.md) | Tambah `collections` sebagai konsep **berdampingan** (arsip publik); `bundles` tak disentuh | **Diterapkan** |
+| [0016](0016-tambah-collections-berdampingan.md) | Tambah `collections` sebagai konsep **berdampingan** (arsip publik); `bundles` tak disentuh | 🔴 Digantikan oleh ADR-0018 |
 | [0017](0017-buang-enum-exercise.md) | Buang nilai enum `exercise` (F7, pasangan `competition`); `bundle_type` = `source`\|`exam` | **Diterapkan** |
+| [0018](0018-drop-collections-origin-discriminator.md) | Konsolidasi Bundles: Hapus `collections` & Tambah Diskriminator `origin` (MAT-39) | **Diterapkan** |
+| [0019](0019-isolasi-vektor-question-embeddings.md) | Isolasi Penyimpanan Vektor 1:1 (`question_embeddings`) & Partial HNSW Index | Diusulkan (v2.0) |
+| [0020](0020-pemisahan-event-makro-dan-provenance-naskah.md) | Pemisahan Mutlak Event Ujian Makro & Provenance Naskah (hapus `bundles.event_id`) | Diusulkan (v2.0) |
+| [0021](0021-konfigurasi-cetak-print-config-bundles.md) | Konfigurasi Cetak Naskah A4 via `bundles.print_config` (KISS) & CSS Paged Media 2-Kolom | Diusulkan (v2.0) |
+| [0022](0022-wraproute-pipeline-banned-server-actions.md) | Pipa Tunggal API Gateway `wrapRoute()` & Larangan Server Actions untuk Mutasi | Diusulkan (v2.0) |
 
 ## Cara menambah ADR
 
