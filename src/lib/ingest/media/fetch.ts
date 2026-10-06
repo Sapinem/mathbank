@@ -9,11 +9,24 @@
  *   - **anti-SSRF (SEC-01)**: resolusi DNS pra-koneksi + redirect `manual` yang
  *     divalidasi ULANG tiap hop, sehingga loopback/RFC1918/link-local
  *     (`169.254.169.254`) tetap diblokir walau lewat DNS rebinding atau 30x.
+ *
+ * Protokol tambahan:
+ *   - **corpus://**: berkas gambar lokal dari korpus ingest (tidak menyentuh
+ *     jaringan). Format: `corpus://defantri/<slug>/<filename>`. Berkas fisik
+ *     dibaca dari `CORPUS_IMAGE_BASE/<slug>/<filename>`.
  */
 import { createHash } from "node:crypto";
 import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
 import { lookup as dnsLookup } from "node:dns/promises";
+import { readFile } from "node:fs/promises";
+import { join, extname } from "node:path";
+
+/**
+ * Root direktori gambar korpus Defantri (baca saja — tidak pernah ditulis).
+ * Berkas fisik: `<CORPUS_IMAGE_BASE>/<slug>/<filename>`.
+ */
+const CORPUS_IMAGE_BASE = "/home/hari/projects/qbank/data/corpora/defantri/images";
 
 /** Domain yang sertifikat SSL-nya rusak di sumber (temuan: pusmendik kemdikdasmen). */
 const TLS_RELAXED_HOSTS = ["pusmendik.kemendikdasmen.go.id"];
@@ -317,6 +330,64 @@ async function fetchFollowingRedirects(
   throw new Error("terlalu banyak redirect");
 }
 
+/**
+ * Baca gambar dari korpus lokal untuk URL berprotokol `corpus://`.
+ *
+ * Format: `corpus://defantri/<slug>/<filename>`
+ * Berkas fisik: `CORPUS_IMAGE_BASE/<slug>/<filename>`
+ *
+ * Path di-sanitasi: tidak ada `..'` / traversal; hanya karakter aman yang
+ * diperbolehkan agar tidak bisa kabur dari CORPUS_IMAGE_BASE.
+ */
+async function fetchCorpusImage(url: string, maxBytes: number): Promise<FetchResult> {
+  // Ambil bagian setelah "corpus://"
+  const rest = url.slice("corpus://".length);
+  // Pisahkan segmen: sumber/slug/filename
+  const parts = rest.split("/").filter(Boolean);
+  if (parts.length < 2) {
+    return { ok: false, error: `corpus:// path terlalu pendek: ${url}` };
+  }
+  // Validasi: tolak traversal / karakter berbahaya
+  const safe = /^[A-Za-z0-9._\-]+$/;
+  if (!parts.every((p) => safe.test(p))) {
+    return { ok: false, error: `corpus:// path mengandung karakter tidak aman: ${url}` };
+  }
+  // Gabungkan path — abaikan segmen pertama (nama sumber, mis. "defantri")
+  const [, ...rest2] = parts;
+  const absPath = join(CORPUS_IMAGE_BASE, ...rest2);
+
+  let bytes: Uint8Array;
+  try {
+    const buf = await readFile(absPath);
+    bytes = new Uint8Array(buf);
+  } catch (e) {
+    return { ok: false, error: `corpus:// berkas tidak ditemukan: ${absPath} (${e instanceof Error ? e.message : String(e)})` };
+  }
+
+  if (bytes.length > maxBytes) {
+    return { ok: false, error: `corpus:// terlalu besar (${bytes.length} B)` };
+  }
+
+  // Deteksi mime dari ekstensi lalu magic bytes sebagai fallback.
+  const ext = extname(absPath).toLowerCase();
+  const extMimeMap: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+    ".bmp": "image/bmp",
+    ".avif": "image/avif",
+  };
+  const mime = extMimeMap[ext] ?? sniffMime(bytes);
+  if (!mime || !IMAGE_MIME.test(mime)) {
+    return { ok: false, error: `corpus:// bukan gambar (${ext || "?"})` };
+  }
+
+  return { ok: true, bytes, contentType: mime, contentHash: hashBytes(bytes) };
+}
+
 /** Unduh satu gambar. */
 export async function fetchImage(url: string, opts: FetchOptions = {}): Promise<FetchResult> {
   let parsedUrl: URL;
@@ -324,6 +395,12 @@ export async function fetchImage(url: string, opts: FetchOptions = {}): Promise<
     parsedUrl = new URL(url);
   } catch {
     return { ok: false, error: "URL tidak valid" };
+  }
+
+  // Protokol corpus:// — baca berkas lokal, tanpa jaringan.
+  if (parsedUrl.protocol === "corpus:") {
+    const maxBytes = opts.maxBytes ?? 10 * 1024 * 1024;
+    return fetchCorpusImage(url, maxBytes);
   }
 
   if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {

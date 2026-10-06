@@ -12,6 +12,7 @@ export function absolutize(url: string, baseUrl?: string): string | undefined {
   if (/^https?:\/\//i.test(u)) return u;
   if (u.startsWith("//")) return `https:${u}`;
   if (u.startsWith("data:")) return u; // data-URI (biarkan)
+  if (u.startsWith("corpus://")) return u; // korpus lokal (biarkan)
   if (!baseUrl) return undefined;
   try {
     return new URL(u, baseUrl).toString();
