@@ -118,6 +118,47 @@ export function useBundlesPage(
   });
 }
 
+/**
+ * Ambil SEMUA paket (semua halaman) untuk daftar yang memfilter di sisi klien.
+ *
+ * LATAR: `GET /api/bundles` dibatasi `limit` (default 20, maksimum 100 sesuai
+ * skema zod). `useBundles` hanya mengambil satu halaman pertama sehingga daftar
+ * & statistik terpotong pada 20 paket walau `total` sebenarnya jauh lebih besar
+ * (mis. 105). Hook ini menelusuri seluruh halaman lalu mengembalikan
+ * `{ items, total }` — `total` diambil dari API (bukan panjang array) agar
+ * statistik akurat.
+ *
+ * Filter `bundleType`/`origin` diteruskan ke API (server-side) seperti semula.
+ */
+export function useAllBundles(filter?: BundlesListFilter) {
+  const qs = new URLSearchParams();
+  if (filter?.bundleType) qs.set("bundleType", filter.bundleType);
+  if (filter?.origin) qs.set("origin", filter.origin);
+  const baseQuery = qs.toString();
+  return useQuery({
+    queryKey: [...bundleKeys.all, "all", filter ?? null],
+    queryFn: async (): Promise<{ items: BundleRow[]; total: number }> => {
+      const PAGE = 100; // batas maksimum skema API
+      const items: BundleRow[] = [];
+      let offset = 0;
+      let total = 0;
+      // Batas iterasi defensif (mis. 50 halaman = 5000 paket) agar tak loop tanpa henti
+      // bila API keliru melaporkan `total`.
+      for (let i = 0; i < 50; i++) {
+        const params = new URLSearchParams(baseQuery);
+        params.set("limit", String(PAGE));
+        params.set("offset", String(offset));
+        const page = await api<BundleListResult>(`/api/bundles?${params.toString()}`);
+        items.push(...page.items);
+        total = page.total;
+        offset += page.items.length;
+        if (page.items.length === 0 || offset >= page.total) break;
+      }
+      return { items, total };
+    },
+  });
+}
+
 export function useBundle(id: string | null) {
   return useQuery({
     queryKey: bundleKeys.detail(id ?? ""),

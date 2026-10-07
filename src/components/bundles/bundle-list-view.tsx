@@ -20,6 +20,8 @@ import {
   X,
   LayoutGrid,
   List,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -51,7 +53,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  useBundles,
+  useAllBundles,
   useCreateBundle,
   useArchiveBundle,
   useDuplicateBundle,
@@ -104,6 +106,9 @@ const ORIGIN_TABS: { id: "all" | BundleOrigin; label: string; param: string }[] 
   { id: "ingest", label: "Ingest", param: "ingest" },
 ];
 
+/** Jumlah paket per halaman pada daftar (paginasi sisi klien). */
+const BUNDLES_PAGE_SIZE = 20;
+
 export function BundleListView() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -116,11 +121,16 @@ export function BundleListView() {
   const originFilter: "all" | BundleOrigin =
     originParam === "ingest" || originParam === "manual" ? originParam : "all";
 
-  // Fetch dengan filter API-side bila type/origin di-URL
-  const { data, isPending, isError, error } = useBundles({
+  // Fetch dengan filter API-side bila type/origin di-URL.
+  // `useAllBundles` mengambil SEMUA halaman (bukan hanya 20 pertama) karena
+  // daftar & statistik memfilter di sisi klien — lihat catatan hook.
+  const { data: bundleData, isPending, isError, error } = useAllBundles({
     bundleType: typeFilter !== "all" ? typeFilter : undefined,
     origin: originFilter !== "all" ? originFilter : undefined,
   });
+  const data: BundleRow[] = bundleData?.items ?? [];
+  /** Total paket menurut API (seluruh halaman), bukan panjang array yang dimuat. */
+  const apiTotal = bundleData?.total ?? 0;
   const create = useCreateBundle();
   const archive = useArchiveBundle();
   const duplicate = useDuplicateBundle();
@@ -136,6 +146,8 @@ export function BundleListView() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | BundleRow["status"]>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  // Halaman daftar (0-based). Direset ke 0 saat filter/pencarian berubah.
+  const [page, setPage] = useState(0);
 
   /** Push filter ke URL (single source of truth untuk type/origin). */
   function updateUrl(next: { type?: "all" | BundleType; origin?: "all" | BundleOrigin }) {
@@ -147,6 +159,7 @@ export function BundleListView() {
     if (nextOrigin === "all") params.delete("origin");
     else params.set("origin", nextOrigin);
     const qs = params.toString();
+    setPage(0); // filter berubah → kembali ke halaman pertama
     router.replace(`/bundles${qs ? `?${qs}` : ""}`, { scroll: false });
   }
 
@@ -178,13 +191,13 @@ export function BundleListView() {
   }
 
   // Statistik ringkas (total seluruh paket, bukan filtered)
-  const totalBundles = data?.length ?? 0;
-  const examCount = data?.filter((b) => b.bundleType === "exam").length ?? 0;
-  const sourceCount = data?.filter((b) => b.bundleType === "source").length ?? 0;
-  const totalItems = data?.reduce((acc, b) => acc + (b.itemCount ?? 0), 0) ?? 0;
+  const totalBundles = apiTotal;
+  const examCount = data.filter((b) => b.bundleType === "exam").length;
+  const sourceCount = data.filter((b) => b.bundleType === "source").length;
+  const totalItems = data.reduce((acc, b) => acc + (b.itemCount ?? 0), 0);
 
   // Filter sisi klien: search & status
-  const filtered = (data ?? []).filter((b) => {
+  const filtered = data.filter((b) => {
     if (statusFilter !== "all" && b.status !== statusFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -194,6 +207,14 @@ export function BundleListView() {
     }
     return true;
   });
+
+  // Paginasi sisi klien (20 per halaman) — lihat konstanta di atas komponen.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / BUNDLES_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paged = filtered.slice(
+    safePage * BUNDLES_PAGE_SIZE,
+    safePage * BUNDLES_PAGE_SIZE + BUNDLES_PAGE_SIZE,
+  );
 
   const hasFilterActive =
     search.trim() !== "" || statusFilter !== "all" || typeFilter !== "all" || originFilter !== "all";
@@ -311,7 +332,7 @@ export function BundleListView() {
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
                 placeholder="Cari judul naskah/tahun…"
                 aria-label="Cari naskah"
                 className="h-9 pl-8.5 pr-8 text-sm bg-muted/20"
@@ -331,7 +352,7 @@ export function BundleListView() {
             {/* Filter Status */}
             <Select
               value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as "all" | BundleRow["status"])}
+              onValueChange={(v) => { setStatusFilter(v as "all" | BundleRow["status"]); setPage(0); }}
             >
               <SelectTrigger className="h-9 min-w-32 text-xs">
                 <SelectValue placeholder="Status" />
@@ -368,6 +389,14 @@ export function BundleListView() {
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <span className="text-xs font-mono text-muted-foreground">
               {filtered.length} dari {totalBundles} paket
+              {totalPages > 1 && (
+                <>
+                  {" · "}
+                  <span className="text-foreground/80">
+                    hal. {safePage + 1}/{totalPages}
+                  </span>
+                </>
+              )}
             </span>
             <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5 bg-muted/20">
               <Button
@@ -428,7 +457,7 @@ export function BundleListView() {
         ) : viewMode === "grid" ? (
           /* ================= TAMPILAN GRID KARTU NASKAH (BENTO) ================= */
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((b) => (
+            {paged.map((b) => (
               <article
                 key={b.id}
                 className="group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card/60 p-4 motion-safe:transition-all motion-safe:duration-150 hover:border-border hover:bg-card hover:shadow-xs dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
@@ -545,7 +574,7 @@ export function BundleListView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((b) => (
+                {paged.map((b) => (
                   <TableRow key={b.id} className="hover:bg-muted/30">
                     <TableCell className="font-medium whitespace-normal min-w-[200px] max-w-sm">
                       <div className="flex flex-col gap-0.5">
@@ -623,6 +652,47 @@ export function BundleListView() {
               </TableBody>
             </Table>
           </div>
+        )}
+
+        {/* PAGINASI (20 per halaman) */}
+        {!isPending && !isError && filtered.length > BUNDLES_PAGE_SIZE && (
+          <nav
+            className="flex items-center justify-between gap-3 pt-1"
+            aria-label="Navigasi halaman paket"
+          >
+            <span className="text-xs text-muted-foreground">
+              Menampilkan {safePage * BUNDLES_PAGE_SIZE + 1}–
+              {Math.min((safePage + 1) * BUNDLES_PAGE_SIZE, filtered.length)} dari{" "}
+              {filtered.length} paket
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage <= 0}
+                onClick={() => {
+                  setPage(Math.max(0, safePage - 1));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                <ChevronLeft data-icon="inline-start" /> Sebelumnya
+              </Button>
+              <span className="text-xs font-medium tabular-nums">
+                {safePage + 1} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage >= totalPages - 1}
+                onClick={() => {
+                  setPage(Math.min(totalPages - 1, safePage + 1));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                Berikutnya <ChevronRight data-icon="inline-end" />
+              </Button>
+            </div>
+          </nav>
         )}
       </div>
 

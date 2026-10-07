@@ -292,7 +292,9 @@ function QuestionCardInner({
           <div className="sr-only">
             {q.options.map((o) => (
               <span key={o.id} className={cn(o.isCorrect ? "text-success font-medium" : "")}>
-                <strong>{o.label}.</strong> <MathContent content={o.contentMarkdown} />
+                {/* `noScroll`: blok sr-only tak terlihat — jangan jadikan kontainer
+                    gulir (dulu membuat area scroll tak kasat mata di daftar). */}
+                <strong>{o.label}.</strong> <MathContent content={o.contentMarkdown} noScroll />
               </span>
             ))}
           </div>
@@ -351,69 +353,113 @@ function QuestionCardInner({
           <StimulusCard content={q.parent.contentMarkdown} className="text-xs" />
         )}
 
-        {/* KONTEN UTAMA SOAL */}
+        {/* KONTEN UTAMA SOAL & OPSI PILIHAN GANDA (SATU KESATUAN ALUR NASKAH) */}
         <Link href={href} className="block group-hover:text-foreground">
           {mode === "grid" ? (
-            <div className="relative max-h-[140px] overflow-hidden">
+            <div className="relative max-h-[220px] overflow-hidden">
               <MathContent
                 content={excerpt(q.contentMarkdown, 240)}
                 noScroll
                 className="text-xs leading-relaxed text-foreground overflow-hidden"
               />
-              {/* Gradien fade-out agar token KaTeX tidak terpotong secara kasar */}
+
+              {/* OPSI PILIHAN GANDA (MENYATU DIDALAM AREA KARTU NASKAH) */}
+              {q.options.length > 0 && (
+                <div className="mt-2.5 flex flex-col gap-1.5 border-t border-border/40 pt-2 text-xs">
+                  {q.options.map((o) => (
+                    <div
+                      key={o.id}
+                      className={cn(
+                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0",
+                        o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
+                      )}
+                    >
+                      <span className={cn(o.isCorrect ? "text-success" : "")}>
+                        <strong
+                          className={cn(
+                            "font-mono font-semibold shrink-0",
+                            o.isCorrect
+                              ? "text-success text-emerald-600 dark:text-emerald-400"
+                              : "text-foreground/70",
+                          )}
+                        >
+                          {o.label}.
+                        </strong>
+                      </span>
+                      <div className="min-w-0 flex-1 truncate">
+                        <MathContent
+                          content={o.contentMarkdown}
+                          noScroll
+                          className="inline truncate max-w-full text-xs"
+                        />
+                      </div>
+                      {o.isCorrect && (
+                        <span
+                          className="inline-flex items-center text-[12px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
+                          title="Kunci Jawaban"
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Gradien fade-out lembut di batas bawah jika ruang kartu tidak mencukupi */}
               <span className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-card to-transparent" aria-hidden="true" />
             </div>
           ) : (
-            <MathContent
-              content={q.contentMarkdown}
-              noScroll
-              className="text-xs leading-relaxed text-foreground overflow-hidden max-h-[380px] overflow-hidden"
-            />
+            <div className="flex flex-col gap-2.5">
+              <MathContent
+                content={q.contentMarkdown}
+                noScroll
+                className="text-xs leading-relaxed text-foreground overflow-hidden max-h-[380px]"
+              />
+              {q.options.length > 0 && (
+                <div className="mt-1 flex flex-col gap-1.5 border-t border-border/40 pt-2 text-xs">
+                  {q.options.map((o) => (
+                    <div
+                      key={o.id}
+                      className={cn(
+                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0",
+                        o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
+                      )}
+                    >
+                      <span className={cn(o.isCorrect ? "text-success" : "")}>
+                        <strong
+                          className={cn(
+                            "font-mono font-semibold shrink-0",
+                            o.isCorrect
+                              ? "text-success text-emerald-600 dark:text-emerald-400"
+                              : "text-foreground/70",
+                          )}
+                        >
+                          {o.label}.
+                        </strong>
+                      </span>
+                      <div className="min-w-0 flex-1 truncate">
+                        <MathContent
+                          content={o.contentMarkdown}
+                          noScroll
+                          className="inline truncate max-w-full text-xs"
+                        />
+                      </div>
+                      {o.isCorrect && (
+                        <span
+                          className="inline-flex items-center text-[12px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
+                          title="Kunci Jawaban"
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </Link>
-
-        {/* OPSI PILIHAN GANDA (FORMAT DOKUMEN NASKAH 1 KOLOM KE BAWAH) */}
-        {q.options.length > 0 && (
-          <div className="mt-2 flex flex-col gap-1.5 border-t border-border/40 pt-2.5 text-xs">
-            {q.options.map((o) => (
-              <div
-                key={o.id}
-                className={cn(
-                  "flex items-center gap-2 leading-relaxed transition-colors min-w-0",
-                  o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
-                )}
-              >
-                <span className={cn(o.isCorrect ? "text-success" : "")}>
-                  <strong
-                    className={cn(
-                      "font-mono font-semibold shrink-0",
-                      o.isCorrect
-                        ? "text-success text-emerald-600 dark:text-emerald-400"
-                        : "text-foreground/70",
-                    )}
-                  >
-                    {o.label}.
-                  </strong>
-                </span>
-                <div className="min-w-0 flex-1 truncate">
-                  <MathContent
-                    content={o.contentMarkdown}
-                    noScroll
-                    className="inline truncate max-w-full text-xs"
-                  />
-                </div>
-                {o.isCorrect && (
-                  <span
-                    className="inline-flex items-center text-[12px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
-                    title="Kunci Jawaban"
-                  >
-                    ✓
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* FOOTER KARTU */}

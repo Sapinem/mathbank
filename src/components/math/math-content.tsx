@@ -157,21 +157,25 @@ export function renderMath(value: string, display: boolean): string {
 /**
  * Komponen render konten soal.
  *
- * Kontrak layout (CONSTRAINTS #12): rumus lebar TIDAK boleh memecah layout.
- * Caranya: pembungkus konten menjadi satu-satunya kontainer gulir horizontal
- * (`overflow-x-auto`), dan setiap rumus inline diberi `max-width:100%` agar
- * menyusut ke lebar kontainer — bukan tiap rumus menjadi kotak gulir sendiri.
+ * Kontrak layout (CONSTRAINTS #12): rumus lebar TIDAK boleh memecah layout,
+ * tetapi konten juga TIDAK boleh menjadi blok yang bisa digeser kanan-kiri.
  *
- * CATATAN REGRESI (MAT-47 → diperbaiki): sebelumnya setiap rumus inline
- * dibungkus `inline-block … overflow-x-auto`. Itu membuat SETIAP rumus (termasuk
- * `5`, `a`, `a≥b`) menjadi wilayah gulir horizontal tersendiri — pengguna
- * melihat scrollbar kanan-kiri di dalam kalimat & rumus terpotong. Isolasi
- * per-rumus hanya berguna untuk rumus yang benar-benar lebih lebar dari kolom,
- * jadi sekarang gulir ditangani satu kali di pembungkus dan rumus inline
- * dibiarkan mengalir sebagai elemen inline biasa.
+ * ATURAN:
+ *  1. PEMBUNGKUS konten TIDAK pernah menjadi kontainer gulir. Default hanya
+ *     `inline-block max-w-full` (teks & rumus inline mengalir/membungkus).
+ *     `noScroll` hanya MENAMBAH `overflow-hidden` untuk memotong (mis. excerpt
+ *     kartu daftar) — bukan untuk menggulir.
+ *  2. RUmus INLINE mengalir sebagai elemen inline biasa + `max-w-full`.
+ *  3. RUmus DISPLAY (blok) adalah SATU-SATUNYA yang menggulir sendiri, via
+ *     `.katex-display` (globals.css) — itulah tempat rumus panjang (mis.
+ *     `\begin{align}`) ditangani.
  *
- * Jika `noScroll={true}` (mis. daftar kartu ringkas), gulir ditiadakan dan
- * konten dipotong menurut batas kontainer.
+ * CATATAN REGRESI:
+ *  - MAT-47: tiap rumus inline pernah dibungkus `overflow-x-auto` → tiap rumus
+ *    jadi kotak gulir sendiri.
+ *  - Pembungkus pernah `overflow-x-auto` → blok seperti pembahasan & blok
+ *    `sr-only` jadi area gulir (termasuk yang tak terlihat), menimbulkan scroll
+ *    kanan-kiri yang membingungkan. Sekarang pembungkus tidak menggulir.
  */
 export function MathContent({
   content,
@@ -186,8 +190,10 @@ export function MathContent({
   return (
     <span
       className={cn(
-        "inline-block max-w-full",
-        noScroll ? "overflow-hidden" : "overflow-x-auto",
+        // Pembungkus TIDAK menggulir. Mengalir/membungkus secara alami.
+        "inline-block max-w-full align-middle",
+        // `noScroll` = potong (bukan gulir) bagi blok ringkas/tersembunyi.
+        noScroll && "overflow-hidden",
         className,
       )}
     >
