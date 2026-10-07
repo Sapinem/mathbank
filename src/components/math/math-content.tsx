@@ -56,10 +56,11 @@ export function clearMathCache(): void {
 
 export function tokenizeMath(input: string): Token[] {
   const tokens: Token[] = [];
-  // Mendukung DUA gaya (CONSTRAINTS #25: konten baru pakai \\( \\) ; data lama $ ):
-  //   display: \\[ ... \\]  atau  $$ ... $$
-  //   inline : \\( ... \\)   atau  $ ... $
-  const re = /\\\[([\s\S]+?)\\\]|\$\$([\s\S]+?)\$\$|\\\(([\s\S]+?)\\\)|\$([^$\n]+?)\$/g;
+  // Mendukung SEMUA gaya (CONSTRAINTS #25):
+  //   display: \[ ... \]  /  \\\[ ... \\\]  /  $$ ... $$  /  $...multiline...$ (bila mengandung \begin)
+  //   inline : \( ... \)  /  \\( ... \\)  /  $ ... $
+  const re =
+    /(?:\\\[|\\\\\[)([\s\S]+?)(?:\\\]|\\\\\])|\$\$([\s\S]+?)\$\$|(?<!\$)\$([\s\S]+?\\(?:begin|end)\{[\s\S]+?)\$|(?<!\$)\$([^$\n]+?)\$(?!\$)|(?:\\\((?:\\\\\(|\\\()??)([\s\S]+?)(?:\\\)|\\\\\))/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(input)) !== null) {
@@ -71,9 +72,11 @@ export function tokenizeMath(input: string): Token[] {
     } else if (m[2] !== undefined) {
       tokens.push({ kind: "math", value: m[2], display: true });
     } else if (m[3] !== undefined) {
-      tokens.push({ kind: "math", value: m[3], display: false });
-    } else {
+      tokens.push({ kind: "math", value: m[3], display: true });
+    } else if (m[4] !== undefined) {
       tokens.push({ kind: "math", value: m[4], display: false });
+    } else if (m[5] !== undefined) {
+      tokens.push({ kind: "math", value: m[5], display: false });
     }
     last = re.lastIndex;
   }
@@ -112,7 +115,7 @@ function renderText(text: string): string {
   return escapeHtml(text)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/`([^`]+)`/g, '<code class="font-mono text-xs bg-transparent px-1 py-0.5 rounded">$1</code>')
     .replace(/\n/g, "<br/>");
 }
 
@@ -154,9 +157,21 @@ export function renderMath(value: string, display: boolean): string {
 /**
  * Komponen render konten soal.
  *
- * Secara default pembungkus memiliki `overflow-x-auto` (CONSTRAINTS #12).
- * Jika `noScroll={true}` atau `className` mendefinisikan `overflow-hidden` / `truncate`,
- * scroll horizontal ditiadakan dan teks/rumus dipotong sesuai batas kontainer.
+ * Kontrak layout (CONSTRAINTS #12): rumus lebar TIDAK boleh memecah layout.
+ * Caranya: pembungkus konten menjadi satu-satunya kontainer gulir horizontal
+ * (`overflow-x-auto`), dan setiap rumus inline diberi `max-width:100%` agar
+ * menyusut ke lebar kontainer — bukan tiap rumus menjadi kotak gulir sendiri.
+ *
+ * CATATAN REGRESI (MAT-47 → diperbaiki): sebelumnya setiap rumus inline
+ * dibungkus `inline-block … overflow-x-auto`. Itu membuat SETIAP rumus (termasuk
+ * `5`, `a`, `a≥b`) menjadi wilayah gulir horizontal tersendiri — pengguna
+ * melihat scrollbar kanan-kiri di dalam kalimat & rumus terpotong. Isolasi
+ * per-rumus hanya berguna untuk rumus yang benar-benar lebih lebar dari kolom,
+ * jadi sekarang gulir ditangani satu kali di pembungkus dan rumus inline
+ * dibiarkan mengalir sebagai elemen inline biasa.
+ *
+ * Jika `noScroll={true}` (mis. daftar kartu ringkas), gulir ditiadakan dan
+ * konten dipotong menurut batas kontainer.
  */
 export function MathContent({
   content,
@@ -171,7 +186,7 @@ export function MathContent({
   return (
     <span
       className={cn(
-        "block",
+        "inline-block max-w-full",
         noScroll ? "overflow-hidden" : "overflow-x-auto",
         className,
       )}
@@ -185,15 +200,12 @@ export function MathContent({
         ) : (
           <span
             key={i}
-            // Skill §4: isolasi rumus inline dengan `.katex-inline` agar
-            // ekspresi panjang menggulir di dalam kontainernya (bukan memaksa
-            // viewport 360px menggulir horizontal). Utilitas Tailwind dipakai
-            // langsung agar kontrak terjamin tanpa bergantung file CSS global.
-            className={
-              t.display
-                ? undefined
-                : "katex-inline inline-block max-w-full overflow-x-auto align-middle [scrollbar-width:thin]"
-            }
+            // Rumus inline dibiarkan mengalir sebagai elemen inline biasa.
+            // `.katex-inline` tetap dipakai (kontrak print.css MAT-40) dan
+            // `max-w-full` mencegahnya melebihi kontainer; gulir horizontal
+            // ditangani pembungkus di atas — BUKAN per-rumus, agar tidak muncul
+            // kotak gulir pada rumus pendek (regresi MAT-47).
+            className={t.display ? undefined : "katex-inline max-w-full align-middle"}
             dangerouslySetInnerHTML={{ __html: renderMath(t.value, t.display) }}
           />
         );
