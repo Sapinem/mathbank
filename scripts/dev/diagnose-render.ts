@@ -46,6 +46,8 @@ async function diagnoseRender() {
       } else if (t.kind === "math") {
         const v = t.value.replace(/\n/g, "\\n");
         console.log(`  [RUMUS${t.display ? " display" : ""}] ${v.length > 70 ? v.slice(0, 70) + "…" : v}`);
+      } else if (t.kind === "table") {
+        console.log(`  [tabel] ${t.header.length} kolom × ${t.rows.length} baris`);
       } else {
         console.log(`  [gambar] ${t.shortId}`);
       }
