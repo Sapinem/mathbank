@@ -3,17 +3,18 @@ import { render } from "@testing-library/react";
 import { MathContent } from "./math-content";
 
 /**
- * Regresi MAT-47: setiap rumus inline TIDAK boleh menjadi wilayah gulir
- * horizontal tersendiri.
+ * Kontrak tata letak MathContent (regresi "scroll kanan-kiri"):
  *
- * Kejadian sebelumnya: tiap potongan rumus dibungkus
- * `inline-block … overflow-x-auto`, sehingga rumus pendek seperti `5` atau
- * `a≥b` pun menjadi kontainer gulir — pengguna melihat scrollbar kanan-kiri di
- * dalam kalimat dan rumus terpotong. Perbaikan: gulir hanya ditangani SATU KALI
- * di pembungkus konten; rumus inline mengalir sebagai elemen inline biasa.
+ *  - TIDAK ADA kontainer gulir di dalam MathContent. Baik pembungkus konten
+ *    (stem/pembahasan) maupun rumus inline mengalir & membungkus.
+ *  - Alasan: `overflow-x-auto` pada elemen `inline-block` membuat rentang gulir
+ *    palsu ~2px akibat pembulatan sub-pixel KaTeX, dan pada blok panjang seperti
+ *    PEMBAHASAN membuat seluruh blok bisa di-drag kanan-kiri. `no-scrollbar`
+ *    hanya menyembunyikan scrollbar — gulirnya tetap ada.
+ *  - Rumus panjang ditangani di rumus DISPLAY (`.katex-display`, globals.css).
  */
 describe("MathContent — tata letak rumus inline (regresi scroll kanan-kiri)", () => {
-  it("rumus inline TIDAK memakai overflow-x-auto (bukan kotak gulir per-rumus)", () => {
+  it("rumus inline mengalir tanpa kotak gulir sendiri", () => {
     const { container } = render(<MathContent content="Jika $x^2=9$ maka nilai $x$" />);
     const inlineMath = container.querySelectorAll(".katex-inline");
     expect(inlineMath.length).toBe(2);
@@ -21,23 +22,35 @@ describe("MathContent — tata letak rumus inline (regresi scroll kanan-kiri)", 
       const cls = el.className;
       expect(cls).not.toContain("overflow-x-auto");
       expect(cls).not.toContain("overflow-x-scroll");
-      // Elemen inline biasa — bukan kotak `inline-block` tersendiri.
-      expect(cls).not.toContain("inline-block");
+      expect(cls).not.toContain("overflow-auto");
+      expect(cls).toContain("max-w-full");
     });
   });
 
-  it("pembungkus konten adalah SATU-SATUNYA kontainer gulir horizontal", () => {
+  it("pembungkus konten BUKAN kontainer gulir horizontal", () => {
     const { container } = render(<MathContent content="Nilai dari $2+2$ adalah $4$" />);
     const wrap = container.firstElementChild as HTMLElement;
-    expect(wrap.className).toContain("overflow-x-auto");
     expect(wrap.className).toContain("max-w-full");
-    // Tidak ada kontainer gulir lain di dalamnya (rumus mengalir bebas).
-    const innerScrollers = [...container.querySelectorAll("*")].filter(
-      (el) =>
-        el !== wrap &&
-        (el.className?.toString() ?? "").match(/overflow-x-(auto|scroll)/),
+    expect(wrap.className).not.toContain("overflow-x-auto");
+    expect(wrap.className).not.toContain("overflow-x-scroll");
+    expect(wrap.className).not.toContain("overflow-auto");
+  });
+
+  it("tidak ada elemen bergulir horizontal di dalam konten", () => {
+    const { container } = render(<MathContent content="Nilai dari $2+2$ adalah $4$" />);
+    const scrollers = [...container.querySelectorAll("*")].filter(
+      (el) => (el.className?.toString() ?? "").match(/overflow-x-(auto|scroll)/),
     );
-    expect(innerScrollers).toHaveLength(0);
+    expect(scrollers).toHaveLength(0);
+  });
+
+  it("pembahasan multi-baris tidak membuat pembungkus menggulir", () => {
+    const sol = "Langkah 1: $a+b$.\nLangkah 2: hasil $c$.\n$d=e$ selesai.";
+    const { container } = render(<MathContent content={sol} />);
+    const wrap = container.firstElementChild as HTMLElement;
+    const cs = getComputedStyle(wrap);
+    expect(cs.overflowX).not.toBe("auto");
+    expect(cs.overflowX).not.toBe("scroll");
   });
 
   it("noScroll → pembungkus memotong (overflow-hidden), bukan menggulir", () => {

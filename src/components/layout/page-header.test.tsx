@@ -19,4 +19,17 @@ describe("PageHeader", () => {
     render(<PageHeader title="Judul" actions={<button>Aksi</button>} />);
     expect(screen.getByRole("button", { name: "Aksi" })).toBeInTheDocument();
   });
+
+  it("wadah actions tidak `shrink-0` di mobile & boleh membungkus (cegah scroll horizontal)", () => {
+    const { container } = render(
+      <PageHeader title="Detail Soal" actions={<button>Aksi</button>} />,
+    );
+    const wrap = container.querySelector(".flex-wrap");
+    expect(wrap, "wadah aksi harus memiliki flex-wrap").not.toBeNull();
+    const cls = wrap!.className;
+    // `shrink-0` hanya boleh aktif di ≥sm (desktop), bukan tanpa prefix.
+    expect(cls).not.toMatch(/(^|\s)shrink-0(\s|$)/);
+    expect(cls).toContain("min-w-0");
+    expect(cls).toContain("max-w-full");
+  });
 });

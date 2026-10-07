@@ -183,9 +183,33 @@
   scrollbar-width: thin;
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
+  /*
+   * Toleransi pembulatan sub-pixel KaTeX.
+   *
+   * KaTeX menata elemen dengan lebar pecahan (mis. konten 551px, tapi
+   * `scrollWidth` menjadi 553px karena sub-elemen `.katex-html`/`.katex-base`
+   * dibulatkan ke atas). Akibatnya `overflow-x: auto` memunculkan scrollbar
+   * tipis yang bisa digeser ~2px walau rumus SEBENARNYA muat — paling terasa
+   * pada blok panjang seperti `\begin{align}` di pembahasan.
+   *
+   * Menambah sedikit padding di sisi kanan (di dalam area gulir) memberi ruang
+   * agar pembulatan itu tidak melewati tepi: `scrollWidth` menjadi sama dengan
+   * `clientWidth`, sehingga scrollbar hanya muncul bila rumus benar-benar lebih
+   * lebar dari kontainer (mis. align panjang di layar sempit) — yang memang
+   * wajar digulir, dan tidak ada konten yang terpotong.
+   */
+  padding-right: 3px;
 }
 
-/* Skala KaTeX persis sama dengan font non-LaTeX */
+/* Skala KaTeX persis sama dengan font non-LaTeX + netralkan background bawaan */
 .katex {
   font-size: 1em;
+}
+
+.katex,
+.katex-inline,
+.katex-display,
+.katex * {
+  background-color: transparent !important;
+  background: transparent !important;
 }
