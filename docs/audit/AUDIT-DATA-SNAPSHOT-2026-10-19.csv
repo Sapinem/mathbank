@@ -1,0 +1,98 @@
+# MATHBANK V2 AUDIT - KEY METRICS SNAPSHOT
+# Generated: 2026-10-19
+# =========================================
+
+## DATA QUALITY SCORECARD
+
+### Questions (11,889 total)
+METRIC,VALUE,PERCENTAGE,STATUS
+Total_Questions,11889,100.0%,BASELINE
+Status_Ready,0,0.0%,CRITICAL
+Status_Draft,11889,100.0%,NEEDS_WORK
+Has_Answer_Key,11108,93.4%,GOOD
+Has_Solution,10363,87.2%,GOOD
+AI_Tagged,0,0.0%,CRITICAL
+Has_Embedding,0,0.0%,CRITICAL-BLOCKER
+Has_Topic_Map,0,0.0%,CRITICAL-BLOCKER
+Has_Tags,0,0.0%,MEDIUM
+Has_Event_ID,2283,19.2%,MEDIUM
+Is_Flagged,3034,25.5%,MEDIUM
+Contains_LaTeX,10685,89.9%,EXCELLENT
+Content_LT50_Chars,699,5.9%,REVIEW_NEEDED
+Soft_Deleted,22,0.2%,OK
+
+### Bundles (579 total)
+METRIC,VALUE,STATUS
+Total_Bundles,579,BASELINE
+Active_Bundles,577,GOOD
+Archived_Bundles,2,OK
+Empty_Active_Bundles,0,EXCELLENT
+Bundles_Without_Title,0,EXCELLENT
+Orphan_Questions,0,EXCELLENT
+Dangling_References,0,EXCELLENT
+Avg_Questions_Per_Bundle,21.4,IDEAL
+
+### Topics (174 total)
+METRIC,VALUE,STATUS
+Total_Topics,174,BASELINE
+Root_Topics_(Level1),6,OK
+Level2_Topics,33,OK
+Level3_Topics,135,OK
+Max_Depth,3,OK
+Orphan_Topics,0,EXCELLENT
+Empty_Topics_(No_Questions),174,CRITICAL-100%
+Questions_With_Topic_Map,0,CRITICAL-0%
+
+### Media Assets (2,617 total)
+METRIC,VALUE,STATUS
+Total_Media_Assets,2617,BASELINE
+DB_Linked_via_question_media,0,CRITICAL-0%
+Referenced_in_Content_as_img,1520,58%
+Orphan_Assets,2617,100%-NEEDS_FIX
+Duplicate_Files_By_Hash,0,EXCELLENT
+Valid_Short_ID,2617,100%
+Files_Over_1MB,15,OK
+Files_Over_5MB,1,OK
+
+### Sources (5 total)
+SOURCE,BUNDLES,QUESTIONS,PERCENT
+defantri,197,5409,45.5%
+mathcyber,172,3436,28.9%
+m4thlab,203,2680,22.5%
+pusmendik_tka,1,233,2.0%
+pusmendik_dayaserap,4,110,0.9%
+
+### Question Types
+TYPE,COUNT,PERCENT
+single_choice,9334,78.5%
+essay,2202,18.5%
+matrix_grid,330,2.8%
+multiple_choice_checkbox,22,0.2%
+stimulus,1,0.0%
+
+### Codebase Metrics
+METRIC,VALUE
+Total_Source_Files,407
+Total_Lines_of_Code,48524
+Test_Files,113
+DB_Integration_Test_Files,23
+E2E_Test_Files,15
+Files_Over_300_Lines,17
+Largest_File(question-editor.tsx),1023
+scripts_dev_Files,342
+useMemo_useCallback_Instances,8
+space-y_Instances,2
+manual_z-index_Instances,18
+ADR_Files,22
+Documentation_Files_MD,172
+
+### Health Scores
+PILLAR,SCORE,STATUS
+1_Data_Quality,3.5,CRITICAL
+2_Codebase_Health,7.5,GOOD
+3_Architecture_Readiness,7.0,GOOD
+4_Security_Posture,8.0,GOOD
+5_Performance_Observability,6.5,MODERATE
+6_Documentation_Governance,5.0,MODERATE
+7_Operational_Readiness,6.0,MODERATE
+OVERALL,6.2,MODERATE
