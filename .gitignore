@@ -52,6 +52,21 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# artefak audit & dump lokal (BUKAN kode — jangan di-commit; lihat MAT-115)
+/.tmp-audit/
+/.tmp-*/
+*.dump
+*.dump.gz
+*.sql.gz
+/*.png
+/*.jpg
+/screenshots/
+/audit-output/
+
+# skrip diagnostik lokal (dev-only, banyak, tak dipakai CI). Bila ada yang
+# layak permanen: pindahkan ke `scripts/` (di luar `scripts/dev/`) lalu commit.
+/scripts/dev/
+
 # playwright
 /test-results/
 /playwright-report/
