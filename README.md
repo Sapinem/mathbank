@@ -101,9 +101,11 @@ Backup manual **tidak cukup** untuk produksi: jadwalkan harian (cron) + retensi 
 | Model | `BAAI/bge-m3` · dimensi **1024** (harus cocok `vector(1024)`) |
 | Health | `GET /health` → `{"status":"ok","model":"BAAI/bge-m3","dim":1024}` |
 | Embed | `POST /v1/embeddings` `{"input":["..."]}` (gaya OpenAI); OpenAPI di `/openapi.json` |
-| Env aplikasi | `BGE_M3_SERVICE_URL`, `BGE_M3_MODEL` (default `bge-m3`) |
+| Env aplikasi | `BGE_M3_SERVICE_URL` (default `http://127.0.0.1:3005`), `BGE_M3_MODEL` (default `bge-m3`), `BGE_M3_TIMEOUT_MS` (default `120000`) |
 
-⚠️ **Gap yang diketahui:** klien di `src/lib/embedding/bge-m3.ts` masih memanggil bentuk **Ollama** (`POST {base}/api/embed`), sementara service `:3005` mengekspos `/v1/embeddings`. Selaraskan base URL/adaptor sebelum menjalankan backfill embedding (0 dari 11.889 soal punya vektor).
+✅ **Klien aplikasi sudah selaras (MAT-115).** `src/lib/embedding/bge-m3.ts` memakai kontrak OpenAI-compatible `POST {base}/v1/embeddings` (`{model,input}` → `{data:[{embedding}]}`), tetap menerima balasan lama `{embeddings:[[…]]}`, dan memakai `GET /health`. `.env`/`.env.example` menunjuk `:3005`.
+
+⏳ **Yang belum jalan:** backfill vektor — **0 dari 11.889 soal** punya embedding. Jalankan `pnpm backup:db` sebelum backfill massal.
 
 ---
 

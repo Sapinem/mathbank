@@ -1,8 +1,10 @@
 # Sinkronisasi Metrik DB & Dokumentasi Arsitektur (MAT-116)
 
-> **Status:** ⏳ Menunggu persetujuan — usulan penggantian §8 `AGENTS.md` + §9 baru
+> **Status:** ✅ Teks final siap terap — **persetujuan Paperclip `1fe757d9` = accepted (2026-10-19 07:22Z)**;
+> penerapan ke `AGENTS.md` masih tertahan **gerbang berkas instruksi terlindungi** (prompt lokal timeout, bukan penolakan).
+> Teks §9.2 sudah dikoreksi pasca-MAT-115 (klien embedding kini menunjuk `:3005`).
 > **Penulis:** Tariq (Data Ingestion & Corpus Pipeline)
-> **Tanggal:** 19 Oktober 2026
+> **Tanggal:** 19 Oktober 2026 (revisi 2)
 > **Isu:** MAT-116 · Sprint 0
 > **Cakupan:** `AGENTS.md`, `README.md`, `docs/`
 
@@ -43,8 +45,10 @@ Angka turunan (status, kunci, soft-delete, media/topik kosong, distribusi sumber
 
 ## 3. Usulan Teks `AGENTS.md` (pengganti §8, tambah §9)
 
-Berkas `AGENTS.md` dilindungi gerbang persetujuan; penulisan ditolak pada run ini. Teks di bawah
-adalah isi yang diminta untuk diterapkan apa adanya.
+Berkas `AGENTS.md` dilindungi gerbang persetujuan. Persetujuan manusia atas isi ini **sudah diterima**
+(`request_confirmation` `1fe757d9`, status `accepted`), tetapi **penulisan berkas** tetap ditahan
+penjaga berkas-instruksi lokal (prompt persetujuan tidak terjawab dalam jendela waktu run).
+Teks di bawah adalah isi final yang harus diterapkan apa adanya begitu gerbang berkas dibuka.
 
 ````markdown
 ## 8. Kondisi proyek saat ini (perbarui bila berubah)
@@ -98,11 +102,13 @@ curl -s -X POST localhost:3005/v1/embeddings \
 - Model `BAAI/bge-m3`, **dimensi wajib 1024** (sesuai `vector(1024)`); OpenAPI di `/openapi.json`.
 - Endpoint embedding: `POST /v1/embeddings` (gaya OpenAI), health: `GET /health`.
 
-**Konvensi integrasi di aplikasi** (`src/lib/embedding/bge-m3.ts`):
+**Konvensi integrasi di aplikasi** (`src/lib/embedding/bge-m3.ts`, diselaraskan MAT-115 2026-10-19):
 
-- Base URL dari `BGE_M3_SERVICE_URL`, model dari `BGE_M3_MODEL`; **jangan hardcode port** di kode baru.
-- Klien saat ini berbentuk **Ollama**: `POST {base}/api/embed` → `{embeddings: number[][]}`.
-- ⚠️ **Gap terverifikasi:** `.env` masih menunjuk `http://localhost:11434` (Ollama **mati**), sedangkan service `:3005` memakai path `/v1/embeddings`. Backfill embedding **belum bisa jalan** sampai base URL/adaptor diselaraskan (domain Salman — jangan ubah kode di luar tugas dokumentasi).
+- Base URL dari `BGE_M3_SERVICE_URL` (default `http://127.0.0.1:3005`), model dari `BGE_M3_MODEL` (default `bge-m3`), batas waktu `BGE_M3_TIMEOUT_MS` (default 120000 ms — cold start CPU). **Jangan hardcode port** di kode baru.
+- Transport memakai kontrak **OpenAI-compatible**: `POST {base}/v1/embeddings` dengan body `{ model, input }` → `{ data: [{ embedding }] }`. Balasan gaya lama `{ embeddings: [[…]] }` (Ollama `/api/embed`) **masih diterima** agar pemanggil lama tidak putus.
+- Health check: `GET /health` (fallback probe embed bila endpoint health tidak ada).
+- ✅ **Gap lama sudah ditutup (MAT-115):** sebelumnya klien memanggil `{base}/api/embed` dan `.env` menunjuk `:11434` (Ollama mati). Kini klien, `.env`, dan `.env.example` semuanya menunjuk service `:3005`.
+- **Yang belum jalan:** backfill 11.889 soal → **0 embedding** tersimpan. Adaptor sudah siap; eksekusi backfill belum dijadwalkan.
 - Aturan data: tolak vektor ≠ 1024 dim; batch + idempoten (skip berdasarkan hash konten); **backup dulu** (`pnpm backup:db`) sebelum backfill massal; jangan simpan vektor parsial.
 
 **Referensi audit:** `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md` (ringkasan: `docs/audit/EVALUASI-PAPERCLIP-V2-EXECUTIVE.md`, rencana aksi: `docs/audit/PAPERCLIP-V2-ACTION-PLAN.md`).
@@ -114,9 +120,10 @@ curl -s -X POST localhost:3005/v1/embeddings \
 
 | Lokasi | Klaim lama | Aktual | Status |
 |---|---|---|---|
-| `AGENTS.md` §8 | 28 tabel | 26 | ⏳ menunggu persetujuan |
-| `AGENTS.md` §8 | 0 soal | 11.889 | ⏳ menunggu persetujuan |
-| `AGENTS.md` §8 | 5 events / 6 sumber | 11 event / 5 sumber | ⏳ menunggu persetujuan |
+| `AGENTS.md` §8 | 28 tabel | 26 | ⏸ teks final siap; tertahan gerbang berkas terlindungi |
+| `AGENTS.md` §8 | 0 soal | 11.889 | ⏸ idem |
+| `AGENTS.md` §8 | 5 events / 6 sumber | 11 event / 5 sumber | ⏸ idem |
+| `AGENTS.md` §8 | — | §9 baru (6 lapisan + embedding `:3005`) | ⏸ idem |
 | `README.md` | 27 tabel | 26 | ✅ diperbaiki |
 | `README.md` | "9 lapisan" tanpa pemetaan | 9 desain → 6 teknis | ✅ diperbaiki |
 | `README.md` | tanpa prasyarat embedding | `:3005` didokumentasikan | ✅ diperbaiki |
@@ -138,5 +145,18 @@ curl -s -X POST localhost:3005/v1/embeddings \
 
 - `pnpm db:verify` dijalankan pada DB utama (`localhost:5433/mathbank`): **hijau**, 26 tabel / 24 trigger / 3 CHECK / 1 HNSW / 0 drift.
 - Semua hitungan entitas berasal dari `psql` langsung, bukan salinan laporan; angka audit MAT-114 cocok kecuali `events` (5 → **11**, dikoreksi).
-- `curl localhost:3005/health` → `200` `{"status":"ok","model":"BAAI/bge-m3","dim":1024}`; `curl localhost:11434/api/tags` → **gagal konek** (Ollama mati). Ini bukti untuk klaim "service `:3005` hidup, klien aplikasi belum menunjuk ke sana".
-- Tidak ada klaim "selesai" untuk `AGENTS.md`: berkas dilindungi gerbang persetujuan, penulisan ditolak pada run ini.
+- `curl localhost:3005/health` → `200` `{"status":"ok","model":"BAAI/bge-m3","dim":1024}`. Per 2026-10-19 (revisi 2) klien aplikasi **sudah** menunjuk service ini lewat MAT-115, jadi klaim gap Ollama di versi pertama dokumen ini **tidak lagi berlaku**.
+- Tidak ada klaim "selesai" untuk `AGENTS.md`: isi sudah disetujui manusia
+  (`request_confirmation` `1fe757d9` → `accepted`, 2026-10-19 07:22Z), tetapi **penulisan berkas**
+  ditolak penjaga berkas-instruksi lokal pada run berikutnya (`approval prompt timed out`) — jadi
+  §8/§9 di `AGENTS.md` **masih versi lama** sampai gerbang berkas dijawab.
+
+## 7. Revisi 2 (2026-10-19, setelah MAT-115)
+
+- Commit `85e727a` (Salman, MAT-115) **menutup gap embedding**: `src/lib/embedding/bge-m3.ts` kini
+  OpenAI-compatible `POST /v1/embeddings`, default `http://127.0.0.1:3005`, menerima balasan lama,
+  `GET /health`, `BGE_M3_TIMEOUT_MS`; `.env` & `.env.example` menunjuk `:3005`.
+  → §9.2 usulan **dikoreksi**: klaim "klien masih Ollama / `.env` menunjuk :11434" **tidak berlaku lagi**.
+- Metrik DB dihitung ulang langsung hari ini (2026-10-19): questions **11.889** · bundles **579** ·
+  topics **174** · media **2.617** · sources **5** · events **11** · embedding **0**. Angka §8 tetap valid.
+- Utang yang **masih** terbuka dan patut dicatat: backfill 11.889 vektor (adaptor siap, eksekusi belum).
