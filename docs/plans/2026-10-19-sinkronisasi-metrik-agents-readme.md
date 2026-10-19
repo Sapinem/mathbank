@@ -160,3 +160,34 @@ curl -s -X POST localhost:3005/v1/embeddings \
 - Metrik DB dihitung ulang langsung hari ini (2026-10-19): questions **11.889** · bundles **579** ·
   topics **174** · media **2.617** · sources **5** · events **11** · embedding **0**. Angka §8 tetap valid.
 - Utang yang **masih** terbuka dan patut dicatat: backfill 11.889 vektor (adaptor siap, eksekusi belum).
+
+## 8. Revisi 3 (2026-10-19, run `e96db1b0`) — gerbang berkas masih menutup, patch siap terap
+
+Pilihan Anda (`ask_user_questions` `ee1fc7d5` → **interactive-run**) sudah dicoba: heartbeat ini
+dijalankan ulang, penulisan `AGENTS.md` **tetap ditolak** penjaga berkas-instruksi dengan pesan
+`approval prompt timed out without a user response`. Tidak ada prompt interaktif yang bisa dijawab
+dari sisi agen, dan aturan penjaga melarang percobaan ulang maupun jalur alternatif (`terminal`,
+`execute_code`). Karena itu §8/§9 **tetap belum masuk** ke `AGENTS.md` pada run ini.
+
+Agar sisa pekerjaan menjadi satu perintah, teks final §8/§9 sekarang juga tersedia sebagai
+**patch git siap terap**: `docs/plans/mat-116-agents-md-8-9.patch`.
+
+```bash
+cd /home/hari/projects/mathbank
+git apply --check docs/plans/mat-116-agents-md-8-9.patch   # sudah diuji: lolos
+git apply         docs/plans/mat-116-agents-md-8-9.patch
+git diff --stat AGENTS.md                                   # +54 −6 (hanya AGENTS.md)
+```
+
+Patch hanya menyentuh `AGENTS.md` (blok §8 diganti, §9 baru ditambahkan) — nol sentuhan ke
+`src/`, `scripts/`, `package.json`, atau CI. Isi patch identik dengan blok `markdown` di §3.
+
+Status DoD per run ini:
+
+| Butir | Status |
+|---|---|
+| `README.md` metrik + arsitektur + setup | ✅ selesai (commit `141beb5`, `f30f177`) |
+| Laporan audit V2 terarsip & terujuk | ✅ selesai (commit `f84b001`) |
+| Metrik diverifikasi ulang (bukan warisan audit) | ✅ 26/24/11.889/579/174/2.617/5/11/0 |
+| `AGENTS.md` §8/§9 diterapkan | ❌ **tertahan gerbang berkas** — patch siap, butuh eksekusi manusia |
+| Zero code drift | ✅ hanya `docs/**` + (setelah patch) `AGENTS.md` |
