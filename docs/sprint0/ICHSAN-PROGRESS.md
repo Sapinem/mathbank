@@ -123,3 +123,31 @@ Area yang layak ditutup tes:
 2. `useBundlesPage` — pembentukan query string (limit/offset/status/q).
 3. `BundleListView` — perilaku paginasi (reset ke halaman 1 saat filter berubah) dan
    empty state ganda.
+
+---
+
+## 6. Verifikasi Ulang (heartbeat lanjutan)
+
+Dijalankan ulang pada dev server `http://127.0.0.1:3010` (Next.js 16, DB `mathbank`
+:5433, login demo `admin`) untuk mengonfirmasi hasil commit `9a1c8a5` + `492c8db`.
+
+**Statis:** `npx tsc --noEmit` → **exit 0**; `grep -rn useAllBundles src/` → **0 hasil**.
+
+**Runtime (Playwright, hitung request jaringan nyata):**
+
+| Aksi | Request `/api/bundles` | Bukti |
+| --- | --- | --- |
+| Buka `/bundles` | **1** | `GET /api/bundles?limit=20&offset=0` |
+| Render awal | — | 20 kartu · "20 dari 577 paket · hal. 1/29" |
+| Klik **Berikutnya** | **1** | `GET /api/bundles?limit=20&offset=20` → "hal. 2/29" |
+| Klik **Sebelumnya** | **0** (cache) | kembali "hal. 1/29" |
+| Cari "matematika" | **1** | `GET /api/bundles?q=matematika&limit=20&offset=0` → "20 dari 195 paket · hal. 1/10" |
+| Filter status Draf | **1** | `GET /api/bundles?status=draft&q=matematika&limit=20&offset=0` |
+
+Konsol browser: **tidak ada error** (0 hydration/console error). Total request
+`/api/bundles` untuk satu sesi buka + next + prev = **2** (bukan 50). Waterfall
+sekuensial benar-benar hilang.
+
+**Kesimpulan:** DoD ACT-04 terpenuhi dan terverifikasi ulang pada kode yang sudah
+di-commit. Tidak ada pekerjaan tersisa untuk Ichsan; siap diserahkan ke Rofik (QA)
+bila ingin menambah cakupan tes otomatis.
