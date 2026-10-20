@@ -68,9 +68,9 @@ const sql = postgres(DB_URL, { max: 3, idle_timeout: 30 });
 const t0 = Date.now();
 const log = (msg: string) => {
   const line = `[${new Date().toISOString()}] ${msg}`;
-  console.log(line);
-  // Wajib: progress harus tercatat di berkas, bukan hanya stdout proses
-  // background yang hilang saat sesi berakhir (DoD ACT-07).
+  // Hindari baris ganda di berkas log saat stdout proses sudah dialihkan ke
+  // berkas yang sama (`nohup … >> logs/embedding-*.log`).
+  if (process.stdout.isTTY) console.log(line);
   try {
     appendFileSync(RUN_LOG, line + "\n");
   } catch {
