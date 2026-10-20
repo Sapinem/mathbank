@@ -151,3 +151,34 @@ sekuensial benar-benar hilang.
 **Kesimpulan:** DoD ACT-04 terpenuhi dan terverifikasi ulang pada kode yang sudah
 di-commit. Tidak ada pekerjaan tersisa untuk Ichsan; siap diserahkan ke Rofik (QA)
 bila ingin menambah cakupan tes otomatis.
+
+## 6. Re-verifikasi Independen (2026-10-20, heartbeat lanjutan)
+
+Dijalankan ulang dari *working tree* saat ini (bukan mengandalkan catatan run sebelumnya)
+untuk memastikan DoD masih terpenuhi pasca-commit `9a1c8a5` + `492c8db`.
+
+| Pemeriksaan | Perintah | Hasil |
+| --- | --- | --- |
+| Typecheck | `npx tsc --noEmit` | **exit 0** (bersih) |
+| Hook mati benar-benar hilang | `grep -rn useAllBundles src scripts` | **0 hasil** |
+| Dev server | `next dev --turbopack -p 3010` | Ready, `/api/health` → **200** |
+| Bukti browser | `node scripts/verify-act04.mjs http://127.0.0.1:3010` | lihat tabel di bawah |
+
+Keluaran `verify-act04.mjs` (Playwright, `page.on("request")`, login demo `admin` → 200):
+
+| Aksi | Request `/api/bundles` | URL |
+| --- | --- | --- |
+| Buka `/bundles` | **1** | `?limit=20&offset=0` |
+| Klik "Berikutnya" | **1** | `?limit=20&offset=20` |
+| Cari "matematika" (debounce) | **1** | `?q=matematika&limit=20&offset=0` |
+| Filter status "Draf" | **1** | `?status=draft&q=matematika&limit=20&offset=0` |
+
+- Indikator halaman setelah Next: `hal. 2/29` (577 paket ÷ 20 = 29 halaman) → paginasi nyata.
+- Setelah pencarian: `20 dari 195 paket · hal. 1/10` → filter & total dihitung server.
+- Konsol browser: **tidak ada error** (tidak ada hydration mismatch).
+- Catatan: pada pengambilan pertama skrip sempat membaca `0 dari 0 paket` karena query halaman
+  belum selesai dikompilasi/dimuat (filesystem lambat, compile awal ±36 s); nilai benar
+  (`hal. 2/29`, `20 dari 195`) muncul pada aksi berikutnya. Bukan regresi fungsional.
+
+**Kesimpulan:** DoD ACT-04 tetap terpenuhi — 1 request HTTP per halaman, tanpa loop
+sekuensial, `useAllBundles` terhapus, paginasi & filter server-side berfungsi.
