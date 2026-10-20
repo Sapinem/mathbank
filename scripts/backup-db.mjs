@@ -265,8 +265,28 @@ function main() {
   }
   say(`✓ Backup selesai (${(size / 1024 / 1024).toFixed(2)} MB)`);
 
-  // Retensi tingkat 1: hanya `keep` dump harian terbaru.
-  const dumps = listDumps(dir);
+  // Verifikasi: arsip harus bisa dibaca pg_restore (deteksi dump terpotong —
+  // dump "ada" tapi tak bisa dipulihkan lebih buruk daripada tak ada dump).
+  try {
+    const objects = verifyDump(usedBin, file);
+    say(`· verifikasi pg_restore: ${objects} objek terbaca`);
+  } catch (err) {
+    try {
+      unlinkSync(file);
+    } catch {
+      /* abaikan */
+    }
+    say(`✗ dump gagal diverifikasi — dibuang: ${err instanceof Error ? err.message : err}`);
+    process.exit(1);
+  }
+
+  // Retensi tingkat 1: hanya `keep` dump OTOMATIS terbaru. Arsip manual
+  // (mis. `mathbank-sebelum-hapus-…dump`) sengaja TIDAK ikut dipangkas —
+  // retensi harian hanya mengelola berkas yang dibuat skrip ini.
+  const autoPattern = new RegExp(
+    `^${db.database.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}_\\d{4}-\\d{2}-\\d{2}-\\d{2}-\\d{2}-\\d{2}\\.dump$`,
+  );
+  const dumps = listDumps(dir).filter((d) => autoPattern.test(d.f));
   for (const old of dumps.slice(keep)) {
     unlinkSync(join(dir, old.f));
     say(`· hapus dump harian lama: ${old.f}`);
