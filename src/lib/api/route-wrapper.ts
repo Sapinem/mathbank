@@ -29,7 +29,7 @@ import {
 import type { Actor } from "@/lib/auth/actor";
 import type { Permission } from "@/lib/auth/permissions";
 import { log } from "@/lib/telemetry/logger";
-import { recordRequest } from "@/lib/telemetry/metrics";
+import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
 
 /**
  * Pembungkus route (L4) — menghapus boilerplate yang di QBank ditulis
@@ -287,7 +287,10 @@ export function wrapRoute<TQuery, TBody, TResult>(
     const requestId =
       req.headers.get("x-request-id")?.slice(0, 64) || crypto.randomUUID();
     // M16: label route utk metrik (path tanpa query) + waktu mulai.
-    const routePath = new URL(req.url).pathname;
+    // **ACT-03 A:** normalisasi segmen dinamis → `:id` SEBELUM dipakai sebagai
+    // label, supaya 100 request `/api/questions/<uuid>` hanya menghasilkan satu
+    // key metrik (dan log) alih-alih 100 label yang membanjiri store.
+    const routePath = normalizeRoutePath(new URL(req.url).pathname);
     const method = req.method;
     const startedAt = Date.now();
     let actorIdForCleanup: string | null = null;

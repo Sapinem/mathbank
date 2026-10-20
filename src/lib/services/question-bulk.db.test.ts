@@ -116,3 +116,38 @@ describe("bulkQuestionAction (G3.1)", () => {
     expect(res.failed).toHaveLength(1);
   });
 });
+
+/**
+ * **ACT-05 (P0)** — bukti DoD: aksi massal 200 soal harus selesai < 300 ms
+ * dengan ≤ 3 query DB (bukan ~1.800 query serial seperti versi loop).
+ */
+describe("bulkQuestionAction — kinerja 200 soal (ACT-05)", () => {
+  it("200 soal review→ready: ≤3 query DB & < 300 ms", async () => {
+    const N = 200;
+    // Seed cepat lewat SQL langsung (bukan lewat service) agar tes mengukur
+    // aksi massal, bukan biaya pembuatan soal.
+    const ids: string[] = [];
+    for (let i = 0; i < N; i++) {
+      const [row] = await sql<{ id: string }[]>`
+        INSERT INTO questions
+          (question_type, difficulty, cognitive_level, grade, content_markdown,
+           data_payload, answer_key, status, child_order)
+        VALUES ('single_choice', 3, 'remember', '11', ${"Perf " + i},
+                '{}'::jsonb, '{"correct":["A"]}'::jsonb, 'review', 0)
+        RETURNING id`;
+      ids.push(row.id);
+    }
+
+    const res = await bulkQuestionAction(ids, "set_ready", admin);
+
+    expect(res.ok).toHaveLength(N);
+    expect(res.failed).toHaveLength(0);
+    expect(res.dbQueries ?? 99).toBeLessThanOrEqual(3);
+    expect(res.durationMs ?? 99_999).toBeLessThan(300);
+
+    const [check] = await sql<{ n: number }[]>`
+      SELECT count(*)::int AS n FROM questions
+       WHERE id = ANY(${sql.array(ids)}::uuid[]) AND status = 'ready'`;
+    expect(check.n).toBe(N);
+  }, 120_000);
+});

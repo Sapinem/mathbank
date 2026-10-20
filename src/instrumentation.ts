@@ -13,6 +13,15 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
+
+  // **ACT-03 C:** pemeliharaan state in-memory (rate limit + idempotensi).
+  // Tak butuh DB → dijalankan sebelum guard DATABASE_URL agar dev tanpa DB
+  // pun tetap bebas kebocoran memori.
+  const { startTelemetryMaintenance } = await import(
+    "@/lib/telemetry/instrumentation"
+  );
+  startTelemetryMaintenance();
+
   if (!process.env.DATABASE_URL) return;
 
   const { checkDbInvariants } = await import("@/lib/db/invariants");

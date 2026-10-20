@@ -75,4 +75,25 @@ describe("GET /api/health", () => {
     expect(typeof body.data.uptimeSec).toBe("number");
     expect(mockCheck).not.toHaveBeenCalled();
   });
+  it("ACT-02: 503 tanpa membocorkan pesan DB mentah ke publik", async () => {
+    mockCheck.mockRejectedValue(
+      new Error(
+        "password authentication failed for user \"mathbank\" host=db.internal port=5433 database=mathbank",
+      ),
+    );
+    const res = await GET(req());
+    expect(res.status).toBe(503);
+    const raw = await res.text();
+    // Tak ada detail driver/DSN/kredensial di body publik.
+    expect(raw).not.toContain("password authentication failed");
+    expect(raw).not.toContain("db.internal");
+    expect(raw).not.toContain("5433");
+    expect(raw).not.toContain("mathbank");
+    expect(raw).not.toContain("error");
+    const body = JSON.parse(raw);
+    expect(body.data.status).toBe("down");
+    expect(body.data.db).toBe("down");
+    expect(typeof body.data.message).toBe("string");
+    expect(body.data.message).toContain("tidak tersedia");
+  });
 });

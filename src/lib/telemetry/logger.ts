@@ -50,18 +50,74 @@ function isSensitiveKey(key: string): boolean {
 }
 
 /**
+ * **ACT-02 (P0):** scrubber pola untuk nilai yang LOLOS dari redaksi berbasis
+ * nama field — mis. `Error.message` hasil `throw new Error(\`gagal: ${url}\`)`,
+ * di mana URL membawa `?token=…` atau `postgres://user:pass@host/db`.
+ *
+ * Redaksi berbasis nama field saja TIDAK cukup: pesan error & stack adalah
+ * string bebas, dan di situlah kredensial paling sering bocor ke log.
+ * Semua pola diganti penanda tetap agar tak ada byte rahasia yang tersisa.
+ */
+const SECRET_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
+  // Header otorisasi: "Bearer eyJ…", "Basic dXNlcjpwYXNz", "Token abc…"
+  [/\b(Bearer|Basic|Token|Digest)\s+[A-Za-z0-9\-._~+/=]{6,}/gi, "$1 [REDACTED]"],
+  // Kredensial di dalam URL koneksi: postgres://user:pass@host:5432/db
+  [/\b([a-z][a-z0-9+.-]*:\/\/)([^\s:@/]+):([^\s@/]+)@/gi, "$1$2:[REDACTED]@"],
+  // Pasangan kunci=nilai pada query string / pesan bebas: ?token=…, password: "…"
+  [
+    /\b(password|passwd|pwd|secret|client[_-]?secret|token|access[_-]?token|refresh[_-]?token|api[_-]?key|apikey|authorization|cookie|session[_-]?id|signature|sig)\b\s*[=:]\s*("[^"]*"|'[^']*'|[^\s&,;)\]}"']+)/gi,
+    "$1=[REDACTED]",
+  ],
+  // JWT (header.payload.signature base64url)
+  [/\beyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{4,}\b/g, "[REDACTED_JWT]"],
+  // Kunci penyedia (Stripe/OpenAI dsb.)
+  [/\b(sk|pk|rk)[-_](live|test)[-_][A-Za-z0-9]{8,}\b/g, "[REDACTED_KEY]"],
+];
+
+/** Sapu pola rahasia dari sebuah string bebas (pesan error, stack, URL). */
+export function scrubString(input: string): string {
+  let out = input;
+  for (const [pattern, replacement] of SECRET_PATTERNS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
+}
+
+/** Deteksi ZodError tanpa mengimpor zod (logger tetap ringan & bebas siklus). */
+function zodIssuesOf(value: object): Array<Record<string, unknown>> | null {
+  const issues = (value as { issues?: unknown }).issues;
+  if (!Array.isArray(issues)) return null;
+  return issues as Array<Record<string, unknown>>;
+}
+
+/**
  * Sapu nilai sensitif secara rekursif → `"[REDACTED]"`.
- * Nilai primitif dibiarkan; Error → `{name,message,stack?}`.
+ * Nilai primitif dibiarkan; Error → `{name,message,stack?}` yang **di-scrub**;
+ * ZodError → `{name,message,issues}` tanpa `input` mentah (payload pengguna).
  */
 export function redact(value: unknown, depth = 0): unknown {
   if (depth > 6) return "[…]";
   if (value === null || value === undefined) return value;
   if (value instanceof Error) {
+    const issues = zodIssuesOf(value);
+    if (issues) {
+      return {
+        name: value.name,
+        message: scrubString(value.message),
+        // `path` + `code` cukup untuk debug; `input`/`received` dibuang karena
+        // bisa memuat password atau isi soal yang belum dipublikasikan.
+        issues: issues.map((issue) => ({
+          path: Array.isArray(issue.path) ? issue.path : [],
+          code: typeof issue.code === "string" ? issue.code : "invalid",
+          message: typeof issue.message === "string" ? scrubString(issue.message) : "",
+        })),
+      };
+    }
     return {
       name: value.name,
-      message: value.message,
+      message: scrubString(value.message),
       ...(process.env.NODE_ENV !== "production" && value.stack
-        ? { stack: value.stack }
+        ? { stack: scrubString(value.stack) }
         : {}),
     };
   }
@@ -73,6 +129,8 @@ export function redact(value: unknown, depth = 0): unknown {
     }
     return out;
   }
+  // String bebas (mis. `msg` hasil interpolasi) tetap disapu pola rahasia.
+  if (typeof value === "string") return scrubString(value);
   return value;
 }
 

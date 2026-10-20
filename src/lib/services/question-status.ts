@@ -14,19 +14,51 @@ import { getQuestion, getQuestionInternal, type PublicQuestion } from "./questio
  * penjagaan balapan optimistik (CONSTRAINT #36).
  */
 
-/** Ubah status lewat FSM (L6) + izin status (L1). */
+/** Opsi tambahan untuk pemanggil massal. */
+export interface ChangeStatusOptions {
+  /**
+   * **ACT-05:** `false` → lewati pembacaan ulang proyeksi publik setelah UPDATE.
+   *
+   * Jalur satuan mengembalikan soal lengkap (butuh opsi, pembahasan, bundle,
+   * topik = beberapa query). Jalur massal tidak memerlukannya: ia hanya perlu
+   * tahu id mana yang berhasil. Melewati pembacaan ini menghapus N×(query baca)
+   * dari aksi 200 soal.
+   */
+  returnUpdated?: boolean;
+}
+
+/** Ubah status lewat FSM (L6) + izin status (L1) — tanpa proyeksi balik. */
+export function changeQuestionStatus(
+  id: string,
+  to: QuestionStatus,
+  actor: Actor,
+  notes: string | null | undefined,
+  opts: ChangeStatusOptions & { returnUpdated: false },
+): Promise<null>;
+/** Ubah status lewat FSM (L6) + izin status (L1) — mengembalikan soal terbaru. */
+export function changeQuestionStatus(
+  id: string,
+  to: QuestionStatus,
+  actor: Actor,
+  notes?: string | null,
+  opts?: ChangeStatusOptions & { returnUpdated?: true },
+): Promise<PublicQuestion>;
 export async function changeQuestionStatus(
   id: string,
   to: QuestionStatus,
   actor: Actor,
   notes?: string | null,
-): Promise<PublicQuestion> {
+  opts: ChangeStatusOptions = {},
+): Promise<PublicQuestion | null> {
   const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   const from = existing.status as QuestionStatus;
   // Transisi tak berubah → tak perlu tulis/audit.
-  if (from === to) return existing;
+  if (from === to) {
+    if (opts.returnUpdated === false) return null;
+    return (await getQuestion(id, { viewer: actor })) ?? existing;
+  }
 
   // Validasi transisi (FSM) SEBELUM izin → error transisi lebih jelas
   transition(from, to);
@@ -73,6 +105,9 @@ export async function changeQuestionStatus(
       ? `Status ${from} → ${to}: ${notes}`
       : `Status ${from} → ${to}`,
   });
+
+  // ACT-05: jalur massal tak butuh proyeksi publik (hemat N query baca).
+  if (opts.returnUpdated === false) return null;
 
   const updated = await getQuestion(id, { viewer: actor });
   if (!updated) throw new NotFoundError();
