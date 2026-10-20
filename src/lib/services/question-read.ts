@@ -9,7 +9,8 @@ import {
 import { embedText } from "@/lib/embedding/bge-m3";
 import type { Actor } from "@/lib/auth/actor";
 import { solutions } from "@/lib/db/schema/solution";
-import { questionTopics } from "@/lib/db/schema/taxonomy";
+import { questionTopics, topics } from "@/lib/db/schema/taxonomy";
+import { questionMedia, mediaAssets } from "@/lib/db/schema/media";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { sources } from "@/lib/db/schema/source";
 import {
@@ -66,7 +67,39 @@ export type PublicQuestion = Omit<
   parent?: { id: string; contentMarkdown: string } | null;
   /** ID topik taksonomi yang ditautkan (untuk pemilih topik di editor). */
   topicIds?: string[];
+  /** Topik terisi (nama + hierarki) — untuk tag topik di halaman detail. */
+  topics?: QuestionTopicView[];
+  /** Aset media yang ditautkan lewat `question_media` (Sprint 1 · ACT-08). */
+  media?: QuestionMediaView[];
 };
+
+/**
+ * Topik yang menempel pada satu soal (proyeksi baca).
+ * `level` 1=Kategori, 2=Topik, 3=SubTopik — UI memakainya untuk urutan/hierarki.
+ */
+export interface QuestionTopicView {
+  id: string;
+  name: string;
+  slug: string;
+  level: number;
+  isPrimary: boolean;
+}
+
+/**
+ * Media yang menempel pada satu soal lewat `question_media` (Sprint 1 · ACT-08).
+ * `shortId` adalah kunci penyajian `/img/{shortId}` — bukan path storage.
+ */
+export interface QuestionMediaView {
+  id: string;
+  shortId: string;
+  role: string;
+  orderIndex: number;
+  altText: string | null;
+  caption: string | null;
+  width: number | null;
+  height: number | null;
+  mimeType: string | null;
+}
 
 /** Bentuk ringkas asal-usul butir — kini lewat BUNDLE (ADR-0014). */
 export interface QuestionBundleView {
@@ -143,12 +176,57 @@ export async function getQuestion(
 
   const parent = row.parentId ? await getParentStimulus(row.parentId) : null;
 
-  // Taksonomi: id topik terpilih (untuk pemilih topik di editor).
+  // Taksonomi: id topik terpilih (untuk pemilih topik di editor) + detail
+  // topik (nama/slug/level) untuk tag topik di halaman detail (ACT-09).
   const topicRows = await db
-    .select({ topicId: questionTopics.topicId })
+    .select({
+      id: topics.id,
+      name: topics.name,
+      slug: topics.slug,
+      level: topics.level,
+      isPrimary: questionTopics.isPrimary,
+    })
     .from(questionTopics)
-    .where(eq(questionTopics.questionId, id));
-  const topicIds = topicRows.map((t) => t.topicId);
+    .innerJoin(topics, eq(questionTopics.topicId, topics.id))
+    .where(eq(questionTopics.questionId, id))
+    .orderBy(asc(topics.level), asc(topics.name));
+  const topicIds = topicRows.map((t) => t.id);
+  const topicViews: QuestionTopicView[] = topicRows.map((t) => ({
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+    level: Number(t.level),
+    isPrimary: t.isPrimary,
+  }));
+
+  // Media tertaut (ACT-08). Urut peran lalu order_index agar galeri stabil.
+  const mediaRows = await db
+    .select({
+      id: mediaAssets.id,
+      shortId: mediaAssets.shortId,
+      role: questionMedia.role,
+      orderIndex: questionMedia.orderIndex,
+      altText: mediaAssets.altText,
+      caption: mediaAssets.caption,
+      width: mediaAssets.width,
+      height: mediaAssets.height,
+      mimeType: mediaAssets.mimeType,
+    })
+    .from(questionMedia)
+    .innerJoin(mediaAssets, eq(questionMedia.mediaId, mediaAssets.id))
+    .where(eq(questionMedia.questionId, id))
+    .orderBy(asc(questionMedia.orderIndex), asc(mediaAssets.shortId));
+  const mediaViews: QuestionMediaView[] = mediaRows.map((m) => ({
+    id: m.id,
+    shortId: m.shortId,
+    role: m.role,
+    orderIndex: Number(m.orderIndex),
+    altText: m.altText,
+    caption: m.caption,
+    width: m.width,
+    height: m.height,
+    mimeType: m.mimeType,
+  }));
 
   // Ambil daftar solusi bila viewer berwenang melihat kunci/pembahasan
   let solutionList: QuestionSolutionView[] = [];
@@ -186,7 +264,16 @@ export async function getQuestion(
     }
   }
 
-  return { ...row, options, bundles: originBundles, solutions: solutionList, parent, topicIds } as PublicQuestion;
+  return {
+    ...row,
+    options,
+    bundles: originBundles,
+    solutions: solutionList,
+    parent,
+    topicIds,
+    topics: topicViews,
+    media: mediaViews,
+  } as PublicQuestion;
 }
 
 /** Ambil wacana stimulus induk (id + contentMarkdown) bila ada. */

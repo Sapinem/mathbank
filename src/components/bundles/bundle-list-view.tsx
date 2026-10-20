@@ -51,6 +51,11 @@ import {
 } from "@/components/ui/table";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 import { Badge } from "@/components/ui/badge";
+import {
+  BundleEnrichmentSummary,
+  DifficultyAverageChip,
+  TopicCoverageChip,
+} from "@/components/bundles/bundle-enrichment";
 import { cn } from "@/lib/utils";
 import {
   useBundlesPage,
@@ -533,6 +538,13 @@ export function BundleListView() {
                       {b.durationMinutes ? `${b.durationMinutes} mnt` : "Tanpa batas"}
                     </span>
                   </div>
+
+                  {/* Statistik pengayaan (MAT-127): rerata kesulitan & cakupan topik */}
+                  <BundleEnrichmentSummary
+                    enrichment={b.enrichment}
+                    compact
+                    className="border-t border-border/30 pt-2"
+                  />
                 </div>
 
                 {/* Footer Kartu & Aksi Cepat */}
@@ -588,6 +600,10 @@ export function BundleListView() {
                   <TableHead className="hidden sm:table-cell">Asal</TableHead>
                   <TableHead className="hidden sm:table-cell">Tahun</TableHead>
                   <TableHead className="text-right">Soal</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">
+                    Rerata Kesulitan
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">Cakupan Topik</TableHead>
                   <TableHead className="hidden sm:table-cell text-right">Durasi</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-28 text-right">Aksi</TableHead>
@@ -623,6 +639,23 @@ export function BundleListView() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums font-mono font-medium">
                       {b.itemCount}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-right">
+                      {b.enrichment && b.enrichment.questionCount > 0 ? (
+                        <DifficultyAverageChip avg={b.enrichment.avgDifficulty} />
+                      ) : (
+                        <span className="text-muted-foreground/60">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {b.enrichment && b.enrichment.questionCount > 0 ? (
+                        <TopicCoverageChip
+                          topicCount={b.enrichment.topicCount}
+                          coverage={b.enrichment.topicCoverage}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground/60">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-right tabular-nums font-mono">
                       {b.durationMinutes ? `${b.durationMinutes} mnt` : "—"}

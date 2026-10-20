@@ -11,6 +11,7 @@ import {
   PenTool,
   Upload,
   Settings,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,6 +63,8 @@ export const NAV_GROUPS: NavGroup[] = [
       // TikZ Studio: ditunda (butuh compiler TeX). Aktifkan saat G4b dikerjakan.
       { label: "TikZ Studio", href: "/studio/tikz", icon: PenTool, hidden: true },
       { label: "Pengaturan", href: "/system/settings", icon: Settings },
+      // MAT-127: rute /curate sudah ada; menu dibuka saat antrean Sprint 2 siap.
+      { label: "Kurasi Soal", href: "/curate", icon: ClipboardList, hidden: true },
     ],
   },
 ];

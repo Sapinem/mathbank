@@ -34,8 +34,30 @@ export interface BundleRow {
   /** Pembuat paket — dasar penegakan izin `own` (lihat `assertBundleAccess`). */
   createdById: string | null;
   itemCount: number;
+  /**
+   * Statistik pengayaan per paket (Sprint 1 · MAT-127).
+   *
+   * Hanya diisi oleh `listBundles` (jalur daftar); `getBundle` tidak
+   * menghitungnya agar detail tetap satu query ringan. UI wajib memperlakukan
+   * field ini opsional.
+   */
+  enrichment?: BundleEnrichment;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Agregat pengayaan satu paket: jumlah butir, rerata kesulitan, cakupan topik. */
+export interface BundleEnrichment {
+  /** Jumlah butir hidup (soal terhapus tidak dihitung). */
+  questionCount: number;
+  /** Rerata `difficulty` 1–5; 0 bila paket kosong. */
+  avgDifficulty: number;
+  /** Jumlah topik DISTINCT yang tercakup butir-butir paket. */
+  topicCount: number;
+  /** Butir yang punya ≥1 topik. */
+  taggedQuestionCount: number;
+  /** `taggedQuestionCount / questionCount` (0–1); 0 bila paket kosong. */
+  topicCoverage: number;
 }
 
 /**

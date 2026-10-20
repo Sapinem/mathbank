@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sliders,
+  Image as ImageIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { EnrichButton } from "@/components/questions/enrich-button";
@@ -33,13 +34,19 @@ import {
   useDeleteQuestion,
   useChangeQuestionStatus,
 } from "@/lib/hooks/use-questions";
-import {
-  STATUS_LABELS,
-  TYPE_LABELS,
-  statusClass,
-} from "@/lib/display/labels";
+import { TYPE_LABELS } from "@/lib/display/labels";
 import { CognitiveBadge, DifficultyBadge } from "@/components/questions/rubric-badge";
+import { QuestionStatusBadge } from "@/components/questions/question-status-badge";
+import {
+  QuestionMediaGallery,
+  extractMediaShortIds,
+} from "@/components/questions/question-image";
+import { TopicTagList } from "@/components/questions/topic-tag";
 import { StimulusCard } from "@/components/questions/stimulus-card";
+import {
+  MatrixGridView,
+  readMatrixGridPayload,
+} from "@/components/questions/matrix-grid-view";
 import { formatGradeBadge } from "@/components/questions/question-card";
 import { cn } from "@/lib/utils";
 
@@ -126,9 +133,7 @@ export function QuestionDetailView() {
               <CardHeader className="border-b border-border/40 pb-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge className={statusClass(q.status)}>
-                      {STATUS_LABELS[q.status] ?? q.status}
-                    </Badge>
+                    <QuestionStatusBadge status={q.status} />
                     <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 font-mono text-xs font-semibold text-foreground/90">
                       Kelas {formatGradeBadge(q.grade)}
                     </span>
@@ -156,6 +161,11 @@ export function QuestionDetailView() {
                 <div className="text-base lg:text-[17px] lg:leading-[1.7] text-foreground">
                   <MathContent content={q.contentMarkdown} className="no-scrollbar" />
                 </div>
+
+                {/* Soal MATRIX GRID (benar-salah): pernyataan ada di dataPayload.rows */}
+                {q.questionType === "matrix_grid" && (
+                  <MatrixGridView payload={readMatrixGridPayload(q.dataPayload)} />
+                )}
 
                 {/* Opsi Pilihan Ganda (Menyatu dalam Dokumen, Format 1 Kolom ke Bawah) */}
                 {q.options && q.options.length > 0 && (
@@ -203,6 +213,36 @@ export function QuestionDetailView() {
                 )}
               </CardContent>
             </Card>
+
+            {/* KARTU LAMPIRAN GAMBAR (ACT-08) — hanya bila ada aset / shortcode */}
+            {(() => {
+              const media = q.media ?? [];
+              const inlineIds = extractMediaShortIds(q.contentMarkdown);
+              if (media.length === 0 && inlineIds.length === 0) return null;
+              return (
+                <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
+                  <CardHeader className="border-b border-border/40 pb-3">
+                    <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                      <ImageIcon aria-hidden className="size-4 shrink-0 text-primary" />
+                      Lampiran Gambar
+                      <span className="font-mono text-xs font-normal text-muted-foreground">
+                        {media.length} aset
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <QuestionMediaGallery
+                      media={media}
+                      emptyHint={
+                        inlineIds.length > 0
+                          ? `Naskah memuat ${inlineIds.length} rujukan gambar (${inlineIds.join(", ")}) yang tampil di dalam teks, tetapi belum ada aset tertaut di question_media.`
+                          : undefined
+                      }
+                    />
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* KARTU KUNCI & PEMBAHASAN */}
             {(() => {
@@ -345,9 +385,7 @@ export function QuestionDetailView() {
               <CardContent className="flex flex-col gap-3 pt-4 text-xs">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Status</span>
-                  <Badge className={statusClass(q.status)}>
-                    {STATUS_LABELS[q.status] ?? q.status}
-                  </Badge>
+                  <QuestionStatusBadge status={q.status} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tipe Soal</span>
@@ -368,6 +406,16 @@ export function QuestionDetailView() {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Level Kognitif</span>
                   <CognitiveBadge level={q.cognitiveLevel} />
+                </div>
+
+                {/* Topik (ACT-09) — klik untuk menyaring Bank Soal */}
+                <div className="flex flex-col gap-1.5 border-t border-border/30 pt-2">
+                  <span className="text-muted-foreground">Topik</span>
+                  <TopicTagList
+                    topics={q.topics ?? []}
+                    emptyLabel="Belum ada topik (menunggu pengayaan)."
+                    showEmptyIcon
+                  />
                 </div>
 
                 {q.isFlagged && (

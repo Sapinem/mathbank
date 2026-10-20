@@ -15,6 +15,7 @@ import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm
 import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions, questionOptions } from "@/lib/db/schema/question";
+import { questionTopics } from "@/lib/db/schema/taxonomy";
 import {
   questionColumns,
   optionColumns,
@@ -57,6 +58,67 @@ async function attachCounts(rows: BundleCore[]): Promise<BundleRow[]> {
     .groupBy(bundleItems.bundleId);
   const map = new Map(counts.map((c) => [c.bundleId, Number(c.c)]));
   return rows.map((r) => ({ ...r, itemCount: map.get(r.id) ?? 0 }));
+}
+
+/**
+ * Lampirkan statistik pengayaan per paket (MAT-127): jumlah butir hidup,
+ * rerata kesulitan, dan cakupan topik.
+ *
+ * Dua query agregat untuk SELURUH halaman (bukan per baris) — tetap satu
+ * request HTTP dari klien. `COUNT(DISTINCT …)` dipakai karena join
+ * `question_topics` menggandakan baris per topik; tanpa DISTINCT rerata
+ * kesulitan akan berbobot jumlah topik.
+ */
+async function attachEnrichment(rows: BundleRow[]): Promise<BundleRow[]> {
+  if (rows.length === 0) return rows;
+  const ids = rows.map((r) => r.id);
+
+  const [diffRows, topicRows] = await Promise.all([
+    db
+      .select({
+        bundleId: bundleItems.bundleId,
+        questionCount: sql<number>`COUNT(DISTINCT ${questions.id})`.mapWith(Number),
+        avgDifficulty: sql<number>`COALESCE(AVG(${questions.difficulty}), 0)`.mapWith(Number),
+      })
+      .from(bundleItems)
+      .innerJoin(questions, eq(questions.id, bundleItems.questionId))
+      .where(and(inArray(bundleItems.bundleId, ids), isNull(questions.deletedAt)))
+      .groupBy(bundleItems.bundleId),
+    db
+      .select({
+        bundleId: bundleItems.bundleId,
+        topicCount: sql<number>`COUNT(DISTINCT ${questionTopics.topicId})`.mapWith(Number),
+        tagged: sql<number>`COUNT(DISTINCT ${questions.id})`.mapWith(Number),
+      })
+      .from(bundleItems)
+      .innerJoin(questions, eq(questions.id, bundleItems.questionId))
+      .innerJoin(questionTopics, eq(questionTopics.questionId, questions.id))
+      .where(and(inArray(bundleItems.bundleId, ids), isNull(questions.deletedAt)))
+      .groupBy(bundleItems.bundleId),
+  ]);
+
+  const diffMap = new Map(diffRows.map((d) => [d.bundleId, d]));
+  const topicMap = new Map(topicRows.map((t) => [t.bundleId, t]));
+
+  return rows.map((r) => {
+    const d = diffMap.get(r.id);
+    const t = topicMap.get(r.id);
+    const questionCount = Number(d?.questionCount ?? 0);
+    const taggedQuestionCount = Number(t?.tagged ?? 0);
+    return {
+      ...r,
+      enrichment: {
+        questionCount,
+        avgDifficulty: Math.round(Number(d?.avgDifficulty ?? 0) * 10) / 10,
+        topicCount: Number(t?.topicCount ?? 0),
+        taggedQuestionCount,
+        topicCoverage:
+          questionCount > 0
+            ? Math.round((taggedQuestionCount / questionCount) * 100) / 100
+            : 0,
+      },
+    };
+  });
 }
 
 /**
@@ -143,7 +205,7 @@ export async function listBundles(
   for (const r of typeRows) byType[r.bundleType] = Number(r.c);
 
   return {
-    items: await attachCounts(rows),
+    items: await attachEnrichment(await attachCounts(rows)),
     total,
     limit,
     offset,
