@@ -131,10 +131,33 @@ Data produksi saat verifikasi: **11.867 soal hidup**, **14.440 tautan topik**,
    ```
    Cocok dengan hitungan manual `itemCount`, jadi agregat tidak menggandakan baris.
 
+4. **Kontrak data diverifikasi ulang (2026-10-20, DB hidup)** — soal
+   `01a11566-26ae-…` (media + topik), keluaran `getQuestion()`:
+   ```json
+   {"difficulty":2,"status":"draft","questionType":"single_choice",
+    "topics":[{"id":"01a0f838-…","name":"Segi Empat","level":3,"isPrimary":true}],
+    "media":[{"shortId":"mbEVRMdk","role":"content","mimeType":"image/jpeg"}]}
+   ```
+   `listBundles()` → `233/233`, `30/30`, `25/25` butir (enrichment.questionCount
+   == itemCount) ⇒ agregat **tidak** menggandakan baris.
+
+5. **Bukti render komponen** — `npx tsx e2e-manual/mat127-render-check.tsx`
+   merender komponen nyata dengan props nyata (`renderToStaticMarkup`) dan
+   memeriksa markup: **15/15 PASS**
+   - `DifficultyBadge` L1–L5 → 5 tone berbeda (`success`, `info`, `gold-fg`,
+     `warning`, `error`) + label "Sangat Mudah…Sangat Sulit".
+   - `QuestionStatusBadge` draft/review/ready/archived (arsip ber-`line-through`).
+   - `TopicTagList` menghasilkan `<a href="/questions?topicId=…">` + keadaan kosong.
+   - `QuestionMediaGallery` → `<img src="/img/mbEVRMdk">`; galeri kosong →
+     "Belum ada gambar yang tertaut ke soal ini."
+   - `BundleEnrichmentSummary` → "233", "40", "40%"; `enrichment` undefined → `null`
+     (respons lama tetap aman).
+
 Catatan: `vitest run` untuk folder komponen gagal start worker (timeout pool)
 karena mesin sedang menjalankan beberapa agen paralel — bukan kegagalan asersi.
 Uji komponen adalah ranah Rofik; komponen baru sengaja diberi tanda tangan
-murni (props → render) agar mudah diuji.
+murni (props → render) agar mudah diuji. Skrip `e2e-manual/mat127-render-check.tsx`
+disediakan sebagai bukti sementara dan bisa dipromosikan Rofik jadi unit test.
 
 ---
 

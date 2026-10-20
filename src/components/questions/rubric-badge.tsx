@@ -2,6 +2,7 @@
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { DIFFICULTY_LABELS } from "@/lib/display/labels";
 import {
   cognitiveRubric,
   difficultyRubric,
@@ -69,25 +70,45 @@ export function CognitiveBadge({
   );
 }
 
-/** Badge kesulitan dengan rubrik + meter titik (●○○○○). */
+/** Warna badge kesulitan 1→5: hijau → biru → kuning → oranye → merah. */
+const DIFFICULTY_TONE: Record<number, string> = {
+  1: "border-success/40 bg-success/10 text-success",
+  2: "border-info/40 bg-info/10 text-info",
+  3: "border-gold/40 bg-gold/15 text-gold-fg",
+  4: "border-warning/40 bg-warning/10 text-warning",
+  5: "border-error/40 bg-error/10 text-error",
+};
+
+/** Kelas warna badge kesulitan (dipakai juga oleh kartu paket/ringkasan). */
+export function difficultyToneClass(level: number): string {
+  return DIFFICULTY_TONE[level] ?? DIFFICULTY_TONE[3];
+}
+
+/** Badge kesulitan dengan rubrik + meter titik (●○○○○) + warna 1→5. */
 export function DifficultyBadge({
   level,
   className,
+  showLabel = false,
 }: {
   level: number;
   className?: string;
+  /** Tampilkan label teks (Sangat Mudah…Sangat Sulit) di samping kode. */
+  showLabel?: boolean;
 }) {
   const rubric = difficultyRubric(level);
   const dots = "●".repeat(Math.max(0, level)) + "○".repeat(Math.max(0, 5 - level));
   return (
     <RubricBadge
       rubric={rubric}
-      className={cn("border-border bg-muted text-muted-foreground", className)}
+      className={cn(difficultyToneClass(level), className)}
     >
       <span aria-hidden className="font-mono text-[10px] tracking-tight">
         {dots}
       </span>
       {rubric.code}
+      {showLabel && (
+        <span className="font-normal">{DIFFICULTY_LABELS[level] ?? `Level ${level}`}</span>
+      )}
     </RubricBadge>
   );
 }

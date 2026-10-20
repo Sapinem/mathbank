@@ -54,14 +54,24 @@ export function ReviewView() {
         title="Telaah"
         description="Kurasi soal: setujui, tolak, atau tangani yang ditandai."
         actions={
-          <Button
-            variant={rapid ? "default" : "outline"}
-            size="sm"
-            aria-pressed={rapid}
-            onClick={() => setRapid((v) => !v)}
-          >
-            <Zap data-icon="inline-start" /> Mode Kilat
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              render={<Link href="/curate" />}
+              nativeButton={false}
+            >
+              <Inbox data-icon="inline-start" /> Ruang Kurasi
+            </Button>
+            <Button
+              variant={rapid ? "default" : "outline"}
+              size="sm"
+              aria-pressed={rapid}
+              onClick={() => setRapid((v) => !v)}
+            >
+              <Zap data-icon="inline-start" /> Mode Kilat
+            </Button>
+          </div>
         }
       />
       <div className="p-6">
