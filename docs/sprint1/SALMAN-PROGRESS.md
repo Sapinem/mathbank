@@ -179,8 +179,21 @@ psql "$DATABASE_URL" -c "
 ### Progres saat ini
 
 ```
-total=11.889  embedded=586 (4,9%)  batch=32  delay=100ms
-laju terukur = 1,07 soal/dtk  →  ETA ≈ 2,9 jam untuk 11.303 soal sisa
+total=11.867 (aktif)  batch=32  delay=100ms  pool DB max=3
+laju ≈ 0,65–0,70 soal/dtk (service CPU-bound ~380% dari 8 core)
+ETA ≈ 4,5 jam untuk 11.857 soal sisa
+```
+
+Angka live: `grep Embedded logs/embedding-$(date +%F).log | tail -1`.
+
+### Pemantau & laporan akhir otomatis
+
+`scripts/watch-embedding.sh` menemani runner: tiap 10 menit mencatat cakupan ke
+`logs/embedding-watch-YYYY-MM-DD.log`, dan saat runner selesai menulis laporan
+akhir `docs/sprint1/ACT-07-EMBEDDING-REPORT.md` (total/embedded/%/sisa/gagal).
+
+```bash
+INTERVAL=600 ./scripts/watch-embedding.sh   # jalankan di background
 ```
 
 DoD akhir (`> 95% embedded`) **belum tercapai** dan tidak mungkin selesai dalam
