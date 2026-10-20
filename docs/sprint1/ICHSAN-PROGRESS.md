@@ -247,6 +247,13 @@ pada branch `paperclip/dev` dengan commit `8b440e2` + `a5b6498` sudah mendarat:
    (`width={asset.width ?? undefined}`) sehingga tidak ada `NaN`/layout shift.
 5. **Rute** di dev server `127.0.0.1:3010`: `/curate`, `/bundles`, `/questions`
    semuanya `307` (gerbang auth) — tidak ada 404.
+6. **Bukti render nyata (SSR, data DB):** `npx tsx e2e-manual/mat127-render-check.tsx`
+   → **15/15 PASS** (`HASIL: SEMUA LOLOS`): 5 tone kesulitan unik
+   (`success/info/gold-fg/warning/error`), 4 status (draft abu, review kuning,
+   ready hijau, archived coret), `TopicTagList` menghasilkan tautan filter +
+   pesan saat kosong, `QuestionMediaGallery` menghasilkan `/img/<shortId>` +
+   fallback saat kosong, `BundleEnrichmentSummary` membaca `233 butir`, dan
+   paket tanpa agregat tidak merusak markup.
 
 ### Status akhir DoD
 | Butir DoD | Status |
