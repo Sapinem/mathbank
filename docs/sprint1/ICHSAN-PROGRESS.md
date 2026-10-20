@@ -201,3 +201,63 @@ Status DoD: gambar soal ✅ · difficulty badge ✅ · topic tags ✅ · status
 indikator ✅ · statistik paket ✅ · rute `/curate` ✅.
 
 **Siap diperiksa Rofik (tes komponen) dan Hafiz (build/hidrasi).**
+
+---
+
+## 8. Verifikasi independen (heartbeat penutup)
+
+Verifikasi ulang dijalankan **dari nol** (tidak memakai klaim run sebelumnya),
+pada branch `paperclip/dev` dengan commit `8b440e2` + `a5b6498` sudah mendarat:
+
+1. **`npx tsc --noEmit`** (`set -o pipefail`) → **exit 0**, tanpa keluaran error.
+2. **Keterpasangan komponen → halaman** (grep, bukan asumsi):
+   - `question-detail-view.tsx` mengimpor & memakai `QuestionMediaGallery`
+     (baris 234), `TopicTagList` (414), `QuestionStatusBadge` (136, 388),
+     `DifficultyBadge` (140, 404), `TYPE_LABELS` (91, 149).
+   - `bundle-list-view.tsx` memakai `BundleEnrichmentSummary` (543, mode
+     `compact` di kartu) + `DifficultyAverageChip` (645) & `TopicCoverageChip`
+     (652) di kolom tabel "Rerata Kesulitan"/"Cakupan Topik" (header 603–606).
+   - `src/app/(app)/curate/page.tsx` ada dan menjadi rute App Shell.
+3. **Data nyata (`.env` proyek, 2026-10-20)** — `listBundles(actor,{limit:5})`,
+   total **577 paket**; agregat terisi konsisten dengan `itemCount`:
+   | Paket | Butir | Rerata | Topik | Cakupan |
+   |---|---|---|---|---|
+   | Simulasi TKA | 233 | 2.0 | 40 | 40% |
+   | Smp_matp | 30 | 2.5 | 20 | 57% |
+   | Sma_amatw | 25 | 2.2 | 16 | 56% |
+   | Sma_amatp | 25 | 2.2 | 20 | 68% |
+   | Sd_matd | 30 | 2.0 | 9 | 37% |
+
+   `questionCount === itemCount` di kelima baris → `COUNT(DISTINCT …)` memang
+   mencegah penggandaan baris akibat join `question_topics`.
+4. **`getQuestion()` pada soal nyata** (`01a1155c-…`, satu-satunya soal yang
+   punya media *dan* topik pada irisan query):
+   ```json
+   { "difficulty": 2, "status": "draft", "type": "single_choice",
+     "topics": ["Aritmetika Sosial(L2)", "Barisan & Deret(L2)",
+                "Luas & Volume Bangun Ruang(L3,primary)"],
+     "media":  ["QAGwtVfi:content:image/jpeg:nullxnull"],
+     "hasAnswerKey": false }
+   ```
+   Tiga hal terbukti: (a) hierarki topik + `isPrimary` sampai ke UI,
+   (b) media membawa `shortId`/`role`/`mimeType`, (c) `answerKey` tetap
+   tersembunyi untuk penonton tanpa izin — proyeksi aman tidak bocor.
+   Catatan: `width`/`height` media masih `null` di DB (pengisi aset belum
+   mengukur dimensi), dan `QuestionImage` sudah menanganinya
+   (`width={asset.width ?? undefined}`) sehingga tidak ada `NaN`/layout shift.
+5. **Rute** di dev server `127.0.0.1:3010`: `/curate`, `/bundles`, `/questions`
+   semuanya `307` (gerbang auth) — tidak ada 404.
+
+### Status akhir DoD
+| Butir DoD | Status |
+|---|---|
+| Question detail menampilkan gambar soal | ✅ (galeri + inline `{{img:…}}` + empty state) |
+| Difficulty badge 1–5 berwarna | ✅ |
+| Topic tags klikabel → filter | ✅ |
+| Tipe soal tag | ✅ |
+| Status indicator 4 keadaan | ✅ |
+| Bundle page statistik pengayaan | ✅ (kartu + tabel, data nyata) |
+| Rute `/curate` ada | ✅ |
+
+Tidak ada blocker. Empat tindak lanjut di §6 tetap berlaku dan **bukan** bagian
+DoD MAT-127 (menunggu skema Faruq, keputusan Kemal, dan PR nav Rofik).
