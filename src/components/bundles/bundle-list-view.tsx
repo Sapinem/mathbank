@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -53,7 +53,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  useAllBundles,
+  useBundlesPage,
   useCreateBundle,
   useArchiveBundle,
   useDuplicateBundle,
@@ -106,7 +106,7 @@ const ORIGIN_TABS: { id: "all" | BundleOrigin; label: string; param: string }[] 
   { id: "ingest", label: "Ingest", param: "ingest" },
 ];
 
-/** Jumlah paket per halaman pada daftar (paginasi sisi klien). */
+/** Jumlah paket per halaman — dipakai sebagai `limit` API (paginasi server-side). */
 const BUNDLES_PAGE_SIZE = 20;
 
 export function BundleListView() {
@@ -121,33 +121,52 @@ export function BundleListView() {
   const originFilter: "all" | BundleOrigin =
     originParam === "ingest" || originParam === "manual" ? originParam : "all";
 
-  // Fetch dengan filter API-side bila type/origin di-URL.
-  // `useAllBundles` mengambil SEMUA halaman (bukan hanya 20 pertama) karena
-  // daftar & statistik memfilter di sisi klien — lihat catatan hook.
-  const { data: bundleData, isPending, isError, error } = useAllBundles({
+  // ── State filter & halaman ──────────────────────────────
+  // Status & pencarian kini **server-side** (ACT-04): nilainya ikut ke query
+  // API, jadi daftar tak perlu menarik seluruh paket ke memori.
+  const [search, setSearch] = useState(""); // input mentah (responsif)
+  const [debouncedSearch, setDebouncedSearch] = useState(""); // 300 ms
+  const [statusFilter, setStatusFilter] = useState<"all" | BundleRow["status"]>("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  // Halaman daftar (0-based). Direset ke 0 saat filter/pencarian berubah.
+  const [page, setPage] = useState(0);
+
+  // Debounce: satu request per jeda ketik, bukan per karakter.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  /**
+   * ACT-04 — SATU request HTTP per halaman.
+   *
+   * Filter (jenis/asal/status/cari) + `limit` + `offset` dikirim ke server;
+   * sebelumnya daftar menelusuri SEMUA halaman (hingga 50 roundtrip
+   * sekuensial) hanya untuk menampilkan 20 baris. Statistik ikut di amplop
+   * (`stats`) sehingga kartu ringkas tetap akurat tanpa request tambahan.
+   */
+  const { data: pageData, isPending, isError, error } = useBundlesPage({
     bundleType: typeFilter !== "all" ? typeFilter : undefined,
     origin: originFilter !== "all" ? originFilter : undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    q: debouncedSearch || undefined,
+    limit: BUNDLES_PAGE_SIZE,
+    offset: page * BUNDLES_PAGE_SIZE,
   });
-  const data: BundleRow[] = bundleData?.items ?? [];
-  /** Total paket menurut API (seluruh halaman), bukan panjang array yang dimuat. */
-  const apiTotal = bundleData?.total ?? 0;
+  const data: BundleRow[] = pageData?.items ?? [];
+  /** Total paket cocok filter menurut API (seluruh halaman). */
+  const total = pageData?.total ?? 0;
+  const stats = pageData?.stats;
   const create = useCreateBundle();
   const archive = useArchiveBundle();
   const duplicate = useDuplicateBundle();
 
-  // Dialog & local-only state (status, search, view mode)
+  // Dialog & local-only state
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<BundleType>(typeFilter !== "all" ? typeFilter : "exam");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<BundleRow | null>(null);
-
-  // Status & search: client-side filtering (tidak URL-driven — UX detail)
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | BundleRow["status"]>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  // Halaman daftar (0-based). Direset ke 0 saat filter/pencarian berubah.
-  const [page, setPage] = useState(0);
 
   /** Push filter ke URL (single source of truth untuk type/origin). */
   function updateUrl(next: { type?: "all" | BundleType; origin?: "all" | BundleOrigin }) {
@@ -190,34 +209,24 @@ export function BundleListView() {
     });
   }
 
-  // Statistik ringkas (total seluruh paket, bukan filtered)
-  const totalBundles = apiTotal;
-  const examCount = data.filter((b) => b.bundleType === "exam").length;
-  const sourceCount = data.filter((b) => b.bundleType === "source").length;
-  const totalItems = data.reduce((acc, b) => acc + (b.itemCount ?? 0), 0);
+  // Statistik ringkas — dari `stats` server (seluruh paket cocok filter,
+  // bukan hanya 20 baris halaman ini).
+  const totalBundles = total;
+  const examCount = stats?.byType.exam ?? 0;
+  const sourceCount = stats?.byType.source ?? 0;
+  const totalItems = stats?.totalItems ?? 0;
 
-  // Filter sisi klien: search & status
-  const filtered = data.filter((b) => {
-    if (statusFilter !== "all" && b.status !== statusFilter) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      const matchTitle = b.title.toLowerCase().includes(q);
-      const matchYear = b.year ? String(b.year).includes(q) : false;
-      if (!matchTitle && !matchYear) return false;
-    }
-    return true;
-  });
-
-  // Paginasi sisi klien (20 per halaman) — lihat konstanta di atas komponen.
-  const totalPages = Math.max(1, Math.ceil(filtered.length / BUNDLES_PAGE_SIZE));
+  // Paginasi server-side: halaman ini sudah berisi maksimal `BUNDLES_PAGE_SIZE`
+  // baris, jadi tak ada lagi `filter`/`slice` di klien.
+  const totalPages = Math.max(1, Math.ceil(total / BUNDLES_PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-  const paged = filtered.slice(
-    safePage * BUNDLES_PAGE_SIZE,
-    safePage * BUNDLES_PAGE_SIZE + BUNDLES_PAGE_SIZE,
-  );
+
+  // Jaring aman tanpa efek: bila halaman ini kosong padahal ada hasil (mis.
+  // data menyusut di tab lain), UI menawarkan kembali ke halaman pertama —
+  // lihat cabang `total > 0 && data.length === 0` di bawah.
 
   const hasFilterActive =
-    search.trim() !== "" || statusFilter !== "all" || typeFilter !== "all" || originFilter !== "all";
+    debouncedSearch !== "" || statusFilter !== "all" || typeFilter !== "all" || originFilter !== "all";
 
   return (
     <>
@@ -388,7 +397,7 @@ export function BundleListView() {
           {/* Toggle Mode Tampilan (Grid / List) */}
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <span className="text-xs font-mono text-muted-foreground">
-              {filtered.length} dari {totalBundles} paket
+              {data.length} dari {totalBundles} paket
               {totalPages > 1 && (
                 <>
                   {" · "}
@@ -426,17 +435,7 @@ export function BundleListView() {
           <LoadingState label="Memuat naskah paket…" />
         ) : isError ? (
           <ErrorState title="Gagal memuat paket" description={(error as Error).message} />
-        ) : data.length === 0 ? (
-          <EmptyState
-            title="Belum ada paket soal"
-            description="Buat naskah ujian atau paket latihan baru untuk mulai mengelompokkan butir soal."
-            action={
-              <Button onClick={() => setOpen(true)} className="mt-2">
-                <Plus data-icon="inline-start" /> Buat Paket Pertama
-              </Button>
-            }
-          />
-        ) : filtered.length === 0 ? (
+        ) : total === 0 && hasFilterActive ? (
           <EmptyState
             title="Tidak ada paket yang cocok"
             description="Coba ubah kata kunci pencarian atau sesuaikan filter yang sedang aktif."
@@ -454,10 +453,30 @@ export function BundleListView() {
               </Button>
             }
           />
+        ) : total === 0 ? (
+          <EmptyState
+            title="Belum ada paket soal"
+            description="Buat naskah ujian atau paket latihan baru untuk mulai mengelompokkan butir soal."
+            action={
+              <Button onClick={() => setOpen(true)} className="mt-2">
+                <Plus data-icon="inline-start" /> Buat Paket Pertama
+              </Button>
+            }
+          />
+        ) : data.length === 0 ? (
+          <EmptyState
+            title="Halaman ini kosong"
+            description={`Hanya tersedia ${totalPages} halaman untuk filter saat ini.`}
+            action={
+              <Button variant="outline" onClick={() => setPage(0)} className="mt-2">
+                Ke Halaman Pertama
+              </Button>
+            }
+          />
         ) : viewMode === "grid" ? (
           /* ================= TAMPILAN GRID KARTU NASKAH (BENTO) ================= */
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {paged.map((b) => (
+            {data.map((b) => (
               <article
                 key={b.id}
                 className="group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card/60 p-4 motion-safe:transition-all motion-safe:duration-150 hover:border-border hover:bg-card hover:shadow-xs dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
@@ -574,7 +593,7 @@ export function BundleListView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paged.map((b) => (
+                {data.map((b) => (
                   <TableRow key={b.id} className="hover:bg-muted/30">
                     <TableCell className="font-medium whitespace-normal min-w-[200px] max-w-sm">
                       <div className="flex flex-col gap-0.5">
@@ -655,15 +674,15 @@ export function BundleListView() {
         )}
 
         {/* PAGINASI (20 per halaman) */}
-        {!isPending && !isError && filtered.length > BUNDLES_PAGE_SIZE && (
+        {!isPending && !isError && totalPages > 1 && (
           <nav
             className="flex items-center justify-between gap-3 pt-1"
             aria-label="Navigasi halaman paket"
           >
             <span className="text-xs text-muted-foreground">
               Menampilkan {safePage * BUNDLES_PAGE_SIZE + 1}–
-              {Math.min((safePage + 1) * BUNDLES_PAGE_SIZE, filtered.length)} dari{" "}
-              {filtered.length} paket
+              {Math.min((safePage + 1) * BUNDLES_PAGE_SIZE, total)} dari{" "}
+              {total} paket
             </span>
             <div className="flex items-center gap-2">
               <Button

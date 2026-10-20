@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import type {
   BundleRow,
   BundleListResult,
@@ -66,18 +66,33 @@ export interface BundleDetail extends BundleRow {
 }
 
 /**
- * Filter opsional untuk `useBundles` (MAT-40 — URL-driven).
- * Meneruskan `bundleType` & `origin` ke API sebagai query string.
+ * Filter daftar paket — semuanya diproses **server-side**.
+ *
+ * ACT-04: `status` & `q` ikut ke query string supaya satu halaman daftar hanya
+ * butuh **satu** request HTTP (sebelumnya klien menarik semua halaman lalu
+ * memfilter/mencari di memori → waterfall sampai 50 roundtrip).
  */
 export interface BundlesListFilter {
   bundleType?: BundleType;
   origin?: BundleOrigin;
+  /** `active` = semua paket yang belum diarsip (default perilaku API). */
+  status?: "active" | BundleRow["status"];
+  /** Kata kunci judul/tahun. */
+  q?: string;
+}
+
+/** Parameter halaman untuk {@link useBundlesPage}. */
+export interface BundlesPageParams extends BundlesListFilter {
+  limit?: number;
+  offset?: number;
 }
 
 export function useBundles(filter?: BundlesListFilter) {
   const qs = new URLSearchParams();
   if (filter?.bundleType) qs.set("bundleType", filter.bundleType);
   if (filter?.origin) qs.set("origin", filter.origin);
+  if (filter?.status) qs.set("status", filter.status);
+  if (filter?.q) qs.set("q", filter.q);
   const query = qs.toString();
   return useQuery({
     queryKey: query
@@ -96,66 +111,29 @@ export function useBundles(filter?: BundlesListFilter) {
 }
 
 /**
- * Daftar paket dengan amplop paginasi penuh (**API-05**).
+ * Satu halaman daftar paket (**ACT-04**) — **satu** request per halaman.
  *
- * Berbeda dari `useBundles` (yang meng-unwrap `.items` demi kompatibilitas
- * komponen daftar), hook ini mempertahankan `{ items, total, limit, offset }`
- * sehingga UI berpaginasi dapat menampilkan total & jumlah halaman.
+ * Mengembalikan amplop penuh `{ items, total, limit, offset, stats }` sehingga
+ * UI bisa: menampilkan 20 baris, tahu jumlah halaman (`total`), dan mengisi
+ * kartu statistik (`stats`) tanpa request tambahan.
+ *
+ * `placeholderData: keepPreviousData` menjaga baris lama tetap tampil saat
+ * berpindah halaman (tanpa flicker/loading penuh).
  */
-export function useBundlesPage(
-  filter?: BundlesListFilter & { limit?: number; offset?: number },
-) {
+export function useBundlesPage(params: BundlesPageParams = {}) {
   const qs = new URLSearchParams();
-  if (filter?.bundleType) qs.set("bundleType", filter.bundleType);
-  if (filter?.origin) qs.set("origin", filter.origin);
-  if (filter?.limit != null) qs.set("limit", String(filter.limit));
-  if (filter?.offset != null) qs.set("offset", String(filter.offset));
+  if (params.bundleType) qs.set("bundleType", params.bundleType);
+  if (params.origin) qs.set("origin", params.origin);
+  if (params.status) qs.set("status", params.status);
+  if (params.q) qs.set("q", params.q);
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.offset != null) qs.set("offset", String(params.offset));
   const query = qs.toString();
   return useQuery({
-    queryKey: [...bundleKeys.all, "page", filter],
+    queryKey: [...bundleKeys.all, "page", params],
     queryFn: () =>
       api<BundleListResult>(`/api/bundles${query ? `?${query}` : ""}`),
-  });
-}
-
-/**
- * Ambil SEMUA paket (semua halaman) untuk daftar yang memfilter di sisi klien.
- *
- * LATAR: `GET /api/bundles` dibatasi `limit` (default 20, maksimum 100 sesuai
- * skema zod). `useBundles` hanya mengambil satu halaman pertama sehingga daftar
- * & statistik terpotong pada 20 paket walau `total` sebenarnya jauh lebih besar
- * (mis. 105). Hook ini menelusuri seluruh halaman lalu mengembalikan
- * `{ items, total }` — `total` diambil dari API (bukan panjang array) agar
- * statistik akurat.
- *
- * Filter `bundleType`/`origin` diteruskan ke API (server-side) seperti semula.
- */
-export function useAllBundles(filter?: BundlesListFilter) {
-  const qs = new URLSearchParams();
-  if (filter?.bundleType) qs.set("bundleType", filter.bundleType);
-  if (filter?.origin) qs.set("origin", filter.origin);
-  const baseQuery = qs.toString();
-  return useQuery({
-    queryKey: [...bundleKeys.all, "all", filter ?? null],
-    queryFn: async (): Promise<{ items: BundleRow[]; total: number }> => {
-      const PAGE = 100; // batas maksimum skema API
-      const items: BundleRow[] = [];
-      let offset = 0;
-      let total = 0;
-      // Batas iterasi defensif (mis. 50 halaman = 5000 paket) agar tak loop tanpa henti
-      // bila API keliru melaporkan `total`.
-      for (let i = 0; i < 50; i++) {
-        const params = new URLSearchParams(baseQuery);
-        params.set("limit", String(PAGE));
-        params.set("offset", String(offset));
-        const page = await api<BundleListResult>(`/api/bundles?${params.toString()}`);
-        items.push(...page.items);
-        total = page.total;
-        offset += page.items.length;
-        if (page.items.length === 0 || offset >= page.total) break;
-      }
-      return { items, total };
-    },
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -11,7 +11,7 @@
  *
  * ⚠️ JANGAN impor file ini dari komponen klien (menarik `@/lib/db`).
  */
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions, questionOptions } from "@/lib/db/schema/question";
@@ -80,6 +80,10 @@ export async function listBundles(
   filter?: {
     bundleType?: "source" | "exam";
     origin?: "ingest" | "manual";
+    /** ACT-04: filter status server-side. `active` = semua yang belum diarsip. */
+    status?: "active" | "draft" | "review" | "ready" | "archived";
+    /** ACT-04: pencarian judul/tahun server-side (ILIKE). */
+    q?: string;
     limit?: number;
     offset?: number;
   },
@@ -88,13 +92,27 @@ export async function listBundles(
   const conds = [isNull(bundles.deletedAt)];
   if (filter?.bundleType) conds.push(eq(bundles.bundleType, filter.bundleType));
   if (filter?.origin) conds.push(eq(bundles.origin, filter.origin));
+  if (filter?.status && filter.status !== "active") {
+    conds.push(eq(bundles.status, filter.status));
+  }
+  const q = filter?.q?.trim();
+  if (q) {
+    const pattern = `%${q}%`;
+    // Judul ATAU tahun (dijadikan teks) — meniru pencarian sisi klien lama.
+    conds.push(
+      or(
+        ilike(bundles.title, pattern),
+        sql`CAST(${bundles.year} AS TEXT) ILIKE ${pattern}`,
+      )!,
+    );
+  }
   const where = and(...conds);
   const limit = filter?.limit ?? 20;
   const offset = filter?.offset ?? 0;
 
-  // Hitung total SELURUH baris cocok filter (terpisah dari halaman ini) agar
-  // klien tahu jumlah halaman. Dijalankan paralel dengan kueri halaman.
-  const [[{ total }], rows] = await Promise.all([
+  // Empat kueri paralel, SATU request HTTP dari klien:
+  //  1) total baris cocok, 2) halaman ini, 3) agregat per jenis, 4) total butir.
+  const [[{ total }], rows, typeRows, [itemAgg]] = await Promise.all([
     db
       .select({ total: sql<number>`COUNT(*)`.mapWith(Number) })
       .from(bundles)
@@ -106,9 +124,31 @@ export async function listBundles(
       .orderBy(desc(bundles.updatedAt))
       .limit(limit)
       .offset(offset),
+    db
+      .select({
+        bundleType: bundles.bundleType,
+        c: sql<number>`COUNT(*)`.mapWith(Number),
+      })
+      .from(bundles)
+      .where(where)
+      .groupBy(bundles.bundleType),
+    db
+      .select({ totalItems: sql<number>`COUNT(*)`.mapWith(Number) })
+      .from(bundleItems)
+      .innerJoin(bundles, eq(bundles.id, bundleItems.bundleId))
+      .where(where),
   ]);
 
-  return { items: await attachCounts(rows), total, limit, offset };
+  const byType = { exam: 0, source: 0 };
+  for (const r of typeRows) byType[r.bundleType] = Number(r.c);
+
+  return {
+    items: await attachCounts(rows),
+    total,
+    limit,
+    offset,
+    stats: { byType, totalItems: Number(itemAgg?.totalItems ?? 0) },
+  };
 }
 
 /** Ambil satu paket (tanpa item) atau null. */

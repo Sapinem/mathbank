@@ -51,6 +51,23 @@ export interface BundleListResult {
   total: number;
   limit: number;
   offset: number;
+  /**
+   * Agregat ringkas untuk kartu statistik daftar (ACT-04).
+   *
+   * KENAPA: setelah daftar berpaginasi **server-side**, klien hanya menerima
+   * 20 baris — menghitung "Naskah Ujian / Bank Sumber / Butir Terhimpun" dari
+   * baris halaman akan salah. Statistik dihitung di server pada query yang sama
+   * (satu request HTTP), memakai filter yang sama dengan `items`.
+   */
+  stats: BundleListStats;
+}
+
+/** Agregat daftar paket (seluruh baris cocok filter, bukan hanya satu halaman). */
+export interface BundleListStats {
+  /** Jumlah paket per jenis. */
+  byType: { exam: number; source: number };
+  /** Total butir soal yang terhimpun pada paket-paket itu. */
+  totalItems: number;
 }
 
 export interface BundleItemRow {

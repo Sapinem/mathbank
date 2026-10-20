@@ -15,12 +15,17 @@ const createSchema = z.object({
 });
 
 /**
- * Filter + paginasi daftar paket (MAT-39 + **PERF-05**).
+ * Filter + paginasi daftar paket (MAT-39 + **PERF-05** + **ACT-04**).
  * `limit` default 20; `coerce` karena query string selalu teks.
+ *
+ * ACT-04: `status` & `q` diproses **server-side** agar klien cukup satu
+ * request untuk satu halaman (tanpa menarik seluruh paket lalu memfilter).
  */
 const listQuerySchema = z.object({
   bundleType: z.enum(["source", "exam"]).optional(),
   origin: z.enum(["ingest", "manual"]).optional(),
+  status: z.enum(["active", "draft", "review", "ready", "archived"]).optional(),
+  q: z.string().trim().max(120).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
@@ -29,6 +34,7 @@ const listQuerySchema = z.object({
  * GET /api/bundles — daftar paket aktif.
  * MAT-39: dukung filter `bundleType` & `origin` via query string.
  * PERF-05: dukung `limit` (default 20) & `offset`.
+ * ACT-04: dukung `status` & `q` + amplop berisi `stats` (satu request/halaman).
  */
 export const GET = wrapRoute({
   rateLimit: true,
@@ -38,6 +44,8 @@ export const GET = wrapRoute({
     listBundles(actor, {
       bundleType: query?.bundleType,
       origin: query?.origin,
+      status: query?.status,
+      q: query?.q || undefined,
       limit: query?.limit,
       offset: query?.offset,
     }),
