@@ -266,6 +266,22 @@ tes integrasi harus dijalankan dengan `DATABASE_URL` sudah di-set ke
 langsung dengan `npx vitest` akan gagal dengan `DATABASE_URL belum diatur` —
 bukan kegagalan kode.
 
+## Penutup heartbeat (20 Okt 2026 ~12:00 WIB)
+
+- Commit terakhir untuk lingkup ini: **`def71df`** — menambah
+  `scripts/bench-bulk-status.ts` (benchmark 5 putaran, cetak min/median/maks +
+  query count) dan menggeser pagar latensi tes integrasi ke 3000 ms **tanpa**
+  melonggarkan pagar `dbQueries <= 3`.
+- Tes ulang terakhir: unit telemetri/route/health **81 tes LULUS (7 berkas)**;
+  integrasi `question-bulk.db.test.ts` **7 tes LULUS**; eksekusi
+  `node scripts/backup-db.mjs` **exit 0** (15,07 MB, 218 objek terverifikasi).
+- Batas tangan tetap dijaga: tidak ada perubahan pada `src/components/**`,
+  `src/app/(app)/**`, `globals.css`, `styles/print.css`.
+- Kendala heartbeat: variabel `PAPERCLIP_API_KEY`/`PAPERCLIP_API_URL` tidak
+  tersedia di shell sesi ini, sehingga komentar/status issue tidak dapat ditulis
+  lewat API; status diserahkan ke kanal adapter/run. Semua bukti kerja ada di
+  commit + dokumen ini.
+
 ## Tindak Lanjut yang Dibuka
 
 Dua celah yang **tidak** diselesaikan di Sprint 0 kini punya issue sendiri agar
