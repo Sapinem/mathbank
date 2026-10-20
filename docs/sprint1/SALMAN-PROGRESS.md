@@ -261,6 +261,25 @@ DoD akhir (`> 95% embedded`) **belum tercapai** dan tidak mungkin selesai dalam
 satu heartbeat — ini pekerjaan background berjam-jam. Skrip bersifat resumable,
 jadi heartbeat berikutnya cukup memverifikasi cakupan dan menutup tiket.
 
+Snapshot 14:56 WIB: 4.394 ter-embed, sisa **7.473**, laju 0,97 soal/dtk →
+ETA ≈ 2,2 jam (sekitar 17:10 WIB).
+
+### Verifikasi cepat (satu perintah)
+
+`scripts/verify-sprint1-dod.sh` mengecek ketiga DoD sekaligus, read-only, dan
+mengembalikan exit code 1 selama masih ada yang belum terpenuhi:
+
+```bash
+./scripts/verify-sprint1-dod.sh
+# ACT-08  PASS question_media=1639 · referensi 1639/1639 (100.0%)
+# ACT-11  PASS 5 level · total 11889 · D3=35.1%
+# ACT-07  FAIL embedded=4394/11889 (37.0%)  <-- target >95%, masih berjalan
+```
+
+Cakupan referensi media sengaja dihitung ulang dari `content_markdown`, bukan
+dari `question_media`, supaya tidak sirkular (tidak "lulus" hanya karena tabel
+yang kita isi memang berisi).
+
 ---
 
 ## Catatan lintas-tim
