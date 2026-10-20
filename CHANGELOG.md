@@ -1,5 +1,553 @@
 # Changelog — MathBank
 
+## [Sprint 0 / Backend] ACT-01, ACT-02, ACT-03, ACT-05 — backup, keamanan log, label metrik, bulk status
+
+**ACT-01 — backup harian + retensi dua tingkat.** `scripts/backup-db.mjs` kini
+menyimpan **7 dump harian** (`BACKUP_KEEP`) **plus arsip mingguan per ISO-week
+selama 30 hari** (`backups/archive/`, dedupe per minggu → idempoten), menulis log
+yang **berotasi sendiri** (5 MB → `.1`), memasang **timeout** `pg_dump`
+(`BACKUP_TIMEOUT_MS`, default 10 menit), dan **membuang dump 0 byte/parsial**
+sebelum exit 1. Cron dipindah ke **02:00 WIB** dengan env retensi eksplisit.
+Bukti: dump `mathbank_2026-10-20-03-41-15.dump` (15,07 MB, exit 0),
+`backups/archive/mathbank_2026-W43.dump`, run kedua `— lewati` (dedupe) dan
+`backup.log.1` (rotasi).
+
+**ACT-02 — log tak lagi membocorkan kredensial.** `logger.ts` menambahkan
+*scrubber pola* pada nilai bebas (`Error.message`, `stack`): URL koneksi
+berpassword, `?token=`/`password=`/`api_key=`, header `Bearer`/`Basic`, JWT, dan
+kunci `sk-live-…`; `ZodError` dicatat hanya `path`+`code`+`message` (`input`
+mentah dibuang). `GET /api/health` mengembalikan **503 + pesan generik** tanpa
+`err.message` PostgreSQL ke publik; detail tetap ke log server yang sudah
+di-scrub.
+
+**ACT-03 — label metrik stabil, store tak bocor.** `normalizeRoutePath()` mengubah
+segmen dinamis menjadi `:id` sebelum `recordRequest` (100 UUID berbeda → **1**
+label `GET /api/questions/:id`), `MAX_ROUTES = 200` dengan **eviksi LRU** (rute
+sibuk bertahan, `evictedLabels` terekspos), dan `startTelemetryMaintenance()`
+menjadwalkan `rateLimit.prune()` + `idempotency.prune()` tiap 60 s (idempoten,
+`unref()`, tak pernah melempar).
+
+**ACT-05 — aksi massal 200 soal: 1.800 query → 3 query.** `bulkQuestionAction`
+memakai **1 `SELECT`** (`= ANY($1)`), validasi FSM/izin di memori, **1 `UPDATE`
+set-based** `FROM (VALUES (id, from_status) …)` dengan `q.status = v.from_status`
+(**compare-and-swap per baris**, bukan update buta) `RETURNING q.id`, lalu **1
+`INSERT`** audit batch. `changeQuestionStatus` menerima `{ returnUpdated: false }`.
+
+**Bukti uji.** `vitest` 5 berkas telemetri+health → 40 test lulus (termasuk
+`logger-scrub.test.ts`, `metrics-labels.test.ts`, `health/route.test.ts`);
+`vitest --config vitest.db.config.mts question-bulk.db.test.ts` vs `mathbank_test`
+→ 6 test lulus, termasuk DoD **200 soal `review→ready`: ≤3 query & <300 ms**.
+Detail: `docs/sprint0/SALMAN-PROGRESS.md`.
+
+## [Perf] ACT-04 — Waterfall `/bundles` dihapus (1 request per halaman)
+
+**Masalah.** `BundleListView` memakai `useAllBundles()` yang menelusuri semua halaman
+`GET /api/bundles` secara **sekuensial** (`PAGE=100`, sampai 50 iterasi) lalu memotong
+20 baris di klien; filter `status` & pencarian `q` juga dikerjakan di memori.
+
+**Perbaikan.**
+- `GET /api/bundles` menerima `status` & `q` (server-side); `listBundles()` menerapkan
+  `eq(status)` + `ILIKE` judul/tahun dan mengembalikan amplop
+  `{ items, total, limit, offset, stats }`. `stats` (per jenis + total butir) dihitung
+  dari 4 kueri paralel dalam request yang sama, sehingga kartu statistik tetap akurat
+  walau klien hanya menerima 20 baris.
+- `useBundlesPage(params)` mengirim `status/q/limit/offset` sekali + `keepPreviousData`.
+- `useAllBundles()` **dihapus**; `BundleListView` memakai `limit=20&offset=page*20`,
+  pencarian di-debounce 300 ms, paginasi Previous/Next dari `total` server.
+
+**Bukti.** `tsc --noEmit` & `eslint` bersih; runtime dev: `?status=active&limit=20&offset=0`
+→ `items=20, total=577, stats={byType:{exam:0,source:577}, totalItems:12336}`;
+`?q=2024` → `total=15`; `?status=ready` → `total=0`; `grep useAllBundles src` → 0.
+Detail: `docs/sprint0/ICHSAN-PROGRESS.md`.
+
+## [Ingest] — Event otomatis + kunci defantri (label opsi `$(A)$`)
+
+### Temuan 1: label opsi `$(A)$` tak dikonversi → KUNCI HILANG
+Sumber defantri menulis opsi `$(B)\ 55,\!8 $`. `normalizeMath` menuntut karakter
+non-spasi sebelum `$` penutup, sehingga bentuk tsb **tidak dikonversi**. Akibat
+berantai: label `\((B)\)` tak dikenali → kode hanya menyimpan kunci bila label
+ada → **40 `value="correct"` → 0 kunci**.
+
+Perbaikan (`clean.ts`), 3 aturan label dijalankan **sebelum** display:
+1. `$(A)\ 63 $` → `\((A)\ 63\)`
+2. label di depan display `$(A)\ $$…$$` → `\((A)\)\[…\]`
+3. typo sumber `$(D)\ 2,\ 3,\ 9$$` → `\((D)\ 2,\ 3,\ 9\)`
+
+**Hasil audit 9.548 soal defantri: `item kotor 0`, `kunci kurang 0`.**
+Kunci batch 5 artikel: 173/195 → **2/162** (keduanya memang kosong di sumber).
+
+### Temuan 2: event tidak pernah terisi otomatis (0/162 soal)
+- Ingest tak menyentuh `event_id`; `backfill-event.ts` membaca **file cetak**
+  `/tmp/event-inventory.json` yang mudah usang.
+- Katalog `events` **tak punya "Ujian Nasional"** padahal 16 artikel UNBK di defantri.
+
+Perbaikan:
+- `src/lib/ingest/event-detect.ts` — detektor event/subtest/tahun (modul bersama).
+- `src/lib/ingest/event-resolve.ts` — isi event dari JUDUL paket; `findUnknownEvents()`
+  **melaporkan** event baru (tidak pernah dibuat otomatis).
+- Commit API + runner ingest kini **mengisi event otomatis** (`eventsTagged`, `unknownEvents`).
+- `backfill-event.ts` dibaca ulang dari DB (bukan file cetak).
+- Katalog +`Ujian Nasional` (UN; alias UNBK/UNAS/UNKP) → 11 event.
+
+Bukti: ingest UNBK → `event_id` terisi otomatis (2 bundle / 80 soal).
+
+### Pelajaran operasional
+- **Service mode `production` (`pnpm start`) memakai kode HASIL BUILD** — ubah
+  parser harus `pnpm build` + restart. Terbukti: server 0/40 kunci vs tes lokal 40/40.
+- **Dev (`pnpm dev`, port 3010) memakai kode sumber** → tak perlu build. TETAPI
+  menambah **file baru** butuh restart service (hot-reload tak menemukan modul baru).
+- Skrip yang membaca file cetak `/tmp/*.json` rapuh; query DB langsung lebih andal.
+
+### Infrastruktur
+- `mathbank.service` (prod, :1234) + `mathbank-dev.service` (dev, :3010) — berjalan
+  berdampingan. Dev untuk iterasi cepat tanpa build.
+
+## [Ingest] — Sumber mathcyber (7.623 soal)
+
+### Hasil
+- **405 berkas** di-ingest → **342 bundle · 7.623 soal**.
+- Verifikasi parse-vs-DB: **336/342 cocok**; 6 "tak cocok" **semuanya dedup
+  `content_hash`** (soal kembar dalam satu artikel) — **0 data hilang**, terbukti
+  jumlah stem unik = jumlah di DB.
+- Stem kosong **0** · pembahasan **92%**.
+
+### Temuan: kunci ADA, tapi TIDAK diisi otomatis
+- 413 soal PG tanpa kunci. Diselidiki seluruh 405 berkas: penanda kunci nyata
+  **`(Jawaban X)`** (273×), **tapi presisi hanya 90,2%** (369 salah dari 3.782).
+- **Keputusan: tidak diisi otomatis** — prinsip "kunci kosong > kunci salah".
+  Soal masuk + ditandai "perlu telaah". Detail: `docs/plans/2026-10-06-temuan-kunci-mathcyber.md`.
+
+### Pelajaran operasional (penting)
+- **`401` bukan cookie rusak** — Better Auth membatasi **sign-in**; sesi bertahan
+  hanya ~12–16 artikel. **Solusi terbukti: login + jeda 5 dtk SEBELUM tiap batch**
+  (20/20 bersih). Login berulang saat 401 memicu rate limit sign-in.
+- **`409` = commit idempoten** (sudah berhasil sebelumnya) → perlakukan selesai.
+
+### Gate
+- Unit **838/838** · DB **248/248** · gerbang PG **210/210 selisih 0**.
+
+### Korpus MathBank
+| Sumber | Soal | Paket |
+|---|---:|---:|
+| mathcyber | 7.623 | 342 |
+| defantri | 3.319 | 116 |
+| m4thlab | 2.938 | 221 |
+| **TOTAL** | **13.599** | 679 |
+
+## [Ingest] — Sumber m4thlab (2.938 soal)
+
+### Hasil
+- **221 artikel m4thlab** di-ingest lewat API resmi → **221 bundle · 2.938 soal**.
+- Verifikasi parse-vs-DB: **221/221 cocok, 0 tak cocok**.
+- Kualitas: stem kosong **0** · LaTeX tak seimbang **0** · URL gambar mentah **0** ·
+  pembahasan **2.908/2.938 (99%)**.
+- `essay` 719 = soal uraian asli (bukan bug).
+
+### Rate limit dinaikkan
+- `POST /api/v1/ingest/commit`: `capacity 10, refillPerSec 0.2` → **`30, 1`**
+  (1 commit / 5 dtk → 1 commit / dtk). Alasan: ingest massal kena 429.
+
+### Pelajaran operasional
+- **`401` pada ingest BUKAN cookie kedaluwarsa biasa** — Better Auth punya
+  rate limit **sign-in** (`Too many requests`). Jangan login berulang; login
+  hanya saat 401, maks 1× per batch, + jeda.
+- `scripts/dev/demo-login.ts` melaporkan "✓ ok" walau sign-in gagal (menyesatkan).
+- Runner: yang gagal **tidak** ditandai selesai → otomatis diulang, tak ada data hilang.
+
+### Gate
+- Unit **838/838** · DB **248/248** · gerbang PG **210/210 selisih 0**.
+
+## [Ingest] — Pembahasan soal benar-salah + audit tanpa-pembahasan
+
+### Diperbaiki (bug nyata)
+- **Pembahasan soal `matrix_grid` tidak terambil.** `extractQuestionGroup`
+  memotong blok soal di **radio berikutnya**; untuk benar-salah beberapa grup
+  radio ada dalam **satu `<ul>`** dan `<details>` pembahasan berada SETELAH
+  `</ul>` → tak masuk potongan.
+  → `defantri-tf.ts`: `explanationAfterBlock()` (berhenti di blok soal
+  berikutnya, tak menyerobot milik soal lain); `defantri.ts`: `explanationBlockFor()`.
+- `<details>` berisi **kisi-kisi materi** sengaja TIDAK diambil sebagai pembahasan.
+
+### Hasil
+| Metrik | Sebelum | Sesudah |
+|---|---:|---:|
+| `matrix_grid` berpembahasan | **0** | **95** |
+| Soal berpembahasan | 2.442 | **2.539** |
+| Tanpa pembahasan | 760 (23,7%) | **663 (20,7%)** |
+
+21 artikel di-re-ingest. Audit baru: `scripts/dev/audit-tanpa-pembahasan.ts`.
+
+### Diperbaiki (skrip)
+- `reingest.ts` menghormati FK: hapus soal hanya bila tak dipakai bundle lain
+  (`bundle_items` RESTRICT) + hapus anak stimulus dulu (FK self).
+  Dedup lintas-paket tetap bekerja (`linked` > 0).
+
+### Gate
+- Unit **838/838** · gerbang PG **210/210 selisih 0**.
+
+### Catatan operasional
+- **Ubah KODE → wajib `pnpm build` + restart service.** **Ingest data saja →
+  tidak perlu build.** Rebuild bukan akibat ingest, tapi akibat kode berubah.
+
+## [Ingest/UI] — Nomor sub-soal wacana + spasi drop-cap
+
+### Diperbaiki
+- **Nomor `(1)`,`(2)`,… di depan sub-soal wacana dihapus.** Stem anak disimpan
+  sebagai `\(\left( 1 \right).\) Jika pada saat…` — nomornya berulang di UI
+  karena urutan sudah diwakili `child_order`. Kini dibuang di parser
+  (`stripSubNumber`, `defantri-wacana.ts`): hanya di **awal** stem, bentuk
+  `\left( n \right)` maupun `\((n)\)`; nomor di tengah stem tidak disentuh.
+- **Spasi bocor di drop-cap** (`<span class="awal">C</span>alon` → `"C alon"`).
+  `stripTags` mengganti SEMUA tag dengan spasi, termasuk tag **inline**. Kini
+  tag inline (`span/b/i/em/sub/sup/a/…`) dibuang **tanpa** spasi; tag blok tetap
+  jadi pemisah. → stimulus jadi `"Calon Guru belajar…"`.
+
+### Diverifikasi
+- Unit **837/837** (5 tes `stripSubNumber` + 2 tes inline-tag) · gerbang PG
+  **210/210 selisih 0** · audit clean 1.066 berkas (3 berkas lama tak berubah).
+- Re-ingest artikel wacana: 1 stimulus + 5 anak, bebas nomor & spasi bocor.
+
+## [UI] — Tampilan soal `matrix_grid` (benar-salah) di halaman detail
+
+### Diperbaiki
+- **Soal benar-salah (`matrix_grid`) tidak muncul di UI.** Halaman detail
+  (`question-detail-view.tsx`) hanya merender `q.options` — sedangkan
+  `matrix_grid` menyimpan pernyataannya di **`dataPayload.rows`** (`options`
+  kosong). Akibatnya 262 soal benar-salah tampil kosong.
+  → Komponen baru **`matrix-grid-view.tsx`** merender tiap pernyataan + kunci
+  per baris (badge ✓/✗ + label), plus label kolom (Benar/Salah).
+- **Bentuk `data_payload` editor ≠ data ingest.** Editor memakai
+  `{ columns, rows:[{label}] }` (tanpa tempat kunci), sedangkan pipeline ingest
+  menulis `{ labels, rows:[{text, answer}] }` — **262/262 soal** pakai bentuk
+  yang kedua. Editor disamakan; kini bisa **mengisi kunci** per pernyataan
+  (sebelumnya kunci akan hilang saat disunting).
+- `readMatrixGridPayload` / `readMatrixPayload` toleran bentuk lama (`label`,
+  `columns`) agar data lama tetap terbaca.
+
+### Diverifikasi
+- Unit **830/830** (6 tes baru `matrix-grid-view.test.tsx`) · gerbang PG
+  **210/210 selisih 0** · typecheck/eslint/lint:names bersih.
+- Render dengan **data API nyata** dari server (`verify-matrix-ui.ts`):
+  pernyataan + label + kunci tampil benar.
+
+## [Ingest] — Wacana (stimulus) + perbaikan gerbang PG
+
+### Ditambah
+- **Dukungan WACANA/STIMULUS** untuk defantri: artikel berwacana (1 teks
+  panjang + beberapa sub-soal bernomor) kini disimpan sebagai **1 soal
+  `stimulus` + anak** (`questions.parent_id`, `child_order`) — sebelumnya
+  sub-soal tersimpan terpisah tanpa wacana.
+  - Modul baru `defantri-wacana.ts` (fungsi murni, terpisah dari jalur PG).
+  - `ParsedItem` + `parentRefIndex` & `childOrder`; `commit.ts` memetakannya
+    ke `parentId`/`childOrder`.
+- 11 tes baru: `defantri-wacana.test.ts` (8) + `defantri-bs-label.test.ts` (3).
+
+### Kriteria deteksi wacana (kunci)
+- Penanda `$\left( n \right).$` berurutan mulai 1, dan **tiap nomor menunjuk
+  grup radio BERBEDA**. Penomoran persamaan `\cdots \left( 1 \right)` (radio
+  sama) ditolak → mencegah false positive.
+
+### Diperbaiki
+- **Gerbang jalur PG salah menghitung BS berlabel** (`$(B)\ \text{Benar}$`,
+  bentuk PAS/SAS) sebagai soal PG → 4 artikel PAS/SAS memunculkan selisih.
+  `isBs` kini mengenali bentuk berlabel.
+
+### Diverifikasi
+- Pindai **414 artikel** → **tepat 1** terdeteksi wacana (presisi 100%).
+- Ingest via API → `created: 6`; DB: 1 stimulus + 5 anak, 0 anak ber-induk salah.
+- **Gerbang PG 210/210, selisih 0** · `pnpm test` **824/824** · typecheck &
+  eslint bersih.
+
+## [Ingest] — Event backfill + temuan wacana (stimulus)
+
+### Ditambah
+- **5 event baru** (`scripts/seed-events.ts`, via service resmi `createEvent`):
+  TKA (subtest Matematika Wajib/Lanjut), PAS-SAS, SBMPTN, Try Out, ANBK-AKM
+  → tabel `events` 5 → **10 baris**.
+- **Backfill event** (`scripts/dev/backfill-event.ts`): `bundles.event_id`
+  0 → **49/116**, `questions.event_id` 0 → **1.325**, `event_year` → **455**,
+  `event_subtest` → **464** (ADR-0010).
+
+### Diukur & diverifikasi
+- **Sumber event = JUDUL**, bukan stem: hanya **6/3.318** soal memuat penanda
+  event di stem (dan itu bukan penanda asal). defantri menaruh nama+tahun di judul.
+- **0 paket campuran** — dari 116 bundle hanya 3 yang soalnya menyebut ujian;
+  2 kebetulan (1 kata di 1 soal), 1 memang satu ujian → penularan aman.
+- Tahun `2013` (SIMAK UI) diperiksa → **benar**.
+
+### Temuan (belum dikerjakan)
+- **Wacana/stimulus**: 1 artikel (`2024-09-soal-penalaran-matematika`) berisi
+  wacana + 5 sub-soal `$(1).$`–`$(5).$` (radio q1–q5) yang sekarang tersimpan
+  sebagai 5 `single_choice` terpisah. Tersimpan di
+  `docs/plans/2026-10-06-temuan-event-dan-wacana-defantri.md`.
+- **Kriteria deteksi wacana**: tiap `(n)` harus menunjuk radio **berbeda**.
+  Penomoran persamaan `\cdots \left( 1 \right)` (radio sama) = false positive.
+  Terbukti menyaring kandidat 5 → 1.
+- 67 bundle tanpa event = artikel materi/latihan yang memang tak terikat ujian.
+
+### Gate
+- `pnpm test` **813/813** · typecheck bersih · DB backup sebelum backfill.
+
+### ⏳ UTANG TEKNIS (belum diperbaiki)
+- **`bundles.event_id` harus DIHAPUS** — `event_id` hanya milik **soal**
+  (`questions`), sesuai ADR-0010. Alasan: 1 soal bisa dipakai lintas paket
+  (terbukti **112 soal** dipakai di >1 bundle) & 1 paket bisa memuat soal dari
+  asal berbeda → event di paket ambigu.
+- 49 baris `bundles.event_id` terlanjur terisi (keputusan pemilik: dibiarkan).
+  **Data soal sudah benar**; `questions.event_id` = sumber kebenaran.
+- Catatan lengkap + rencana migrasi:
+  `docs/plans/2026-10-06-utang-teknis-bundles-event-id.md`.
+
+## [Ingest] — Media di pernyataan benar-salah + aturan embed `{{img:…}}`
+
+### Diperbaiki
+- **Gambar di `matrix_grid.rows[]` tidak diproses pipeline media.** Fungsi
+  `applyMediaToItems` & `mediaTexts` (service.ts) hanya menangani `stem`,
+  `options`, dan `explanation` — sehingga gambar pada **pernyataan benar-salah**
+  tidak diunduh dan URL-nya tidak diganti shortcode. Kini `dataPayload.rows[].text`
+  ikut diproses.
+- **Pernyataan benar-salah berupa GAMBAR** (temuan TKA SD 2026) kini tetap masuk:
+  bila teks pernyataan kosong, dipakai markdown `![alt](src)` dari `<img>` di
+  `<li>` yang sama (placeholder `data:image/...` lazy-load dilewati).
+
+### Aturan yang dipatuhi (dikonfirmasi)
+- Media **wajib** lewat pipeline: `![alt](url)` di markdown → diunduh &
+  didaftarkan → **diganti shortcode `{{img:<shortId>}}`** oleh `applyMedia`.
+  Jangan menulis URL gambar langsung ke markdown soal.
+
+### Diverifikasi
+- Artikel TKA SD 2026 (pernyataan bergambar): **42/42 pernyataan** ✓
+  (sebelumnya 36 — 2 soal hilang karena pernyataannya gambar).
+- Batch BS-1 (5 artikel): **63 `matrix_grid` / 208 pernyataan** + 78 PG tersimpan.
+- Gerbang PG **214/214 (selisih 0)** · korpus 9.121 PG + 396 matrix_grid ·
+  `pnpm test` **813/813**.
+
+
+## [Ingest] — Dukungan BENAR-SALAH (`matrix_grid`) untuk defantri
+
+### Ditambahkan
+- **Soal benar-salah kini jadi `matrix_grid`**, bukan pilihan ganda rusak.
+  Modul baru `src/lib/ingest/parsers/adapters/defantri-tf.ts` (fungsi murni):
+  pernyataan (2 opsi Benar/Salah) dikelompokkan menjadi satu soal; kunci
+  `value="correct"` → `answer: "Benar" | "Salah"`.
+- **Dua bentuk sumber didukung** (terverifikasi):
+  1. **Per-`<ul>`** (TKA): satu `<ul>` pernyataan = satu soal.
+  2. **Per-`<h4>`** (PAS/SAS): satu soal = satu `<h4>` + `<blockquote>`.
+  Pilihan pengelompokan otomatis: pakai `<ul>` hanya bila pernyataan
+  **benar-benar berada di dalamnya** (cek `</ul>` sebelum posisi).
+
+### Diperbaiki (temuan saat pengembangan)
+- **`<ul>` jauh di awal artikel dianggap menaungi semua radio.** Pada PAS/SAS,
+  `<ul>` berjarak >21.000 karakter dari grup BS tetap dianggap induknya →
+  semua BS tergabung jadi satu soal. Kini diverifikasi lewat penutup `</ul>`.
+- **Teks opsi terpotong salah.** Pengambilan teks memakai potongan tetap
+  (160 char) sehingga menyerap tag `<label>`/`<button>` berikutnya → opsi BS
+  tak dikenali. Kini dibatasi sampai `</label>`.
+
+### Dampak pada metrik korpus (bukan regresi)
+- Total korpus **10.592 → 9.545** karena **1.435 grup benar-salah** yang dulu
+  dihitung sebagai soal PG palsu kini menjadi **394 `matrix_grid`** yang benar.
+- Rincian: **9.121 PG** + **394 matrix_grid (1.435 pernyataan)** + 30 lain.
+- **Gerbang PG tetap 214/214 (selisih 0)** — jalur pilihan ganda tidak terganggu.
+
+### Diverifikasi (server :1234)
+- 5 artikel BS di-ingest: **63 `matrix_grid` (220 pernyataan) + 101 PG**.
+- DB: 78 paket · 2.027 soal (63 matrix_grid + 1.964 PG) · 1.883 solusi.
+- Hanya **3 pernyataan tanpa kunci** (memang tak ada di sumber).
+- `pnpm test` **813/813** (termasuk 5 tes BS baru).
+
+
+## [Ingest] — Ingest 5 artikel matematika ke produksi + dukungan PEMBAHASAN
+
+### Ditambahkan
+- **Pembahasan (`<details>` "Alternatif Pembahasan") kini diambil adapter defantri.**
+  Sebelumnya `finalizeItem(..., undefined, ...)` → **pembahasan tidak pernah
+  tersimpan**. Kini dibaca dari `<details>`, `<summary>` dibuang, media di dalam
+  pembahasan ikut diunduh. Potongan: `extractExplanation()` di `defantri.ts`.
+
+### Diverifikasi (server demo publik :1234, via API resmi)
+- 5 artikel MATEMATIKA di-ingest; hasil **261 soal · 261 solutions ·
+  261 bundle_items · 1296 opsi**.
+- **`answerKey.explanation` ada di 261/261** · kunci 260/261 (1 soal memang
+  tanpa kunci di sumber) · `tanpa-opsi` 0.
+- Rincian: Persamaan Garis 46, Integral Tentu 46 (+1 `linked`), Statistika 52,
+  Limit 58, TPS Kuantitatif 59.
+
+### Diperbaiki (temuan penting)
+- **Ingest ke produksi memakai build LAMA.** Service `mathbank.service`
+  menjalankan `pnpm start` dari `.next`; perubahan sumber **tidak berlaku** sampai
+  `pnpm build` + restart. Sempat mengejutkan: `results` tak punya field `linked`
+  (kode lama) dan pembahasan 0. **Wajib `pnpm build` lalu restart** setelah ubah
+  parsers.
+- **`linked` wajib dibaca di summary.** Soal identik dalam satu artikel (mis.
+  Integral nomor 6 = 17) → dibuat 1, sisanya `linked`. Tanpa field ini,
+  `created` terlihat "kurang 1" tanpa penjelasan.
+
+### Catatan operasional
+- Uji ingest ke :1234 (demo publik, `DEMO_LOGIN=enabled`) memakai **API key agen**
+  (`/api/system/agent-keys`, izin `user:manage`). **API key TIDAK melihat
+  `answerKey`** (S3 — hanya admin/teacher/reviewer); verifikasi kunci/pembahasan
+  harus lewat **session admin** (`/api/dev/quick-login`).
+
+## [Ingest] — Gerbang mapel matematika + perbaikan opsi LaTeX (defantri)
+
+### Ditambahkan
+- **Gerbang mapel**: artikel defantri yang judul/slug-nya **bukan matematika**
+  kini **ditandai `skipped`** (dengan alasan), bukan diproses. Whitelist dua
+  lapis (nama mapel + topik) diperiksa dari **judul + URL** — sebab 3 artikel
+  berjudul "Olimpiade MIPA" ternyata matematika (terlihat dari slug).
+  Hasil: **200 masuk / 74 skip**; 74 judul skip diperiksa manual, semuanya
+  benar non-matematika (OSN IPS/IPA, Kebumian, Astronomi, TKA PKK/Pancasila/
+  B.Indo/B.Inggris/Fisika, TPS PBM/PPU/PU, LBI). "Pengetahuan Kuantitatif (PK)"
+  ikut MASUK (soalnya hitungan).
+  Gerbang **hanya berlaku untuk `source === "defantri"`** — sumber lain (mathcyber,
+  m4thlab, pusmendik) tidak diganggu.
+
+### Diperbaiki
+- **Opsi `\)` nyasar → LaTeX tak seimbang.** Pembersihan label opsi membuang `\)`
+  di akhir teks secara membabi-buta, padahal itu bisa penutup math opsi (mis.
+  `$(A)$ $P \gt Q$` → `\(P \gt Q` tanpa `\)`; opsi OSNP → `)\) Epidermis`).
+  Kini label dibuang presisi (`\` `(` `(` `A` `)` `\` `)`), dan `\)` akhir hanya
+  dibuang pada varian label tanpa penutup.
+
+### Diverifikasi
+- 5 artikel matematika (262 soal): **262/262 cocok**, `latex-rusak` **0**,
+  `tanpa-stem` 0, `tanpa-opsi` 0, kunci 261/261 ✓
+- Gerbang PG `audit-defantri-pg-verify.ts`: **214/214, selisih 0**
+- Korpus tetap **10.592 soal**, `Tak ada soal` = 0
+- `pnpm test` **806/806** · `test:db` **248/248** · `typecheck`/`eslint`/`lint:names` bersih
+- Rincian: `docs/plans/2026-10-06-gerbang-mapel-matematika-defantri.md`
+
+## [Ingest] — 2 bug jalur PG defantri diperbaiki: korpus 10.365 → 10.592 (+227)
+
+### Diperbaiki
+- **`<!--more-->` mengalahkan pembuka soal.** Blogger menyisipkan `<!--more-->`
+  DI ANTARA stem dan `<div class="question">`; karena pembuka dipilih via
+  `Math.max(...starts)`, penanda itu menang atas `<h4>`/`<blockquote>` → stem
+  terpotong → **soal dibuang**. Kini `<!--more-->` dikeluarkan dari kandidat
+  pembuka. (9 → 4 artikel bermasalah; +10 soal.)
+- **Stem "pembuka bersama" di luar blok radio.** Sebagian artikel (4 OSNP)
+  menaruh deskripsi soal di `<p>` **SEBELUM `<h4>`**, sedangkan radio di dalam
+  `<blockquote>` terpisah → stem kosong → soal dibuang (75→3, 60→0, 50→0, 34→0).
+  Kini ada fallback `sharedStemBefore()`. (4 → 0 artikel bermasalah; +217 soal.)
+
+### Diverifikasi
+- **Gerbang PG**: `audit-defantri-pg-verify.ts` → **214/214 artikel murni PG
+  cocok, selisih 0** (7.493 grup = 7.493 item).
+- Korpus: **10.592 soal**, `Tak ada soal` = **0** (sebelumnya 4).
+- Unit test adapter 21/21; `pnpm test`, `test:db`, `typecheck` hijau.
+
+### Alat ukur baru (dev)
+- `scripts/dev/audit-defantri-pg-baseline.ts` — baseline per-kelompok artikel
+  (120 murni PG / 154 campuran; 7.493 grup PG, 1.890 benar-salah, 6 generik).
+- `scripts/dev/audit-defantri-pg-verify.ts` — **gerbang jalur PG**.
+- `scripts/dev/db-clear-ingest.ts` — bersihkan data ingest (dry-run default).
+- Rincian: `docs/plans/2026-10-06-perbaikan-jalur-pg-defantri.md`
+
+### Pelajaran
+- "Harapan" harus diukur dari **nama grup unik**, bukan nomor urut — sumber
+  menomori ganda/lompat (`q41,q42,q21,q44…`).
+- Deteksi benar-salah harus dari **teks opsi sendiri** (tepat Benar/Salah),
+  bukan kata kunci di sekitar radio — soal "…pernyataan yang salah…" jadi
+  false positive dan membuat alat ukur sendiri salah.
+
+## [Ingest] — Benar–salah `qN` defantri: percobaan DIBATALKAN (regresi korpus −1.174)
+
+### Dicoba
+- Implementasi **benar-salah `qN` → `matrix_grid`** (prioritas 1: 56 artikel
+  campuran). Klasifikasi per-grup radio: grup 2-opsi Benar/Salah → satu
+  `matrix_grid`; sisanya tetap `single_choice`.
+
+### Hasil: ❌ DIBATALKAN
+- **Regresi korpus**: `10.365 → 9.191` soal (−1.174). Gerbang korpus
+  (`audit-defantri-corpus.ts`) mendeteksi; perubahan **dikembalikan ke HEAD**.
+- Akar masalah (2, terverifikasi atas korpus):
+  1. **Stem di luar `<blockquote>`** — sebagian artikel (OSNP IPA SD, dst.)
+     menaruh stem SEBELUM blok radio, sehingga ekstraksi stem kosong → grup
+     ter-skip. Cacat ini **juga ada di HEAD** (bukan regresi baru), tapi
+     memperparah saat dikombinasikan.
+  2. **`<ul>` antar-soal bercampur** — grouping per-`<ul>` salah, sehingga
+     hingga **64 pernyataan** dari soal berbeda menempel jadi 1 `matrix_grid`
+     ber-stem keliru (mis. TKA Bahasa Inggris 82 → 19).
+- Korpus kembali baseline: **10.365 soal / 13 ber-opsi>6 / 227 skip** ✓
+- Gate: `pnpm typecheck` bersih, `pnpm test` **793/793** ✓
+
+### Temuan terukur (274 artikel beradio)
+- 210 artikel murni pilihan-ganda; **56** campuran benar-salah+pilihan-ganda;
+  5 generik; 2 campuran 3-jenis; 1 dengan `qX`. → penanganan harus **per-grup**, bukan per-artikel.
+- Rincian lengkap + utang teknis: `docs/plans/2026-10-06-benar-salah-qn-defantri-belum-selesai.md`
+
+### Pelajaran
+- Benar-salah `qN` **bukan** tambalan kecil — sumber tidak seragam (stem di luar
+  blok, `<ul>` bercampur, `True`/`False`). Perlu stem-resolver + batas soal
+  andal + uji **per-kelompok artikel**, bukan 1–5 artikel contoh.
+
+## [Ingest] — `stripTags`: placeholder NUL bersarang bikin soal HILANG + `failed` tak terlapor
+
+### Diperbaiki
+- **Soal hilang senyap karena `\u0000` (NUL).** Sumber defantri memuat `$$` di
+  TENGAH math (mis. `$\int…dx+$$\int…dx+$$…$`). `stripTags` menyembunyikan math
+  sebagai placeholder `\u0000N\u0000`; pola itu membuat placeholder **bersarang**
+  → satu pass pemulihan menyisakan NUL → PostgreSQL menolak NUL → **`createQuestion`
+  gagal**, soal tidak tersimpan. Terbukti: 1 artikel (10 soal) hanya masuk 7.
+  Kini pemulihan **iteratif** + jaring pengaman buang sisa NUL.
+- **`failed` tak terlapor di API commit.** `summary.failed` hanya menghitung
+  artikel yang gagal total, bukan soal yang gagal dibuat (`commitItems.failed`).
+  Akibatnya soal hilang **tanpa jejak**. Kini `ProcessResult` mengekspos
+  `linked` & `failed`, dan summary menjumlahkan keduanya.
+
+### Diverifikasi
+- Re-ingest 5 artikel defantri (93 soal) via API: **93/93 cocok sumber**
+  (integral-mutlak 6/6, integral-tentu 10/10, UM-UNDIP 10/10, TKA-SD 30/30,
+  limit 38/38); LaTeX rusak 0; `failed` 0.
+
+### Temuan BELUM diperbaiki (dicatat)
+- 1 soal latihan limit berbentuk **3 pernyataan Benar/Salah** (tipe benar-salah)
+  dipaksa jadi `single_choice` ber-6 opsi "Benar/Salah" — tipe soal khusus ini
+  belum didukung adapter defantri.
+
+## [Ingest] — `clean.ts`: delimiter LaTeX selalu sepasang (bug pembahasan rusak)
+
+### Diperbaiki
+- **Regex display-multiline melompati `$…$` inline.** Sumber defantri sering
+  punya `$…$` inline tepat sebelum `$\begin{align}…\end{align}$`. Regex lama
+  (`[\s\S]*?` tanpa batas) menelan inline-inline itu jadi satu blok display →
+  hasil `\[x^{2}-px+q=0\( … \)m\( …` — **delimiter tak sepasang**. Kini body
+  dibatasi `[^$]` sehingga environment tak melintasi `$` lain. Terbukti:
+  **413/413 artikel defantri → 0 delimiter rusak** (sebelumnya mayoritas rusak).
+- **`<blockquote>` tidak dilepas tag** — padahal dokumen fungsinya menyatakan
+  "tag dilepas, isi tetap" (temuan 9.740 blockquote = pembungkus SOAL). Kini
+  dilepas (jadi newline), isi tetap. Menutup 1 tes `clean.test.ts` yang gagal.
+
+### Ditambahkan
+- Tes regresi `normalizeMath`: `$inline$` sebelum `$\begin{align}$` tak bocor.
+- `scripts/dev/audit-clean-math.ts` — audit keseimbangan delimiter `cleanHtml`.
+
+### Diverifikasi
+- Re-ingest 4 artikel defantri (33 soal) via API: **33/33 cocok sumber**,
+  **LaTeX rusak tersimpan 0** (sebelumnya 69/70), opsi > 6 = 0, flag tanpa
+  kunci tepat (3/3).
+
+## [Ingest] — Adapter defantri: perbaikan layout radio DIBATALKAN (regresi)
+
+### Dibatalkan (jujur)
+- Percobaan memecah soal yang berbagi satu nama radio (`2015-10-...`) & nama `qN`
+  terduplikasi (label ulang A) **sempat dibuat lalu DIBATALKAN**. Perbaikan
+  pertama berhasil di 1–4 artikel uji, tetapi pendekatan lanjutan (segmentasi
+  per-urutan kemunculan radio, untuk menangkap soal ke-39 di artikel Limit)
+  **menimbulkan regresi besar**: total soal korpus **10.365 → 9.251**
+  (**1.383 soal ter-skip**, stem kosong). Adapter dikembalikan ke versi stabil.
+- **Temuan & langkah berikutnya** dicatat di
+  `docs/plans/2026-10-06-temuan-variasi-layout-defantri.md` (70 artikel
+  benar-salah `qN`, 19 nama duplikat, 6 radio generik, 1 `qX`).
+- **Pelajaran:** perbaikan parser **wajib** lolos gerbang korpus
+  (`audit-defantri-corpus.ts`: total soal tak turun, `skipped` tak naik),
+  bukan hanya 1–5 artikel uji.
+
+### Dipertahankan
+- `scripts/dev/audit-defantri-corpus.ts` — regresi adapter atas seluruh korpus
+  (dipakai sebagai gerbang untuk pekerjaan lanjutan).
+
 ## [Skema] — ADR-0017: buang enum `exercise` + `curriculum.yaml` masuk repo
 
 ### Diubah
