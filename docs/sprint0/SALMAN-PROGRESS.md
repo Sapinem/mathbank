@@ -187,21 +187,35 @@ FSM per butir (draft gagal, review sukses), izin per peran, `flag/unflag` +
 yang sudah di status tujuan.
 
 ### ⚠️ Catatan jujur soal SLO 300 ms (wall-clock)
-Latensi dinding yang terukur di host ini **≈ 0,7–3,7 detik** untuk 200 soal —
+Latensi dinding yang terukur di host ini **≈ 0,2–3,0 detik** untuk 200 soal —
 **bukan** karena jumlah query, melainkan biaya baris-per-baris PostgreSQL:
+
+Bukti benchmark terukur (`scripts/bench-bulk-status.ts`, 5 putaran, tiap putaran
+200 soal baru `review → ready`, biaya seeding tidak diukur):
+
+```
+putaran 1:  3 query    215 ms  (ok=200/200)
+putaran 2:  3 query    723 ms  (ok=200/200)
+putaran 3:  3 query   1115 ms  (ok=200/200)
+putaran 4:  3 query    556 ms  (ok=200/200)
+putaran 5:  3 query   3036 ms  (ok=200/200)
+query DB : 3 (maks, target ≤ 3) · latensi min 215 ms · median 723 ms · maks 3036 ms
+```
 
 | Pernyataan (200 baris) | Waktu terukur |
 |---|---|
-| `UPDATE questions SET status=…` (host sepi) | **240 ms** |
-| `UPDATE` yang sama saat host jenuh | 450 ms – 3,4 s |
-| `INSERT audit_logs` 200 baris saat host jenuh | ≈ 1,0 s |
+| `UPDATE questions SET status=…` (psql, host sepi) | **6,8 – 27 ms** |
+| `UPDATE` yang sama via driver saat host jenuh | 450 ms – 3,4 s |
+| `INSERT audit_logs` 200 baris | ≈ 1 ms – 1,0 s (tergantung fsync) |
 
 Selama pengukuran `load average` mesin **10–31 pada 8 vCPU** (banyak proses lain
 berjalan), jadi angka dinding tidak representatif untuk produksi. Yang
 **deterministik dan terbukti**: query **1.800 → 3** (≈600× lebih sedikit roundtrip,
-dari 9 query/soal menjadi 0,015 query/soal). Karena itu tes mengunci
-`dbQueries <= 3` secara ketat, sedangkan latensi diberi batas longgar (1500 ms)
-dan nilainya dicatat di log tes.
+dari 9 query/soal menjadi 0,015 query/soal), dan eksekusi SQL-nya sendiri
+**6,8 ms** di DB. Karena itu tes mengunci `dbQueries <= 3` secara ketat,
+sedangkan latensi diberi batas kasar (3000 ms) + nilainya dicatat di log tes;
+angka latensi yang jujur ada di benchmark (min/median/maks), bukan di satu
+kebetulan.
 
 Bila SLO 300 ms wajib dipegang, dua tindak lanjut arsitektural (di luar Sprint 0):
 1. **HOT-eligibility**: `status` ada di `idx_questions_status` **dan**
