@@ -179,8 +179,8 @@ psql "$DATABASE_URL" -c "
 ### Progres saat ini
 
 ```
-total=11.889  embedded=138 (1,2%)  batch=32  delay=100ms
-laju ≈ 1,2 soal/dtk  →  ETA ≈ 2,5–3 jam untuk 11.857 soal sisa
+total=11.889  embedded=586 (4,9%)  batch=32  delay=100ms
+laju terukur = 1,07 soal/dtk  →  ETA ≈ 2,9 jam untuk 11.303 soal sisa
 ```
 
 DoD akhir (`> 95% embedded`) **belum tercapai** dan tidak mungkin selesai dalam
