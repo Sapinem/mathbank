@@ -92,6 +92,31 @@ Error per soal: \`logs/embedding-errors-$(date +%F).log\` ·
 Pantauan: \`${WATCH_LOG}\`
 MD
       echo "[$(date -Is)] runner selesai — laporan ditulis ke ${REPORT}" >> "$WATCH_LOG"
+
+      # ---- self-wake Paperclip -------------------------------------------
+      # Tanpa ini, tiket tetap "in_progress" tanpa sinyal padahal pekerjaan
+      # sudah tuntas. Kredensial run-scoped dibaca dari berkas mode 600 di
+      # luar repo; bila tidak ada/kedaluwarsa, laporan berkas tetap jadi
+      # bukti dan kegagalan hanya dicatat ke log.
+      NOTIFY_ENV="${PAPERCLIP_NOTIFY_ENV:-$HOME/.config/mathbank/paperclip-notify.env}"
+      if [ -r "$NOTIFY_ENV" ]; then
+        # shellcheck disable=SC1090
+        . "$NOTIFY_ENV"
+        api="${PAPERCLIP_API_URL%/}"; case "$api" in */api) ;; *) api="$api/api" ;; esac
+        body=$(printf '## ACT-07 selesai — laporan akhir backfill embedding\n\nBackfill BGE-M3 tuntas otomatis (dipicu oleh `scripts/watch-embedding.sh`).\n\n| Metrik | Nilai |\n| --- | --- |\n| Total soal aktif | %s |\n| Memiliki embedding | %s |\n| Cakupan (soal aktif) | **%s%%** |\n| Sisa tanpa embedding | %s |\n| Soal gagal | %s |\n| Kueri DoD (seluruh baris) | %s/%s = %s%% |\n\nAmbang DoD >95%%: **%s**.\n\nLaporan lengkap: `docs/sprint1/ACT-07-EMBEDDING-REPORT.md`\nVerifikasi ulang: `./scripts/verify-sprint1-dod.sh`\n\nMohon heartbeat berikutnya menutup tiket bila ketiga DoD PASS.' \
+          "$tot" "$emb" "$pct" "$sisa" "$err_count" "$all_emb" "$all_tot" "$all_pct" \
+          "$( [ "${pct%.*}" -ge 95 ] && echo TERPENUHI || echo 'BELUM TERPENUHI' )")
+        payload=$(jq -n --arg body "$body" '{body:$body, resume:true}')
+        code=$(printf '%s' "$payload" | curl -sS -o "logs/pc-notify.out" -w '%{http_code}' \
+                 -X POST "$api/issues/${PAPERCLIP_TASK_ID}/comments" \
+                 -H "Authorization: Bearer ${PAPERCLIP_API_KEY}" \
+                 -H "X-Paperclip-Run-Id: ${PAPERCLIP_RUN_ID}" \
+                 -H "Content-Type: application/json" --data-binary @- 2>/dev/null || echo 000)
+        echo "[$(date -Is)] notifikasi Paperclip -> HTTP ${code}" >> "$WATCH_LOG"
+      else
+        echo "[$(date -Is)] notifikasi dilewati: ${NOTIFY_ENV} tidak ada" >> "$WATCH_LOG"
+      fi
+
       exit 0
     fi
   fi

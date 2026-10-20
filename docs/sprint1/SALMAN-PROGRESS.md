@@ -252,6 +252,15 @@ Guard anti-loop-abadi: bila runner mati tetapi cakupan mentok < 95% (mis. ada
 soal yang selalu gagal), watcher tetap menulis laporan setelah 3 cek berturut-
 turut tanpa kemajuan lalu keluar — tidak menggantung tanpa sinyal.
 
+**Self-wake:** saat runner selesai, watcher juga mem-POST komentar laporan akhir
+ke tiket MAT-125 (`resume: true`) lewat Paperclip API, sehingga tiket bangun
+sendiri tanpa perlu polling manual. Kredensial run-scoped dibaca dari
+`~/.config/mathbank/paperclip-notify.env` (mode `600`, di luar repo, tidak
+pernah di-commit). Bila berkas itu tidak ada atau token kedaluwarsa, notifikasi
+dilewati dan hanya dicatat di log — laporan berkas tetap menjadi bukti.
+Plumbing sudah diuji: POST ke issue-id palsu → `404 {"error":"Issue not found"}`
+(artinya auth & bentuk payload benar, bukan 401).
+
 ```bash
 setsid nohup env INTERVAL=300 ./scripts/watch-embedding.sh \
   >> logs/embedding-watch-$(date +%F).log 2>&1 < /dev/null &
