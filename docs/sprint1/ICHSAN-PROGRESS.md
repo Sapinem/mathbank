@@ -151,3 +151,30 @@ murni (props → render) agar mudah diuji.
 4. **Gambar opsi/pembahasan** — `question_media.role` sudah dibaca & diberi label,
    tetapi aset ber-role `option` belum disisipkan ke baris opsi tertentu
    (butuh kolom penghubung opsi↔media; saat ini tampil di galeri lampiran).
+
+---
+
+## 7. Verifikasi ulang & penutupan (heartbeat lanjutan)
+
+Run sebelumnya berhenti setelah pekerjaan kode selesai tetapi **sebelum commit**
+(`adapter_failed`). Pada lanjutan ini:
+
+1. **`npx tsc --noEmit`** dijalankan ulang dengan `pipefail` → **exit 0**,
+   log kosong (tidak ada error tipe).
+2. **Rute `/curate` dirender** lewat dev server proyek yang sudah berjalan
+   (`http://127.0.0.1:3010`): respons `307 → /login` dengan payload RSC halaman
+   lengkap — judul `Kurasi Soal — MathBank`, kartu "Kerangka halaman siap —
+   antrean menyusul", dan tautan ke `/review`. Artinya rute benar-benar
+   ter-resolve di App Router dan hanya tertahan gerbang autentikasi, bukan 404.
+3. **Commit**: `8b440e2` — 12 berkas (4 komponen baru, halaman `/curate`,
+   3 service, nav-config, dokumen ini). `matrix-grid-view.tsx` disertakan
+   karena `question-detail-view.tsx` mengimpornya (komponen sudah dipakai,
+   sebelumnya belum ter-track).
+4. Berkas milik agen lain yang belum di-commit (parser ingest, print view,
+   `globals.css` probe audit) **sengaja tidak disentuh** agar tidak mencampur
+   pekerjaan yang belum selesai.
+
+Status DoD: gambar soal ✅ · difficulty badge ✅ · topic tags ✅ · status
+indikator ✅ · statistik paket ✅ · rute `/curate` ✅.
+
+**Siap diperiksa Rofik (tes komponen) dan Hafiz (build/hidrasi).**
