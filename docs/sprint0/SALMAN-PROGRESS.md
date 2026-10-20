@@ -291,9 +291,11 @@ tidak hilang di percakapan:
   (`status` ada di dua indeks sehingga update selalu memelihara indeks, termasuk
   HNSW pgvector dan GIN trigram) plus `fillfactor`, dengan angka
   `n_tup_hot_upd` sebelum/sesudah dan tanpa regresi query daftar soal.
-- **MAT-124 — ACT-07: Latihan restore drill.** Backup sudah terbukti *terbuat*
-  dan *terbaca*, tetapi belum terbukti *dipulihkan*; latihan sebelumnya
-  dihentikan setelah lebih dari 7 menit pada fase `db:verify`.
+- **MAT-124 — ACT-07: Latihan restore drill.** ✅ **Sudah tertutup** oleh commit
+  `4e978f0` ("restore drill terbukti exit 0 + runbook pemulihan"): dump 15 MB
+  dipulihkan ke DB sementara, verifikasi invarian lulus, DB sementara dibersihkan.
+  Runbook ada di `docs/RESTORE-RUNBOOK.md`, bukti di
+  `docs/sprint0/evidence/restore-drill-2026-10-20.{log,json}`.
 
 ---
 
