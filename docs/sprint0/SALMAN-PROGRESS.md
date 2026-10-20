@@ -227,3 +227,38 @@ Bila SLO 300 ms wajib dipegang, dua tindak lanjut arsitektural (di luar Sprint 0
   dengan env tersebut, jangan DB dev.
 - `backups/archive/` ikut `.gitignore` (`/backups/`) — arsip mingguan bersifat
   data runtime, bukan artefak repo.
+
+---
+
+## Verifikasi Ulang (heartbeat lanjutan, 20 Okt 2026 ~11:30 WIB)
+
+Klaim di laporan sebelumnya diuji ulang dari nol pada commit `cb6b2d0` (branch
+`paperclip/dev`), bukan sekadar dibaca dari catatan.
+
+| Pemeriksaan | Perintah | Hasil |
+|---|---|---|
+| Typecheck | `npx tsc --noEmit` | **exit 0** — galat frontend `bundle-list-view.tsx` yang dulu tercatat sudah hilang (diperbaiki di domain Ichsan) |
+| Tes telemetri | `npx vitest run src/lib/telemetry/` | **6 berkas, 40 tes LULUS** (logger-scrub, metrics-labels, metrics, instrumentation, check-names, logger) |
+| Tes integrasi bulk | `vitest --config vitest.db.config.mts src/lib/services/question-bulk.db.test.ts` (dengan `DATABASE_URL=$TEST_DATABASE_URL`) | **7 tes LULUS**; assertion `dbQueries <= 3` untuk 200 soal tetap hijau |
+| Cron | `crontab -l` | entri `0 2 * * * ... scripts/backup-db.mjs` ada, `systemctl is-active cron` → **active** |
+| Eksekusi backup nyata | `backups/backup.log` | `pg_dump (PostgreSQL) 18.6` → dump **15,07 MB** → **218 objek** terbaca `pg_restore` → dump harian disimpan **7** → arsip mingguan **2026-W43** ada |
+| Batas tangan | `git show --stat cb6b2d0 557f441` | hanya `src/lib/{telemetry,api,services}`, `src/app/api/health`, `src/instrumentation.ts`, `scripts/backup-db.mjs`, dokumen — **tidak ada** `src/components/**`, `src/app/(app)/**`, `globals.css`, `styles/print.css` |
+
+Catatan operasional: `vitest.db.config.mts` **tidak** memuat `.env` sendiri, jadi
+tes integrasi harus dijalankan dengan `DATABASE_URL` sudah di-set ke
+`TEST_DATABASE_URL` (mis. `pnpm test:db`, yang melakukan itu). Menjalankannya
+langsung dengan `npx vitest` akan gagal dengan `DATABASE_URL belum diatur` —
+bukan kegagalan kode.
+
+## Tindak Lanjut yang Dibuka
+
+Dua celah yang **tidak** diselesaikan di Sprint 0 kini punya issue sendiri agar
+tidak hilang di percakapan:
+
+- **MAT-123 — ACT-06: Bukti SLO bulk status <300 ms.** Meninjau HOT-eligibility
+  (`status` ada di dua indeks sehingga update selalu memelihara indeks, termasuk
+  HNSW pgvector dan GIN trigram) plus `fillfactor`, dengan angka
+  `n_tup_hot_upd` sebelum/sesudah dan tanpa regresi query daftar soal.
+- **MAT-124 — ACT-07: Latihan restore drill.** Backup sudah terbukti *terbuat*
+  dan *terbaca*, tetapi belum terbukti *dipulihkan*; latihan sebelumnya
+  dihentikan setelah lebih dari 7 menit pada fase `db:verify`.
