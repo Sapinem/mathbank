@@ -1,0 +1,64 @@
+ 11:54:02 up 4 days, 17:03,  2 users,  load average: 9.84, 9.54, 12.71
+◇ injected env (0) from .env
+→ Latihan restore: /home/hari/projects/mathbank/backups/mathbank_2026-10-20-04-42-26.dump
+  sumber: mathbank@localhost:5433 | target: mathbank_restore_1792472042095
+  load average awal: 9.84 9.54 12.71
+  /usr/lib/postgresql/18/bin/pg_restore → 218 objek (pg_restore (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2))
+✓ preflight (pg_restore --list): 0.03s (load 10.63 9.72 12.74)
+✓ createdb: 95.57s (load 10.63 9.72 12.74)
+✓ pg_restore: 125.20s (load 14.49 11.26 12.99)
+✓ verify (invarian SQL): 22.21s (load 12.54 11.27 12.76)
+  ✓ tables: 26 (harap ≥ 26)
+  ✓ checks: 3 (harap ≥ 2)
+  ✓ fks: 20 (harap ≥ 20)
+  ✓ indexes: 87 (harap ≥ 80)
+  ✓ hnsw: 1 (harap ≥ 1)
+  ✓ triggers: 24 (harap ≥ 24)
+  ✓ rows questions: 11889 (harap ≥ 1)
+  ✓ rows question_options: 43243 (harap ≥ 1)
+  ✓ rows solutions: 10363 (harap ≥ 1)
+  ✓ rows question_topics: 0 (harap ≥ 0)
+  ✓ rows question_tags: 0 (harap ≥ 0)
+  ✓ rows topics: 174 (harap ≥ 1)
+  ✓ rows bundles: 579 (harap ≥ 1)
+  ✓ rows bundle_items: 12344 (harap ≥ 1)
+  ✓ rows audit_logs: 67794 (harap ≥ 1)
+  ✓ rows media_assets: 2617 (harap ≥ 1)
+  ✓ rows user: 4 (harap ≥ 1)
+  ✓ PK default questions.id = uuidv7()
+  · ekstensi: pg_trgm,pgcrypto,plpgsql,vector
+  ✓ orphan question_options: 0
+  ✓ orphan bundle_items: 0
+  ✓ orphan question_topics: 0
+  · kesetaraan dengan DB sumber: 11/11 tabel sama
+$ tsx scripts/db-verify.ts
+◇ injected env (0) from .env
+✓ tables: 26 (harap ≥ 26)
+✓ checkConstraints: 3 (harap ≥ 2)
+✓ hnswIndexes: 1 (harap ≥ 1)
+✓ triggers: 24 (harap ≥ 24)
+✓ CHECK chk_questions_difficulty
+✓ CHECK chk_topics_level
+✓ TRIGGER trg_questions_updated_at
+✓ TRIGGER trg_questions_stimulus_depth
+✓ TRIGGER trg_topics_cycle
+✓ TRIGGER trg_question_topics_usage
+✓ TRIGGER trg_question_tags_usage
+✓ TRIGGER trg_audit_logs_immutable
+✓ PK default = uuidv7() (kini: uuidv7())
+
+✓ Skema OK — tak ada drift.
+✓ db:verify: 7.11s (load 11.61 11.25 12.66)
+
+✓ VERIFIKASI LULUS — dump dapat dipulihkan & invarian utuh.
+· DB sementara "mathbank_restore_1792472042095" dihapus.
+✓ Tak ada DB sementara tertinggal.
+· Bukti drill: /home/hari/projects/mathbank/backups/restore-drill-2026-10-20-04-54-02.json
+
+Ringkasan fase (total 384.01s):
+  ✓ preflight (pg_restore --list): 0.03s  (load 10.63 9.72 12.74)
+  ✓ createdb: 95.57s  (load 10.63 9.72 12.74)
+  ✓ pg_restore: 125.20s  (load 14.49 11.26 12.99)
+  ✓ verify (invarian SQL): 22.21s  (load 12.54 11.27 12.76)
+  ✓ db:verify: 7.11s  (load 11.61 11.25 12.66)
+exit=0

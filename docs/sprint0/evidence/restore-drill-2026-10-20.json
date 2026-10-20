@@ -1,0 +1,83 @@
+{
+  "startedAt": "2026-10-20T04:54:02.095Z",
+  "dump": "/home/hari/projects/mathbank/backups/mathbank_2026-10-20-04-42-26.dump",
+  "dumpBytes": 15806935,
+  "source": "mathbank@localhost:5433",
+  "tempDatabase": "mathbank_restore_1792472042095",
+  "pgRestore": {
+    "bin": "/usr/lib/postgresql/18/bin/pg_restore",
+    "version": "pg_restore (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)"
+  },
+  "archiveObjects": 218,
+  "invariants": {
+    "tables": 26,
+    "checks": 3,
+    "fks": 20,
+    "indexes": 87,
+    "hnsw": 1,
+    "triggers": 24,
+    "rows:questions": 11889,
+    "rows:question_options": 43243,
+    "rows:solutions": 10363,
+    "rows:question_topics": 0,
+    "rows:question_tags": 0,
+    "rows:topics": 174,
+    "rows:bundles": 579,
+    "rows:bundle_items": 12344,
+    "rows:audit_logs": 67794,
+    "rows:media_assets": 2617,
+    "rows:user": 4,
+    "pkDefault": "uuidv7()",
+    "extensions": "pg_trgm,pgcrypto,plpgsql,vector"
+  },
+  "sourceCounts": {
+    "questions": 11889,
+    "question_options": 43243,
+    "solutions": 10363,
+    "question_topics": 0,
+    "question_tags": 0,
+    "topics": 174,
+    "bundles": 579,
+    "bundle_items": 12344,
+    "audit_logs": 67794,
+    "media_assets": 2617,
+    "user": 4
+  },
+  "timings": [
+    {
+      "phase": "preflight (pg_restore --list)",
+      "ms": 26,
+      "loadAvg": "10.63 9.72 12.74",
+      "ok": true
+    },
+    {
+      "phase": "createdb",
+      "ms": 95567,
+      "loadAvg": "10.63 9.72 12.74",
+      "ok": true
+    },
+    {
+      "phase": "pg_restore",
+      "ms": 125198,
+      "loadAvg": "14.49 11.26 12.99",
+      "ok": true
+    },
+    {
+      "phase": "verify (invarian SQL)",
+      "ms": 22211,
+      "loadAvg": "12.54 11.27 12.76",
+      "ok": true
+    },
+    {
+      "phase": "db:verify",
+      "ms": 7106,
+      "loadAvg": "11.61 11.25 12.66",
+      "ok": true
+    }
+  ],
+  "leftovers": [],
+  "ok": true,
+  "finishedAt": "2026-10-20T05:00:26.110Z",
+  "durationMs": 384015,
+  "loadAvgEnd": "8.05 10.07 12.09"
+}

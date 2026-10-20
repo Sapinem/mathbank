@@ -1,8 +1,10 @@
 # BACKUP-RECOVERY.md — Strategi Backup & Pemulihan
 
-> **Status:** ✅ **TERIMPLEMENTASI (M16, 2026-09-30).**
+> **Status:** ✅ **TERIMPLEMENTASI & TERUJI-RESTORE (M16 + ACT-01/ACT-07).**
 > Skrip nyata: `scripts/backup-db.mjs` (`pnpm backup:db`) & `scripts/restore-check.mjs`
-> (`pnpm restore:check`). Uji-restore terbukti hijau (28 tabel, 26 trigger, HNSW, uuidv7).
+> (`pnpm restore:check`). Drill terakhir **exit 0** (20 Okt 2026): dump 15,07 MB,
+> 218 objek, **26 tabel, 20 FK, 87 indeks, 1 HNSW, 24 trigger, 3 CHECK, PK
+> `uuidv7()`**, 11.889 soal — prosedur manual: `docs/RESTORE-RUNBOOK.md`.
 > **Sifat:** dokumen hidup — perbarui saat mekanisme berubah.
 > **Prinsip:** **backup yang belum diuji-restore = bukan backup.**
 
@@ -57,21 +59,36 @@ pg_dump -Fc --no-owner -f backup/mathbank_$(date +%F_%H%M).dump "$DATABASE_URL"
 
 **Otomatis — satu perintah:**
 ```bash
-pnpm restore:check                 # uji arsip TERBARU
-pnpm restore:check backups/<file>.dump
+pnpm restore:check                              # uji arsip TERBARU
+pnpm restore:check backups/<file>.dump           # arsip tertentu
+node scripts/restore-check.mjs --with-db-verify  # + cek drift skema (pnpm db:verify)
 ```
-Skrip (`scripts/restore-check.mjs`): buat DB sementara → `pg_restore` → jalankan
-`db:verify` → **bersihkan** DB sementara. Gagal bila invarian tak lengkap.
+Skrip (`scripts/restore-check.mjs`): sapu sisa DB lama → `pg_restore --list`
+(preflight) → `CREATE DATABASE mathbank_restore_<epoch>` → `pg_restore
+--no-owner --no-acl --exit-on-error` → verifikasi invarian inti via `psql` →
+**selalu** `DROP DATABASE … WITH (FORCE)` → tulis bukti
+`backups/restore-drill-<stamp>.json` (durasi per fase + load average).
+Exit `0` = dump terbukti dapat dipulihkan.
 
-**Manual (setara):**
-1. Buat DB kosong: `mathbank_restore`.
-2. `pg_restore -d mathbank_restore <dump>`.
-3. `DATABASE_URL=<restore> pnpm db:verify` → **harus hijau** (28 tabel, 2 CHECK, 1 HNSW, 26 trigger, PK `uuidv7()`).
-4. Spot-check data (`questions`, `topics`).
-5. Catat waktu (uji RTO) & dokumentasikan.
+Prosedur manual langkah-demi-langkah (untuk insiden, lengkap dengan ekspektasi
+keluaran dan troubleshooting): **`docs/RESTORE-RUNBOOK.md`**.
 
-> `db:verify` menjadikan uji restore **objektif** — bukan sekadar "restore jalan tanpa error".
-> **Jalankan `restore:check` minimal tiap kali jadwal backup berubah & sebelum migrasi berisiko.**
+**Manual (ringkas, setara):**
+1. `psql -d postgres -c 'CREATE DATABASE mathbank_restore'`.
+2. `/usr/lib/postgresql/18/bin/pg_restore -d mathbank_restore --no-owner --no-acl --exit-on-error <dump>`
+   (pakai klien **mayor 18**; `/usr/bin/pg_restore` = 17).
+3. Verifikasi: `26` tabel, `20` FK, `87` indeks, `1` HNSW, `24` trigger,
+   `3` CHECK, PK `uuidv7()`, orphan FK `0`, `questions ≥ 11.000`.
+   Cek drift penuh: `DATABASE_URL=<restore> pnpm db:verify`.
+4. Spot-check data (`questions`, `bundles`).
+5. `DROP DATABASE mathbank_restore WITH (FORCE)` lalu pastikan tak ada
+   `mathbank_restore_*` tersisa.
+
+> `db:verify` + invarian SQL menjadikan uji restore **objektif** — bukan sekadar
+> "restore jalan tanpa error". Latihan terakhir: **exit 0**, 384 s (6,4 menit),
+> load 9,8–14,5, 11/11 tabel sama dengan DB sumber (20 Okt 2026).
+> **Jalankan `restore:check` minimal tiap kali skema/migrasi berubah, sebelum
+> migrasi berisiko, dan minimal sebulan sekali.**
 
 ---
 
@@ -88,10 +105,11 @@ Skrip (`scripts/restore-check.mjs`): buat DB sementara → `pg_restore` → jala
 
 ## 6. Yang Belum Ada (utang)
 
-- [ ] Backup otomatis terjadwal
-- [ ] Penyimpanan backup **off-site** (beda mesin/region)
+- [x] Backup otomatis terjadwal (cron `0 2 * * *`, ACT-01)
+- [ ] Penyimpanan backup **off-site** (beda mesin/region) — **risiko tertinggi yang tersisa**
 - [ ] Enkripsi backup at-rest
-- [ ] Uji restore terekam (log + tanggal)
+- [x] Uji restore terekam (log + tanggal) — `backups/restore-drill-*.json`, `docs/RESTORE-RUNBOOK.md` §8
+- [ ] Drill restore terjadwal otomatis (usulan bulanan, cron contoh di `RESTORE-RUNBOOK.md` §6 — menunggu persetujuan)
 - [ ] Monitoring keberhasilan backup + alert bila gagal
 
 ---

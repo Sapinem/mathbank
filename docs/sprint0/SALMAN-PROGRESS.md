@@ -233,10 +233,12 @@ Bila SLO 300 ms wajib dipegang, dua tindak lanjut arsitektural (di luar Sprint 0
 ## Catatan / Tindak Lanjut
 
 - **Uji restore drill** (`scripts/restore-check.mjs`) tidak diselesaikan di
-  heartbeat ini: proses >7 menit pada dump 15 MB (fase `db:verify`) lalu
+  heartbeat ACT-01: proses >7 menit pada dump 15 MB (fase `db:verify`) lalu
   dihentikan; DB sementara `mathbank_restore_1792467927197` sudah dibersihkan.
-  Backup tetap terbukti **terbuat** dan **terbaca** (pg_dump exit 0), tetapi
-  latihan restore penuh layak dijadwalkan terpisah (butuh jendela >10 menit).
+  **SELESAI di ACT-07 (MAT-124)** — akar masalahnya tiga bug skrip (klien
+  `pg_restore` 17 vs arsip 18, password literal `***` di `DATABASE_URL`, tanpa
+  timeout/verifikasi cleanup), bukan ukuran dump. Drill penuh kini **exit 0**
+  dalam 384 s; lihat bagian ACT-07 di bawah dan `docs/RESTORE-RUNBOOK.md`.
 - `pnpm test:db` memerlukan `DATABASE_URL` menunjuk `mathbank_test`; jalankan
   dengan env tersebut, jangan DB dev.
 - `backups/archive/` ikut `.gitignore` (`/backups/`) — arsip mingguan bersifat
@@ -276,3 +278,83 @@ tidak hilang di percakapan:
 - **MAT-124 — ACT-07: Latihan restore drill.** Backup sudah terbukti *terbuat*
   dan *terbaca*, tetapi belum terbukti *dipulihkan*; latihan sebelumnya
   dihentikan setelah lebih dari 7 menit pada fase `db:verify`.
+
+---
+
+## ACT-07 (MAT-124) — Latihan Restore Drill: dump TERBUKTI dapat dipulihkan
+
+**Hasil: `exit 0`.** Latihan penuh selesai dalam **384 detik (6,4 menit)** pada
+host yang sedang jenuh (load 9,8–14,5 / 8 vCPU). Bukan asumsi — angka di bawah
+diambil dari `backups/restore-drill-2026-10-20-04-54-02.json`.
+
+### Akar masalah latihan sebelumnya (bukan "host terlalu lambat")
+
+Latihan yang dulu dihentikan setelah >7 menit **tidak** gagal karena ukuran dump.
+Ada tiga bug nyata di `scripts/restore-check.mjs`:
+
+| # | Bug | Dampak |
+|---|---|---|
+| 1 | Memakai `pg_restore` dari PATH = **17**, sementara server & arsip = **18** | klien lebih tua membaca arsip v18; restore penuh tidak dapat dipercaya |
+| 2 | `restoreUrl` berisi password **literal `***`** (`:***@host`) | `db:verify` tidak pernah bisa autentikasi ke DB hasil restore |
+| 3 | `npm run db:verify` tanpa timeout, tanpa verifikasi pembersihan DB | fase bisa menggantung; DB sementara bisa tertinggal |
+
+### Perbaikan skrip (`scripts/restore-check.mjs`)
+
+- **Pemilihan biner sadar-versi**: `PG_RESTORE_BIN` → `/usr/lib/postgresql/<mayor>/bin/pg_restore`
+  (mayor tertinggi) → PATH; galat `version/unsupported` otomatis coba kandidat lain.
+- **Preflight** `pg_restore --list` (218 objek) sebelum menyentuh server — arsip
+  terpotong terdeteksi tanpa biaya `CREATE DATABASE`.
+- **Password hanya di env anak** (`PGPASSWORD`, `DATABASE_URL`), tidak di argumen.
+- **Invarian inti via `psql` langsung** (satu perjalanan, 0,4 s saat host sepi):
+  26 tabel, 20 FK, 87 indeks, 1 HNSW, 24 trigger, 3 CHECK, PK `uuidv7()`,
+  ekstensi `vector/pg_trgm/pgcrypto`, 11 tabel berisi, dan orphan FK = 0.
+  `pnpm db:verify` tetap tersedia sebagai fase opsional (`--with-db-verify`).
+- **Pembanding DB sumber**: jumlah baris hasil restore dibandingkan dengan DB
+  hidup — bukti isi ikut pulih, bukan hanya skema.
+- **Cleanup berlapis**: sisa `mathbank_restore_*` disapu di awal, DB dihapus di
+  `finally`, lalu **diperiksa ulang**; sisa apa pun membuat exit ≠ 0.
+- **Bukti JSON** per latihan (`backups/restore-drill-<stamp>.json`).
+
+### Angka terukur (dump `mathbank_2026-10-20-04-42-26.dump`, 15,07 MB, 218 objek)
+
+| Fase | Durasi | Load avg saat fase |
+|---|---|---|
+| preflight (`pg_restore --list`) | 0,03 s | 10,63 |
+| createdb | 95,57 s | 10,63 |
+| `pg_restore` (18.6, `--exit-on-error`) | 125,20 s | 14,49 |
+| verify invarian SQL | 22,21 s | 12,54 |
+| `pnpm db:verify` (opsional) | 7,11 s | 11,61 |
+| **Total** | **384,01 s** | awal 9,84 · akhir 11,6 |
+
+Variasi antar-percobaan besar dan **didominasi I/O host**, bukan ukuran data:
+run sebelumnya `createdb` 13 s dan `pg_restore` 39 s (total 223 s, load 5,9).
+Artinya RTO database untuk dump 15 MB = **±2–7 menit**, jauh di bawah target
+RTO 4 jam di `BACKUP-RECOVERY.md`.
+
+### Isi yang pulih (bukan hanya skema)
+
+`questions` 11.889 · `question_options` 43.243 · `solutions` 10.363 ·
+`topics` 174 · `bundles` 579 · `bundle_items` 12.344 · `audit_logs` 67.794 ·
+`media_assets` 2.617 · `user` 4 — **11/11 tabel sama persis dengan DB sumber**.
+`question_topics` dan `question_tags` = 0 baris; **DB sumber juga 0**, jadi ini
+bukan cacat restore melainkan celah data yang perlu isu terpisah.
+
+### Dokumen prosedur insiden
+
+`docs/RESTORE-RUNBOOK.md` (baru) — langkah-demi-langkah dengan perintah siap
+salin, ekspektasi keluaran tiap langkah, tabel nilai invarian yang harus cocok,
+prosedur "restore menimpa produksi" (rename, bukan drop), troubleshooting tujuh
+gejala umum, dan riwayat latihan.
+
+### Kebersihan DB sementara
+
+Setelah latihan: `SELECT datname FROM pg_database WHERE datname LIKE 'mathbank\_restore\_%'`
+→ **0 baris**. Diperiksa otomatis oleh skrip setiap kali dijalankan.
+
+### Jadwal drill (usulan, butuh persetujuan)
+
+Restore penuh memakan ±6 menit CPU/IO nyata di host bersama yang sudah jenuh.
+Usulan: **bulanan** (tanggal 1, 03:00) untuk drill otomatis, plus manual penuh
+sebelum migrasi berisiko. Alasan tidak harian: dump harian isinya identik
+sehingga tidak menambah informasi, sedangkan biaya CPU-nya nyata. Entri cron
+contoh ada di `RESTORE-RUNBOOK.md` §6 — **belum dipasang**.
