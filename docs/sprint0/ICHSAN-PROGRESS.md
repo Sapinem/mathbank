@@ -47,47 +47,71 @@ request tambahan.
 | Statistik | Dibaca dari `stats` server (`byType.exam`, `byType.source`, `totalItems`) — bukan lagi `data.filter(…)` atas 20 baris. |
 | Paginasi | `totalPages = ceil(total / 20)`, tombol Previous/Next, teks "Menampilkan X–Y dari N paket". |
 | Reset halaman | `setPage(0)` saat kata kunci / status / filter URL berubah, plus jaring aman bila halaman aktif kosong (mis. data berubah di tab lain). |
-| Empty state | Dipisah: `total === 0 && hasFilterActive` → "Tidak ada paket yang cocok"; `total === 0` → "Belum ada paket soal". |
+| Empty state | Dipisah: `total === 0 && hasFilterActive` → "Tidak ada paket yang cocok"; `total === 0` → "Belum ada paket soal"; `total > 0 && data.length === 0` → "Halaman ini kosong" + tombol ke halaman 1 (jaring aman tanpa efek/setState). |
+| Filter "Arsip" | Opsi dihapus dari dropdown status: mengarsipkan = soft-delete (`deleted_at`), jadi paket terarsip tak pernah muncul di daftar aktif — opsi itu akan selalu kosong. |
 | Grid & tabel | Keduanya merender `data` (halaman dari server), bukan `paged` hasil slice klien. |
+
+### 2.4 Alat verifikasi
+
+`scripts/verify-act04.mjs` — skrip Playwright sekali pakai: login demo, buka `/bundles`,
+lalu mencatat **setiap** request `/api/bundles` pada tiap aksi (buka, Next, cari, filter
+status). Dipakai untuk membuktikan DoD "1 request per halaman" secara empiris:
+
+```bash
+node scripts/verify-act04.mjs http://127.0.0.1:3010
+```
 
 ## 3. Verifikasi
 
-Lingkungan: dev server proyek di `http://localhost:3010` (Next.js 16.3.8, DB `mathbank` :5433).
+Lingkungan: dev server proyek di `http://127.0.0.1:3010` (Next.js 16.3.8, DB `mathbank` :5433),
+login demo `admin` (cookie sesi better-auth nyata).
 
 **a. Statis**
 
 - `npx tsc --noEmit` → **exit 0**, tanpa error.
-- `npx eslint` pada 4 berkas yang disentuh → **bersih**.
-- `grep -rn useAllBundles src` → **0 hasil** (hanya tersisa di dokumen audit).
+- `npx eslint` pada 4 berkas yang disentuh → **bersih** (termasuk aturan
+  `react-hooks/set-state-in-effect`: jaring aman halaman kosong dibuat tanpa efek,
+  memakai cabang render).
+- `grep -rn useAllBundles src` → **0 hasil** (hook benar-benar terhapus).
 
-**b. Runtime API** (login demo `admin`, cookie sesi nyata)
+**b. Runtime API** (`GET /api/bundles`, cookie sesi nyata)
 
-| Request | Hasil |
+| Request | Hasil terukur |
 | --- | --- |
 | `?status=active&limit=20&offset=0` | `items=20`, `total=577`, `stats={byType:{exam:0,source:577}, totalItems:12336}` |
-| `?offset=20&limit=20` | halaman berbeda (item pertama berubah) → paginasi server benar |
-| `?q=2024&limit=5` | `total=15`, item pertama "Osn K Matematika Sma 2024 Dasar" → pencarian server benar |
-| `?status=ready&limit=5` | `total=0` → filter status benar (DB dev seluruhnya `draft`) |
-| `?q=zzzznotfound` | `total=0` |
-| `?bundleType=exam` | `total=0`, `stats` ikut 0 (konsisten dengan filter) |
+| `?limit=20&offset=20` | `items=20`, item pertama berubah → paginasi server benar |
+| `?q=2024&limit=5` | `items=5`, `total=15`, `stats.totalItems=395` → pencarian server (judul **atau** tahun) |
+| `?q=matematika&limit=5` | `total=195`, `stats.totalItems=5675` → statistik ikut filter |
+| `?status=draft&limit=3` | `total=577` → benar (DB dev 100% `draft`) |
+| `?status=ready&limit=5` | `total=0` → filter status benar |
+| `?bundleType=exam&limit=5` | `total=0` (semua paket dev = `source`) |
+| `?q=zzzznotfound&limit=5` | `total=0`, `stats` nol |
 
-Catatan: pada DB dev 100% paket berstatus `draft`, sehingga `status=draft` juga
-mengembalikan 577 — ini benar, bukan bug filter (dikonfirmasi via `SELECT status, COUNT(*)`).
+**c. Bukti "satu request" di browser** (`scripts/verify-act04.mjs`, Playwright + `page.on("request")`)
 
-**c. Bukti "satu request"**
+| Aksi | Request `/api/bundles` | URL |
+| --- | --- | --- |
+| Buka `/bundles` | **1** | `?limit=20&offset=0` |
+| Klik "Berikutnya" | **1** | `?limit=20&offset=20` |
+| Ketik "matematika" (debounce 300 ms) | **1** | `?q=matematika&limit=20&offset=0` |
+| Pilih status "Draf" | **1** | `?status=draft&q=matematika&limit=20&offset=0` |
 
-Jalur kode klien hanya memanggil **satu** `useQuery` (`useBundlesPage`) per halaman;
-tidak ada `for`/loop fetch, tidak ada `useAllBundles`. Satu perpindahan halaman =
-satu `GET /api/bundles?...&limit=20&offset=…`, dan kartu statistik tidak memicu
-request kedua karena ikut di amplop `stats`.
+Hasil render yang sama: `20 dari 577 paket · hal. 1/29`, kartu grid = 20, tabel = 20 baris,
+indikator halaman `hal. 2/29` setelah Next, dan setelah pencarian `20 dari 195 paket · hal. 1/10`
+dengan kartu statistik ikut berubah (195 / 0 / 195 / 5675). **Tidak ada error konsol**
+(hidrasi bersih), termasuk pada viewport 390×844 (mobile).
+
+Sebelumnya: `useAllBundles` menembak ±6 request berurutan (577 paket ÷ 100) untuk
+halaman yang sama, lalu memotong 20 baris di klien.
 
 ## 4. DoD
 
-- [x] `/bundles` hanya 1 request HTTP per halaman (20 item)
+- [x] `/bundles` hanya 1 request HTTP per halaman (20 item) — dibuktikan di browser
 - [x] Tidak ada loop sekuensial (tidak ada waterfall)
-- [x] `useAllBundles` dihapus
+- [x] `useAllBundles` dihapus (`grep` = 0 hasil)
 - [x] Parameter `?status=&q=&limit=&offset=` didukung `GET /api/bundles`
-- [x] UI paginasi Previous/Next berfungsi
+- [x] UI paginasi Previous/Next berfungsi (29 halaman pada data dev)
+- [x] Kartu statistik tetap akurat tanpa request tambahan (`stats` di amplop)
 - [x] `tsc --noEmit` & `eslint` bersih
 
 ## 5. Catatan untuk Rofik (QA)

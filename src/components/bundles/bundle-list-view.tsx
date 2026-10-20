@@ -372,7 +372,8 @@ export function BundleListView() {
                   <SelectItem value="draft">Draf</SelectItem>
                   <SelectItem value="review">Telaah</SelectItem>
                   <SelectItem value="ready">Siap</SelectItem>
-                  <SelectItem value="archived">Arsip</SelectItem>
+                  {/* "Arsip" tak ditawarkan: mengarsipkan = soft-delete, jadi
+                      paket terarsip tak pernah muncul di daftar aktif. */}
                 </SelectGroup>
               </SelectContent>
             </Select>
