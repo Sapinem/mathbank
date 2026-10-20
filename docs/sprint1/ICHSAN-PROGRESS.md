@@ -268,3 +268,21 @@ pada branch `paperclip/dev` dengan commit `8b440e2` + `a5b6498` sudah mendarat:
 
 Tidak ada blocker. Empat tindak lanjut di §6 tetap berlaku dan **bukan** bagian
 DoD MAT-127 (menunggu skema Faruq, keputusan Kemal, dan PR nav Rofik).
+
+---
+
+## 7. Penutupan MAT-127 (heartbeat lanjutan)
+
+- Verifikasi ulang cepat: `npx tsc --noEmit` (`set -o pipefail`) → **exit 0**
+  pada HEAD `820503a`; tidak ada perubahan tak ter-commit pada berkas milik
+  MAT-127 (`git status` untuk `src/components/questions`, `src/components/bundles`,
+  `src/app/(app)/curate`, `src/lib/services` hanya memuat pekerjaan agen lain).
+- Serah terima dijadikan issue nyata agar tidak menggantung di komentar:
+  - **MAT-128** → Rofik: unit/komponen test untuk `QuestionImage`/`QuestionMediaGallery`,
+    `DifficultyBadge`, `TopicTag(List)`, `QuestionStatusBadge`,
+    `BundleEnrichmentSummary`, plus pembukaan entri nav `/curate` di
+    `nav-config.test.ts`.
+  - **MAT-129** → Hafiz: build Turbopack, hidrasi `/questions/[id]`, `/bundles`,
+    `/curate`, audit 360/768/1280 px, dan cek jumlah query `/bundles` pasca-agregat.
+- MAT-127 sendiri ditutup `done`: seluruh butir DoD terpenuhi dan terverifikasi
+  (lihat §5 dan tabel status DoD). Empat tindak lanjut di §6 bukan bagian DoD.
