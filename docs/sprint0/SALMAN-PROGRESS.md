@@ -376,3 +376,180 @@ Usulan: **bulanan** (tanggal 1, 03:00) untuk drill otomatis, plus manual penuh
 sebelum migrasi berisiko. Alasan tidak harian: dump harian isinya identik
 sehingga tidak menambah informasi, sedangkan biaya CPU-nya nyata. Entri cron
 contoh ada di `RESTORE-RUNBOOK.md` §6 — **belum dipasang**.
+
+---
+
+## ACT-06 (MAT-123) — Bukti SLO bulk status <300 ms: HOT-eligibility & fillfactor
+
+Tindak lanjut dari catatan jujur ACT-05. Pertanyaannya bukan lagi "berapa
+milidetik", melainkan **apakah `UPDATE questions.status` bisa menjadi HOT** dan
+apakah susunan indeks/fillfactor bertanggung jawab atas latensi yang dulu
+terukur 450 ms – 3,4 s.
+
+### Cara mengukur (dan mengapa begitu)
+
+Host ini **bersama dan selalu jenuh** (load average 0,3 – 16 pada 8 vCPU selama
+pengukuran). Stopwatch di host seperti ini menghasilkan angka yang tidak bisa
+dibandingkan antar-jam. Karena itu dua jenis bukti dipisahkan:
+
+1. **Bukti struktural (tahan derau beban)** — `pg_stat_user_tables.n_tup_hot_upd`
+   vs `n_tup_upd`. Ini penghitung kumulatif di dalam PostgreSQL, bukan waktu:
+   HOT terjadi atau tidak, titik. Begitu juga bentuk rencana `EXPLAIN`
+   (`Sort` vs `Index Scan`).
+2. **Bukti dinding (berderau)** — stopwatch, **selalu** dicatat bersama load
+   average, dan hanya dipercaya bila dua varian diukur pada beban sebanding.
+
+Harness: **`scripts/bench-hot-status.ts`** (baru). Dataset sintetis di
+`mathbank_test`: 20.000 & 100.000 baris, komposisi status realistis
+(60% draft / 10% review / 25% ready / 5% archived), 20% baris ber-embedding
+1024-d (jadi indeks HNSW ikut terpelihara), 20% konten >2 kB (TOAST).
+Tiap putaran = 5 × (`UPDATE` 200 baris `review→ready` + `INSERT` 200
+`audit_logs` dalam satu transaksi). Skrip memaksa skema awal kembali ke definisi
+Drizzle sebelum mengukur "baseline", supaya baseline tidak diam-diam mengukur
+skema yang sudah dimigrasikan.
+
+### Temuan 1 — fillfactor BUKAN penyebabnya, dan bukan solusinya
+
+100.000 baris, 5 putaran × 200 baris:
+
+| Varian | `n_tup_upd` | `n_tup_hot_upd` | HOT | `UPDATE` p50 | total p50 |
+|---|---|---|---|---|---|
+| baseline (fillfactor 100, 15 indeks) | 1.000 | **0** | **0%** | 52 ms | 229 ms |
+| fillfactor 85 saja | 1.000 | **0** | **0%** | 40 ms | 153 ms |
+| fillfactor 85 + `status` dilepas dari **semua** indeks | 1.000 | 559 | **55,9%** | 14 ms | 158 ms |
+| fillfactor 85 + indeks daftar `(status, created_at DESC)` | 1.000 | **0** | **0%** | 42 ms | 93 ms |
+
+Kesimpulan yang tidak bisa ditawar: **fillfactor sendirian tidak mengubah apa
+pun** (0% → 0%). Selama `status` ada di sebuah indeks, setiap transisi status
+wajib menulis entri baru ke **seluruh** indeks tabel — termasuk GIN trigram dan
+HNSW pgvector — jadi HOT mustahil. HOT baru muncul (55,9%) ketika `status`
+hilang dari **semua** indeks.
+
+Dan fillfactor 85 justru **merugikan**: baris tersebar ke 15% halaman lebih
+banyak sehingga satu `UPDATE` 200 baris menyentuh lebih banyak halaman. Pada
+A/B 20.000 baris dengan beban sebanding (load 2,56 vs 2,83):
+
+| Varian (20k baris) | `UPDATE` p50 | total min/med/max |
+|---|---|---|
+| baseline (fillfactor 100) | 43 ms | 60 / 94 / 183 ms |
+| fillfactor 85 + indeks daftar | 32 ms | 60 / 61 / 101 ms |
+| **fillfactor 100 + indeks daftar** | **21 ms** | **43 / 71 / 99 ms** |
+
+→ **fillfactor 85 ditolak berdasarkan data**, bukan preferensi. Tidak ada
+perubahan fillfactor di migrasi.
+
+### Temuan 2 — trade-off HOT vs daftar soal bersifat fundamental
+
+Ini pilihan arsitektural, bukan tweak: **indeks apa pun yang membuat "soal
+berstatus X" bisa dicari cepat harus memuat `status`, dan itu mematikan HOT
+untuk `status`.** Keduanya tidak bisa dimenangkan sekaligus.
+
+| | HOT untuk `status` | Halaman daftar (`ready`, 100k baris) |
+|---|---|---|
+| `status` dilepas dari semua indeks | **55,9%** | **Seq Scan, 30–142 ms** ❌ |
+| `status` diindeks (`(status, created_at DESC)`) | 0% | **Index Scan, 0,05–0,55 ms** ✅ |
+
+**Keputusan: jalur baca menang.** Halaman daftar soal dibuka setiap pengguna
+setiap kali; aksi massal 200 soal adalah operasi admin yang jarang. Membuang
+indeks status demi HOT akan memperlambat layar utama 30–140 ms setiap muat —
+regresi yang dilarang eksplisit oleh DoD issue ini. Yang diambil bukan HOT,
+melainkan **bentuk indeks yang benar untuk query yang benar**.
+
+### Temuan 3 — akar masalah daftar soal: `SORT`, bukan indeks yang hilang
+
+Bentuk query daftar (`listQuestions`) adalah:
+
+```sql
+WHERE deleted_at IS NULL AND status = $1 ORDER BY created_at DESC LIMIT 20 OFFSET $2
+```
+
+`idx_questions_status` hanya btree `(status)` — ia menyaring, lalu PostgreSQL
+tetap harus **mengurutkan seluruh partisi status** sebelum `LIMIT`. Biayanya
+tumbuh bersama ukuran partisi, jadi makin banyak soal makin lambat, tanpa batas.
+`idx_questions_grade_diff_status` `(grade, difficulty, status)` tak menolong
+sama sekali: `status` bukan kolom depan (11 scan seumur hidup statistik di DB
+dev; `idx_questions_status` 465 scan, `idx_questions_grade` 5 scan).
+
+Indeks pengganti `idx_questions_listing (status, created_at DESC) WHERE
+deleted_at IS NULL` melayani **ketiga bagian query sekaligus** — filter, urutan,
+dan predikat hidup — sehingga `SORT` hilang dari rencana. `EXPLAIN ANALYZE`,
+100.000 baris:
+
+| status | sebelum (`Sort`) | sesudah (`Index Scan idx_questions_listing`) |
+|---|---|---|
+| `ready` | 48,1 – 513,0 ms | **0,107 – 0,219 ms** |
+| `draft` | 37,5 – 51,8 ms | **0,074 – 0,096 ms** |
+| `review` | 10,3 – 31,8 ms | **0,493 – 0,717 ms** |
+| `archived` | 7,4 – 23,8 ms | **0,054 – 0,083 ms** |
+
+Di DB dev (11.889 baris) rencana `draft` berubah dari
+`Limit → Sort → Index Scan(idx_questions_status)` menjadi
+`Limit → Index Scan(idx_questions_listing)` dengan **Execution Time 0,290 ms**.
+
+Catatan jujur: `COUNT(*)` untuk filter status **tidak** ikut membaik — kedua
+rencana memakai Bitmap Heap Scan, dan angka terukur untuk rencana yang sama
+berkisar 14–65 ms antar-jam (derau cache/host). Secara total satu permintaan
+daftar (`count` + `page`) tetap jauh lebih cepat karena halaman turun 30–450×:
+`ready` 87,8 → 37,5 ms; `draft` 93,1 → 43,0 ms; `review` 40,8 → 24,7 ms.
+
+### Temuan 4 — SLO 300 ms: DIPERTAHANKAN, dengan bukti
+
+Diukur lewat jalur layanan nyata (`bulkQuestionAction`, 3 query), bukan SQL
+mentah, pada `mathbank_test`, **load average 0,33** (host akhirnya sepi):
+
+| Skema | query | min | p50 | max |
+|---|---|---|---|---|
+| sebelum (`idx_questions_status` + `grade_diff_status`) | 3 | 97 ms | **103 ms** | 115 ms |
+| sesudah (`idx_questions_listing`) | 3 | 69 ms | **69 ms** | 112 ms |
+
+→ **−33% pada p50**, jumlah query tetap 3, dan SLO **<300 ms terpenuhi dengan
+margin 4,3×**. Diulang setelah migrasi pada load 2,75: min 47 ms, p50 92 ms,
+max 125 ms — tetap lulus.
+
+**Kesimpulan atas angka 450 ms – 3,4 s di ACT-05:** itu **bukan** biaya desain
+indeks, melainkan ekor latensi host bersama. Pada beban 10–31, pernyataan yang
+sama berayun 129 ms – 3,8 s. Yang deterministik dan bisa diklaim adalah:
+jumlah query (3), bentuk rencana (`Sort` hilang), dan jumlah indeks yang harus
+dipelihara tiap tulis (15 → 14).
+
+Ambang yang jujur dicatat: pada **100.000 baris** p50 total berkisar
+229–488 ms tergantung beban host, jadi SLO 300 ms **tidak** lagi aman di sana.
+Itu masalah kapasitas host, bukan skema — dan dicatat sebagai rekomendasi
+lanjutan, bukan blocker Sprint 0 (data produksi saat ini 11.889 baris).
+
+### Yang dikirim
+
+| Berkas | Isi |
+|---|---|
+| `drizzle/manual/10-questions-listing-index.sql` | Migrasi idempotent: `DROP idx_questions_status`, `DROP idx_questions_grade_diff_status`, `CREATE idx_questions_listing (status, created_at DESC) WHERE deleted_at IS NULL`, `ANALYZE`. **Plus rencana rollback lengkap** (drop indeks baru, buat ulang dua indeks lama, `ANALYZE`) dan alasan trade-off tertulis di kepala berkas. |
+| `src/lib/db/schema/question.ts` | Definisi Drizzle disinkronkan (indeks lama dibuang, `idx_questions_listing` ditambah) supaya `drizzle-kit` tidak menghasilkan drift. |
+| `scripts/bench-hot-status.ts` | Harness 5 varian: baseline / ff85 / ff85-nostatus / ff85-nostatus-listing / final. Mencatat `n_tup_hot_upd`, load average per putaran, dan `EXPLAIN` daftar soal. Aman: menolak jalan bila URL bukan `mathbank_test`. |
+| `scripts/bench-bulk-status.ts` | Diperbaiki: proses dulu menggantung setelah laporan tercetak karena pool Drizzle menahan event loop (exit eksplisit setelah `finally`). |
+
+Rollback tidak menyentuh data — hanya indeks. Pada 12 ribu baris < 1 detik;
+pada 1 juta baris perkirakan 10–60 detik (pakai `CREATE INDEX CONCURRENTLY`
+bila tabel harus tetap melayani tulis).
+
+### Verifikasi
+
+| Pemeriksaan | Perintah | Hasil |
+|---|---|---|
+| Typecheck | `npx tsc --noEmit` | **exit 0** |
+| Migrasi idempotent | `DATABASE_URL=$TEST_DATABASE_URL npx tsx scripts/db-apply-safety.ts` (2×) | kedua kali **exit 0**, tanpa galat |
+| Tes integrasi bulk (ACT-05 tidak regresi) | `vitest --config vitest.db.config.mts src/lib/services/question-bulk.db.test.ts` | **7 tes LULUS**, `dbQueries <= 3` tetap hijau |
+| Tes layanan soal | `vitest … question-service.db.test.ts` | **34/35 lulus**; 1 (`mode semantic: fallback ke trigram`) time-out 20 dtk karena layanan embedding tak terjangkau di host ini (`embeddingTimeoutMs` 30 dtk > batas tes) — **lulus** saat diberi `--testTimeout=60000`, jadi bukan regresi skema |
+| Rencana daftar di DB dev | `EXPLAIN (ANALYZE, BUFFERS)` `status='draft'` | `Limit → Index Scan(idx_questions_listing)`, **0,290 ms**, tanpa `Sort` |
+| Migrasi diterapkan | `db:safety` pada `mathbank` **dan** `mathbank_test` | `idx_questions_status` & `idx_questions_grade_diff_status` hilang, `idx_questions_listing` ada di kedua DB |
+| Batas tangan | `git show --stat` | hanya `drizzle/manual/`, `src/lib/db/schema/question.ts`, `scripts/`, dokumen — **tidak ada** `src/components/**`, `src/app/(app)/**`, CSS |
+
+### Rekomendasi lanjutan (bukan blocker)
+
+1. **Kapasitas host.** Ekor latensi 3,8 s berasal dari host bersama yang jenuh,
+   bukan dari PostgreSQL. Selama 8 vCPU dipakai bersama beban 10–31, SLO
+   apa pun akan sesekali jebol. Perlu CPU/IO terisolasi untuk jalur DB.
+2. **Ambang volume.** Di atas ±50.000 soal, p50 aksi massal mulai menyentuh
+   300 ms. Bila bank soal tumbuh ke sana, opsi berikutnya: `COPY` audit ke
+   jalur async durable (kontrak L5 tetap utuh), atau partisi tabel per status.
+3. **`COUNT(*)` filter status** masih Bitmap Heap Scan. Bila angka pasti total
+   tidak lagi wajib di setiap halaman, ganti dengan estimasi
+   (`reltuples`/keyset pagination) — keputusan produk, bukan teknis.

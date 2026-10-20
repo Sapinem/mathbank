@@ -88,6 +88,9 @@ try {
       passLatency ? "LULUS" : "GAGAL"
     }`,
   );
+  // Pool drizzle di `@/lib/db` menahan event loop; tanpa exit eksplisit proses
+  // menggantung setelah laporan tercetak (dulu terlihat seperti "hang").
+  // Exit dilakukan SETELAH `finally` agar cleanup audit_logs tetap berjalan.
   process.exitCode = passQueries ? 0 : 1;
 } finally {
   await cleanup();
@@ -95,7 +98,9 @@ try {
 }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(process.exitCode ?? 0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

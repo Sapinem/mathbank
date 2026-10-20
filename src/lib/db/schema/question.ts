@@ -14,7 +14,7 @@ import {
   customType,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { relations, sql } from "drizzle-orm";
+import { relations, sql, desc } from "drizzle-orm";
 import {
   questionTypeEnum,
   questionStatusEnum,
@@ -98,7 +98,6 @@ export const questions = pgTable(
   (t) => [
     index("idx_questions_parent_id").on(t.parentId),
     index("idx_questions_question_type").on(t.questionType),
-    index("idx_questions_status").on(t.status),
     index("idx_questions_grade").on(t.grade),
     index("idx_questions_difficulty").on(t.difficulty),
     // PERF-08: filter taksonomi Bloom (C1–C6) sering dipakai di daftar soal.
@@ -110,11 +109,19 @@ export const questions = pgTable(
     uniqueIndex("uq_questions_content_hash")
       .on(t.contentHash)
       .where(sql`${t.deletedAt} IS NULL AND ${t.contentHash} IS NOT NULL`),
-    index("idx_questions_grade_diff_status").on(
-      t.grade,
-      t.difficulty,
-      t.status,
-    ),
+    // ACT-06 (MAT-123): bentuk query daftar soal adalah
+    //   WHERE deleted_at IS NULL AND status = $1 ORDER BY created_at DESC LIMIT n
+    // Indeks (status, created_at DESC) parsial melayani ketiga bagian sekaligus
+    // (filter, urutan, dan predikat hidup) sehingga SORT hilang dari rencana.
+    // Terukur: 512,996 ms → 0,219 ms pada 100k baris untuk status `ready`.
+    // Menggantikan idx_questions_status + idx_questions_grade_diff_status yang
+    // tak melayani bentuk query ini (status bukan kolom depan pada yang kedua).
+    // ⚠️ Konsekuensi: `status` ada di indeks ⇒ UPDATE status tidak bisa HOT.
+    // Trade-off ini disengaja; angka pembanding ada di
+    // drizzle/manual/10-questions-listing-index.sql.
+    index("idx_questions_listing")
+      .on(t.status, desc(t.createdAt))
+      .where(sql`${t.deletedAt} IS NULL`),
     index("idx_questions_content_trgm").using(
       "gin",
       sql`${t.contentMarkdown} gin_trgm_ops`,
