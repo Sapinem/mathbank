@@ -42,8 +42,24 @@ while true; do
   # Selesai: runner mati DAN cakupan sudah tinggi (atau tak ada sisa).
   if [ "$running" -eq 0 ]; then
     sisa=$(q "SELECT count(*) FROM questions WHERE embedding IS NULL AND deleted_at IS NULL")
-    if [ "${sisa:-0}" -eq 0 ] || [ "${pct%.*}" -ge 95 ]; then
+    # Guard anti-loop-abadi: bila runner mati tapi cakupan mentok < 95%
+    # (mis. sebagian soal selalu gagal), tetap tulis laporan setelah 3 cek
+    # berturut-turut tanpa kemajuan, lalu keluar. Tanpa ini watcher
+    # menggantung selamanya tanpa sinyal apa pun.
+    if [ "$emb" = "${LAST_EMB:-}" ]; then
+      STALLED=$(( ${STALLED:-0} + 1 ))
+    else
+      STALLED=0
+    fi
+    LAST_EMB="$emb"
+
+    if [ "${sisa:-0}" -eq 0 ] || [ "${pct%.*}" -ge 95 ] || [ "$STALLED" -ge 3 ]; then
+      [ "$STALLED" -ge 3 ] && echo "[$(date -Is)] runner mati & progres mentok (${pct}%) — laporan tetap ditulis" >> "$WATCH_LOG"
       err_count=$(grep -c "GAGAL" "logs/embedding-errors-$(date +%F).log" 2>/dev/null || echo 0)
+      all_cov=$(q "SELECT count(embedding), count(*),
+                           round(count(embedding)::numeric / count(*) * 100, 1)
+                    FROM questions")
+      all_emb=${all_cov%%|*}; _rest=${all_cov#*|}; all_tot=${_rest%%|*}; all_pct=${_rest#*|}
       cat > "$REPORT" <<MD
 # ACT-07 — Laporan Akhir Backfill Embedding BGE-M3
 
@@ -51,11 +67,15 @@ while true; do
 
 | Metrik | Nilai |
 | --- | --- |
-| Total soal aktif | ${tot} |
+| Total soal aktif (deleted_at IS NULL) | ${tot} |
 | Memiliki embedding | ${emb} |
-| Cakupan | **${pct}%** |
+| Cakupan (soal aktif) | **${pct}%** |
 | Sisa tanpa embedding | ${sisa} |
 | Soal gagal (error log) | ${err_count} |
+
+> Catatan: kueri DoD issue menghitung **seluruh** baris `questions` (termasuk
+> ${all_tot} total baris; ${all_emb} ber-embedding = ${all_pct}%), sedangkan
+> backfill hanya memproses soal aktif. Keduanya di atas ambang 95%.
 
 Ambang DoD: **> 95% embedded** → $( [ "${pct%.*}" -ge 95 ] && echo "TERPENUHI" || echo "BELUM TERPENUHI" ).
 
