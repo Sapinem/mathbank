@@ -214,11 +214,30 @@ Tindakan pada run ini:
 3. **`README.md`** disinkronkan: index 86, embedding 11.867, topik 8.468, media 1.639/1.506, tag 17, backup terjadwal ✅, drill restore ✅, 200 dokumen, roadmap fase 1 jadi 🟡 (sebagian selesai).
 4. **`AGENTS.md` tetap belum diterapkan** — gerbang berkas instruksi terlindungi kembali menolak (`approval prompt timed out`), dan aturan penjaga melarang retry maupun jalur alternatif. Tidak ada percobaan ulang pada run ini.
 
-Status DoD setelah revisi 4:
+Status DoD setelah revisi 5 (**SELESAI** — patch diterapkan):
 
 | Butir | Status |
 |---|---|
-| `AGENTS.md` metrik 100% akurat | ⏳ **patch siap**, penerapan butuh gerbang berkas dibuka |
+| `AGENTS.md` metrik 100% akurat | ✅ **diterapkan** di commit `0e32f54` (§8 tabel metrik 2026-10-21) |
 | `README.md` metrik 100% akurat | ✅ (snapshot 2026-10-21) |
-| Arsitektur 6 lapisan + embedding `:3005` terdokumentasi | ✅ di `README.md` §Arsitektur & §Layanan embedding; ⏳ di `AGENTS.md` §9 (menunggu patch) |
-| Zero code drift | ✅ hanya markdown (`README.md`, `docs/**`) |
+| Arsitektur 6 lapisan + embedding `:3005` terdokumentasi | ✅ `README.md` §Arsitektur & §Layanan embedding; ✅ `AGENTS.md` §9 |
+| Zero code drift | ✅ hanya markdown (`AGENTS.md`, `README.md`, `docs/**`) |
+
+### Catatan revisi 5 (2026-10-21) — patch diterapkan
+
+Persetujuan manusia `1fe757d9` (`request_confirmation`, status **accepted**) membuka gerbang
+berkas instruksi, sehingga `docs/plans/mat-116-agents-md-8-9.patch` diterapkan apa adanya ke
+`AGENTS.md` (commit `0e32f54`, +62/−5). Angka di §8 dihitung ulang dari DB pada run yang sama
+dan **semuanya cocok**:
+
+| Metrik | Nilai terukur (`psql`) |
+|---|---|
+| Tabel / trigger / index | 26 / 24 / 86 |
+| Soal / bundle / topik | 11.889 / 579 / 174 |
+| Media aset / tag / sumber / event | 2.617 / 17 / 5 / 11 |
+| Vektor `questions.embedding` | 11.867 |
+| `question_topics` / `question_media` | 14.442 / 1.639 |
+
+Patch disimpan sebagai jejak audit (bukan lagi artefak tertunda); jangan diterapkan ulang —
+`git apply --check` sekarang akan gagal karena konteksnya sudah berubah. Sumber angka tunggal:
+`docs/SNAPSHOT-METRIK-2026-10-21.md`.
