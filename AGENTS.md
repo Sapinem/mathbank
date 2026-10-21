@@ -108,8 +108,65 @@ pnpm build
 
 ## 8. Kondisi proyek saat ini (perbarui bila berubah)
 
-- **28 tabel** · skema sehat · `db:verify` hijau (DB utama & DB uji)
-- Referensi: **174 topik**, **5 events**, **6 sumber**
-- **0 soal** — kanvas kosong (177 soal mentah lama sudah dibuang atas keputusan pemilik produk)
-- ADR berlaku: **0009** (bundle satu tabel), **0010** (event), **0011** (stimulus), **0014** (sumber menempel bundle), **0015** (gabung books/institutions), **0016** (`collections`)
-- **Utang terbuka:** UI koleksi · parser kunci dua bahasa · `warnings`→`isFlagged` tak tersambung · `curriculum.yaml` di luar repo · pengaman `scripts/ingest-corpus.ts`
+**Snapshot terverifikasi 2026-10-21.** Angka di bawah dihitung langsung dari DB produksi lokal
+(`psql "$DATABASE_URL"`) dan `pnpm db:verify` pada **DB utama dan DB uji**. Riwayat: snapshot
+2026-10-19 di `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md` — baris embedding, topik, media, dan
+jumlah index di sana **sudah usang**. **Jangan menulis angka dari ingatan** — hitung ulang, lalu
+perbarui tabel ini. Bukti & perintah verifikasi: `docs/SNAPSHOT-METRIK-2026-10-21.md`.
+
+| Aspek | Nilai aktual (2026-10-21) |
+|---|---|
+| Skema | **26 tabel** · **24 trigger** · 3 CHECK · **86 index** (1 HNSW) · `db:verify` hijau (DB utama & DB uji) |
+| Soal | **11.889** — 100% `draft`, 0 `ready`, 22 soft-deleted; `answer_key` non-kosong 11.108 (93,4%); `is_flagged` 3.034 (25,5%) |
+| Bundle | **579** (577 aktif, 2 arsip) · rata-rata 21,4 soal/paket |
+| Topik | **174** · **8.468 soal terpetakan** (14.442 tautan `question_topics` — 71,2%) |
+| Media | **2.617** aset · **1.639 tautan** `question_media` menjangkau **1.506 soal** (12,7%) |
+| Tag | **17** tag · 35.598 tautan `question_tags` (11.866 soal) |
+| Provenance | **5 sumber** · **11 event** · 2.281 soal ber-`event_id` (19,2%) |
+| Vektor | **11.867 embedding** (99,8%) · `vector(1024)` · index HNSW **terisi** |
+
+- ADR berlaku: **0009** (bundle satu tabel), **0010** (event), **0011** (stimulus), **0014** (sumber menempel bundle), **0015** (gabung books/institutions), **0016** (`collections`), **0017** (buang enum `exercise`), **0018** (drop `collections.origin`), **0019** (isolasi vektor), **0020** (event makro vs provenance naskah), **0021** (print config), **0022** (`wrapRoute`, larangan Server Actions). Total 22 ADR di `docs/ADR/`.
+- **Utang terbuka (2026-10-21):** 3.421 soal belum bertopik (28,8%) · 10.383 soal tanpa media (978 aset belum tertaut) · cakupan Zod route API 17/51 · layanan embedding `:3005` tidak selalu hidup (soal baru tak bisa di-embed saat mati) · status `pnpm test`/`pnpm lint` penuh perlu verifikasi ulang pemilik CI (MAT-115).
+
+## 9. Arsitektur 6 lapisan & layanan embedding
+
+### 9.1 Dua penomoran, satu kode
+
+- **Dokumen desain** `docs/DESAIN-PER-LAPISAN-MATHBANK.md` memakai penomoran produk **L1–L9** (peran → antarmuka → state → API → data → engine → …). Itu acuan *ranah*.
+- **Tinjauan implementasi V2** (`docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md` §3.1) memakai **6 lapisan teknis**. Saat menulis kode/audit, pakai tabel ini:
+
+| Lapis | Isi | Modul acuan | Status 2026-10-21 |
+|---|---|---|---|
+| **L1 Auth/Role** | Better Auth, peran, `can`/`assertCan`/`hasRole` | `src/lib/auth/` | ✅ siap |
+| **L2 API** | `wrapRoute`, rate limit, Zod di boundary | `src/lib/api/`, `src/app/api/` | ⚠️ Zod baru 17/51 route |
+| **L3 Service** | orkestrasi domain, transaksi | `src/lib/services/`, `src/lib/ingest/` | ⚠️ beberapa fungsi > 300 baris |
+| **L4 Engine** | fungsi murni: KaTeX lint/repair, export, cetak | `src/lib/math/`, `src/lib/export/` | ✅ siap |
+| **L5 Data Access** | Drizzle, 26 tabel, 86 index, HNSW | `src/lib/db/` | ✅ siap |
+| **L6 Infra** | PG18 + pgvector, Docker Compose, Caddy, health/metrics | `docker-compose.yml`, `Caddyfile` | ✅ siap |
+
+**Aturan:** logika murni **hanya** di L4; route **tidak** menyentuh Drizzle langsung (lewat L3/L5); jangan menambah lapisan baru tanpa ADR.
+
+### 9.2 Layanan embedding (FastAPI BGE-M3, port `:3005`)
+
+**Kontrak service:**
+
+```bash
+curl -s localhost:3005/health
+# {"status":"ok","model":"BAAI/bge-m3","dim":1024}
+curl -s -X POST localhost:3005/v1/embeddings \
+  -H 'Content-Type: application/json' -d '{"input":["$x^2+1$"]}'
+```
+
+- Model `BAAI/bge-m3`, **dimensi wajib 1024** (sesuai `vector(1024)`); OpenAPI di `/openapi.json`.
+- Endpoint embedding: `POST /v1/embeddings` (gaya OpenAI), health: `GET /health`.
+- ⚠️ Service ini **tidak selalu hidup** (health timeout saat snapshot 2026-10-21). Nyalakan sebelum ingest/enrichment massal.
+
+**Konvensi integrasi di aplikasi** (`src/lib/embedding/bge-m3.ts`, diselaraskan MAT-115):
+
+- Base URL dari `BGE_M3_SERVICE_URL` (default `http://127.0.0.1:3005`), model dari `BGE_M3_MODEL` (default `bge-m3`), batas waktu `BGE_M3_TIMEOUT_MS` (default 120000 ms — cold start CPU). **Jangan hardcode port** di kode baru.
+- Transport memakai kontrak **OpenAI-compatible**: `POST {base}/v1/embeddings` dengan body `{ model, input }` → `{ data: [{ embedding }] }`. Balasan gaya lama `{ embeddings: [[…]] }` (Ollama `/api/embed`) **masih diterima** agar pemanggil lama tidak putus.
+- Health check: `GET /health` (fallback probe embed bila endpoint health tidak ada).
+- ✅ **Backfill selesai:** 11.867 dari 11.889 soal (99,8%) punya vektor; index HNSW terisi. Sisa 22 soal.
+- Aturan data: tolak vektor ≠ 1024 dim; batch + idempoten (skip berdasarkan hash konten); **backup dulu** (`pnpm backup:db`) sebelum backfill massal; jangan simpan vektor parsial.
+
+**Referensi audit:** `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md` (ringkasan: `docs/audit/EVALUASI-PAPERCLIP-V2-EXECUTIVE.md`, rencana aksi: `docs/audit/PAPERCLIP-V2-ACTION-PLAN.md`).
