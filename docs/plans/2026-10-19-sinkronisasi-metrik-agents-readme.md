@@ -191,3 +191,34 @@ Status DoD per run ini:
 | Metrik diverifikasi ulang (bukan warisan audit) | ✅ 26/24/11.889/579/174/2.617/5/11/0 |
 | `AGENTS.md` §8/§9 diterapkan | ❌ **tertahan gerbang berkas** — patch siap, butuh eksekusi manusia |
 | Zero code drift | ✅ hanya `docs/**` + (setelah patch) `AGENTS.md` |
+
+## 9. Revisi 4 (2026-10-21) — angka disegarkan, patch diregenerasi
+
+Snapshot 2026-10-19 di §3 **sudah tidak akurat lagi** (embedding, topik, media, index). Angka baru
+dihitung ulang langsung dari DB dan dipakai untuk meregenerasi patch:
+
+| Metrik | §3 (2026-10-19) | 2026-10-21 |
+|---|---|---|
+| Embedding | 0 | **11.867** (99,8%) |
+| `question_topics` | 0 | **14.442** tautan / 8.468 soal (71,2%) |
+| `question_media` | 0 | **1.639** tautan / 1.506 soal (12,7%) |
+| `question_tags` | — | 35.598 tautan / 11.866 soal |
+| Index | 87 | **86** |
+| Soal ber-`event_id` | 2.283 | **2.281** |
+| Backup | stagnan 8 hari | cron 02:00 + drill 2026-10-20 |
+
+Tindakan pada run ini:
+
+1. **`docs/SNAPSHOT-METRIK-2026-10-21.md`** dibuat — bukti + query reproduksi + tabel delta + daftar drift. Ini acuan angka yang menggantikan snapshot 2026-10-19.
+2. **`docs/plans/mat-116-agents-md-8-9.patch` diregenerasi** dengan angka 2026-10-21 (blok §8/§9 di §3 dokumen ini **usang**; patch adalah sumber final). Sudah diuji `git apply --check` → **lolos**.
+3. **`README.md`** disinkronkan: index 86, embedding 11.867, topik 8.468, media 1.639/1.506, tag 17, backup terjadwal ✅, drill restore ✅, 200 dokumen, roadmap fase 1 jadi 🟡 (sebagian selesai).
+4. **`AGENTS.md` tetap belum diterapkan** — gerbang berkas instruksi terlindungi kembali menolak (`approval prompt timed out`), dan aturan penjaga melarang retry maupun jalur alternatif. Tidak ada percobaan ulang pada run ini.
+
+Status DoD setelah revisi 4:
+
+| Butir | Status |
+|---|---|
+| `AGENTS.md` metrik 100% akurat | ⏳ **patch siap**, penerapan butuh gerbang berkas dibuka |
+| `README.md` metrik 100% akurat | ✅ (snapshot 2026-10-21) |
+| Arsitektur 6 lapisan + embedding `:3005` terdokumentasi | ✅ di `README.md` §Arsitektur & §Layanan embedding; ⏳ di `AGENTS.md` §9 (menunggu patch) |
+| Zero code drift | ✅ hanya markdown (`README.md`, `docs/**`) |

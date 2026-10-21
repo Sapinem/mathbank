@@ -75,7 +75,7 @@ pnpm dev                      # http://localhost:3000
 
 ### Verifikasi skema
 
-`pnpm db:verify` mencetak invarian dan gagal bila ada drift. Snapshot acuan (2026-10-19):
+`pnpm db:verify` mencetak invarian dan gagal bila ada drift. Snapshot acuan (diverifikasi ulang 2026-10-21, DB utama & DB uji):
 
 ```text
 ✓ tables: 26   ✓ triggers: 24   ✓ checkConstraints: 3   ✓ hnswIndexes: 1
@@ -105,7 +105,9 @@ Backup manual **tidak cukup** untuk produksi: jadwalkan harian (cron) + retensi 
 
 ✅ **Klien aplikasi sudah selaras (MAT-115).** `src/lib/embedding/bge-m3.ts` memakai kontrak OpenAI-compatible `POST {base}/v1/embeddings` (`{model,input}` → `{data:[{embedding}]}`), tetap menerima balasan lama `{embeddings:[[…]]}`, dan memakai `GET /health`. `.env`/`.env.example` menunjuk `:3005`.
 
-⏳ **Yang belum jalan:** backfill vektor — **0 dari 11.889 soal** punya embedding. Jalankan `pnpm backup:db` sebelum backfill massal.
+✅ **Backfill vektor selesai:** **11.867 dari 11.889 soal (99,8%)** punya embedding `vector(1024)` dan index HNSW terisi. Sisa 22 soal belum — jalankan `pnpm backup:db` lalu backfill ulang bila perlu.
+
+⚠️ **Service `:3005` tidak selalu hidup.** Bila `curl -s localhost:3005/health` timeout, enrichment/pencarian semantik untuk soal **baru** akan gagal walau data lama sudah ter-embed. Nyalakan service sebelum ingest massal.
 
 ---
 
@@ -119,26 +121,34 @@ Dokumen desain memakai penomoran produk **L1–L9**; implementasi & audit V2 mem
 | **L2 API** | `wrapRoute`, rate limit, validasi Zod | `src/lib/api/`, `src/app/api/` |
 | **L3 Service** | orkestrasi domain & transaksi | `src/lib/services/`, `src/lib/ingest/` |
 | **L4 Engine** | fungsi murni: KaTeX lint/repair, export, cetak | `src/lib/math/`, `src/lib/export/` |
-| **L5 Data Access** | Drizzle ORM, 26 tabel, 87 index, 1 HNSW | `src/lib/db/` |
+| **L5 Data Access** | Drizzle ORM, 26 tabel, 86 index, 1 HNSW | `src/lib/db/` |
 | **L6 Infra** | PG18 + pgvector, Docker Compose, Caddy, health/metrics | `docker-compose.yml`, `Caddyfile` |
 
 Aturan: logika murni hanya di L4; route tidak menyentuh Drizzle langsung; penambahan lapisan wajib lewat ADR. Detail: `docs/ARCHITECTURE.md`, `docs/DESAIN-PER-LAPISAN-MATHBANK.md`.
 
 ---
 
-## Metrik Database (snapshot 2026-10-19)
+## Metrik Database (snapshot 2026-10-21, terverifikasi langsung dari DB)
 
 | Entitas | Jumlah | Catatan |
 |---------|--------|---------|
-| Tabel / trigger / index | **26 / 24 / 87** | 1 index HNSW (`vector(1024)`), `db:verify` hijau |
-| Soal | **11.889** | 100% `draft`, 22 soft-deleted, 93,4% ber-`answer_key` |
-| Bundle | **579** | 577 aktif, rata-rata 21,4 soal |
-| Topik | **174** | 0 terpetakan (`question_topics` kosong) |
-| Media | **2.617** | 0 tertaut (`question_media` kosong) |
-| Sumber / event | **5 / 11** | provenance 19,2% soal ber-`event_id` |
-| Embedding | **0** | HNSW kosong — blocker V2 |
+| Tabel / trigger / index | **26 / 24 / 86** | 1 index HNSW (`vector(1024)`), `db:verify` hijau di DB utama & DB uji |
+| Soal | **11.889** | 100% `draft`, 22 soft-deleted, 93,4% (11.108) ber-`answer_key`, 3.034 (25,5%) `is_flagged` |
+| Bundle | **579** | 100% `draft`, rata-rata 21,4 soal, 2 soft-deleted |
+| Topik | **174** | **8.468 soal terpetakan** (14.442 tautan `question_topics` — 71,2%) |
+| Media | **2.617** | **1.639 tautan** `question_media` menjangkau **1.506 soal** (12,7%) |
+| Tag | **17** | 35.598 tautan `question_tags` (11.866 soal) |
+| Sumber / event | **5 / 11** | provenance `event_id` pada 2.281 soal (19,2%) |
+| Embedding | **11.867** (99,8%) | HNSW terisi — blocker V2 sudah lewat |
 
-Sumber: `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md`, `docs/audit/AUDIT-DATA-SNAPSHOT-2026-10-19.csv`.
+Angka di atas diambil `psql` + `pnpm db:verify` pada 2026-10-21 dan **menggantikan** snapshot 2026-10-19 di `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md` (baris embedding, topik, media, dan jumlah index sudah berubah). Rincian & perintah verifikasi: `docs/SNAPSHOT-METRIK-2026-10-21.md`.
+
+**Cara verifikasi ulang** (jangan percaya tabel ini tanpa cek):
+
+```bash
+pnpm db:verify
+psql "$DATABASE_URL" -c "select count(*) from questions;"   # ulangi per baris tabel
+```
 
 ---
 
@@ -148,20 +158,21 @@ Sumber: `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md`, `docs/audit/AUDIT-DATA-SNAPS
 
 | Fase | Fokus | Status |
 |------|-------|--------|
-| 0 — Sprint 0 | Sinkronisasi metrik & dokumentasi; verifikasi skema | ✅ (dokumen ini) |
-| 1 — Data hygiene | Backfill 11.889 embedding · pemetaan 174 topik · relasi 2.617 media | ⬜ blocker utama |
-| 2 — Kualitas soal | `draft` → `ready`, kunci/pembahasan, AI tagging | ⬜ |
-| 3 — Skala & operasi | Hot/cold storage, partial HNSW, media CDN, backup terjadwal | ⬜ |
+| 0 — Sprint 0 | Sinkronisasi metrik & dokumentasi; verifikasi skema | ✅ (dokumen ini + `docs/SNAPSHOT-METRIK-2026-10-21.md`) |
+| 1 — Data hygiene | Backfill 11.889 embedding · pemetaan 174 topik · relasi 2.617 media | 🟡 embedding 99,8% ✅ · topik 71,2% · media 12,7% |
+| 2 — Kualitas soal | `draft` → `ready`, kunci/pembahasan, AI tagging | ⬜ 0 dari 11.889 soal berstatus `ready` |
+| 3 — Skala & operasi | Hot/cold storage, partial HNSW, media CDN, backup terjadwal | 🟡 backup terjadwal ✅, sisanya ⬜ |
 
 **Kesiapan CI/CD:**
 
 | Aspek | Status |
 |-------|--------|
 | Workflow CI | ✅ `.github/workflows/ci.yml` (PG18 + pgvector service) |
-| Gerbang CI hijau | ❌ `pnpm test` & `pnpm lint` masih gagal (lihat audit Pilar 2) |
-| `db:verify` | ✅ 0 drift |
-| Backup terjadwal | ❌ masih manual (terakhir 11 Okt 2026) |
-| Uji restore | ⚠️ `restore:check` ada, belum terjadwal |
+| `pnpm typecheck` | ✅ 0 error (diverifikasi 2026-10-21) |
+| `pnpm test` / `pnpm lint` penuh | ❌ masih gagal per audit V2 (Pilar 2) — perlu verifikasi ulang pemilik CI (MAT-115) |
+| `db:verify` | ✅ 0 drift — DB utama **dan** DB uji |
+| Backup terjadwal | ✅ cron harian 02:00 (`scripts/backup-db.mjs`, retensi 7 dump harian + arsip mingguan 30 hari) |
+| Uji restore | ✅ `restore:check` + drill terakhir 2026-10-20 (`backups/restore-drill-*.json`) |
 | Cakupan Zod route API | ⚠️ 17/51 route |
 
 ---
@@ -186,7 +197,7 @@ src/
 scripts/
   theme/build.ts      mesin tema
   seed-taxonomy.ts    seeder
-docs/                 182 dokumen (kanonikal, ADR, audit, rencana)
+docs/                 200 dokumen (kanonikal, ADR, audit, rencana)
 ```
 
 ---
