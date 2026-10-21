@@ -107,9 +107,10 @@ describe("event", () => {
 });
 
 describe("label", () => {
-  it("buat label + slug", async () => {
+  it("buat label tanpa slug (MAT-131A: slug deprecated → NULL)", async () => {
     const t = await createTag({ name: "HOTS" }, admin);
-    expect(t.slug).toBe("hots");
+    expect(t.name).toBe("HOTS");
+    expect(t.slug ?? null).toBeNull();
   });
 
   it("usageCount dihitung dari DB (0 saat baru)", async () => {

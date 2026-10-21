@@ -8,7 +8,9 @@
  * Berisi:
  *  - Tipe node pohon (`TopicNode`, `TopicTree`).
  *  - `buildTree`: susun pohon dari daftar datar.
- *  - `slugify`: slug dari nama (amankan panjang kolom DB).
+ *  - `slugify`: slug dari nama — **LEGACY** (MAT-131A). Masih diekspor karena
+ *    dipakai skrip kurasi (Faruq) & service `sources`/`bundles` yang belum
+ *    di-deprecate; taksonomi `topics`/`tags` sudah berhenti memakainya.
  *  - `resolveLevel`: level induk→anak (maks 3).
  *  - `isSelfOrDescendant`: anti-siklus (dari snapshot datar).
  *  - `descendantIds`: kumpulkan id seluruh keturunan (dari snapshot).
@@ -21,7 +23,13 @@
 export interface TopicNode {
   id: string;
   name: string;
-  slug: string;
+  /**
+   * MAT-131A (Tahap A): `slug` **deprecated & opsional**.
+   * Identitas kanonik node adalah `id`; nilai ini hanya dipertahankan untuk
+   * kompatibilitas data legacy (baris lama masih punya slug, baris baru `null`).
+   * Jangan menambah logika baru yang bergantung pada `slug`.
+   */
+  slug?: string | null;
   parentId: string | null;
   level: number;
   description: string | null;

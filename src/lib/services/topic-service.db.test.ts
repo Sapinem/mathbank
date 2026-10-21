@@ -47,7 +47,8 @@ describe("createTopic — level diturunkan dari induk", () => {
     const t = await createTopic({ name: "Aljabar" }, admin);
     expect(t.level).toBe(1);
     expect(t.parentId).toBeNull();
-    expect(t.slug).toBe("aljabar");
+    // MAT-131A: slug tidak lagi digenerate — identitas kanonik = id.
+    expect(t.slug ?? null).toBeNull();
   });
 
   it("dengan induk → level induk + 1", async () => {

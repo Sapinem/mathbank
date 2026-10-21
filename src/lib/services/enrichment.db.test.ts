@@ -41,11 +41,10 @@ async function cleanAll() {
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
   await sql`DELETE FROM questions`;
-  // CORR-02/03: bersihkan tag/topik buatan uji (termasuk slug hasil NFKD).
-  await sql`DELETE FROM tags WHERE slug = 'a-b' OR length(slug) >= 90`;
-  await sql`DELETE FROM topics WHERE slug = 'a-b' OR length(slug) >= 90`;
-  await sql`DELETE FROM tags WHERE slug IN ('kalkulus','turunan')`;
-  await sql`DELETE FROM topics WHERE slug IN ('aljabar','bilangan')`;
+  // MAT-131A: baris baru tidak punya slug → bersihkan berdasarkan nama uji.
+  // Tetap hapus sisa slug legacy (data lama) agar tidak mengganggu.
+  await sql`DELETE FROM tags WHERE lower(name) IN ('a b', 'a-b', 'kalkulus', 'turunan') OR slug IN ('a-b','kalkulus','turunan') OR length(slug) >= 90`;
+  await sql`DELETE FROM topics WHERE lower(name) IN ('aljabar', 'bilangan') OR slug IN ('a-b','aljabar','bilangan') OR length(slug) >= 90`;
   await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;
   await sql`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_immutable`;
@@ -270,29 +269,29 @@ describe("enrichment — kontrak pedagogi (MAT-41)", () => {
     expect(r.pedagogy?.ok).toBe(false);
   });
 
-  it("CORR-02: NFKD memperpanjang slug > 100 → tetap dipotong (tak error varchar)", async () => {
+  it("MAT-131A: nama panjang/ligatur disimpan utuh & slug NULL (tak ada batas varchar slug)", async () => {
     const id = await makeQuestion();
-    // Nama 50 char, tapi NFKD ligatur "ﬃ"→"ffi" ⇒ slug 150 char. Tanpa potong,
-    // INSERT ke `tags.slug` varchar(100) → error PG (500).
+    // Dulu: nama 50 char → slug NFKD 150 char → error varchar(100). Kini slug
+    // tidak ditulis (NULL), jadi nama apa pun aman dan tersimpan utuh.
     const ligatureName = "ﬃ".repeat(50);
     mockChatJson.mockResolvedValue({ ok: true, data: { tags: [ligatureName] } });
     const r = await enrichQuestion(id, guru, ["tags"]);
     expect(r.ok).toBe(true);
-    const [t] = await sql`SELECT slug, length(slug)::int AS len FROM tags WHERE name = ${ligatureName}`;
+    const [t] = await sql`SELECT name, slug FROM tags WHERE name = ${ligatureName}`;
     expect(t).toBeTruthy();
-    expect(t.len).toBeLessThanOrEqual(100);
+    expect(t.slug).toBeNull();
   });
 
-  it("CORR-03: dua nama berbeda yang slug-nya bentrok → tak crash (pakai baris ada)", async () => {
-    // "A B" dan "A-B" menghasilkan slug sama ("a-b").
-    await sql`INSERT INTO tags (name, slug) VALUES ('A B', 'a-b')`;
+  it("MAT-131A: lookup tag berbasis nama — dua nama mirip-slug tetap dua baris", async () => {
+    // Dulu slug "a-b" bentrok. Kini identitas = nama (dinormalisasi lowercase
+    // oleh normalizeProposal), jadi keduanya sah berdiri sendiri.
+    await sql`INSERT INTO tags (name) VALUES ('A B')`;
     const id = await makeQuestion();
     mockChatJson.mockResolvedValue({ ok: true, data: { tags: ["A-B"] } });
     const r = await enrichQuestion(id, guru, ["tags"]);
     expect(r.ok).toBe(true);
-    // Hanya satu baris slug "a-b" (yang lama dipakai ulang, bukan error unik).
-    const rows = await sql`SELECT id FROM tags WHERE slug = 'a-b'`;
-    expect(rows.length).toBe(1);
+    const rows = await sql`SELECT name FROM tags WHERE lower(name) IN ('a b', 'a-b')`;
+    expect(rows.length).toBe(2);
   });
 });
 

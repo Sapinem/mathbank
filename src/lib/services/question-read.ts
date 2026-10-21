@@ -80,7 +80,11 @@ export type PublicQuestion = Omit<
 export interface QuestionTopicView {
   id: string;
   name: string;
-  slug: string;
+  /**
+   * MAT-131A (Tahap A): `slug` **deprecated & nullable** — baris topik baru
+   * menyimpan `NULL`. Konsumen wajib memakai `id` untuk tautan/filter.
+   */
+  slug?: string | null;
   level: number;
   isPrimary: boolean;
 }

@@ -11,7 +11,7 @@ import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
 import { recordAudit } from "../audit";
 import type { Actor } from "@/lib/auth/actor";
-import { slugify, type TagRow } from "./shared";
+import { type TagRow } from "./shared";
 
 /** Kolom tag yang diproyeksikan. */
 const tagColumns = {
@@ -41,7 +41,9 @@ export async function createTag(
     () =>
       db
         .insert(tags)
-        .values({ name: input.name, slug: slugify(input.name, 100) })
+        // MAT-131A: `slug` tidak lagi ditulis → NULL. Identitas kanonik = `id`;
+        // kolom slug hanya dipertahankan untuk data legacy (Tahap B: di-drop).
+        .values({ name: input.name })
         .returning(tagColumns),
     "Nama label sudah dipakai.",
   );
@@ -65,7 +67,9 @@ export async function updateTag(
     () =>
       db
         .update(tags)
-        .set({ name: input.name, slug: slugify(input.name, 100), updatedAt: new Date() })
+        // MAT-131A: jangan menulis ulang `slug` — biarkan nilai legacy apa adanya
+        // (NULL untuk baris baru) agar rename tidak membangkitkan konflik unik.
+        .set({ name: input.name, updatedAt: new Date() })
         .where(eq(tags.id, id))
         .returning(tagColumns),
     "Nama label sudah dipakai.",

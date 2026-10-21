@@ -6,6 +6,9 @@
  * - **Anti-siklus:** induk tak boleh diri sendiri / keturunannya (dicek di sini
  *   karena FK RESTRICT hanya melarang hapus, bukan siklus).
  * - Hapus: RESTRICT FK DB menolak bila masih ada anak / dipakai soal → pesan jelas.
+ * - **MAT-131A (Tahap A):** `slug` tidak lagi ditulis. Identitas kanonik = `id`
+ *   (UUIDv7); seluruh pencarian/navigasi murni `id` + `parentId`. Baris baru
+ *   menyimpan `slug = NULL`; data legacy tetap utuh (nullable, bukan di-drop).
  */
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -14,7 +17,7 @@ import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
 import { recordAudit } from "./audit";
 import type { Actor } from "@/lib/auth/actor";
-import { buildTree, slugify, type TopicNode, type TopicTree, resolveLevel, isSelfOrDescendant, descendantIds, subtreeMaxDepth, type TreeEdgeWithLevel, TopicParentNotFoundError, TopicMaxDepthError } from "@/lib/taxonomy/tree";
+import { buildTree, type TopicNode, type TopicTree, resolveLevel, isSelfOrDescendant, descendantIds, subtreeMaxDepth, type TreeEdgeWithLevel, TopicParentNotFoundError, TopicMaxDepthError } from "@/lib/taxonomy/tree";
 
 export type { TopicNode, TopicTree };
 export { buildTree };
@@ -79,7 +82,7 @@ export async function createTopic(
         .insert(topics)
         .values({
           name: input.name,
-          slug: slugify(input.name),
+          // MAT-131A: slug sengaja tidak diisi → NULL (kolom nullable).
           parentId: input.parentId ?? null,
           level,
           description: input.description ?? null,
@@ -112,7 +115,8 @@ export async function updateTopic(
   const patch: Partial<typeof topics.$inferInsert> = {};
   if (input.name !== undefined) {
     patch.name = input.name;
-    patch.slug = slugify(input.name);
+    // MAT-131A: `slug` tidak lagi diturunkan dari nama. Baris legacy yang sudah
+    // punya slug dibiarkan apa adanya (soft deprecation, Tahap B: drop kolom).
   }
   if (input.description !== undefined) patch.description = input.description;
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder;

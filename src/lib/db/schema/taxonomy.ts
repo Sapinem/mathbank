@@ -23,7 +23,10 @@ export const topics = pgTable(
   {
     id: uuidPk(),
     name: varchar("name", { length: 255 }).notNull(),
-    slug: varchar("slug", { length: 255 }).notNull(),
+    // MAT-131A: `slug` DEPRECATED (nullable). Identitas kanonik = `id` (UUIDv7).
+    // Tahap A hanya melepas NOT NULL; unique index dipertahankan karena
+    // PostgreSQL mengizinkan banyak NULL pada kolom ber-unique index.
+    slug: varchar("slug", { length: 255 }),
     parentId: uuid("parent_id").references((): AnyPgColumn => topics.id, {
       onDelete: "restrict", // cegah hapus kalau masih ada anak
     }),
@@ -90,7 +93,8 @@ export const tags = pgTable(
   {
     id: uuidPk(),
     name: varchar("name", { length: 100 }).notNull(),
-    slug: varchar("slug", { length: 100 }).notNull(),
+    // MAT-131A: `slug` DEPRECATED (nullable) — lihat catatan pada `topics.slug`.
+    slug: varchar("slug", { length: 100 }),
     description: text("description"),
     usageCount: integer("usage_count").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
