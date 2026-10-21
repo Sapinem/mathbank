@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Merge } from "lucide-react";
+import { Plus, Pencil, Trash2, Merge, Tag as TagIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +29,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ErrorState, LoadingState } from "@/components/ui/states";
-import { Badge } from "@/components/ui/badge";
 import {
   useTags,
   useCreateTag,
@@ -45,6 +44,87 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TagRow } from "@/lib/services/taxonomy-service";
+
+/**
+ * Meteran pemakaian label (MAT-131B).
+ *
+ * Angka teks adalah sumber informasi; bar hanya bobot visual relatif terhadap
+ * label paling banyak dipakai (`aria-hidden`). Label tanpa pemakaian tampil
+ * sebagai em-dash + teks pembaca layar, bukan angka 0 yang bersuara ganda.
+ */
+function UsageMeter({ count, max }: { count: number; max: number }) {
+  if (count === 0) {
+    return (
+      <span className="text-muted-foreground/60 text-xs">
+        <span aria-hidden>—</span>
+        <span className="sr-only">Belum dipakai</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-2.5">
+      <span
+        aria-hidden
+        className="hidden h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-muted sm:block sm:w-24"
+      >
+        <span
+          className="block h-full rounded-full bg-brand/70 motion-safe:transition-[width] motion-safe:duration-300"
+          style={{ width: `${Math.round((count / max) * 100)}%` }}
+        />
+      </span>
+      <span className="text-muted-foreground text-xs tabular-nums">
+        {count}
+        <span className="hidden sm:inline"> soal</span>
+      </span>
+    </span>
+  );
+}
+
+/** Tiga aksi baris — dipakai bersama oleh kartu mobile & tabel desktop. */
+function RowActions({
+  tag,
+  canMerge,
+  onEdit,
+  onMerge,
+  onDelete,
+}: {
+  tag: TagRow;
+  canMerge: boolean;
+  onEdit: (tag: TagRow) => void;
+  onMerge: (tag: TagRow) => void;
+  onDelete: (tag: TagRow) => void;
+}) {
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Sunting ${tag.name}`}
+        onClick={() => onEdit(tag)}
+      >
+        <Pencil />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Gabungkan ${tag.name}`}
+        disabled={!canMerge}
+        onClick={() => onMerge(tag)}
+      >
+        <Merge />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Hapus ${tag.name}`}
+        onClick={() => onDelete(tag)}
+      >
+        <Trash2 />
+      </Button>
+    </>
+  );
+}
 
 export function LabelsView() {
   const { data, isPending, isError, error } = useTags();
@@ -73,6 +153,11 @@ export function LabelsView() {
     setFormErr(null);
     setOpen(true);
   }
+  function openMerge(t: TagRow) {
+    setMerging(t);
+    setMergeTarget("");
+    setFormErr(null);
+  }
 
   function submit() {
     setFormErr(null);
@@ -85,6 +170,13 @@ export function LabelsView() {
   }
 
   const busy = create.isPending || update.isPending;
+  const canMerge = (data?.length ?? 0) >= 2;
+  /**
+   * MAT-131B: bobot visual "Pemakaian" — skala relatif terhadap label terpakai
+   * terbanyak. Bar murni dekoratif (`aria-hidden`); angka teks yang jadi
+   * sumber informasi bagi pembaca layar.
+   */
+  const maxUsage = Math.max(1, ...(data ?? []).map((t) => t.usageCount));
 
   return (
     <>
@@ -110,59 +202,81 @@ export function LabelsView() {
           ) : data.length === 0 ? (
             <p className="text-muted-foreground text-sm">Belum ada label.</p>
           ) : (
-            <Table>
-              <TableCaption>Daftar label soal.</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead className="text-right">Dipakai</TableHead>
-                  <TableHead className="w-24 text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* <640px: kartu ringkas — nama utuh, metrik & aksi di baris kedua. */}
+              <ul className="flex flex-col divide-y divide-border/60 sm:hidden">
                 {data.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{t.slug}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{t.usageCount}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Sunting ${t.name}`}
-                        onClick={() => openEdit(t)}
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Gabungkan ${t.name}`}
-                        disabled={(data.length ?? 0) < 2}
-                        onClick={() => {
-                          setMerging(t);
-                          setMergeTarget("");
-                          setFormErr(null);
-                        }}
-                      >
-                        <Merge />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Hapus ${t.name}`}
-                        onClick={() => setConfirm(t)}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                  <li key={t.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <TagIcon
+                        aria-hidden
+                        className="size-3.5 shrink-0 text-muted-foreground"
+                      />
+                      <span className="truncate font-medium" title={t.name}>
+                        {t.name}
+                      </span>
+                    </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <UsageMeter count={t.usageCount} max={maxUsage} />
+                      <div className="flex items-center">
+                        <RowActions
+                          tag={t}
+                          canMerge={canMerge}
+                          onEdit={openEdit}
+                          onMerge={openMerge}
+                          onDelete={setConfirm}
+                        />
+                      </div>
+                    </div>
+                  </li>
                 ))}
-              </TableBody>
-            </Table>
+              </ul>
+
+              {/* ≥640px: tabel penuh — fokus Nama, Pemakaian, Aksi (tanpa slug). */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableCaption>
+                    Daftar label soal beserta jumlah pemakaiannya.
+                  </TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[45%]">Label</TableHead>
+                      <TableHead>Pemakaian</TableHead>
+                      <TableHead className="w-28 text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="w-full max-w-0 font-medium">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <TagIcon
+                              aria-hidden
+                              className="size-3.5 shrink-0 text-muted-foreground"
+                            />
+                            <span className="truncate" title={t.name}>
+                              {t.name}
+                            </span>
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <UsageMeter count={t.usageCount} max={maxUsage} />
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          <RowActions
+                            tag={t}
+                            canMerge={canMerge}
+                            onEdit={openEdit}
+                            onMerge={openMerge}
+                            onDelete={setConfirm}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

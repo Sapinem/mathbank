@@ -15,10 +15,15 @@ import { cn } from "@/lib/utils";
  *  - level 3 (SubTopik) → paling ringan
  */
 
+/**
+ * MAT-131B (Tahap A): `slug` **dihapus** dari kontrak UI.
+ * Identitas & navigasi tag sepenuhnya memakai `id` kanonik + `name` tampilan —
+ * lihat `topicFilterHref`. Nilai `slug` legacy (bila masih terkirim API) sengaja
+ * diabaikan; Tahap B akan membuangnya dari skema.
+ */
 export interface TopicTagItem {
   id: string;
   name: string;
-  slug?: string | null;
   level?: number | null;
   isPrimary?: boolean | null;
 }

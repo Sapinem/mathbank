@@ -14,10 +14,15 @@ async function apiFetch<T>(url: string): Promise<T> {
   return json.data as T;
 }
 
+/**
+ * MAT-131B (Tahap A): `slug` **deprecated & opsional** pada topik.
+ * Identitas kanonik = `id`; UI tidak boleh bergantung pada `slug`
+ * (bisa `null` untuk baris baru, hilang total di Tahap B).
+ */
 export interface TopicRow {
   id: string;
   name: string;
-  slug: string;
+  slug?: string | null;
   parentId: string | null;
   level: number;
 }
