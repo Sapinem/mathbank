@@ -1,14 +1,16 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 📊 terbit 2026-10-05 (MAT-33) — audit pedagogis database MathBank.
+> **Status:** 🔄 diperbarui 2026-10-21 (MAT-35, Batch 1 selesai) — enrichment distractor rationale aktif.
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
-> **Lingkup:** **read-only** atas tabel `questions` & `question_options` (plus `bundles`/`bundle_items` sebagai dimensi pengganti topik). Tidak mengubah skema/DB/kode aplikasi.
+> **Lingkup:** read-only audit → enrichment aktif (MAT-35). Cakupan DB sekarang jauh lebih besar dari audit awal MAT-33 (11.867 soal hidup, 9.355 PG). Skrip enrichment: `scripts/curate-distractor-rationale-batch1.ts`, `scripts/curate-essay-rubrics-batch1.ts`.
 > **Skrip inspeksi:** `scripts/audit-pedagogy.ts` (read-only, dapat dijalankan ulang: `npx tsx scripts/audit-pedagogy.ts`).
 > **Standar rujukan:** `SKILL_PEDAGOGY.md` (Haladyna 31 aturan + *Distractor Rationale Mandate*), `docs/SKEMA-DB-DETAIL.md` §`question_options`.
 
 ---
 
 ## 0. Ringkasan Eksekutif (TL;DR)
+
+### Snapshot MAT-33 (2026-10-05) — Baseline Audit
 
 | Metrik | Nilai | Status |
 |--------|------:|:------:|
@@ -20,9 +22,27 @@
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
 
-**Temuan utama:** kolom `distractor_rationale` **belum pernah diisi sama sekali** — bukan hanya kosong, tetapi *tidak ada satu pun baris* yang pernah terisi, baik di DB dev saat ini (0/208) maupun di backup historis `backups/db-data-20261001/question_options.csv` (0/255). Standar pedagogis Math My Id mensyaratkan rationale untuk **setiap** pengecoh, sehingga cakupan saat ini **0 %** dan seluruh 52 butir PG belum memenuhi *Pedagogy Contract*.
+### Snapshot MAT-35 Batch 1 (2026-10-21) — Pasca-Enrichment
 
-**Kabar baik (jalur enrichment murah):** 100 % butir PG **sudah** memiliki `answer_key.explanation` berisi pembahasan lengkap ber-KaTeX, dan **2 butir** di antaranya bahkan sudah memuat analisis per-opsi bergaya `"Cek opsi A: … / Cek opsi B: …"`. Artinya, sebagian besar *distractor rationale* dapat **diturunkan (derive) dari pembahasan yang sudah ada** oleh kurator — bukan ditulis dari nol.
+> ⚠️ DB telah berkembang signifikan sejak MAT-33: 11.867 soal hidup (dari 78), 9.355 PG (dari 52).
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 11.867 | — |
+| Soal pilihan ganda (punya opsi) | 9.355 | — |
+| Opsi pengecoh total | 34.357 | — |
+| **Opsi dengan `distractor_rationale` terisi** | **172** | 🟡 **0,50 %** |
+| **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **43 / 9.355** | 🟡 **0,46 %** |
+| Soal dengan `answer_key.explanation` (pembahasan) terisi | (tidak diaudit ulang) | — |
+| Soal esai dengan rambu penilaian (`answer_key.text`) | 3 | 🟡 dimulai |
+
+**Batch 1 mengisi:**
+- **R2 (auto-ekstraksi):** 33 soal bergaya "Cek opsi X" → 132 rationale otomatis
+- **R3 (manual, bundle Tabel Distribusi Frekuensi):** 10 soal → 40 rationale manual berkualitas tinggi
+- **R5 (rubrik esai):** 3 esai bundle Tabel Distribusi Frekuensi → rubrik poin-per-langkah
+- **Child issues dibuat:** MAT-138 (R1: kontrak skema/validasi UI) dan MAT-139 (R7: pipeline gate)
+
+**Kabar baik (jalur enrichment murah):** DB memiliki 34 soal bergaya "Cek opsi A/B/C/D/E" lengkap (1 sudah di-skip karena hanya cek kunci). Jalur R2 lebih besar dari perkiraan audit awal.
 
 ---
 
