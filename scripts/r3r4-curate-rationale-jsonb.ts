@@ -215,12 +215,14 @@ async function main() {
   console.log(`Mode: ${DRY_RUN ? "DRY RUN (no writes)" : "LIVE UPDATE"}`);
   console.log("Target: questions.data_payload.options[].distractorRationale (JSONB, MAT-144)");
 
-  // Migration check
+  // Migration check (use CASE to avoid array_length on scalar-typed options)
   const migCheck = await sql`
     SELECT COUNT(*) as cnt FROM questions
     WHERE deleted_at IS NULL
       AND data_payload->'options' IS NOT NULL
-      AND jsonb_array_length(data_payload->'options') > 0
+      AND CASE WHEN jsonb_typeof(data_payload->'options') = 'array'
+               THEN jsonb_array_length(data_payload->'options') > 0
+               ELSE FALSE END
   `;
   const migratedCount = Number((migCheck[0] as Record<string, unknown>).cnt);
   console.log(`\nMigration check: ${migratedCount} questions have data_payload.options`);
