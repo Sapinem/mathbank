@@ -12,7 +12,7 @@ import { join } from "node:path";
  *
  * Route diuji lewat pemanggilan handler langsung (jalur nyata), bukan service.
  */
-const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+const url = process.env.TEST_DATABASE_URL; // wajib eksplisit: JANGAN fallback ke DATABASE_URL (cegah tes menulis ke DB dev/prod)
 if (!url) throw new Error("TEST_DATABASE_URL wajib untuk tes integrasi (DB uji).");
 
 // Storage diarahkan ke direktori sementara SEBELUM modul route dimuat.

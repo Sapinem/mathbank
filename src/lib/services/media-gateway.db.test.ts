@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
  * Memverifikasi bahwa jalur NON-ingest (unggah manual, tempel, lepas) memakai
  * jalur yang sama: tersimpan, terdaftar, tertaut, dan bisa dibersihkan.
  */
-const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+const url = process.env.TEST_DATABASE_URL; // wajib eksplisit: JANGAN fallback ke DATABASE_URL (cegah tes menulis ke DB dev/prod)
 if (!url) throw new Error("TEST_DATABASE_URL wajib untuk tes integrasi (DB uji).");
 
 const {

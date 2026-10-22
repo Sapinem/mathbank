@@ -10,7 +10,7 @@ Status ringkas:
 | --- | --- | --- |
 | ACT-08 Relasi Media | ✅ **Selesai & terverifikasi** | `question_media` 1.639 baris · 100% referensi terpetakan |
 | ACT-11 Distribusi Difficulty | ✅ **Selesai & terverifikasi** | 5 level terisi, sebaran 10/25/35/20/10 |
-| ACT-07 Batch Embedding | 🟡 **Berjalan di background** | 4.266/11.867 (35,9%) — runner + watcher aktif, resumable |
+| ACT-07 Batch Embedding | ✅ **Selesai & terverifikasi** | 11.869/11.869 soal aktif (100,0%) · 0 sisa · HNSW 92 MB sehat |
 
 ---
 
@@ -288,6 +288,67 @@ mengembalikan exit code 1 selama masih ada yang belum terpenuhi:
 Cakupan referensi media sengaja dihitung ulang dari `content_markdown`, bukan
 dari `question_media`, supaya tidak sirkular (tidak "lulus" hanya karena tabel
 yang kita isi memang berisi).
+
+---
+
+## ACT-07 — Hasil Akhir (tiket MAT-133)
+
+Runner batch embedding **selesai**: cakupan soal aktif **100%**.
+
+```
+total baris questions                 : 11.891
+aktif (deleted_at IS NULL)            : 11.869
+ter-embed (embedding NOT NULL)        : 11.869  (100,0%)
+sisa aktif                            : 0
+baris tanpa embedding (soft-deleted)  : 22  (sengaja dilewati: WHERE deleted_at IS NULL)
+provenance embedding_model_name       : 11.869 baris 'bge-m3'
+provenance embedding_content_hash     : 11.869 baris (100%)
+dimensi vektor                        : tepat 1 nilai unik = 1024, 0 baris menyimpang
+```
+
+Verifikasi terotomasi (read-only): `./scripts/verify-sprint1-dod.sh` →
+**6 PASS · 0 FAIL · "SEMUA DoD TERPENUHI"** (ACT-08, ACT-11, ACT-07).
+
+Indeks vektor:
+
+```
+idx_questions_embedding_hnsw  hnsw (embedding vector_cosine_ops) m=16 ef_construction=64
+                              indisvalid=t, indisready=t, ukuran 92 MB (tabel 24 MB)
+idx_questions_has_embedding   btree partial WHERE embedding IS NOT NULL
+```
+
+Latensi similarity (top-10, `ORDER BY embedding <=> $1`, 11.869 kandidat):
+
+| Kondisi | Waktu |
+| --- | --- |
+| panggilan pertama (index cold, 340 page read) | ~3.570 ms |
+| hangat, 3 pengukuran berurutan | **1,01 / 1,07 / 1,05 ms** |
+
+Catatan operasional: biaya besar hanya di pembacaan pertama (92 MB indeks belum
+masuk `shared_buffers`). Setelah hangat, kueri similarity ~1 ms sehingga tidak
+perlu caching tambahan di layer aplikasi.
+
+Laporan rinci: `docs/sprint1/ACT-07-EMBEDDING-REPORT.md`.
+
+### Temuan samping: tes integrasi bisa menulis ke DB dev (diperbaiki)
+
+Dua soal `author_id = 'test-admin'` berisi `"Soal vyuh0kxen5"` / `"Soal c3p4o0oojf8"`
+(draft, dibuat 2026-10-21 14:36 WIB) ditemukan di DB **dev** — artefak tes
+integrasi yang lolos ke database yang salah. Akar masalah: 22 berkas
+`*.db.test.ts` memakai
+
+```ts
+const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL; // fallback berbahaya
+```
+
+sehingga menjalankan Vitest langsung (tanpa `pnpm test:db`) menyasar DB dev.
+Pagar `if (!url) throw …` jadi tidak berguna karena `DATABASE_URL` selalu terisi.
+Fallback dihapus di seluruh 22 berkas → tes kini **gagal cepat** tanpa
+`TEST_DATABASE_URL` (dibuktikan: `Error: TEST_DATABASE_URL wajib untuk tes
+integrasi (DB uji)` dan jumlah baris DB dev tidak berubah 11.891 → 11.891).
+Jalur resmi `pnpm test:db` tetap hijau (35/35 tes `question-service.db.test.ts`).
+Dua baris draft `test-admin` dibiarkan (tidak dihapus) — bukan milik saya untuk
+dihapus; kandidat soft-delete oleh pemilik data.
 
 ---
 

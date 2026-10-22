@@ -21,7 +21,7 @@ import { ConflictError, NotFoundError } from "@/lib/auth/guards";
  * Tes INTEGRASI paket soal (M7) — DB uji nyata.
  * Fokus: urutan item, stimulus 1×, RESTRICT hapus soal, duplikasi, soft-delete.
  */
-const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+const url = process.env.TEST_DATABASE_URL; // wajib eksplisit: JANGAN fallback ke DATABASE_URL (cegah tes menulis ke DB dev/prod)
 if (!url) throw new Error("TEST_DATABASE_URL wajib untuk tes integrasi (DB uji).");
 const sql = postgres(url, { max: 4 });
 

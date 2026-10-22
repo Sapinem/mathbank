@@ -4,7 +4,7 @@ import { mergeTags, createTag, listTags } from "./taxonomy-service";
 import { createQuestion } from "./question-service";
 import type { Actor } from "@/lib/auth/actor";
 
-const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+const url = process.env.TEST_DATABASE_URL; // wajib eksplisit: JANGAN fallback ke DATABASE_URL (cegah tes menulis ke DB dev/prod)
 if (!url) throw new Error("TEST_DATABASE_URL wajib untuk tes integrasi (DB uji).");
 const sql = postgres(url, { max: 4 });
 
