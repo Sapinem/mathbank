@@ -94,3 +94,131 @@ describe("contracts/question", () => {
     expect(() => listQuestionsQuerySchema.parse({ limit: "500" })).toThrow();
   });
 });
+
+// ── MAT-146 · Gerbang Tulis Wajib ────────────────────────────────────────────
+import {
+  enforceQuestionWriteGate,
+  normalizeQuestionWritePayload,
+  QuestionPayloadValidationError,
+} from "./question";
+
+describe("enforceQuestionWriteGate — MAT-146", () => {
+  const opts = (labels: string[], correct: string[]) =>
+    labels.map((label, i) => ({
+      label,
+      contentMarkdown: `isi ${label}`,
+      isCorrect: correct.includes(label),
+      orderIndex: i,
+    }));
+
+  it("menormalkan opsi relasional → data_payload.options + correctOptionIds", () => {
+    const r = enforceQuestionWriteGate({
+      questionType: "single_choice",
+      dataPayload: {},
+      answerKey: {},
+      options: opts(["A", "B", "C"], ["B"]),
+    });
+    expect(r.dataPayload.type).toBe("multiple_choice");
+    expect(r.dataPayload.options).toEqual([
+      { id: "A", contentMarkdown: "isi A" },
+      { id: "B", contentMarkdown: "isi B" },
+      { id: "C", contentMarkdown: "isi C" },
+    ]);
+    expect(r.answerKey.correctOptionIds).toEqual(["B"]);
+    // mirror legacy tetap ada (dedup + ekspor Moodle)
+    expect(r.answerKey.correct).toEqual(["B"]);
+  });
+
+  it("checkbox → complex_multiple_choice", () => {
+    const r = enforceQuestionWriteGate({
+      questionType: "multiple_choice_checkbox",
+      dataPayload: {},
+      answerKey: {},
+      options: opts(["A", "B", "C"], ["A", "C"]),
+    });
+    expect(r.dataPayload.type).toBe("complex_multiple_choice");
+    expect(r.answerKey.correctOptionIds).toEqual(["A", "C"]);
+  });
+
+  it("menolak < 2 opsi (Haladyna Rule 2) dengan 422 + issues", () => {
+    try {
+      enforceQuestionWriteGate({
+        questionType: "single_choice",
+        dataPayload: {},
+        answerKey: {},
+        options: opts(["A"], ["A"]),
+      });
+      throw new Error("seharusnya melempar");
+    } catch (e) {
+      expect(e).toBeInstanceOf(QuestionPayloadValidationError);
+      const err = e as QuestionPayloadValidationError;
+      expect(err.httpStatus).toBe(422);
+      expect(err.code).toBe("VALIDATION_ERROR");
+      expect(err.issues.length).toBeGreaterThan(0);
+      expect(err.message).toMatch(/Minimal 2 opsi/);
+    }
+  });
+
+  it("menolak frasa terlarang 'semua di atas' (Haladyna Rule 5)", () => {
+    expect(() =>
+      enforceQuestionWriteGate({
+        questionType: "single_choice",
+        dataPayload: {},
+        answerKey: {},
+        options: [
+          { label: "A", contentMarkdown: "1", isCorrect: true, orderIndex: 0 },
+          {
+            label: "B",
+            contentMarkdown: "Semua jawaban di atas benar",
+            isCorrect: false,
+            orderIndex: 1,
+          },
+        ],
+      }),
+    ).toThrow(QuestionPayloadValidationError);
+  });
+
+  it("envelope: answer_key bertipe salah ditolak", () => {
+    expect(() =>
+      enforceQuestionWriteGate({
+        questionType: "single_choice",
+        dataPayload: {},
+        answerKey: { correctOptionIds: 42 },
+      }),
+    ).toThrow(QuestionPayloadValidationError);
+  });
+
+  it("draft tanpa opsi & tanpa kunci tetap boleh (jalur legacy/ingest)", () => {
+    const r = enforceQuestionWriteGate({
+      questionType: "essay",
+      dataPayload: {},
+      answerKey: {},
+    });
+    expect(r.dataPayload).toEqual({});
+    expect(r.answerKey).toEqual({});
+  });
+
+  it("status ready memicu kontrak rilis (distractor rationale wajib)", () => {
+    expect(() =>
+      enforceQuestionWriteGate({
+        questionType: "single_choice",
+        dataPayload: {},
+        answerKey: {},
+        options: opts(["A", "B"], ["A"]),
+        status: "ready",
+      }),
+    ).toThrow(/kontrak pedagogis/i);
+  });
+
+  it("normalisasi eksplisit: correct string → array, explanation ⇄ explanationMarkdown", () => {
+    const r = normalizeQuestionWritePayload({
+      questionType: "single_choice",
+      dataPayload: {},
+      answerKey: { correct: "A", explanation: "Pembahasan" },
+    });
+    expect(r.answerKey.correct).toEqual(["A"]);
+    expect(r.answerKey.correctOptionIds).toEqual(["A"]);
+    expect(r.answerKey.explanationMarkdown).toBe("Pembahasan");
+    expect(r.answerKey.explanation).toBe("Pembahasan");
+  });
+});

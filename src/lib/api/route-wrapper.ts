@@ -260,7 +260,9 @@ function errorResponse(
             details: err.issues,
           },
         },
-        { status: 400 },
+        {
+          status: (err as { httpStatus?: number }).httpStatus ?? 400,
+        },
       ),
     );
   }

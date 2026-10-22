@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { QUESTION_STATUSES } from "@/lib/fsm/question-fsm";
 import {
   questionDataPayloadSchema,
@@ -146,16 +146,20 @@ export const PAYLOAD_TYPE_BY_QUESTION_TYPE = {
 /** Tipe payload yang opsinya disimpan di `data_payload.options`. */
 const OPTION_PAYLOAD_TYPES = new Set(["multiple_choice", "complex_multiple_choice"]);
 
-/** Galat gerbang tulis soal — HTTP 422, kode `VALIDATION_ERROR`. */
-export class QuestionPayloadValidationError extends Error {
+/**
+ * Galat gerbang tulis soal — HTTP 422, kode `VALIDATION_ERROR`.
+ *
+ * Turunan `ZodError` supaya pemeta galat API (`route-wrapper.ts`) otomatis
+ * menyertakan `details.issues` per-field, tidak pernah jatuh ke 500.
+ * `httpStatus` dibaca pemeta tersebut untuk memilih 422 (bukan 400).
+ */
+export class QuestionPayloadValidationError extends ZodError {
   readonly code = "VALIDATION_ERROR";
   readonly httpStatus = 422;
-  constructor(
-    message: string,
-    readonly issues: z.ZodIssue[] = [],
-  ) {
-    super(message);
+  constructor(message: string, issues: z.ZodIssue[] = []) {
+    super(issues);
     this.name = "QuestionPayloadValidationError";
+    this.message = message;
   }
 }
 
