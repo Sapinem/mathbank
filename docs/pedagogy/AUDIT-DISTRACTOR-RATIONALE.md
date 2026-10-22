@@ -1,8 +1,8 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-21 (MAT-35, Batch 1 selesai) — enrichment distractor rationale aktif.
+> **Status:** 🔄 diperbarui 2026-10-22 (MAT-35, Batch 2 selesai) — enrichment distractor rationale & rubrik esai aktif.
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
-> **Lingkup:** read-only audit → enrichment aktif (MAT-35). Cakupan DB sekarang jauh lebih besar dari audit awal MAT-33 (11.867 soal hidup, 9.355 PG). Skrip enrichment: `scripts/curate-distractor-rationale-batch1.ts`, `scripts/curate-essay-rubrics-batch1.ts`.
+> **Lingkup:** read-only audit → enrichment aktif (MAT-35). Cakupan DB sekarang jauh lebih besar dari audit awal MAT-33 (11.869 soal hidup, 9.358 PG). Skrip enrichment: `scripts/curate-distractor-rationale-batch1.ts`, `scripts/curate-essay-rubrics-batch1.ts`, `scripts/curate-distractor-rationale-batch2.ts`.
 > **Skrip inspeksi:** `scripts/audit-pedagogy.ts` (read-only, dapat dijalankan ulang: `npx tsx scripts/audit-pedagogy.ts`).
 > **Standar rujukan:** `SKILL_PEDAGOGY.md` (Haladyna 31 aturan + *Distractor Rationale Mandate*), `docs/SKEMA-DB-DETAIL.md` §`question_options`.
 
@@ -21,6 +21,27 @@
 | **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **0 / 52** | 🔴 **0,00 %** |
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
+
+### Snapshot MAT-35 Batch 2 (2026-10-22) — Pasca-Enrichment Batch 2
+
+> ⚠️ DB terus berkembang: 11.869 soal hidup, 9.358 PG, 2.181 esai.
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 11.869 | — |
+| Soal pilihan ganda (punya opsi) | 9.358 | — |
+| Opsi pengecoh total | 34.357 | — |
+| **Opsi dengan `distractor_rationale` terisi** | **188** | 🟡 **0,55 %** |
+| **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **47+ / 9.358** | 🟡 **~0,50 %** |
+| Soal esai dengan rambu penilaian (`answer_key.text`) | **12** | 🟡 dimulai |
+
+**Batch 2 mengisi:**
+- **R4 (manual, Barisan & Deret Geometri):** 4 soal → 16 rationale reverse-engineered dari opsi & pembahasan
+- **R5 (rubrik esai):** 5 esai bundle Barisan & Deret → rubrik poin-per-langkah (BA, DA, BG, S_n, deret aritmetika olympic)
+
+**Kumulatif sejak Batch 1:**
+- Total rationale ditulis: 188 (baseline 0)
+- Total rubrik esai: 12 (baseline 0)
 
 ### Snapshot MAT-35 Batch 1 (2026-10-21) — Pasca-Enrichment
 
