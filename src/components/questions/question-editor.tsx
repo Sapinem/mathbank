@@ -58,12 +58,19 @@ import type { PublicQuestion } from "@/lib/services/question-service";
 /**
  * Editor soal (M4c) — form + pratinjau KaTeX.
  *
- * Menangani seluruh 11 tipe: tipe opsi (A–E dengan radio/checkbox kunci) dan
- * tipe teks (`short_answer`/`essay` via `answer_key.text`). Menyimpan sebagai
- * draf (`draft`) atau mengirim ke telaah (`review`).
+ * Single Table + Hybrid JSONB (MAT-144/146): seluruh isi soal ditulis ke
+ * `data_payload` + `answer_key` — tidak ada tabel `question_options`.
  *
- * SENGAJA satu komponen (bukan 11) — perbedaan antar-tipe kecil (kunci opsi vs
- * teks) dan berbagi 90% field. Lihat kontrak `contracts/question.ts`.
+ * - Tipe opsi (`single_choice`, `assertion_reason`, `combination_1234`,
+ *   `quantitative_pq`, `data_sufficiency`, `multiple_choice_checkbox`) →
+ *   `data_payload.options[]` + `answer_key.correctOptionIds`.
+ * - `matrix_grid` → `data_payload {labels, rows[{text,answer}]}` (kunci per baris).
+ * - `matching` → `data_payload {premises, responses}` + `answer_key.matchingPairs`.
+ * - `short_answer` / `essay` → `data_payload.rubricGuidelines` +
+ *   `answer_key.acceptedAnswers` / `answer_key.scoringRubric`.
+ *
+ * SENGAJA satu komponen (bukan 11) — perbedaan antar-tipe kecil dan berbagi
+ * 90% field. Lihat kontrak `contracts/question.ts` + `validations/question-payload.ts`.
  */
 
 const OPTION_TYPES = [

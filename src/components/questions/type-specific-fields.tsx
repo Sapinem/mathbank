@@ -15,7 +15,7 @@ import { Field } from "@/components/ui/field-group";
  * Tipe lain cukup `content_markdown` (+ opsi A–E di `data_payload.options`).
  *
  * ⚠️ `matrix_grid` sengaja memakai bentuk pipeline ingest (`defantri-tf.ts`),
- * BUKAN bentuk kanonik MAT-145 (`columns` + `statements`): 262 soal tersimpan
+ * BUKAN bentuk kanonik MAT-145 (`columns` + `statements`): 330 soal tersimpan
  * memakai `{labels, rows}`, dan `MatrixGridView` (halaman detail) membaca bentuk
  * itu. Menulis bentuk kanonik akan membuat soal matriks tampil kosong. Karena
  * payload matriks tidak menyertakan kunci `type`, gerbang tulis lapis 2
