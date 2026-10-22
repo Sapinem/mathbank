@@ -1,11 +1,10 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-22 (MAT-35, Batch 4 — R5 esai 38/2181 + R6 taksonomi 8.130 soal dikoreksi).
+> **Status:** 🔄 diperbarui 2026-10-22 (MAT-35, Batch 5 — R2/R3/R4 JSONB live, fix double-encoded, 51 PG dengan rationale / 237 entries).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
-> **Lingkup:** enrichment aktif (MAT-35). DB: 11.869 soal hidup, 9.358 PG, 2.181 esai.
+> **Lingkup:** enrichment aktif (MAT-35). DB: 11.869 soal hidup, 9.335 PG, 2.181 esai.
 > **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
-> **Skrip JSONB-aligned:** `scripts/r2-extract-rationale-jsonb.ts` (R2), `scripts/r3r4-curate-rationale-jsonb.ts` (R3/R4), `scripts/r5-essay-rubric-jsonb.ts` (R5), `scripts/r5-migrate-rubric-field.sql` (migrasi text→scoringRubric).
-> **Skrip lama (relasional):** `scripts/curate-distractor-rationale-batch1.ts`, `scripts/curate-distractor-rationale-batch2.ts` — valid sampai migrasi MAT-144 selesai.
+> **Skrip JSONB-aligned:** `scripts/r2-extract-rationale-jsonb.ts` (R2), `scripts/r3r4-curate-rationale-jsonb.ts` (R3/R4), `scripts/r4-barisan-deret-rationale.ts` (R4 Batch 1), `scripts/r5-essay-rubric-jsonb.ts` (R5), `scripts/fix-double-encoded-options.ts` (data fix).
 > **Standar rujukan:** `SKILL_PEDAGOGY.md` (Haladyna 31 aturan + *Distractor Rationale Mandate*), `src/lib/validations/question-payload.ts` (Zod schema MAT-145), `docs/architecture/QUESTION_PAYLOAD_DECISION.md` (MAT-144).
 
 ---
@@ -23,6 +22,38 @@
 | **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **0 / 52** | 🔴 **0,00 %** |
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
+
+### Snapshot MAT-35 Batch 5 (2026-10-22) — R2/R3/R4 JSONB Live + Data Fix
+
+> MAT-144 migrasi selesai — `data_payload.options` telah populer untuk 9.324 soal PG.
+> R2, R3, R4 JSONB scripts dijalankan. 37 soal dengan double-encoded options diperbaiki via SQL.
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 11.869 | — |
+| Soal pilihan ganda (`single_choice`) | 9.335 | — |
+| Soal esai | 2.181 | — |
+| **PG dengan ≥1 `distractorRationale` di JSONB** | **51** | 🟡 **0,55 %** |
+| **Total entries `distractorRationale` di JSONB** | **237** | 🟡 — |
+| Esai dengan `answer_key.scoringRubric` terisi | **38** | 🟡 **1,74 %** |
+| Double-encoded `data_payload.options` (data quality) | **0** | ✅ diperbaiki |
+
+**Batch 5 mengerjakan:**
+- **R2 (JSONB live)**: 33 entries dari explanations bergaya "Cek opsi X" — 34 soal diproses
+- **R3 (JSONB live)**: 4 entries untuk bundle Distribusi Peluang (1 soal valid dari 3 ID)
+- **R4 Batch 1**: 12 entries untuk 3 soal Barisan & Deret (ID nyata dari DB)
+  - Script baru: `scripts/r4-barisan-deret-rationale.ts`
+  - Topik: BG vs BA gabungan, modifikasi barisan, jumlah BG 4 suku dengan kondisi
+- **Data quality fix**: 37 soal double-encoded `data_payload.options` (string → JSONB array)
+  - 37 soal ini sudah punya rationale dari Batch 2 — kini accessible kembali
+- **Bug fix**: `scripts/r3r4-curate-rationale-jsonb.ts` — CASE guard untuk PG18 `jsonb_array_length`
+
+**Blocker selesai:**
+- ✅ MAT-144 migrasi sudah berjalan — R2/R3/R4 JSONB tidak lagi blocked
+
+**Remaining R4:**
+- 5 ID placeholder di `r3r4-curate-rationale-jsonb.ts` perlu diganti ID nyata dari DB
+- Butuh kurasi manual: ~100+ soal PG prioritas (bundle Distribusi Peluang, Barisan & Deret lanjutan)
 
 ### Snapshot MAT-35 Batch 4 (2026-10-22) — R5 Rubrik Esai + R6 Koreksi Taksonomi
 
