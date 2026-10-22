@@ -76,8 +76,22 @@ interface CandidateRow {
   authorId: string | null;
 }
 
+/**
+ * Ambil pesan galat yang bisa dibaca operator.
+ *
+ * KENAPA tidak `err instanceof Error` saja: `QuestionPayloadValidationError`
+ * mewarisi `ZodError` (zod v4) yang **tidak lolos** `instanceof Error` pada
+ * beberapa jalur modul. Akibatnya penolakan gerbang pedagogis diringkas jadi
+ * "Gagal diproses." dan operator kehilangan alasan konkretnya (opsi mana yang
+ * kurang rationale, field mana yang kosong). Kontrak galat harus menyampaikan
+ * sebab, bukan menelannya.
+ */
 function errMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
+  if (err instanceof Error && err.message) return err.message;
+  if (err && typeof err === "object") {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
   return "Gagal diproses.";
 }
 

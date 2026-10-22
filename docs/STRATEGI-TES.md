@@ -134,16 +134,53 @@ Sebuah milestone **selesai** hanya bila:
 Prinsip: **tes DB memakai database terpisah**, dijalankan sekali per suite.
 
 ```bash
-# DB uji (sekali setup; jangan pakai DB dev 'mathbank')
+# 1) DB uji (sekali setup; jangan pakai DB dev 'mathbank')
 sudo -u postgres psql -p 5433 -c "CREATE DATABASE mathbank_test OWNER mathbank;"
 sudo -u postgres psql -p 5433 -d mathbank_test -c \
   "CREATE EXTENSION IF NOT EXISTS vector; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS pgcrypto;"
-DATABASE_URL="postgresql://mathbank:...@localhost:5433/mathbank_test" pnpm db:migrate
+DATABASE_URL="postgresql://mathbank:$MB_PASSWORD@localhost:5433/mathbank_test" pnpm db:migrate
 ```
 
 - Skrip tes membaca `TEST_DATABASE_URL` (fallback `DATABASE_URL`).
 - **Jangan** jalankan tes destruktif terhadap DB dev.
 - Untuk skema, andalkan `pnpm db:verify` (bukan tes Vitest) — sudah menutup jumlah objek & objek kritis.
+
+### 5.1 Kredensial basi → `password authentication failed for user "mathbank"`
+
+Gejala: `psql "$TEST_DATABASE_URL" -c 'select 1'` gagal dengan `FATAL: password
+authentication failed for user "mathbank"`, padahal server hidup (role proyek
+lain di klaster yang sama bisa connect). Artinya **password role di klaster
+sudah bergeser** dari nilai di `.env` — bukan server mati, bukan DB hilang.
+
+Perbaikan (pilih satu jalur; keduanya idempoten):
+
+```bash
+# Jalur A — punya akses superuser OS (postgres)
+sudo -u postgres psql -p 5433 -c "ALTER ROLE mathbank WITH PASSWORD 'PASSWORD_BARU';"
+
+# Jalur B — tanpa sudo: pakai role superuser lain yang kredensialnya masih valid
+# (mis. proyek tetangga di klaster yang sama). JANGAN cetak password ke log.
+psql "postgresql://SUPERUSER:RAHASIA@localhost:5433/postgres" \
+  -c "ALTER ROLE mathbank WITH PASSWORD 'PASSWORD_BARU';"
+```
+
+Lalu **samakan** `.env` (`DATABASE_URL` + `TEST_DATABASE_URL`) dengan
+`PASSWORD_BARU`. `.env.example` hanya berisi placeholder `GANTI_PASSWORD` —
+jangan pernah menuliskan password asli (atau `***`, yang bukan placeholder
+valid) di berkas yang di-commit.
+
+Verifikasi (harus hijau sebelum lanjut):
+
+```bash
+psql "$TEST_DATABASE_URL" -c "select current_user, current_database()"
+psql "$TEST_DATABASE_URL" -c "select extname from pg_extension where extname in ('vector','pg_trgm')"
+psql "$TEST_DATABASE_URL" -c "select pg_get_userbyid(datdba) from pg_database where datname='mathbank_test'"
+pnpm test:db
+```
+
+Catatan operasional: bila `pnpm test:db` sekarang berjalan tetapi ada tes
+gagal, itu **bug kontrak/tes**, bukan kredensial. Kredensial yang benar
+membuka jalan verifikasi; ia tidak menjamin suite hijau dengan sendirinya.
 
 ---
 

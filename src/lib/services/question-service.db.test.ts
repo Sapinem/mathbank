@@ -64,6 +64,39 @@ function baseInput(over: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * Input soal PG yang **memenuhi kontrak rilis** (MAT-145/146/150).
+ *
+ * KENAPA ada: `baseInput()` sengaja minimal (tanpa opsi) untuk tes draft.
+ * Sejak MAT-150, transisi → `ready` menegakkan kontrak pedagogis lewat
+ * `assertReleaseContract()`; soal `single_choice` tanpa opsi memang **wajib
+ * ditolak** (bukan bug gerbang). Tes yang ingin membuktikan "transisi BERHASIL"
+ * karena itu harus memakai soal yang benar-benar layak rilis: ≥2 opsi, kunci
+ * `correctOptionIds`, dan `distractorRationale` ≥40 karakter pada pengecoh.
+ */
+function releasableInput(over: Record<string, unknown> = {}) {
+  return baseInput({
+    contentMarkdown: "Berapa $1+1$?",
+    options: [
+      { label: "A", contentMarkdown: "2", isCorrect: true, orderIndex: 0 },
+      {
+        label: "B",
+        contentMarkdown: "1",
+        isCorrect: false,
+        orderIndex: 1,
+        // (a) nama kesalahan — (b) langkah salah — (c) nilai keliru
+        distractorRationale:
+          "Siswa salah menjumlahkan karena hanya menyalin bilangan pertama — tidak menjumlahkan kedua suku, sehingga hasil keliru 1 bukan 2.",
+      },
+    ],
+    answerKey: {
+      correctOptionIds: "A",
+      explanationMarkdown: "$1+1=2$ karena dua satuan digabung menjadi dua.",
+    },
+    ...over,
+  });
+}
+
 /** Bersihkan data soal + audit antar-tes. */
 async function cleanAll() {
   await sql`DELETE FROM question_topics`;
@@ -254,10 +287,9 @@ describe("changeQuestionStatus — FSM + kesiapan", () => {
   });
 
   it("review → ready DENGAN answer_key BERHASIL", async () => {
-    const q = await createQuestion(
-      baseInput({ answerKey: { correct: "A" } }),
-      admin,
-    );
+    // MAT-150: soal PG tanpa opsi memang ditolak gerbang rilis, jadi pakai
+    // soal yang benar-benar layak rilis (opsi + pengecoh ber-rasional).
+    const q = await createQuestion(releasableInput(), admin);
     await changeQuestionStatus(q.id, "review", admin);
     const upd = await changeQuestionStatus(q.id, "ready", admin);
     expect(upd.status).toBe("ready");
@@ -472,10 +504,7 @@ describe("M4 — perbaikan audit (T-M4-3/4/5)", () => {
 
   it("T-M4-3: PENELAAH bisa review → ready atas soal ORANG LAIN", async () => {
     // Soal ditulis guru, disetujui penelaah (bukan pemiliknya).
-    const q = await createQuestion(
-      baseInput({ answerKey: { correct: ["A"] } }),
-      teacher,
-    );
+    const q = await createQuestion(releasableInput(), teacher);
     await changeQuestionStatus(q.id, "review", admin);
     const upd = await changeQuestionStatus(q.id, "ready", reviewer);
     expect(upd.status).toBe("ready");
@@ -491,10 +520,7 @@ describe("M4 — perbaikan audit (T-M4-3/4/5)", () => {
   });
 
   it("T-M4-5: transisi tak sah ditolak FSM (sabuk pertama)", async () => {
-    const q = await createQuestion(
-      baseInput({ answerKey: { correct: ["A"] } }),
-      admin,
-    );
+    const q = await createQuestion(releasableInput(), admin);
     await changeQuestionStatus(q.id, "review", admin);
     await changeQuestionStatus(q.id, "ready", admin);
     // ready → draft TIDAK ada di TRANSITIONS → ditolak.

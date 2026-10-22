@@ -20,13 +20,25 @@ function base(over: Record<string, unknown> = {}) {
     grade: "11",
     contentMarkdown: `Soal ${Math.random().toString(36).slice(2)}`,
     dataPayload: {},
-    answerKey: { correct: ["A"] },
+    // MAT-150: kontrak rilis mewajibkan `explanationMarkdown` (pembahasan) —
+    // tanpa itu `set_ready` (satuan maupun massal) ditolak gerbang pedagogis.
+    answerKey: { correct: ["A"], explanationMarkdown: "1 + 1 = 2 karena dua satuan digabung." },
     status: "draft" as const,
     childOrder: 0,
     // MAT-146: Haladyna Rule 2 → minimal 2 opsi.
+    // MAT-150: pengecoh wajib ber-`distractorRationale` (≥40 karakter) agar
+    // soal LOLOS kontrak rilis — jalur massal (`set_ready`) memakai gerbang
+    // yang sama dengan jalur satuan.
     options: [
       { label: "A", contentMarkdown: "1", isCorrect: true, orderIndex: 0 },
-      { label: "B", contentMarkdown: "2", isCorrect: false, orderIndex: 1 },
+      {
+        label: "B",
+        contentMarkdown: "2",
+        isCorrect: false,
+        orderIndex: 1,
+        distractorRationale:
+          "Siswa keliru menjumlahkan dua suku karena menambahkan satu ke bilangan yang salah — langkahnya melewati suku pertama, hasil keliru 2 bukan 1.",
+      },
     ],
     topicIds: [],
     tagIds: [],
@@ -118,6 +130,25 @@ describe("bulkQuestionAction (G3.1)", () => {
     expect(res.ok).toHaveLength(0);
     expect(res.failed).toHaveLength(1);
   });
+
+  it("penolakan gerbang pedagogis menyampaikan SEBABNYA, bukan 'Gagal diproses.'", async () => {
+    // Soal `review` dengan pengecoh tanpa `distractorRationale` → wajib ditolak
+    // `assertReleaseContract()`. Regresi: `errMessage()` dulu menelan pesan
+    // (ZodError zod v4 tak lolos `instanceof Error`) sehingga operator hanya
+    // melihat "Gagal diproses." tanpa tahu field mana yang salah.
+    const a = await makeAt("review", {
+      options: [
+        { label: "A", contentMarkdown: "1", isCorrect: true, orderIndex: 0 },
+        { label: "B", contentMarkdown: "2", isCorrect: false, orderIndex: 1 },
+      ],
+    });
+    const res = await bulkQuestionAction([a.id], "set_ready", admin);
+    expect(res.ok).toHaveLength(0);
+    expect(res.failed).toHaveLength(1);
+    expect(res.failed[0].error).not.toBe("Gagal diproses.");
+    expect(res.failed[0].error.toLowerCase()).toContain("distractorrationale");
+    expect((await getQuestionInternal(a.id))?.status).toBe("review");
+  });
 });
 
 /**
@@ -129,6 +160,26 @@ describe("bulkQuestionAction — kinerja 200 soal (ACT-05)", () => {
     const N = 200;
     // Seed cepat lewat SQL langsung (bukan lewat service) agar tes mengukur
     // aksi massal, bukan biaya pembuatan soal.
+    // MAT-150: seed WAJIB memenuhi kontrak rilis (opsi + rationale pengecoh +
+    // explanationMarkdown), kalau tidak `set_ready` menolak semua butir dan
+    // tes ini mengukur gerbang, bukan kinerja.
+    const seedPayload = JSON.stringify({
+      type: "multiple_choice",
+      shuffleOptions: true,
+      options: [
+        { id: "A", contentMarkdown: "2" },
+        {
+          id: "B",
+          contentMarkdown: "1",
+          distractorRationale:
+            "Siswa hanya menyalin suku pertama tanpa menjumlahkan — langkah salah, hasil keliru 1 bukan 2.",
+        },
+      ],
+    });
+    const seedAnswer = JSON.stringify({
+      correctOptionIds: "A",
+      explanationMarkdown: "1 + 1 = 2 karena dua satuan digabung.",
+    });
     const ids: string[] = [];
     for (let i = 0; i < N; i++) {
       const [row] = await sql<{ id: string }[]>`
@@ -136,7 +187,7 @@ describe("bulkQuestionAction — kinerja 200 soal (ACT-05)", () => {
           (question_type, difficulty, cognitive_level, grade, content_markdown,
            data_payload, answer_key, status, child_order)
         VALUES ('single_choice', 3, 'remember', '11', ${"Perf " + i},
-                '{}'::jsonb, '{"correct":["A"]}'::jsonb, 'review', 0)
+                ${seedPayload}::jsonb, ${seedAnswer}::jsonb, 'review', 0)
         RETURNING id`;
       ids.push(row.id);
     }
