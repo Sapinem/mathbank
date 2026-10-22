@@ -1,10 +1,12 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-22 (MAT-35, Batch 5 — R2/R3/R4 JSONB live, fix double-encoded, 51 PG dengan rationale / 237 entries).
+> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 6 — R4 7 soal baru, fix sql.json double-encoding bug, 58 SC dengan rationale / 265 entries).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
-> **Lingkup:** enrichment aktif (MAT-35). DB: 11.869 soal hidup, 9.335 PG, 2.181 esai.
+> **Lingkup:** enrichment aktif (MAT-35). DB: 11.891 soal hidup, 9.336 SC, 2.202 esai.
 > **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
-> **Skrip JSONB-aligned:** `scripts/r2-extract-rationale-jsonb.ts` (R2), `scripts/r3r4-curate-rationale-jsonb.ts` (R3/R4), `scripts/r4-barisan-deret-rationale.ts` (R4 Batch 1), `scripts/r5-essay-rubric-jsonb.ts` (R5), `scripts/fix-double-encoded-options.ts` (data fix).
+> **Skrip JSONB-aligned:** `scripts/r2-extract-rationale-jsonb.ts` (R2), `scripts/r3r4-curate-rationale-jsonb.ts` (R3/R4), `scripts/r4-barisan-deret-rationale.ts` (R4 Batch 1), `scripts/r4-batch2-rationale.ts` (R4 Batch 2), `scripts/r5-essay-rubric-jsonb.ts` (R5), `scripts/fix-double-encoded-options.ts` (data fix).
+> **Bug fix (Batch 6):** semua skrip R2/R3/R4 kini menggunakan `sql.json()` bukan `JSON.stringify(...):jsonb` — mencegah double-encoding JSONB.
+> **MAT-151:** skrip legacy `question_options` sudah dihapus; `audit-pedagogy.ts` sepenuhnya JSONB. `question_options_mat146_backup` masih ada (43.245 baris) — siap di-drop (tidak dipakai skrip aktif, MAT-149 invarian).
 > **Standar rujukan:** `SKILL_PEDAGOGY.md` (Haladyna 31 aturan + *Distractor Rationale Mandate*), `src/lib/validations/question-payload.ts` (Zod schema MAT-145), `docs/architecture/QUESTION_PAYLOAD_DECISION.md` (MAT-144).
 
 ---
@@ -22,6 +24,41 @@
 | **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **0 / 52** | 🔴 **0,00 %** |
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
+
+### Snapshot MAT-35 Batch 6 (2026-10-23) — R4 Batch 2 + Bug Fix sql.json
+
+> Merespons MAT-151 (cleanup skrip legacy). Semua skrip R2/R3/R4 di-patch ke `sql.json()`.
+> Bug double-encoding `JSON.stringify(...):jsonb` yang menghasilkan string JSONB alih-alih array diperbaiki.
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 11.891 | — |
+| Soal single_choice | 9.336 | — |
+| Soal esai | 2.202 | — |
+| **SC dengan ≥1 `distractorRationale` di JSONB** | **58** | 🟡 **0,62 %** |
+| **Total entries `distractorRationale` di JSONB** | **265** | 🟡 — |
+| Esai dengan `answer_key.scoringRubric` terisi | **38** | 🟡 **1,73 %** |
+| Double-encoded `data_payload.options` | **0** | ✅ bersih |
+| Backup table `question_options_mat146_backup` | ada (43.245 baris) | 🟡 siap di-drop |
+
+**Batch 6 mengerjakan:**
+- **R4 Batch 2** (`scripts/r4-batch2-rationale.ts`): 7 soal baru dikurasi
+  - Eksponensial: 3 soal (2^x=1/32, 2^{x+1}=8, 5^{4+x}=0.2^x)
+  - Geometri: 2 soal (segi enam beraturan + Pythagoras persegi bertumpuk)
+  - Aljabar Linear: 1 soal (identifikasi persamaan bukan linear)
+  - Teorema Pick: 1 soal (tiga segitiga luas sama di grid)
+  - 28 entries baru, 265-373 chars per rationale, Haladyna R21 ✓
+- **Bug fix kritis**: `JSON.stringify(...):jsonb` → `sql.json()` di 4 skrip
+  - Sebelumnya: options tersimpan sebagai string JSONB, bukan array — `jsonb_array_elements` gagal
+  - Diperbaiki: `r2-extract-rationale-jsonb.ts`, `r3r4-curate-rationale-jsonb.ts`,
+    `r4-barisan-deret-rationale.ts`, `r4-batch2-rationale.ts`
+- **MAT-151 koordinasi**: Semua skrip kurasi yang direferensikan MAT-151 sudah menggunakan JSONB.
+  Keputusan: `question_options_mat146_backup` (43.245 baris) tidak dipakai skrip aktif →
+  **rekomendasikan di-drop oleh MAT-151/MAT-149** untuk menegakkan invarian "zero question_options".
+
+**Remaining R4:**
+- ~9.278 soal SC tanpa rationale, 8.157 di antaranya memiliki explanation
+- Butuh kurasi manual batch berikutnya atau otomasi berbasis LLM
 
 ### Snapshot MAT-35 Batch 5 (2026-10-22) — R2/R3/R4 JSONB Live + Data Fix
 
