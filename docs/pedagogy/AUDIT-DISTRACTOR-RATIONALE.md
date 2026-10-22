@@ -1,12 +1,12 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 6 — R4 7 soal baru, fix sql.json double-encoding bug, 58 SC dengan rationale / 265 entries).
+> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 7 — R4 Batch 3: 5 soal eksponensial/SPLDV + R5 Batch 2: 5 rubrik esai, 63 SC dengan rationale / 285 entries, 43 esai dengan rubrik).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
-> **Lingkup:** enrichment aktif (MAT-35). DB: 11.891 soal hidup, 9.336 SC, 2.202 esai.
+> **Lingkup:** enrichment aktif (MAT-35). DB: 11.891 soal hidup, 9.336 SC, 2.181 esai.
 > **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
-> **Skrip JSONB-aligned:** `scripts/r2-extract-rationale-jsonb.ts` (R2), `scripts/r3r4-curate-rationale-jsonb.ts` (R3/R4), `scripts/r4-barisan-deret-rationale.ts` (R4 Batch 1), `scripts/r4-batch2-rationale.ts` (R4 Batch 2), `scripts/r5-essay-rubric-jsonb.ts` (R5), `scripts/fix-double-encoded-options.ts` (data fix).
+> **Skrip JSONB-aligned:** `scripts/r2-extract-rationale-jsonb.ts` (R2), `scripts/r3r4-curate-rationale-jsonb.ts` (R3/R4), `scripts/r4-barisan-deret-rationale.ts` (R4 Batch 1), `scripts/r4-batch2-rationale.ts` (R4 Batch 2), `scripts/r4-batch3-rationale.ts` (R4 Batch 3), `scripts/r5-essay-rubric-jsonb.ts` (R5 Batch 1), `scripts/r5-batch2-rubrik.ts` (R5 Batch 2), `scripts/fix-double-encoded-options.ts` (data fix).
 > **Bug fix (Batch 6):** semua skrip R2/R3/R4 kini menggunakan `sql.json()` bukan `JSON.stringify(...):jsonb` — mencegah double-encoding JSONB.
-> **MAT-151:** skrip legacy `question_options` sudah dihapus; `audit-pedagogy.ts` sepenuhnya JSONB. `question_options_mat146_backup` masih ada (43.245 baris) — siap di-drop (tidak dipakai skrip aktif, MAT-149 invarian).
+> **MAT-151:** skrip legacy `question_options` sudah dihapus; `audit-pedagogy.ts` sepenuhnya JSONB. `question_options_mat146_backup` (43.245 baris) — direkomendasikan di-drop (tidak ada dependency aktif dari MAT-35).
 > **Standar rujukan:** `SKILL_PEDAGOGY.md` (Haladyna 31 aturan + *Distractor Rationale Mandate*), `src/lib/validations/question-payload.ts` (Zod schema MAT-145), `docs/architecture/QUESTION_PAYLOAD_DECISION.md` (MAT-144).
 
 ---
@@ -24,6 +24,34 @@
 | **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **0 / 52** | 🔴 **0,00 %** |
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
+
+### Snapshot MAT-35 Batch 7 (2026-10-23) — R4 Batch 3 + R5 Batch 2
+
+> R4 Batch 3: 5 soal eksponensial & SPLDV-eksponen dikurasi (`scripts/r4-batch3-rationale.ts`).
+> R5 Batch 2: 5 rubrik esai baru (matriks, invers fungsi, ogive, pemetaan, optimasi pagar).
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 11.891 | — |
+| Soal single_choice | 9.336 | — |
+| Soal esai | 2.181 | — |
+| **SC dengan ≥1 `distractorRationale` di JSONB** | **63** | 🟡 **0,67 %** |
+| **Total entries `distractorRationale` di JSONB** | **285** | 🟡 — |
+| Esai dengan `answer_key.scoringRubric` terisi | **43** | 🟡 **1,97 %** |
+| Double-encoded `data_payload.options` | **0** | ✅ bersih |
+
+**Batch 7 mengerjakan:**
+- **R4 Batch 3** (`scripts/r4-batch3-rationale.ts`): 5 soal baru dikurasi (20 entries)
+  - Eksponensial: `4^{x+1}=128` (basis ganda), `8^x=2^{y+1}` (ekuivalensi), `3^{2-x}=27` (tanda negatif)
+  - Eksponen sama pangkat: `5^3=(x+2)^3` (isolasi variabel)
+  - SPLDV eksponen: sistem `3^a=81^{b+2}, 125^b=5^{a-3}` → ab=60
+  - 20 entries baru, 245–439 chars per rationale, Haladyna R21 ✓, KaTeX ✓
+- **R5 Batch 2** (`scripts/r5-batch2-rubrik.ts`): 5 rubrik esai baru
+  - Ordo matriks (2A+B)×4C=5D
+  - Invers komposisi f(x)=g(4+2x)
+  - Ogive dari histogram (statistika)
+  - Identifikasi pemetaan/fungsi
+  - Optimasi panjang pagar minimum (kalkulus)
 
 ### Snapshot MAT-35 Batch 6 (2026-10-23) — R4 Batch 2 + Bug Fix sql.json
 
