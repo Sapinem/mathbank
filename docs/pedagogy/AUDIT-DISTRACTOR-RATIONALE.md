@@ -435,3 +435,22 @@ Skrip bersifat **read-only** (hanya `SELECT`), tidak memodifikasi DB, skema, ata
 ---
 
 *Dokumen ini hidup — perbarui metrik setiap kali batch kurasi rationale selesai. Rujukan silang: `docs/SKEMA-DB-DETAIL.md` (skema `question_options`), `docs/RENCANA-SOAL.md` (tipe soal & kunci), `docs/PETA-DOKUMEN.md` (indeks dokumen).*
+
+---
+
+## 9. Snapshot Metrik Kumulatif (per batch)
+
+| Batch | Commit | SC dengan DR | Total DR entries | Esai dengan Rubrik |
+|:-----:|--------|:------------:|:----------------:|:------------------:|
+| Awal (audit) | — | 0 | 0 | 0 |
+| Batch 1–2 (relasional, pre-MAT-144) | sebelum 6aaad54 | 0 | 188 (relasional, deprecated) | 0 |
+| Batch 3 | 6aaad54 | 0 JSONB | 0 JSONB | 12 |
+| Batch 4 | 24f72f8 | 0 JSONB | 0 JSONB | 38 |
+| Batch 5 (MAT-144 live) | 2bba25b | 51 | 237 | 38 |
+| Batch 6 | 9f1abed | 58 | 265 | 38 |
+| Batch 7 | 2524bc2 | 63 | 285 | 43 |
+| **Batch 8** | **0ee341f** | **71** | **317** | **48** |
+
+**Target awal audit:** 52 SC → 100% rationale, 26 esai → rubrik penuh.
+**Update skala:** DB produksi jauh lebih besar (9.336 SC, 2.202 esai per batch 8).
+Prioritas next batch: *Simulasi TKA* (187 SC tanpa rationale), *Bangun Datar SMP* (59 SC), *UTBK Matematika* (59 SC).
