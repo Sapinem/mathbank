@@ -44,6 +44,9 @@ function item(over: Partial<ParsedItem> = {}): ParsedItem {
       { label: "B", text: "2", isCorrect: true },
     ],
     correct: ["B"],
+    // MAT-147: `answerKeySchema` mewajibkan `explanationMarkdown`; butir tanpa
+    // pembahasan dipasangi placeholder + di-flag (lihat `buildQuestionPayload`).
+    explanation: "Karena $1+1=2$, jawabannya B.",
     warnings: [],
     ref: { index: 1 },
     ...over,
@@ -258,6 +261,87 @@ describe("commit (soal draft)", () => {
     const [q] = await sql`SELECT flag_notes FROM questions WHERE id = ${res.questionIds[0]}`;
     expect(q.flag_notes).toContain("Opsi hanya 3");
     expect(q.flag_notes).toContain("Kunci jawaban tidak ditemukan");
+  });
+
+  // ── MAT-147: single table + hybrid JSONB (tanpa `question_options`) ────────
+  it("MAT-147: 1 INSERT ke questions membawa soal + opsi + kunci (JSONB)", async () => {
+    const res = await commitItems([item()], machine, { sourceOrigin: "uji-ingest" });
+    expect(res.created).toBe(1);
+    expect(res.rejected).toBe(0);
+
+    // Satu baris `questions` memuat semuanya — tak ada join ke tabel opsi.
+    const rows = await sql`
+      SELECT data_payload, answer_key, question_type, status
+      FROM questions WHERE id = ${res.questionIds[0]}`;
+    expect(rows).toHaveLength(1);
+    const q = rows[0]!;
+
+    // data_payload: tipe kanonik + opsi A/B.
+    expect(q.data_payload.type).toBe("multiple_choice");
+    expect(q.data_payload.options).toHaveLength(2);
+    expect(q.data_payload.options.map((o: { id: string }) => o.id)).toEqual(["A", "B"]);
+    expect(q.data_payload.options[0].contentMarkdown).toBe("1");
+
+    // answer_key: kunci kanonik + pembahasan.
+    expect(q.answer_key.correctOptionIds).toBe("B");
+    expect(q.answer_key.explanationMarkdown).toContain("1+1=2");
+
+    // Tabel relasional lama benar-benar tak ada lagi di DB.
+    const legacy = await sql`SELECT to_regclass('public.question_options') AS t`;
+    expect(legacy[0]!.t).toBeNull();
+  });
+
+  it("MAT-147: matriks (matrix_grid) → data_payload.columns + statements", async () => {
+    const res = await commitItems(
+      [
+        item({
+          type: "matrix_grid",
+          options: [],
+          correct: [],
+          dataPayload: {
+            labels: ["Benar", "Salah"],
+            rows: [
+              { text: "2 bilangan prima.", answer: "Benar" },
+              { text: "4 bilangan prima.", answer: "Salah" },
+            ],
+          },
+        }),
+      ],
+      machine,
+      { sourceOrigin: "uji-ingest" },
+    );
+    expect(res.created).toBe(1);
+    const [q] = await sql`SELECT data_payload, answer_key FROM questions WHERE id = ${res.questionIds[0]}`;
+    expect(q.data_payload.type).toBe("matrix");
+    expect(q.data_payload.columns).toEqual(["Benar", "Salah"]);
+    expect(q.data_payload.statements).toHaveLength(2);
+    expect(q.data_payload.statements[0].contentMarkdown).toBe("2 bilangan prima.");
+    expect(q.answer_key.matrixAnswers).toEqual({ s1: "Benar", s2: "Salah" });
+  });
+
+  it("MAT-147: butir melanggar skema Zod DITOLAK anggun (bukan 500, tak masuk DB)", async () => {
+    // Haladyna Rule 5: opsi "semua jawaban di atas benar" dilarang.
+    const res = await commitItems(
+      [
+        item({
+          options: [
+            { label: "A", text: "1", isCorrect: false },
+            { label: "B", text: "Semua jawaban di atas benar", isCorrect: true },
+          ],
+          correct: ["B"],
+        }),
+      ],
+      machine,
+      { sourceOrigin: "uji-ingest" },
+    );
+    expect(res.created).toBe(0);
+    expect(res.rejected).toBe(1);
+    expect(res.failed).toBe(0);
+    expect(res.errors[0]).toContain("#1 ditolak");
+    expect(res.errors[0]).toContain("data_payload ditolak skema");
+
+    const total = await sql`SELECT count(*)::int AS n FROM questions`;
+    expect(total[0]!.n).toBe(0); // tak ada baris separuh jadi
   });
 
   it("stem kosong dilewati (tak simpan sampah)", async () => {

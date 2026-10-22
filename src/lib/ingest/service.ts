@@ -24,8 +24,19 @@ import type { ParsedItem } from "./parsers/types";
 export interface ProcessResult {
   id: string;
   status: "completed" | "failed" | "skipped";
+  /** Bundle tujuan (untuk resolve event otomatis setelah commit). */
+  bundleId?: string;
   created: number;
+  /** Soal identik (konten sama) yang cukup ditambahkan ke bundle. */
+  linked: number;
   skipped: number;
+  /**
+   * Butir yang DITOLAK gerbang Zod (MAT-147) — mis. opsi < 2 atau frasa
+   * terlarang. Dihitung terpisah dari `failed` (galat DB).
+   */
+  rejected: number;
+  /** Soal yang GAGAL dibuat di `commitItems` (mis. ditolak DB) — jangan hilang senyap. */
+  failed: number;
   mediaOk: number;
   mediaFailed: number;
   error?: string;
@@ -43,14 +54,28 @@ export interface ProcessOptions {
   grade?: string | null;
 }
 
-/** Terapkan URL lokal ke seluruh bagian soal (stem, opsi, pembahasan). */
+/** Terapkan URL lokal ke seluruh bagian soal (stem, opsi, pembahasan, rows matrix_grid). */
 function applyMediaToItems(items: ParsedItem[], cache: MediaCache): ParsedItem[] {
-  return items.map((it) => ({
-    ...it,
-    stem: applyMedia(it.stem, cache),
-    options: it.options.map((o) => ({ ...o, text: applyMedia(o.text, cache) })),
-    ...(it.explanation ? { explanation: applyMedia(it.explanation, cache) } : {}),
-  }));
+  return items.map((it) => {
+    const base = {
+      ...it,
+      stem: applyMedia(it.stem, cache),
+      options: it.options.map((o) => ({ ...o, text: applyMedia(o.text, cache) })),
+      ...(it.explanation ? { explanation: applyMedia(it.explanation, cache) } : {}),
+    };
+    // `matrix_grid` menyimpan pernyataan di `dataPayload.rows[].text` — gambar di
+    // sana juga harus diproses (temuan: pernyataan BS bisa berupa gambar).
+    if (it.dataPayload && Array.isArray((it.dataPayload as { rows?: unknown }).rows)) {
+      const dp = it.dataPayload as { rows: { text?: string }[] };
+      base.dataPayload = {
+        ...dp,
+        rows: dp.rows.map((r) =>
+          r && typeof r.text === "string" ? { ...r, text: applyMedia(r.text, cache) } : r,
+        ),
+      };
+    }
+    return base;
+  });
 }
 
 /** Kumpulkan teks ber-gambar dari item (untuk orkestrasi media). */
@@ -60,6 +85,15 @@ function mediaTexts(items: ParsedItem[]) {
     texts.push({ text: it.stem, role: "content" });
     for (const o of it.options) texts.push({ text: o.text, role: "option" });
     if (it.explanation) texts.push({ text: it.explanation, role: "solution" });
+    // Pernyataan `matrix_grid` juga bisa memuat gambar.
+    if (it.dataPayload && Array.isArray((it.dataPayload as { rows?: unknown }).rows)) {
+      const dp = it.dataPayload as { rows: { text?: string }[] };
+      for (const r of dp.rows) {
+        if (r && typeof r.text === "string" && r.text) {
+          texts.push({ text: r.text, role: "content" });
+        }
+      }
+    }
   }
   return texts;
 }
@@ -72,7 +106,7 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
   // Guard balapan: hanya lanjut bila berhasil menandai `processing`.
   const ok = await markProcessing(item.id);
   if (!ok) {
-    return { id: item.id, status: "skipped", created: 0, skipped: 0, mediaOk: 0, mediaFailed: 0, error: "sudah diproses" };
+    return { id: item.id, status: "skipped", created: 0, linked: 0, skipped: 0, rejected: 0, failed: 0, mediaOk: 0, mediaFailed: 0, error: "sudah diproses" };
   }
 
   const meta = { source: item.sourceOrigin, url: item.sourceUrl ?? undefined, title: item.title };
@@ -90,7 +124,7 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
         aiNotes: seg.warnings.join("; ") || "Artikel tanpa soal (dilewati)",
         importedQuestionsCount: 0,
       });
-      return { id: item.id, status: "skipped", created: 0, skipped: 0, mediaOk: 0, mediaFailed: 0 };
+      return { id: item.id, status: "skipped", created: 0, linked: 0, skipped: 0, rejected: 0, failed: 0, mediaOk: 0, mediaFailed: 0 };
     }
 
     // 2. Unduh gambar + DAFTARKAN ke media_assets (gagal tak memblokir).
@@ -134,13 +168,18 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
       aiNotes:
         `${commit.created} soal dibuat, ${commit.linked} soal identik (sumber ditambah), ` +
         `${commit.skipped} dilewati` +
+        (commit.rejected ? `, ${commit.rejected} ditolak validasi Zod` : "") +
         (mediaFailed ? `, ${mediaFailed} gambar gagal` : ""),
     });
     return {
       id: item.id,
       status: "completed",
+      bundleId: commit.bundleId,
       created: commit.created,
+      linked: commit.linked,
       skipped: commit.skipped,
+      rejected: commit.rejected,
+      failed: commit.failed,
       mediaOk,
       mediaFailed,
       ...(commit.errors.length ? { error: commit.errors.slice(0, 3).join("; ") } : {}),
@@ -148,7 +187,7 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await markDone(item.id, "failed", { errorMessage: msg.slice(0, 1000) });
-    return { id: item.id, status: "failed", created: 0, skipped: 0, mediaOk: 0, mediaFailed: 0, error: msg };
+    return { id: item.id, status: "failed", created: 0, linked: 0, skipped: 0, rejected: 0, failed: 0, mediaOk: 0, mediaFailed: 0, error: msg };
   }
 }
 

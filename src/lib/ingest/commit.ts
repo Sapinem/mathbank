@@ -19,17 +19,31 @@ import { createQuestion } from "@/lib/services/question-service";
 import { slugify } from "@/lib/taxonomy/tree";
 import { ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
+import type { AnswerKey } from "@/lib/contracts/question";
+import { answerKeySchema, questionDataPayloadSchema } from "@/lib/validations/question-payload";
 import { contentHash, itemHash } from "./hash";
+import { buildQuestionPayload, type BuiltQuestionPayload } from "./parsers/types";
 import type { ParsedItem } from "./parsers/types";
 
 /** Hasil commit satu artikel. */
 export interface CommitResult {
+  /** Bundle tempat soal-soal ini dimasukkan (untuk resolve event, dll.). */
+  bundleId: string;
   created: number;
   /** Soal identik (konten sama, exact) → provenance ditambahkan, soal TIDAK dibuat ulang. */
   linked: number;
   skipped: number;
+  /**
+   * Butir yang **ditolak gerbang Zod** (MAT-147) — mis. opsi < 2, frasa
+   * terlarang ("semua jawaban benar"), atau kolom matriks kosong.
+   *
+   * Dihitung terpisah dari `failed` (galat DB) supaya operator tahu mana yang
+   * perlu diperbaiki di parser/sumber dan mana yang murni galat teknis.
+   */
+  rejected: number;
   failed: number;
   questionIds: string[];
+  /** Pesan galat DB **dan** alasan penolakan validasi (berprefiks `#<ref>`). */
   errors: string[];
 }
 
@@ -181,11 +195,67 @@ export async function linkQuestionToBundle(
 }
 
 /**
+ * Hasil gerbang validasi satu butir: payload kanonik yang lolos skema, atau
+ * alasan penolakan yang bisa dibaca operator.
+ */
+type PayloadGate =
+  | { ok: true; dataPayload: Record<string, unknown>; answerKey: AnswerKey }
+  | { ok: false; message: string };
+
+/** Rangkum `ZodError.issues` jadi satu baris pendek (maks 4 issue). */
+function formatIssues(error: {
+  issues: { path: (string | number)[]; message: string }[];
+}): string {
+  return error.issues
+    .slice(0, 4)
+    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+    .join("; ");
+}
+
+/**
+ * Gerbang Zod wajib sebelum `createQuestion` (MAT-147).
+ *
+ * Dua skema dari `src/lib/validations/question-payload.ts` dipanggil di sini —
+ * bukan di service — supaya butir korpus yang melanggar kontrak ditolak
+ * **sebelum** menyentuh DB, dengan pesan validasi yang bisa dilacak ke butir
+ * asalnya (`#<ref.index>`), bukan meledak sebagai galat 500.
+ *
+ * Pengecualian yang disengaja:
+ *   - **Kontainer stimulus/wacana** (`data_payload` tanpa `type`): tak punya
+ *     kunci jawaban sendiri, jadi `answer_key` kosong dan tak divalidasi.
+ */
+function gatePayload(built: BuiltQuestionPayload): PayloadGate {
+  if (typeof built.dataPayload.type === "string") {
+    const data = questionDataPayloadSchema.safeParse(built.dataPayload);
+    if (!data.success) {
+      return { ok: false, message: `data_payload ditolak skema: ${formatIssues(data.error)}` };
+    }
+  }
+
+  if (Object.keys(built.answerKey).length > 0) {
+    const key = answerKeySchema.safeParse(built.answerKey);
+    if (!key.success) {
+      return { ok: false, message: `answer_key ditolak skema: ${formatIssues(key.error)}` };
+    }
+  }
+
+  return {
+    ok: true,
+    dataPayload: built.dataPayload,
+    answerKey: built.answerKey as AnswerKey,
+  };
+}
+
+/**
  * Commit daftar `ParsedItem` (dari satu artikel) → soal draft.
  *
  * Dedup berbasis `contentHash(stem, opsi)` **tanpa sumber** (ADR-0012):
  *   - soal ada (konten sama) → **tambahkan provenance**, jangan buat soal baru;
  *   - soal baru → buat soal + provenance.
+ *
+ * Sejak MAT-147 seluruh isi soal (opsi + kunci) dibentuk **atomik** ke
+ * `data_payload` / `answer_key` lalu divalidasi Zod — satu INSERT ke `questions`
+ * sudah membawa soal, opsi, dan kunci. Tak ada lagi jalur `question_options`.
  */
 export async function commitItems(
   items: ParsedItem[],
@@ -206,13 +276,19 @@ export async function commitItems(
   });
 
   const result: CommitResult = {
+    bundleId,
     created: 0,
     linked: 0,
     skipped: 0,
+    rejected: 0,
     failed: 0,
     questionIds: [],
     errors: [],
   };
+
+  // Peta `ref.index` → id soal yang baru dibuat (untuk menyambung anak
+  // wacana/stimulus ke induknya lewat `parentRefIndex`).
+  const idByRefIndex = new Map<number, string>();
 
   for (const it of items) {
     // Aturan mutu: stem kosong → lewati (jangan simpan sampah).
@@ -230,12 +306,30 @@ export async function commitItems(
       const existing = await findQuestionByContentHash(hash);
       if (existing) {
         await linkQuestionToBundle(bundleId, existing.id, String(it.ref.index));
+        idByRefIndex.set(it.ref.index, existing.id);
         result.linked++;
         result.questionIds.push(existing.id);
         continue;
       }
 
-      // 2) Belum ada → buat soal baru.
+      // 2) Belum ada → bentuk payload kanonik (data_payload + answer_key) dan
+      //    lewatkan gerbang Zod SEBELUM menyentuh DB (MAT-147).
+      const built = buildQuestionPayload(it);
+      const gate = gatePayload(built);
+      if (!gate.ok) {
+        // Gagal secara anggun: butir dicatat & dilaporkan, bukan melempar 500.
+        result.rejected++;
+        result.errors.push(`#${it.ref.index} ditolak: ${gate.message}`);
+        continue;
+      }
+
+      // Catatan mutu parser + catatan konversi payload (mis. placeholder
+      // pembahasan/rubrik dipasang) → satu daftar flag yang bisa ditelaah.
+      const notes = [...it.warnings, ...built.warnings];
+
+      // Induk wacana/stimulus: petakan `parentRefIndex` → id soal induk yang
+      // sudah dibuat sebelumnya pada commit yang sama.
+      const parentId = it.parentRefIndex != null ? idByRefIndex.get(it.parentRefIndex) : undefined;
       const q = await createQuestion(
         {
           questionType: it.type,
@@ -243,29 +337,34 @@ export async function commitItems(
           cognitiveLevel: DEFAULT_COGNITIVE,
           grade,
           contentMarkdown: it.stem,
-          dataPayload: it.dataPayload ?? {},
-          answerKey: {
-            ...(it.correct.length ? { correct: it.correct } : {}),
-            ...(it.explanation ? { explanation: it.explanation } : {}),
-          },
+          // Opsi & kunci TIDAK lagi lewat parameter relasional `options`
+          // (MAT-147): keduanya sudah di dalam JSONB di bawah.
+          dataPayload: gate.dataPayload,
+          answerKey: gate.answerKey,
           status: "draft", // keputusan: SEMUA draft
-          childOrder: 0,
-          options: it.options.map((o, i) => ({
-            label: o.label,
-            contentMarkdown: o.text,
-            isCorrect: o.isCorrect,
-            orderIndex: i,
-          })),
+          childOrder: it.childOrder ?? 0,
+          ...(parentId ? { parentId } : {}),
           topicIds: opts.topicId ? [opts.topicId] : [],
+          solutions: it.explanation
+            ? [
+                {
+                  solutionType: "conceptual" as const,
+                  title: "Pembahasan Konseptual",
+                  contentMarkdown: it.explanation,
+                  isPrimary: true,
+                },
+              ]
+            : [],
           tagIds: [],
           // Peringatan parser → tanda "perlu telaah" (STRATEGI-INGEST §3.2).
           // Sebelumnya dibuang, jadi soal tanpa kunci masuk tanpa tanda apa pun.
-          isFlagged: it.warnings.length > 0,
-          flagNotes: it.warnings.length > 0 ? it.warnings.join("; ") : null,
+          isFlagged: notes.length > 0,
+          flagNotes: notes.length > 0 ? notes.join("; ") : null,
         },
         actor,
       );
       await linkQuestionToBundle(bundleId, q.id, String(it.ref.index));
+      idByRefIndex.set(it.ref.index, q.id);
       result.created++;
       result.questionIds.push(q.id);
     } catch (e) {
