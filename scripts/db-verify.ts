@@ -13,15 +13,27 @@ import postgres from "postgres";
 
 config({ path: ".env" });
 
-/** Harapan minimum skema (rata-rata setelah 0000..0014). */
+/** Harapan minimum skema (rata-rata setelah 0000..0017). */
 const EXPECTED = {
   // MAT-39: collections & collection_items dihapus (28 → 26).
-  tables: 26,
+  // MAT-146: question_options dihapus (26 → 25) — opsi kini JSONB.
+  tables: 25,
   checkConstraints: 2,
   hnswIndexes: 1,
   // MAT-39: collections trigger dihapus (25 → 24).
-  triggers: 24, // 20 updated_at + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
+  // MAT-146: trg_question_options_updated_at ikut terhapus (24 → 23).
+  triggers: 23, // 18 updated_at + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
 } as const;
+
+/**
+ * Tabel yang WAJIB sudah TIDAK ada (invarian negatif).
+ *
+ * MAT-144/MAT-146: `question_options` sudah di-drop dan datanya dipindah ke
+ * `questions.data_payload.options` (JSONB). Bila tabel ini muncul lagi berarti
+ * ada migrasi/dump lama yang ter-apply ulang — gerbang ini menangkapnya lebih
+ * awal daripada bug produksi.
+ */
+const FORBIDDEN_TABLES = ["question_options"] as const;
 
 /** Nama constraint/trigger kritis yang WAJIB ada. */
 const REQUIRED_CHECKS = [
@@ -76,6 +88,18 @@ async function main() {
         `${ok ? "✓" : "✗"} ${key}: ${have} (harap ≥ ${want})`,
       );
       if (!ok) failures.push(`${key}: ${have} < ${want}`);
+    }
+
+    // Tabel terlarang (invarian negatif MAT-144/MAT-146)
+    const forbiddenRows = await sql<{ table_name: string }[]>`
+      SELECT table_name FROM information_schema.tables
+       WHERE table_schema='public' AND table_type='BASE TABLE'
+         AND table_name IN ${sql(FORBIDDEN_TABLES as unknown as string[])}
+    `;
+    for (const name of FORBIDDEN_TABLES) {
+      const exists = forbiddenRows.some((r) => r.table_name === name);
+      console.log(`${exists ? "✗" : "✓"} tabel ${name} sudah di-drop`);
+      if (exists) failures.push(`tabel terlarang masih ada: ${name}`);
     }
 
     // Constraint kritis

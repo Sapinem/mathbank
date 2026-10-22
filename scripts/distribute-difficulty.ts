@@ -138,12 +138,14 @@ async function loadRows(): Promise<Row[]> {
       q.content_markdown,
       q.question_type::text AS question_type,
       q.event_subtest,
-      COALESCE(o.cnt, 0)::int AS option_count,
+      -- MAT-146: opsi hidup di data_payload.options (JSONB) — tanpa join.
+      COALESCE(jsonb_array_length(
+        CASE jsonb_typeof(q.data_payload -> 'options')
+          WHEN 'array' THEN q.data_payload -> 'options'
+          ELSE '[]'::jsonb
+        END), 0)::int AS option_count,
       COALESCE(length(q.answer_key->>'explanation'), 0)::int AS explanation_len
     FROM questions q
-    LEFT JOIN (
-      SELECT question_id, count(*) AS cnt FROM question_options GROUP BY question_id
-    ) o ON o.question_id = q.id
     WHERE q.difficulty = 3
       AND q.deleted_at IS NULL
     ORDER BY q.id

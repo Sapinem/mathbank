@@ -13,7 +13,7 @@
 | **Soal** (question) | `questions` | Unit soal tunggal (atau stimulus induk). Punya tipe, kesulitan, topik, jawaban. |
 | **Stimulus** | `questions` (`question_type=stimulus`) | Soal induk berisi bacaan/gambar bersama untuk anak-anak soal. Maks 1 level. |
 | **Anak soal** | `questions.parent_id` | Soal yang bergantung pada stimulus induk. |
-| **Opsi** (option) | `question_options` | Pilihan jawaban (A–E) untuk tipe pilihan ganda. |
+| **Opsi** (option) | `questions.data_payload.options[]` | Pilihan jawaban (A–E) untuk tipe pilihan ganda. Sejak MAT-146 berupa JSONB di dalam `questions` — tabel `question_options` sudah dihapus. |
 | **Kunci jawaban** | `questions.answer_key` | Jawaban benar. **Opsional** saat bikin soal; wajib untuk `ready`. |
 | **Pembahasan** (solution) | `solutions` | Penjelasan jawaban (langkah penyelesaian). |
 | **Sumber** (source) | `sources` | Asal soal: buku, sekolah, platform, dsb. |

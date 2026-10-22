@@ -60,47 +60,15 @@ async function main() {
   console.log(`\nMigration check: ${migratedCount} questions with data_payload.options populated`);
 
   if (migratedCount === 0) {
+    // MAT-146: tabel `question_options` sudah di-drop, jadi tidak ada jalur
+    // fallback relasional. Backfill wajib jalan lebih dulu.
     console.error(
-      "\nBLOCKER: data_payload.options is empty for all questions." +
-      "\nMAT-144 migration (question_options -> data_payload JSONB) must complete first." +
-      "\nFalling back to read-only analysis of question_options for planning purposes...\n"
+      "\nBLOCKER: data_payload.options kosong untuk semua soal." +
+      "\nBackfill MAT-146 (opsi → data_payload.options JSONB) belum dijalankan." +
+      "\nJalankan: pnpm tsx scripts/migrate-options-to-jsonb.ts\n"
     );
-
-    // Report what will be available post-migration
-    const candidates = await sql`
-      SELECT q.id, q.content_markdown as stem,
-        q.answer_key->>'explanation' as explanation,
-        q.answer_key->>'correct' as correct,
-        json_agg(json_build_object(
-          'label', o.label,
-          'is_correct', o.is_correct,
-          'current_rationale', o.distractor_rationale
-        ) ORDER BY o.label) as options
-      FROM questions q
-      JOIN question_options o ON o.question_id = q.id
-      WHERE q.deleted_at IS NULL
-        AND q.answer_key->>'explanation' ILIKE '%cek opsi%'
-      GROUP BY q.id, q.content_markdown, q.answer_key
-      ORDER BY q.created_at
-    ` as Array<Record<string, unknown>>;
-
-    console.log(`Found ${candidates.length} questions with "Cek opsi" explanations (post-migration targets)`);
-    let totalPotential = 0;
-    for (const q of candidates) {
-      const explanation = q.explanation as string;
-      const rationales = extractRationalePerOption(explanation);
-      totalPotential += rationales.size;
-      if (rationales.size > 0) {
-        console.log(
-          `  Q ${(q.id as string).substring(0, 8)}...: ${rationales.size} rationale blocks` +
-          ` [labels: ${[...rationales.keys()].join(",")}]` +
-          ` "${(q.stem as string).substring(0, 60)}..."`
-        );
-      }
-    }
-    console.log(`\nPotential: ${totalPotential} distractorRationale entries ready to write post-migration`);
     await sql.end();
-    return;
+    process.exit(1);
   }
 
   // Post-migration: update data_payload.options[].distractorRationale
@@ -138,7 +106,7 @@ async function main() {
         ? [correctRaw]
         : [];
 
-    let updatedOptions = [...optionsJsonb];
+    const updatedOptions = [...optionsJsonb];
     let changed = false;
 
     for (let i = 0; i < updatedOptions.length; i++) {

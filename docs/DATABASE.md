@@ -36,7 +36,7 @@ Prinsip Utama:
   - `section`: text (Kelompok/bagian soal)
   - Unique Constraint: `(bundle_id, question_id)` & `(bundle_id, display_order)`
 
-### 2.2. Butir Soal & Opsi (`questions` & `question_options`)
+### 2.2. Butir Soal & Opsi (`questions` — Single Table + Hybrid JSONB)
 - **`questions`**:
   - `id`: UUID (Primary Key)
   - `code`: text (Kode unik butir soal)
@@ -50,13 +50,12 @@ Prinsip Utama:
   - `difficulty`: enum (`easy`, `medium`, `hard`)
   - `answer_key`: JSONB (Kunci jawaban, pembahasan, dan rubrik analitik esai)
   - Indeks Performa: Indeks eksplisit pada `question_type`, `status`, `topic_id`, dan `grade_id`.
-- **`question_options`**:
-  - `id`: UUID (Primary Key)
-  - `question_id`: UUID (FK ➔ `questions.id`, ON DELETE CASCADE)
-  - `label`: text (`A`, `B`, `C`, `D`, `E`)
-  - `content`: text (Formula Markdown/KaTeX)
-  - `is_correct`: boolean
-  - `distractor_rationale`: text (Analisis miskonsepsi nyata siswa untuk opsi salah)
+- **Opsi (JSONB, sejak MAT-146)**: tabel anak `question_options` sudah **dihapus**.
+  Opsi disimpan di `questions.data_payload.options[]` dengan bentuk
+  `{ id, contentMarkdown, distractorRationale? }`, dan kunci benar di
+  `questions.answer_key.correctOptionIds` (string atau array). Konsekuensinya
+  baca soal = *zero join*. Kontrak lengkap: `src/lib/validations/question-payload.ts`
+  (MAT-145) + `enforceQuestionWriteGate` (MAT-146).
 
 ### 2.3. Taksonomi & Hierarki (`topics`, `grades`, `curriculums`)
 - **`topics`**: Hierarki materi berstruktur pohon (*adjacency list* `parent_id`), dikelola dengan pure validation di L6 (`src/lib/taxonomy/tree.ts`).

@@ -173,7 +173,8 @@ const QUESTIONS: Seed[] = [
 
 async function main() {
   // Bersihkan (idempoten)
-  await sql`DELETE FROM question_options`;
+  // MAT-146: `question_options` sudah di-drop — opsi hidup di
+  // `questions.data_payload.options`, jadi ikut terhapus bersama `questions`.
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
   await sql`DELETE FROM questions`;
@@ -211,26 +212,29 @@ async function main() {
   const topicKeys = [...topicId.keys()];
   for (let i = 0; i < QUESTIONS.length; i++) {
     const q = QUESTIONS[i];
+    // MAT-146: opsi ditulis ke `data_payload.options` (JSONB), bukan tabel anak.
+    // Bentuk item mengikuti kontrak MAT-145: `{ id, contentMarkdown, distractorRationale? }`;
+    // `label` dipertahankan sebagai mirror agar proyeksi lama tetap cocok.
+    const payload: Record<string, unknown> = { type: q.type, ...(q.payload ?? {}) };
+    if (q.options) {
+      payload.options = q.options.map((o) => ({
+        id: o.label,
+        label: o.label,
+        contentMarkdown: o.content,
+      }));
+    }
     const rows = await sql<{ id: string }[]>`
       INSERT INTO questions (
         question_type, difficulty, cognitive_level, grade, content_markdown,
         data_payload, answer_key, status, source_id, is_flagged, flag_notes, author_id
       ) VALUES (
         ${q.type}, ${q.difficulty}, ${q.cognitive}, ${q.grade}, ${q.content},
-        ${j(q.payload ?? {})}, ${j(q.answer)}, ${q.status},
+        ${j(payload)}, ${j(q.answer)}, ${q.status},
         ${sourceIds[i % sourceIds.length]}, ${i === 10}, ${i === 10 ? "Perlu cek kunci" : null},
         'seed'
       ) RETURNING id`;
     const questionId = rows[0].id;
 
-    if (q.options) {
-      for (let j = 0; j < q.options.length; j++) {
-        const o = q.options[j];
-        await sql`
-          INSERT INTO question_options (question_id, label, content_markdown, is_correct, order_index)
-          VALUES (${questionId}, ${o.label}, ${o.content}, ${o.correct ?? false}, ${j})`;
-      }
-    }
     // Hubungkan 1 topik
     const t = topicId.get(topicKeys[i % topicKeys.length]) as string;
     await sql`INSERT INTO question_topics (question_id, topic_id) VALUES (${questionId}, ${t})`;

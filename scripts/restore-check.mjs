@@ -48,18 +48,26 @@ const WITH_DB_VERIFY = argv.includes("--with-db-verify");
 const KEEP_DB = argv.includes("--keep");
 const dumpArg = argv.find((a) => !a.startsWith("--"));
 
-/** Ambang invarian skema — selaras `scripts/db-verify.ts` (MAT-39: 26 tabel). */
+/**
+ * Ambang invarian skema — selaras `scripts/db-verify.ts`.
+ * MAT-39: 26 tabel. MAT-146: `question_options` di-drop → 25 tabel, −1 FK,
+ * −2 indeks (PK + idx_question_options_question), −1 trigger updated_at.
+ */
 const EXPECTED = {
-  tables: 26,
+  tables: 25,
   checks: 2,
-  fks: 20,
-  indexes: 80,
+  fks: 19,
+  indexes: 78,
   hnsw: 1,
-  triggers: 24,
+  triggers: 23,
 };
 
-/** Relasi yang keutuhan foreign key-nya diperiksa langsung (orphan harus 0). */
-const ORPHAN_CHECKS = ["question_options", "bundle_items", "question_topics"];
+/**
+ * Relasi yang keutuhan foreign key-nya diperiksa langsung (orphan harus 0).
+ * MAT-146: `question_options` sudah di-drop — digantikan invarian turunan
+ * `questions_with_options` di bawah.
+ */
+const ORPHAN_CHECKS = ["bundle_items", "question_topics"];
 
 /**
  * Tabel yang jumlah barisnya dilaporkan sebagai bukti isi ikut pulih.
@@ -71,7 +79,6 @@ const ORPHAN_CHECKS = ["question_options", "bundle_items", "question_topics"];
  */
 const ROW_TABLES = [
   { label: "questions", sql: "questions", min: 1 },
-  { label: "question_options", sql: "question_options", min: 1 },
   { label: "solutions", sql: "solutions", min: 1 },
   { label: "question_topics", sql: "question_topics", min: 0 },
   { label: "question_tags", sql: "question_tags", min: 0 },
@@ -81,6 +88,25 @@ const ROW_TABLES = [
   { label: "audit_logs", sql: "audit_logs", min: 1 },
   { label: "media_assets", sql: "media_assets", min: 1 },
   { label: "user", sql: '"user"', min: 1 },
+];
+
+/**
+ * Invarian turunan (bukan tabel) — MAT-146: karena `question_options` di-drop,
+ * bukti "opsi ikut pulih" harus dibaca dari `questions.data_payload.options`
+ * (JSONB). Dievaluasi sebagai subquery, jadi bentuknya `SELECT <expr>`.
+ */
+const DERIVED_CHECKS = [
+  {
+    label: "questions_with_options",
+    sql: `SELECT count(*)::text FROM questions
+           WHERE deleted_at IS NULL
+             AND jsonb_array_length(
+                   CASE jsonb_typeof(data_payload->'options')
+                     WHEN 'array' THEN data_payload->'options'
+                     ELSE '[]'::jsonb
+                   END) > 0`,
+    min: 1,
+  },
 ];
 
 function parseDbUrl(raw) {
@@ -193,6 +219,9 @@ function invariantSql() {
   const rows = ROW_TABLES.map(
     (t) => `SELECT 'rows:${t.label}' AS k, count(*)::text AS v FROM ${t.sql}`,
   );
+  for (const c of DERIVED_CHECKS) {
+    rows.push(`SELECT 'rows:${c.label}' AS k, (${c.sql}) AS v`);
+  }
   return `
 SELECT 'tables' k, count(*)::text v FROM information_schema.tables
   WHERE table_schema='public' AND table_type='BASE TABLE'
@@ -207,9 +236,6 @@ UNION ALL SELECT 'pk_default', COALESCE((SELECT column_default FROM information_
   WHERE table_name='questions' AND column_name='id'),'-')
 UNION ALL SELECT 'extensions', COALESCE((SELECT string_agg(extname,',' ORDER BY extname)
   FROM pg_extension),'-')
-UNION ALL SELECT 'orphans:question_options',
-  (SELECT count(*)::text FROM question_options o
-     LEFT JOIN questions q ON q.id=o.question_id WHERE q.id IS NULL)
 UNION ALL SELECT 'orphans:bundle_items',
   (SELECT count(*)::text FROM bundle_items bi
      LEFT JOIN bundles b ON b.id=bi.bundle_id WHERE b.id IS NULL)
@@ -357,6 +383,13 @@ function main() {
       result.invariants[key] = have;
     }
     for (const { label, min } of ROW_TABLES) {
+      const have = Number(got.get(`rows:${label}`) ?? 0);
+      const ok = have >= min;
+      console.log(`  ${ok ? "✓" : "✗"} rows ${label}: ${have} (harap ≥ ${min})`);
+      if (!ok) failures.push(`${label}: ${have} < ${min}`);
+      result.invariants[`rows:${label}`] = have;
+    }
+    for (const { label, min } of DERIVED_CHECKS) {
       const have = Number(got.get(`rows:${label}`) ?? 0);
       const ok = have >= min;
       console.log(`  ${ok ? "✓" : "✗"} rows ${label}: ${have} (harap ≥ ${min})`);
