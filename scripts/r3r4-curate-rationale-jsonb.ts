@@ -202,7 +202,7 @@ async function applyRationalesJsonb(items: QuestionRationale[]): Promise<{
     if (changed && !DRY_RUN) {
       await sql`
         UPDATE questions
-        SET data_payload = jsonb_set(data_payload, '{options}', ${JSON.stringify(updatedOptions)}::jsonb)
+        SET data_payload = jsonb_set(data_payload, '{options}', ${sql.json(updatedOptions)})
         WHERE id = ${item.questionId}::uuid
       `;
     }
