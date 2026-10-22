@@ -1,10 +1,12 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-22 (MAT-35, Batch 2 selesai) — enrichment distractor rationale & rubrik esai aktif.
+> **Status:** 🔄 diperbarui 2026-10-22 (MAT-35, Batch 3 — penyelarasan JSONB MAT-144).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
-> **Lingkup:** read-only audit → enrichment aktif (MAT-35). Cakupan DB sekarang jauh lebih besar dari audit awal MAT-33 (11.869 soal hidup, 9.358 PG). Skrip enrichment: `scripts/curate-distractor-rationale-batch1.ts`, `scripts/curate-essay-rubrics-batch1.ts`, `scripts/curate-distractor-rationale-batch2.ts`.
-> **Skrip inspeksi:** `scripts/audit-pedagogy.ts` (read-only, dapat dijalankan ulang: `npx tsx scripts/audit-pedagogy.ts`).
-> **Standar rujukan:** `SKILL_PEDAGOGY.md` (Haladyna 31 aturan + *Distractor Rationale Mandate*), `docs/SKEMA-DB-DETAIL.md` §`question_options`.
+> **Lingkup:** enrichment aktif (MAT-35). DB: 11.869 soal hidup, 9.358 PG, 2.181 esai.
+> **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
+> **Skrip JSONB-aligned:** `scripts/r2-extract-rationale-jsonb.ts` (R2), `scripts/r3r4-curate-rationale-jsonb.ts` (R3/R4), `scripts/r5-essay-rubric-jsonb.ts` (R5), `scripts/r5-migrate-rubric-field.sql` (migrasi text→scoringRubric).
+> **Skrip lama (relasional):** `scripts/curate-distractor-rationale-batch1.ts`, `scripts/curate-distractor-rationale-batch2.ts` — valid sampai migrasi MAT-144 selesai.
+> **Standar rujukan:** `SKILL_PEDAGOGY.md` (Haladyna 31 aturan + *Distractor Rationale Mandate*), `src/lib/validations/question-payload.ts` (Zod schema MAT-145), `docs/architecture/QUESTION_PAYLOAD_DECISION.md` (MAT-144).
 
 ---
 
@@ -21,6 +23,28 @@
 | **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **0 / 52** | 🔴 **0,00 %** |
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
+
+### Snapshot MAT-35 Batch 3 (2026-10-22) — Penyelarasan Arsitektur JSONB MAT-144
+
+> Batch ini menyelaraskan enrichment target ke arsitektur Single Table + Hybrid JSONB (MAT-144).
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 11.869 | — |
+| Soal pilihan ganda | 9.357 | — |
+| Opsi dengan `distractor_rationale` (relasional, `question_options`) | **188** | 🟡 **0,55 %** |
+| Esai dengan `answer_key.scoringRubric` (JSONB canonical) | **12** | 🟡 migrasi selesai |
+| Esai dengan `answer_key.text` (lama) yang sudah dimitrasi | **12 → scoringRubric** | ✅ |
+
+**Batch 3 mengerjakan:**
+- **Arsitektur**: Semua skrip baru menargetkan JSONB `data_payload.options[].distractorRationale` dan `answer_key.scoringRubric` (per MAT-144)
+- **R5 migrasi** (`r5-migrate-rubric-field.sql`): 12 rubrik lama di `answer_key.text` → `answer_key.scoringRubric`
+- **R2/R3/R4 JSONB-ready**: Skrip baru siap dijalankan setelah migrasi `data_payload` MAT-144 selesai
+- **Blocker teridentifikasi**: `data_payload.options` masih kosong (MAT-144 migrasi belum berjalan) — skrip R2/R3/R4 baru akan aktif setelah migrasi
+
+**Kumulatif rubrik esai:**
+- `answer_key.scoringRubric` (canonical JSONB): **12** ✅
+- `answer_key.text` (lama, masih ada): **12** (ditetapkan deprecated)
 
 ### Snapshot MAT-35 Batch 2 (2026-10-22) — Pasca-Enrichment Batch 2
 
