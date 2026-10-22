@@ -47,6 +47,7 @@ import {
   MatrixGridView,
   readMatrixGridPayload,
 } from "@/components/questions/matrix-grid-view";
+import { MatchingView, readMatchingPayload } from "@/components/questions/matching-view";
 import { formatGradeBadge } from "@/components/questions/question-card";
 import { cn } from "@/lib/utils";
 
@@ -166,6 +167,11 @@ export function QuestionDetailView() {
                 {/* Soal MATRIX GRID (benar-salah): pernyataan ada di dataPayload.rows */}
                 {q.questionType === "matrix_grid" && (
                   <MatrixGridView payload={readMatrixGridPayload(q.dataPayload)} />
+                )}
+
+                {/* Soal MENJODOHKAN: dua kolom ada di dataPayload.premises/responses */}
+                {q.questionType === "matching" && (
+                  <MatchingView payload={readMatchingPayload(q.dataPayload)} />
                 )}
 
                 {/* Opsi Pilihan Ganda (Menyatu dalam Dokumen, Format 1 Kolom ke Bawah) */}
