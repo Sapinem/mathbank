@@ -1,6 +1,6 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 7 — R4 Batch 3: 5 soal eksponensial/SPLDV + R5 Batch 2: 5 rubrik esai, 63 SC dengan rationale / 285 entries, 43 esai dengan rubrik).
+> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 9 — R4 Batch 9: 7 soal geom/matriks/eksponen + R5 Batch 4: 6 rubrik esai tingkat lanjut; 78 SC dengan rationale / 352 entries, 54 esai dengan rubrik).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
 > **Lingkup:** enrichment aktif (MAT-35). DB: 11.891 soal hidup, 9.336 SC, 2.181 esai.
 > **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
@@ -450,7 +450,8 @@ Skrip bersifat **read-only** (hanya `SELECT`), tidak memodifikasi DB, skema, ata
 | Batch 6 | 9f1abed | 58 | 265 | 38 |
 | Batch 7 | 2524bc2 | 63 | 285 | 43 |
 | **Batch 8** | **0ee341f** | **71** | **317** | **48** |
+| **Batch 9** | *(pending commit)* | **78** | **352** | **54** |
 
 **Target awal audit:** 52 SC → 100% rationale, 26 esai → rubrik penuh.
-**Update skala:** DB produksi jauh lebih besar (9.336 SC, 2.202 esai per batch 8).
+**Update skala:** DB produksi jauh lebih besar (9.336 SC, 2.202 esai per batch 9).
 Prioritas next batch: *Simulasi TKA* (187 SC tanpa rationale), *Bangun Datar SMP* (59 SC), *UTBK Matematika* (59 SC).
