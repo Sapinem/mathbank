@@ -39,7 +39,11 @@ export function QuestionEditView() {
         title="Sunting Soal"
         description="Perubahan tersimpan saat Anda menekan Simpan."
         actions={
-          <Button variant="ghost" render={<Link href={`/questions/${id}`} />}>
+          <Button
+            variant="ghost"
+            render={<Link href={`/questions/${id}`} />}
+            nativeButton={false}
+          >
             <ArrowLeft data-icon="inline-start" />
             Kembali
           </Button>

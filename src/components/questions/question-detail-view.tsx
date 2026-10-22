@@ -108,6 +108,7 @@ export function QuestionDetailView() {
               variant="outline"
               size="sm"
               render={<Link href={`/questions/${id}/edit`} />}
+              nativeButton={false}
             >
               <Pencil data-icon="inline-start" /> Sunting
             </Button>
@@ -353,6 +354,7 @@ export function QuestionDetailView() {
                             variant="outline"
                             size="sm"
                             render={<Link href={`/questions/${id}/edit`} />}
+                            nativeButton={false}
                           >
                             <Pencil data-icon="inline-start" /> Tulis Pembahasan
                           </Button>
