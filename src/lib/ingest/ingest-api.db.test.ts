@@ -35,7 +35,6 @@ async function cleanAll() {
   // ADR-0014: bundle_items.question_id = RESTRICT -> harus dihapus lebih dulu.
   await sql`DELETE FROM bundle_items`;
   await sql`DELETE FROM bundles WHERE bundle_type = 'source'`;
-  await sql`DELETE FROM question_options`;
   await sql`UPDATE questions SET parent_id = NULL`;
   await sql`DELETE FROM questions`;
   await sql`DELETE FROM ingest_queue`;

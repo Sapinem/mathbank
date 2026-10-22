@@ -1,11 +1,6 @@
 import { and, eq, isNull, sql, desc, asc, inArray, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
-import {
-  questions,
-  questionOptions,
-  type Question,
-  type QuestionOption,
-} from "@/lib/db/schema/question";
+import { questions, type Question } from "@/lib/db/schema/question";
 import { embedText } from "@/lib/embedding/bge-m3";
 import type { Actor } from "@/lib/auth/actor";
 import { solutions } from "@/lib/db/schema/solution";
@@ -15,8 +10,10 @@ import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { sources } from "@/lib/db/schema/source";
 import {
   questionColumns,
-  optionColumns,
+  projectOptions,
+  projectAnswerKey,
   canSeeAnswerKey,
+  type QuestionOptionView,
 } from "@/lib/db/projections/question";
 import type { ListQuestionsQuery, AnswerKey } from "@/lib/contracts/question";
 
@@ -54,7 +51,7 @@ export type PublicQuestion = Omit<
   | "answerKey"
   | "contentHash"
 > & {
-  options: QuestionOption[];
+  options: QuestionOptionView[];
   answerKey?: AnswerKey;
   /** Asal-usul (ADR-0014): naskah/bundle yang memuat butir ini (bisa >1). */
   bundles?: QuestionBundleView[];
@@ -126,7 +123,7 @@ export interface QuestionBundleView {
 
 /** Soal internal (untuk logika service: FSM, izin) — punya `answerKey`. */
 export interface QuestionInternal extends Question {
-  options: QuestionOption[];
+  options: QuestionOptionView[];
 }
 
 /**
@@ -150,11 +147,11 @@ export async function getQuestion(
     .limit(1);
   if (!row) return null;
 
-  const options = await db
-    .select(optionColumns({ withAnswerKey }))
-    .from(questionOptions)
-    .where(eq(questionOptions.questionId, id))
-    .orderBy(asc(questionOptions.orderIndex));
+  // MAT-146 — opsi dari `data_payload.options` (zero join, tanpa query kedua).
+  const options = projectOptions(
+    { id: row.id, dataPayload: row.dataPayload, answerKey: "answerKey" in row ? row.answerKey : undefined },
+    { withAnswerKey, createdAt: row.createdAt, updatedAt: row.updatedAt },
+  );
 
   // ADR-0014: sumber TIDAK lagi per-butir — ia menempel pada BUNDLE.
   // Jadi "asal soal" = daftar naskah yang memuatnya (via bundle_items).
@@ -250,7 +247,11 @@ export async function getQuestion(
       .orderBy(desc(solutions.isPrimary), asc(solutions.createdAt));
 
     solutionList = rawSolutions as QuestionSolutionView[];
-    const answerKey = "answerKey" in row ? (row.answerKey as AnswerKey | undefined) : undefined;
+    // MAT-146 — `answer_key` diproyeksikan: bentuk kanonik + alias legacy
+    // (`explanation`), sehingga fallback solusi virtual tetap bekerja.
+    const answerKey = withAnswerKey
+      ? (projectAnswerKey("answerKey" in row ? row.answerKey : undefined) as AnswerKey)
+      : undefined;
 
     // Fallback: Jika tabel solutions kosong tapi answerKey.explanation ada, buat solusi virtual
     if (solutionList.length === 0 && answerKey?.explanation) {
@@ -270,6 +271,10 @@ export async function getQuestion(
 
   return {
     ...row,
+    // Kunci jawaban: bentuk kanonik + alias legacy (S3 — hanya bila berwenang).
+    ...(withAnswerKey
+      ? { answerKey: projectAnswerKey("answerKey" in row ? row.answerKey : undefined) as AnswerKey }
+      : {}),
     options,
     bundles: originBundles,
     solutions: solutionList,
@@ -311,11 +316,11 @@ export async function getQuestionInternal(
     .limit(1);
   if (!row) return null;
 
-  const options = await db
-    .select()
-    .from(questionOptions)
-    .where(eq(questionOptions.questionId, id))
-    .orderBy(asc(questionOptions.orderIndex));
+  // MAT-146 — opsi dari JSONB; kunci internal dibutuhkan (FSM/izin/enrichment).
+  const options = projectOptions(
+    { id: row.id, dataPayload: row.dataPayload, answerKey: row.answerKey },
+    { withAnswerKey: true, createdAt: row.createdAt, updatedAt: row.updatedAt },
+  );
 
   return { ...row, options };
 }
@@ -377,24 +382,15 @@ export async function listQuestions(
   return { items, total: count };
 }
 
-/** Lampirkan opsi ke banyak soal (hindari N+1). Proyeksi aman (S3). */
+/**
+ * Lampirkan opsi ke banyak soal (MAT-146 — zero join: opsi sudah ikut di baris
+ * `data_payload`, jadi tidak ada query opsi sama sekali).
+ */
 async function attachOptions(
   rows: Omit<PublicQuestion, "options">[],
   withAnswerKey: boolean,
 ): Promise<PublicQuestion[]> {
   if (rows.length === 0) return [];
-  const ids = rows.map((r) => r.id);
-  const opts = await db
-    .select(optionColumns({ withAnswerKey }))
-    .from(questionOptions)
-    .where(inArray(questionOptions.questionId, ids))
-    .orderBy(asc(questionOptions.orderIndex));
-  const byQuestion = new Map<string, QuestionOption[]>();
-  for (const o of opts) {
-    const arr = byQuestion.get(o.questionId) ?? [];
-    arr.push(o as QuestionOption);
-    byQuestion.set(o.questionId, arr);
-  }
 
   // Lampirkan wacana stimulus induk (hindari N+1): 1 query untuk semua parentId.
   const parentIds = [
@@ -409,9 +405,18 @@ async function attachOptions(
     for (const p of parents) parentMap.set(p.id, p);
   }
 
-  return rows.map((r) => ({
-    ...r,
-    options: byQuestion.get(r.id) ?? [],
-    parent: r.parentId ? (parentMap.get(r.parentId) ?? null) : null,
-  }));
+  return rows.map((r) => {
+    const answerKey = "answerKey" in r ? (r as { answerKey?: unknown }).answerKey : undefined;
+    return {
+      ...r,
+      ...(answerKey !== undefined
+        ? { answerKey: projectAnswerKey(answerKey) as AnswerKey }
+        : {}),
+      options: projectOptions(
+        { id: r.id, dataPayload: r.dataPayload, answerKey },
+        { withAnswerKey, createdAt: r.createdAt, updatedAt: r.updatedAt },
+      ),
+      parent: r.parentId ? (parentMap.get(r.parentId) ?? null) : null,
+    } as PublicQuestion;
+  });
 }

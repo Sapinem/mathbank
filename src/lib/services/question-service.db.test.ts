@@ -66,7 +66,6 @@ function baseInput(over: Record<string, unknown> = {}) {
 
 /** Bersihkan data soal + audit antar-tes. */
 async function cleanAll() {
-  await sql`DELETE FROM question_options`;
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
   await sql`UPDATE questions SET parent_id = NULL`;
@@ -211,7 +210,11 @@ describe("updateQuestion", () => {
   it("mengganti opsi bila dikirim", async () => {
     const q = await createQuestion(
       baseInput({
-        options: [{ label: "A", contentMarkdown: "x", isCorrect: true, orderIndex: 0 }],
+        // MAT-146: kontrak Haladyna Rule 2 → minimal 2 opsi.
+        options: [
+          { label: "A", contentMarkdown: "x", isCorrect: true, orderIndex: 0 },
+          { label: "B", contentMarkdown: "w", isCorrect: false, orderIndex: 1 },
+        ],
       }),
       teacher,
     );

@@ -37,7 +37,6 @@ const guru: Actor = { id: "guru-enrich", name: "Guru", roles: ["teacher"], via: 
 const noone: Actor = { id: "noone", name: "X", roles: [], via: "session" };
 
 async function cleanAll() {
-  await sql`DELETE FROM question_options`;
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
   await sql`DELETE FROM questions`;
@@ -61,17 +60,25 @@ async function makeQuestion(stem = "Tentukan turunan dari $x^2$."): Promise<stri
   return r.id;
 }
 
-/** Soal PG dengan opsi A–E (A kunci, B–E pengecoh) untuk uji rationale. */
+/**
+ * Soal PG dengan opsi A–E (A kunci, B–E pengecoh) untuk uji rationale.
+ * MAT-146: opsi ditulis ke `data_payload.options` (JSONB) — bukan tabel lagi.
+ */
 async function makePgQuestion(stem = "Berapa $1+1$?"): Promise<string> {
-  const [r] = await sql`
-    INSERT INTO questions (question_type, difficulty, cognitive_level, grade, content_markdown, answer_key, status, author_id)
-    VALUES ('single_choice', 2, 'apply', 'sma-10', ${stem}, '{"correct":["A"]}'::jsonb, 'draft', ${guru.id})
-    RETURNING id`;
   const labels = ["A", "B", "C", "D", "E"];
-  for (let i = 0; i < labels.length; i++) {
-    await sql`INSERT INTO question_options (question_id, label, content_markdown, is_correct, order_index)
-      VALUES (${r.id}, ${labels[i]}, ${String(i + 1)}, ${i === 0}, ${i})`;
-  }
+  const dataPayload = {
+    type: "multiple_choice",
+    shuffleOptions: true,
+    options: labels.map((label, i) => ({
+      id: label,
+      contentMarkdown: String(i + 1),
+    })),
+  };
+  const [r] = await sql`
+    INSERT INTO questions (question_type, difficulty, cognitive_level, grade, content_markdown, data_payload, answer_key, status, author_id)
+    VALUES ('single_choice', 2, 'apply', 'sma-10', ${stem},
+            ${sql.json(dataPayload)}, '{"correct":["A"]}'::jsonb, 'draft', ${guru.id})
+    RETURNING id`;
   return r.id;
 }
 
@@ -197,15 +204,16 @@ describe("enrichment — kontrak pedagogi (MAT-41)", () => {
     expect(r.ok).toBe(true);
     expect(r.pedagogy?.rationaleApplied).toBe(4);
 
-    const rows = await sql`SELECT label, is_correct, distractor_rationale FROM question_options WHERE question_id = ${id} ORDER BY order_index`;
+    // MAT-146: rationale dibaca dari `data_payload.options` (JSONB).
+    const [q] = await sql`SELECT data_payload, answer_key FROM questions WHERE id = ${id}`;
+    const opts = q.data_payload.options as { id: string; distractorRationale?: string }[];
     // Opsi benar (A) TIDAK diisi rationale.
-    expect(rows.find((o) => o.label === "A")!.distractor_rationale).toBeNull();
+    expect(opts.find((o) => o.id === "A")!.distractorRationale ?? null).toBeNull();
     // Semua pengecoh (B–E) terisi.
     for (const label of ["B", "C", "D", "E"]) {
-      expect(rows.find((o) => o.label === label)!.distractor_rationale).toBeTruthy();
+      expect(opts.find((o) => o.id === label)!.distractorRationale).toBeTruthy();
     }
     // Kunci tidak berubah.
-    const [q] = await sql`SELECT answer_key FROM questions WHERE id = ${id}`;
     expect(q.answer_key.correct).toEqual(["A"]);
   });
 

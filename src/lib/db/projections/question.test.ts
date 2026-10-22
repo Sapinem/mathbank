@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   questionColumns,
-  optionColumns,
+  projectOptions,
+  projectAnswerKey,
+  correctLabelsOf,
   canSeeAnswerKey,
 } from "./question";
 import type { Actor } from "@/lib/auth/actor";
 import { questions } from "@/lib/db/schema/question";
-import { questionOptions } from "@/lib/db/schema/question";
 
 function actor(roles: Actor["roles"], via: Actor["via"] = "session"): Actor {
   return { id: "u1", name: "Uji", roles, via };
@@ -60,16 +61,65 @@ describe("questionColumns — proyeksi aman (S3)", () => {
   });
 });
 
-describe("optionColumns — kunci opsi (S3)", () => {
-  it("TANPA kunci: tak ada isCorrect/distractorRationale", () => {
-    const cols = optionColumns() as Record<string, unknown>;
-    expect(cols.isCorrect).toBeUndefined();
-    expect(cols.distractorRationale).toBeUndefined();
+describe("projectOptions — opsi dari JSONB (MAT-146, S3)", () => {
+  const row = {
+    id: "q-1",
+    dataPayload: {
+      type: "multiple_choice",
+      options: [
+        { id: "A", contentMarkdown: "1", distractorRationale: "Salah menjumlah suku sejenis pada langkah kedua." },
+        { id: "B", contentMarkdown: "2" },
+      ],
+    },
+    answerKey: { correctOptionIds: ["B"] },
+  };
+
+  it("TANPA kunci: isCorrect=false & rationale null", () => {
+    const opts = projectOptions(row);
+    expect(opts).toHaveLength(2);
+    expect(opts.every((o) => o.isCorrect === false)).toBe(true);
+    expect(opts.every((o) => o.distractorRationale === null)).toBe(true);
   });
 
-  it("DENGAN kunci: ada isCorrect & distractorRationale", () => {
-    const cols = optionColumns({ withAnswerKey: true }) as Record<string, unknown>;
-    expect(cols.isCorrect).toBe(questionOptions.isCorrect);
-    expect(cols.distractorRationale).toBe(questionOptions.distractorRationale);
+  it("DENGAN kunci: isCorrect dari answer_key + rationale terbaca", () => {
+    const opts = projectOptions(row, { withAnswerKey: true });
+    expect(opts.find((o) => o.label === "B")?.isCorrect).toBe(true);
+    expect(opts.find((o) => o.label === "A")?.isCorrect).toBe(false);
+    expect(opts[0].distractorRationale).toContain("Salah menjumlah");
+  });
+
+  it("zero join: urutan & label mengikuti JSONB", () => {
+    const opts = projectOptions(row, { withAnswerKey: true });
+    expect(opts.map((o) => o.label)).toEqual(["A", "B"]);
+    expect(opts.map((o) => o.orderIndex)).toEqual([0, 1]);
+    expect(opts.every((o) => o.questionId === "q-1")).toBe(true);
+  });
+
+  it("payload tanpa opsi (matriks/esai) → array kosong", () => {
+    expect(projectOptions({ id: "q-2", dataPayload: { rows: [] } })).toEqual([]);
+    expect(projectOptions({ id: "q-3", dataPayload: {} })).toEqual([]);
+  });
+});
+
+describe("projectAnswerKey — kanonik + mirror legacy (MAT-146)", () => {
+  it("menurunkan `correct`/`explanation` dari bentuk kanonik", () => {
+    const key = projectAnswerKey({
+      correctOptionIds: ["c"],
+      explanationMarkdown: "Pembahasan",
+    });
+    expect(key.correct).toEqual(["C"]);
+    expect(key.explanation).toBe("Pembahasan");
+    expect(key.correctOptionIds).toEqual(["c"]);
+  });
+
+  it("kunci kosong tetap {} (kontrak respons tak berubah)", () => {
+    expect(projectAnswerKey({})).toEqual({});
+    expect(projectAnswerKey(null)).toEqual({});
+  });
+
+  it("correctLabelsOf menerima string tunggal & array", () => {
+    expect(correctLabelsOf({ correctOptionIds: "a" })).toEqual(["A"]);
+    expect(correctLabelsOf({ correct: ["b", "d"] })).toEqual(["B", "D"]);
+    expect(correctLabelsOf(undefined)).toEqual([]);
   });
 });

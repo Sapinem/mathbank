@@ -53,9 +53,11 @@ async function mkQuestion(content = "Soal contoh $1+1$?", withKey = true) {
       answerKey: withKey ? { correct: ["B"] } : {},
       status: "draft",
       childOrder: 0,
+      // MAT-146: `isCorrect` = sumber tunggal kunci (tidak ada tabel opsi lagi),
+      // jadi soal "tanpa kunci" harus tanpa opsi bertanda benar juga.
       options: [
         { label: "A", contentMarkdown: "1", isCorrect: false, orderIndex: 0 },
-        { label: "B", contentMarkdown: "2", isCorrect: true, orderIndex: 1 },
+        { label: "B", contentMarkdown: "2", isCorrect: withKey, orderIndex: 1 },
       ],
       topicIds: [],
       tagIds: [],

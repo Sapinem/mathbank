@@ -37,7 +37,8 @@ DECLARE
   tables text[] := ARRAY[
     'account', 'apikey', 'app_settings', 'bundles',
     'cognitive_levels', 'difficulty_levels', 'events', 'grades',
-    'ingest_queue', 'media_assets', 'question_options',
+    'ingest_queue', 'media_assets',
+    -- MAT-146: `question_options` DIHAPUS (opsi kini JSONB di questions.data_payload).
     'questions', 'session', 'solutions', 'sources', 'tags',
     'topics', 'user', 'verification'
   ];

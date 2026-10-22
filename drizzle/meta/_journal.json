@@ -120,6 +120,13 @@
       "when": 1792563367273,
       "tag": "0016_slug_soft_deprecation",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792687302926,
+      "tag": "0017_thick_ultimates",
+      "breakpoints": true
     }
   ]
 }

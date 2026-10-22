@@ -47,7 +47,6 @@ async function call(client: { callTool: (x: never) => Promise<unknown> }, name: 
 }
 
 async function cleanAll() {
-  await sql`DELETE FROM question_options`;
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
   await sql`DELETE FROM questions`;

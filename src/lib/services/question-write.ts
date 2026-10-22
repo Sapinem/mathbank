@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { questions, questionOptions } from "@/lib/db/schema/question";
+import { questions } from "@/lib/db/schema/question";
 import { solutions } from "@/lib/db/schema/solution";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import { isQuestionUsedInBundles } from "./bundle-service";
@@ -9,6 +9,7 @@ import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
+import { enforceQuestionWriteGate } from "@/lib/contracts/question";
 import type {
   CreateQuestionInput,
   UpdateQuestionInput,
@@ -19,6 +20,11 @@ import type {
  *
  * Operasi mutasi yang tidak mengubah status lewat FSM: buat, perbarui, tandai,
  * hapus lunak, hapus permanen. Transisi status ada di `question-status.ts`.
+ *
+ * **MAT-146** — `question_options` dihapus. Semua jalur tulis di modul ini
+ * melewati `enforceQuestionWriteGate()` (Zod, 3 lapis) lalu menyimpan opsi ke
+ * `data_payload.options` + kunci ke `answer_key.correctOptionIds`. Tidak ada
+ * lagi INSERT/DELETE ke tabel opsi.
  */
 
 /** Buat soal (+ opsi + topik + label) dalam satu transaksi. */
@@ -41,6 +47,19 @@ export async function createQuestion(
     }
   }
 
+  // ⛔ GERBANG TULIS WAJIB (MAT-146). Melempar 422 bila payload melanggar kontrak.
+  const gated = enforceQuestionWriteGate({
+    questionType: input.questionType,
+    dataPayload: input.dataPayload,
+    answerKey: input.answerKey,
+    options: input.options,
+    status: input.status,
+  });
+  // Opsi kanonik (dari data_payload) — dipakai untuk hash konten anti-duplikat.
+  const gatedOptions = Array.isArray(gated.dataPayload.options)
+    ? (gated.dataPayload.options as { contentMarkdown?: unknown }[])
+    : [];
+
   const id = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(questions)
@@ -55,10 +74,10 @@ export async function createQuestion(
         // Hash konten (ADR-0012) — dedup lintas-sumber.
         contentHash: contentHash(
           input.contentMarkdown,
-          input.options.map((o) => o.contentMarkdown),
+          gatedOptions.map((o) => String(o.contentMarkdown ?? "")),
         ),
-        dataPayload: input.dataPayload,
-        answerKey: input.answerKey,
+        dataPayload: gated.dataPayload,
+        answerKey: gated.answerKey,
         status: input.status,
         eventId: input.eventId ?? null,
         eventYear: input.eventYear ?? null,
@@ -72,18 +91,6 @@ export async function createQuestion(
       })
       .returning({ id: questions.id });
 
-    if (input.options.length) {
-      await tx.insert(questionOptions).values(
-        input.options.map((o) => ({
-          questionId: row.id,
-          label: o.label,
-          contentMarkdown: o.contentMarkdown,
-          isCorrect: o.isCorrect,
-          distractorRationale: o.distractorRationale ?? null,
-          orderIndex: o.orderIndex,
-        })),
-      );
-    }
     if (input.topicIds.length) {
       await tx
         .insert(questionTopics)
@@ -137,6 +144,37 @@ export async function updateQuestion(
 
   const { options, solutions: solutionInputs, topicIds, tagIds, parentId, ...fields } = input;
 
+  // ⛔ GERBANG TULIS WAJIB (MAT-146). Dijalankan SEBELUM transaksi, dengan
+  // payload hasil merge (partial update tidak boleh menghapus opsi yang ada).
+  const touchesPayload =
+    options !== undefined ||
+    solutionInputs !== undefined ||
+    fields.dataPayload !== undefined ||
+    fields.answerKey !== undefined;
+
+  let gated: { dataPayload: Record<string, unknown>; answerKey: Record<string, unknown> } | undefined;
+  if (touchesPayload) {
+    const basePayload = (fields.dataPayload ??
+      (existing.dataPayload as Record<string, unknown>)) as Record<string, unknown>;
+    let baseKey = (fields.answerKey ??
+      (existing.answerKey as Record<string, unknown>)) as Record<string, unknown>;
+
+    // Pembahasan utama (multi-solution) → `answer_key.explanationMarkdown`.
+    const primarySolution =
+      solutionInputs?.find((s) => s.isPrimary) ?? solutionInputs?.[0];
+    if (primarySolution?.contentMarkdown) {
+      baseKey = { ...baseKey, explanationMarkdown: primarySolution.contentMarkdown };
+    }
+
+    gated = enforceQuestionWriteGate({
+      questionType: fields.questionType ?? existing.questionType,
+      dataPayload: basePayload,
+      answerKey: baseKey,
+      options,
+      status: fields.status ?? existing.status,
+    });
+  }
+
   await db.transaction(async (tx) => {
     const patch: Partial<typeof questions.$inferInsert> = {};
     if (fields.questionType !== undefined) patch.questionType = fields.questionType;
@@ -144,8 +182,10 @@ export async function updateQuestion(
     if (fields.cognitiveLevel !== undefined) patch.cognitiveLevel = fields.cognitiveLevel;
     if (fields.grade !== undefined) patch.grade = fields.grade;
     if (fields.contentMarkdown !== undefined) patch.contentMarkdown = fields.contentMarkdown;
-    if (fields.dataPayload !== undefined) patch.dataPayload = fields.dataPayload;
-    if (fields.answerKey !== undefined) patch.answerKey = fields.answerKey;
+    if (gated) {
+      patch.dataPayload = gated.dataPayload;
+      patch.answerKey = gated.answerKey;
+    }
     if (fields.eventId !== undefined) patch.eventId = fields.eventId;
     if (fields.eventYear !== undefined) patch.eventYear = fields.eventYear;
     if (fields.eventSubtest !== undefined) patch.eventSubtest = fields.eventSubtest;
@@ -169,33 +209,11 @@ export async function updateQuestion(
           })),
         );
       }
-      const prim = solutionInputs.find((s) => s.isPrimary) ?? solutionInputs[0];
-      if (prim?.contentMarkdown) {
-        patch.answerKey = {
-          ...(existing.answerKey ?? {}),
-          ...(patch.answerKey ?? {}),
-          explanation: prim.contentMarkdown,
-        };
-      }
+      // Pembahasan utama sudah masuk `answer_key.explanationMarkdown` lewat gerbang.
     }
 
     if (Object.keys(patch).length) {
       await tx.update(questions).set(patch).where(eq(questions.id, id));
-    }
-    if (options) {
-      await tx.delete(questionOptions).where(eq(questionOptions.questionId, id));
-      if (options.length) {
-        await tx.insert(questionOptions).values(
-          options.map((o) => ({
-            questionId: id,
-            label: o.label,
-            contentMarkdown: o.contentMarkdown,
-            isCorrect: o.isCorrect,
-            distractorRationale: o.distractorRationale ?? null,
-            orderIndex: o.orderIndex,
-          })),
-        );
-      }
     }
     if (topicIds) {
       await tx.delete(questionTopics).where(eq(questionTopics.questionId, id));

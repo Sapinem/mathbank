@@ -23,7 +23,11 @@ function base(over: Record<string, unknown> = {}) {
     answerKey: { correct: ["A"] },
     status: "draft" as const,
     childOrder: 0,
-    options: [{ label: "A", contentMarkdown: "1", isCorrect: true, orderIndex: 0 }],
+    // MAT-146: Haladyna Rule 2 → minimal 2 opsi.
+    options: [
+      { label: "A", contentMarkdown: "1", isCorrect: true, orderIndex: 0 },
+      { label: "B", contentMarkdown: "2", isCorrect: false, orderIndex: 1 },
+    ],
     topicIds: [],
     tagIds: [],
     ...over,
@@ -31,7 +35,6 @@ function base(over: Record<string, unknown> = {}) {
 }
 
 async function cleanAll() {
-  await sql`DELETE FROM question_options`;
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
   await sql`UPDATE questions SET parent_id = NULL`;

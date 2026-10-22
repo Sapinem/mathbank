@@ -14,11 +14,12 @@
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
-import { questions, questionOptions } from "@/lib/db/schema/question";
+import { questions } from "@/lib/db/schema/question";
 import { questionTopics } from "@/lib/db/schema/taxonomy";
 import {
   questionColumns,
-  optionColumns,
+  projectOptions,
+  projectAnswerKey,
   canSeeAnswerKey,
 } from "@/lib/db/projections/question";
 import { assertBundleRead, bundleColumns } from "./bundle-shared";
@@ -262,23 +263,25 @@ export async function listBundleItems(
     };
   }>;
 
-  // Lampirkan opsi (M8: naskah cetak butuh pilihan jawaban). Batch agar tak N+1.
+  // MAT-146 — opsi & kunci dibaca langsung dari `data_payload` / `answer_key`
+  // (zero join, tanpa query kedua). Naskah cetak tetap dapat pilihan jawaban.
   if (rows.length === 0) return [];
-  const ids = rows.map((r) => r.question.id);
-  const opts = await db
-    .select(optionColumns({ withAnswerKey }))
-    .from(questionOptions)
-    .where(inArray(questionOptions.questionId, ids))
-    .orderBy(asc(questionOptions.orderIndex));
-  const byQuestion = new Map<string, typeof opts>();
-  for (const o of opts) {
-    const arr = byQuestion.get(o.questionId) ?? [];
-    arr.push(o);
-    byQuestion.set(o.questionId, arr);
-  }
   return rows.map((r) => ({
     ...r,
-    question: { ...r.question, options: byQuestion.get(r.question.id) ?? [] },
+    question: {
+      ...r.question,
+      ...(r.question.answerKey !== undefined
+        ? { answerKey: projectAnswerKey(r.question.answerKey) as AnswerKey }
+        : {}),
+      options: projectOptions(
+        {
+          id: r.question.id,
+          dataPayload: r.question.dataPayload,
+          answerKey: r.question.answerKey,
+        },
+        { withAnswerKey, createdAt: r.question.createdAt, updatedAt: r.question.updatedAt },
+      ),
+    },
   }));
 }
 

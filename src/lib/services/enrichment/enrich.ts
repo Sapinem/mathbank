@@ -9,7 +9,12 @@
  */
 import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { questions, questionOptions } from "@/lib/db/schema/question";
+import { questions } from "@/lib/db/schema/question";
+import { projectOptions } from "@/lib/db/projections/question";
+import {
+  enforceQuestionWriteGate,
+  QuestionPayloadValidationError,
+} from "@/lib/contracts/question";
 import { questionTopics, questionTags, topics, tags } from "@/lib/db/schema/taxonomy";
 import type { Actor } from "@/lib/auth/actor";
 import { assertCan, NotFoundError } from "@/lib/auth/guards";
@@ -55,6 +60,7 @@ export async function enrichQuestion(
       contentMarkdown: questions.contentMarkdown,
       questionType: questions.questionType,
       answerKey: questions.answerKey,
+      dataPayload: questions.dataPayload,
       status: questions.status,
       authorId: questions.authorId,
     })
@@ -72,16 +78,16 @@ export async function enrichQuestion(
     return { questionId, ok: false, error: "AI belum siap (cek Pengaturan → AI)." };
   }
 
-  // Opsi soal (untuk rationale pengecoh) — hanya opsi salah yang diusulkan.
-  const optionRows = await db
-    .select({
-      label: questionOptions.label,
-      contentMarkdown: questionOptions.contentMarkdown,
-      isCorrect: questionOptions.isCorrect,
-    })
-    .from(questionOptions)
-    .where(eq(questionOptions.questionId, questionId))
-    .orderBy(questionOptions.orderIndex);
+  // Opsi soal (untuk rationale pengecoh) — MAT-146: dibaca dari `data_payload`
+  // (zero join). Hanya opsi salah yang diusulkan.
+  const optionRows = projectOptions(
+    { id: q.id, dataPayload: q.dataPayload, answerKey: q.answerKey },
+    { withAnswerKey: true },
+  ).map((o) => ({
+    label: o.label,
+    contentMarkdown: o.contentMarkdown,
+    isCorrect: o.isCorrect,
+  }));
 
   const [topicNames, tagNames] = await Promise.all([listTopicNames(), listTagNames()]);
   const prompt = buildUserPrompt({
@@ -110,27 +116,53 @@ export async function enrichQuestion(
   }
   const rubricApplied = proposal.rubric !== null && fields.includes("rubric");
 
+  // ── MAT-146: rationale ditulis ke `data_payload.options` (JSONB), bukan tabel.
+  const basePayload = (q.dataPayload ?? {}) as Record<string, unknown>;
+  const rawOptions = Array.isArray(basePayload.options) ? basePayload.options : [];
+  const nextOptions = rawOptions.map((item) => {
+    const opt = (item ?? {}) as Record<string, unknown>;
+    const label = String(opt.id ?? opt.label ?? "").trim().toUpperCase();
+    const rationale = rationaleByLabel.get(label);
+    return rationale ? { ...opt, distractorRationale: rationale } : opt;
+  });
+  const nextPayload: Record<string, unknown> =
+    rawOptions.length > 0 ? { ...basePayload, options: nextOptions } : basePayload;
+
+  const baseKey = (q.answerKey ?? {}) as Record<string, unknown>;
+  const nextKey: Record<string, unknown> = rubricApplied
+    ? { ...baseKey, rubric: proposal.rubric }
+    : baseKey;
+
+  // ⛔ Gerbang tulis wajib — tidak ada jalur tulis yang lolos tanpa Zod parse.
+  let gated: { dataPayload: Record<string, unknown>; answerKey: Record<string, unknown> };
+  try {
+    // CATATAN: kontrak pedagogis *rilis* (lapis 3) sengaja TIDAK dipasang di
+    // sini. Enrichment tidak pernah memindahkan soal ke `ready` (hanya
+    // draft → review); gerbang rilis milik transisi FSM, bukan jalur tulis ini.
+    gated = enforceQuestionWriteGate({
+      questionType: q.questionType,
+      dataPayload: nextPayload,
+      answerKey: nextKey,
+    });
+  } catch (e) {
+    if (e instanceof QuestionPayloadValidationError) {
+      return { questionId, ok: false, error: e.message };
+    }
+    throw e;
+  }
+
   await db.transaction(async (tx) => {
     const set: Record<string, unknown> = {
       aiTagged: true,
       aiTaggedAt: new Date(),
       updatedAt: new Date(),
+      dataPayload: gated.dataPayload,
+      answerKey: gated.answerKey,
     };
     if (proposal.difficulty !== null) set.difficulty = proposal.difficulty;
     if (proposal.cognitiveLevel !== null) set.cognitiveLevel = proposal.cognitiveLevel;
     if (q.status === "draft") set.status = newStatus;
-    if (rubricApplied) {
-      const key = (q.answerKey ?? {}) as Record<string, unknown>;
-      set.answerKey = { ...key, rubric: proposal.rubric };
-    }
     await tx.update(questions).set(set).where(eq(questions.id, questionId));
-
-    for (const [label, rationale] of rationaleByLabel) {
-      await tx
-        .update(questionOptions)
-        .set({ distractorRationale: rationale, updatedAt: new Date() })
-        .where(and(eq(questionOptions.questionId, questionId), eq(questionOptions.label, label)));
-    }
 
     if (proposal.topics.length) {
       for (const name of proposal.topics) {

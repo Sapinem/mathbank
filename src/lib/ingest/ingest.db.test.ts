@@ -23,7 +23,6 @@ async function cleanAll() {
   // ADR-0014: `question_sources` dihapus; asal soal kini lewat bundle_items.
   await sql`DELETE FROM bundle_items`;
   await sql`DELETE FROM bundles WHERE bundle_type = 'source'`;
-  await sql`DELETE FROM question_options`;
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
   await sql`UPDATE questions SET parent_id = NULL`;
@@ -201,7 +200,21 @@ describe("commit (soal draft)", () => {
   });
 
   it("kunci kosong tetap draft (tak menebak)", async () => {
-    const res = await commitItems([item({ correct: [] })], machine, { sourceOrigin: "uji-ingest" });
+    // MAT-146: kunci diturunkan dari `isCorrect` opsi → tanpa kunci berarti
+    // tak ada opsi bertanda benar (fixture harus konsisten).
+    const res = await commitItems(
+      [
+        item({
+          correct: [],
+          options: [
+            { label: "A", text: "1", isCorrect: false },
+            { label: "B", text: "2", isCorrect: false },
+          ],
+        }),
+      ],
+      machine,
+      { sourceOrigin: "uji-ingest" },
+    );
     const [q] = await sql`SELECT answer_key FROM questions WHERE id = ${res.questionIds[0]}`;
     expect(q.answer_key.correct).toBeUndefined();
   });

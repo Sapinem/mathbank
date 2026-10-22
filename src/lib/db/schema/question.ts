@@ -131,28 +131,14 @@ export const questions = pgTable(
   ],
 );
 
-/** question_options — opsi jawaban (anak murni soal). */
-export const questionOptions = pgTable(
-  "question_options",
-  {
-    id: uuidPk(),
-    questionId: uuid("question_id")
-      .notNull()
-      .references(() => questions.id, { onDelete: "cascade" }),
-    label: varchar("label", { length: 10 }).notNull(), // 'A'..'E'
-    contentMarkdown: text("content_markdown").notNull(),
-    isCorrect: boolean("is_correct").default(false).notNull(),
-    distractorRationale: text("distractor_rationale"),
-    orderIndex: smallint("order_index").default(0).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (t) => [index("idx_question_options_question").on(t.questionId)],
-);
+/**
+ * MAT-146 — `question_options` DIHAPUS.
+ *
+ * Opsi jawaban kini tinggal di `questions.data_payload.options` (JSONB) dan
+ * kuncinya di `questions.answer_key.correctOptionIds` (lihat
+ * `src/lib/validations/question-payload.ts` + `enforceQuestionWriteGate`).
+ * Konsekuensi: baca soal = **zero join**.
+ */
 
 export const questionsRelations = relations(questions, ({ one, many }) => ({
   parent: one(questions, {
@@ -163,16 +149,15 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
   children: many(questions, { relationName: "questionChildren" }),
   // ADR-0014: relasi `source` & `sources` (per-butir) dihapus — sumber via bundle.
   event: one(events, { fields: [questions.eventId], references: [events.id] }),
-  options: many(questionOptions),
-}));
-
-export const questionOptionsRelations = relations(questionOptions, ({ one }) => ({
-  question: one(questions, {
-    fields: [questionOptions.questionId],
-    references: [questions.id],
-  }),
 }));
 
 export type Question = typeof questions.$inferSelect;
 export type NewQuestion = typeof questions.$inferInsert;
-export type QuestionOption = typeof questionOptions.$inferSelect;
+
+/**
+ * @deprecated MAT-146 — `question_options` dihapus; opsi kini JSONB di
+ * `data_payload.options`. Alias ini dipertahankan agar konsumen lama tetap
+ * typecheck; sumber kebenarannya `QuestionOptionView` di
+ * `@/lib/db/projections/question`.
+ */
+export type QuestionOption = import("@/lib/db/projections/question").QuestionOptionView;

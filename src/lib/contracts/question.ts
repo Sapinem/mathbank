@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { QUESTION_STATUSES } from "@/lib/fsm/question-fsm";
+import {
+  questionDataPayloadSchema,
+  releasedQuestionGuardSchema,
+} from "@/lib/validations/question-payload";
 
 /**
  * Kontrak data soal (L9 API + L7 skema) — SATU sumber kebenaran validasi.
@@ -75,15 +79,264 @@ export type RubricCriterion = z.infer<typeof rubricCriterionSchema>;
 // `data_payload` hanya untuk matrix_grid & matching (UI interaktif).
 
 export const answerKeySchema = z.object({
-  /** Label opsi benar, mis. ["A"] atau ["A","C"] (checkbox). */
+  /**
+   * MAT-146 — kunci kanonik (menggantikan `correct`).
+   * `string` untuk satu jawaban, `string[]` untuk banyak jawaban.
+   */
+  correctOptionIds: z
+    .union([z.string().min(1), z.array(z.string().min(1)).min(1)])
+    .optional(),
+  /** MAT-146 — pembahasan kanonik (menggantikan `explanation`). */
+  explanationMarkdown: z.string().optional(),
+  /** Pemetaan premis → respons (tipe `matching`). */
+  matchingPairs: z.record(z.string(), z.string()).optional(),
+  /** Pemetaan pernyataan → kolom (tipe `matrix`). */
+  matrixAnswers: z.record(z.string(), z.string()).optional(),
+  /** Jawaban yang diterima (tipe `short_answer`). */
+  acceptedAnswers: z.array(z.string().min(1)).optional(),
+  /** Rubrik penilaian teks (wajib untuk esai siap rilis). */
+  scoringRubric: z.string().optional(),
+
+  // ── Mirror legacy (deprecated, dipertahankan agar konsumen lama utuh) ──
+  /** @deprecated MAT-146 — pakai `correctOptionIds`. */
   correct: z.array(z.string()).optional(),
   /** Jawaban teks (short_answer/essay). */
   text: z.string().optional(),
-  /** Pembahasan singkat jawaban. */
+  /** @deprecated MAT-146 — pakai `explanationMarkdown`. */
   explanation: z.string().optional(),
   /** Rubrik penilaian (wajib untuk esai/isian — ditegakkan gate pedagogi). */
   rubric: rubricSchema.nullable().optional(),
 });
+
+// ── Gerbang Tulis Wajib (MAT-146) ────────────────────────────
+//
+// Setiap jalur tulis soal (`createQuestion`, `updateQuestion`, `enrichQuestion`)
+// WAJIB melewati `enforceQuestionWriteGate()`. Tidak ada jalur tulis yang boleh
+// menulis `data_payload` / `answer_key` tanpa Zod parse.
+//
+// Gerbang bertingkat (3 lapis), karena korpus lama & jalur ingest masih memakai
+// bentuk pra-MAT-145:
+//   1. **Envelope** (selalu)  — tipe & bentuk dasar `data_payload` / `answer_key`.
+//   2. **Struktur kanonik** (bila `data_payload.type` ada) — `questionDataPayloadSchema`
+//      dari `src/lib/validations/question-payload.ts` (MAT-145): min 2 opsi,
+//      Haladyna Rule 5, premis/kolom tidak kosong, rubrik teks.
+//   3. **Kontrak rilis** (bila status → `ready`) — `releasedQuestionGuardSchema`:
+//      distractor rationale wajib untuk semua pengecoh, rubrik esai wajib,
+//      matching/matrix harus lengkap.
+//
+// Normalisasi juga mengisi kolom kanonik (`answerKey.correctOptionIds`,
+// `explanationMarkdown`) dari mirror legacy (`correct`, `explanation`) dan dari
+// array `options` bentuk lama — sehingga `question_options` tak lagi dibutuhkan.
+
+/** Label tipe payload kanonik (MAT-145) per `questionType` DB. */
+export const PAYLOAD_TYPE_BY_QUESTION_TYPE = {
+  stimulus: null,
+  single_choice: "multiple_choice",
+  assertion_reason: "multiple_choice",
+  combination_1234: "multiple_choice",
+  quantitative_pq: "multiple_choice",
+  data_sufficiency: "multiple_choice",
+  multiple_choice_checkbox: "complex_multiple_choice",
+  matrix_grid: "matrix",
+  matching: "matching",
+  short_answer: "short_answer",
+  essay: "essay",
+} as const;
+
+/** Tipe payload yang opsinya disimpan di `data_payload.options`. */
+const OPTION_PAYLOAD_TYPES = new Set(["multiple_choice", "complex_multiple_choice"]);
+
+/** Galat gerbang tulis soal — HTTP 422, kode `VALIDATION_ERROR`. */
+export class QuestionPayloadValidationError extends Error {
+  readonly code = "VALIDATION_ERROR";
+  readonly httpStatus = 422;
+  constructor(
+    message: string,
+    readonly issues: z.ZodIssue[] = [],
+  ) {
+    super(message);
+    this.name = "QuestionPayloadValidationError";
+  }
+}
+
+/** Bentuk minimal opsi yang diterima gerbang (bentuk relasional lama). */
+export interface GateOptionInput {
+  label: string;
+  contentMarkdown: string;
+  isCorrect?: boolean;
+  distractorRationale?: string | null;
+  orderIndex?: number;
+}
+
+export interface QuestionWriteGateInput {
+  questionType: z.infer<typeof questionTypeSchema>;
+  dataPayload?: Record<string, unknown> | null;
+  answerKey?: Record<string, unknown> | null;
+  /** Opsi bentuk lama (`question_options`); dinormalkan ke `data_payload.options`. */
+  options?: GateOptionInput[] | null;
+  /** Status tujuan — `ready` memicu kontrak pedagogis rilis. */
+  status?: z.infer<typeof questionStatusSchema>;
+}
+
+export interface NormalizedQuestionWrite {
+  dataPayload: Record<string, unknown>;
+  answerKey: Record<string, unknown>;
+}
+
+/** Normalisasi `string | string[] | undefined` → `string[] | undefined`. */
+function toLabelArray(value: unknown): string[] | undefined {
+  if (typeof value === "string") return value.trim() ? [value.trim()] : undefined;
+  if (Array.isArray(value)) {
+    const arr = value
+      .filter((v): v is string => typeof v === "string")
+      .map((v) => v.trim())
+      .filter(Boolean);
+    return arr.length ? arr : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Normalkan input tulis ke bentuk kanonik JSONB (tanpa validasi).
+ *
+ * - `options[]` (bentuk relasional) → `data_payload.options[{id,contentMarkdown,distractorRationale?}]`
+ * - `answerKey.correct` ⇄ `answerKey.correctOptionIds`
+ * - `answerKey.explanation` ⇄ `answerKey.explanationMarkdown`
+ * - `answerKey.text` ⇄ `answerKey.acceptedAnswers`
+ */
+export function normalizeQuestionWritePayload(
+  input: QuestionWriteGateInput,
+): NormalizedQuestionWrite {
+  const dataPayload: Record<string, unknown> = { ...(input.dataPayload ?? {}) };
+  const answerKey: Record<string, unknown> = { ...(input.answerKey ?? {}) };
+
+  // 1) Opsi bentuk lama → `data_payload.options` kanonik.
+  const incoming = input.options ?? [];
+  if (incoming.length) {
+    const ordered = [...incoming].sort(
+      (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0),
+    );
+    const canonicalOptions = ordered.map((o) => {
+      const id = String(o.label ?? "").trim().toUpperCase();
+      const item: Record<string, unknown> = {
+        id,
+        contentMarkdown: o.contentMarkdown,
+      };
+      const rationale = o.distractorRationale?.trim();
+      if (rationale) item.distractorRationale = o.distractorRationale;
+      return item;
+    });
+    dataPayload.options = canonicalOptions;
+
+    const mapped = PAYLOAD_TYPE_BY_QUESTION_TYPE[input.questionType];
+    dataPayload.type ??=
+      mapped && OPTION_PAYLOAD_TYPES.has(mapped) ? mapped : "multiple_choice";
+    if (dataPayload.shuffleOptions === undefined) dataPayload.shuffleOptions = true;
+
+    // Kunci dari flag `isCorrect` opsi — sumber kebenaran bentuk lama.
+    const correctFromFlags = ordered
+      .filter((o) => o.isCorrect)
+      .map((o) => String(o.label ?? "").trim().toUpperCase())
+      .filter(Boolean);
+    if (correctFromFlags.length && answerKey.correctOptionIds === undefined) {
+      answerKey.correctOptionIds = correctFromFlags;
+    }
+  }
+
+  // 2) Sinkronkan kunci jawaban kanonik ⇄ mirror legacy.
+  if (answerKey.correctOptionIds === undefined) {
+    const fromLegacy = toLabelArray(answerKey.correct);
+    if (fromLegacy) answerKey.correctOptionIds = fromLegacy;
+  }
+  // `correct` legacy boleh berupa string tunggal ("A") — normalkan ke array.
+  if (answerKey.correct !== undefined) {
+    const legacy = toLabelArray(answerKey.correct);
+    if (legacy) answerKey.correct = legacy;
+    else delete answerKey.correct;
+  }
+  if (answerKey.correct === undefined) {
+    const canonical = toLabelArray(answerKey.correctOptionIds);
+    if (canonical) answerKey.correct = canonical;
+  }
+  if (
+    answerKey.explanationMarkdown === undefined &&
+    typeof answerKey.explanation === "string"
+  ) {
+    answerKey.explanationMarkdown = answerKey.explanation;
+  }
+  if (
+    answerKey.explanation === undefined &&
+    typeof answerKey.explanationMarkdown === "string"
+  ) {
+    answerKey.explanation = answerKey.explanationMarkdown;
+  }
+  if (answerKey.acceptedAnswers === undefined && typeof answerKey.text === "string") {
+    const text = answerKey.text.trim();
+    if (text) answerKey.acceptedAnswers = [text];
+  }
+  if (answerKey.text === undefined && Array.isArray(answerKey.acceptedAnswers)) {
+    const first = answerKey.acceptedAnswers[0];
+    if (typeof first === "string") answerKey.text = first;
+  }
+
+  return { dataPayload, answerKey };
+}
+
+/** Envelope minimum yang SELALU divalidasi (lapis 1). */
+const writeEnvelopeSchema = z.object({
+  dataPayload: z.record(z.string(), z.unknown()),
+  answerKey: answerKeySchema.passthrough(),
+});
+
+/**
+ * Gerbang tulis soal — normalkan lalu validasi. **Wajib** dipanggil semua
+ * jalur tulis. Melempar `QuestionPayloadValidationError` (HTTP 422) bila
+ * payload tidak sesuai kontrak.
+ */
+export function enforceQuestionWriteGate(
+  input: QuestionWriteGateInput,
+): NormalizedQuestionWrite {
+  const normalized = normalizeQuestionWritePayload(input);
+  const { dataPayload, answerKey } = normalized;
+
+  // Lapis 1 — envelope.
+  const envelope = writeEnvelopeSchema.safeParse({ dataPayload, answerKey });
+  if (!envelope.success) {
+    throw new QuestionPayloadValidationError(
+      "Payload soal tidak valid: bentuk data_payload/answer_key salah.",
+      envelope.error.issues,
+    );
+  }
+
+  // Lapis 2 — struktur kanonik (hanya bila payload mendeklarasikan `type`).
+  if (typeof dataPayload.type === "string") {
+    const structured = questionDataPayloadSchema.safeParse(dataPayload);
+    if (!structured.success) {
+      throw new QuestionPayloadValidationError(
+        `Struktur data_payload tidak valid untuk tipe "${dataPayload.type}": ` +
+          structured.error.issues.map((i) => i.message).join("; "),
+        structured.error.issues,
+      );
+    }
+  }
+
+  // Lapis 3 — kontrak pedagogis rilis.
+  if (input.status === "ready") {
+    const release = releasedQuestionGuardSchema.safeParse({
+      dataPayload,
+      answerKey,
+    });
+    if (!release.success) {
+      throw new QuestionPayloadValidationError(
+        "Soal belum memenuhi kontrak pedagogis untuk dirilis: " +
+          release.error.issues.map((i) => i.message).join("; "),
+        release.error.issues,
+      );
+    }
+  }
+
+  return normalized;
+}
 
 // ── Metadata pedagogi (MAT-41) ────────────────────────────────
 // Taksonomi kognitif (Bloom C1–C6 / Webb's DOK) & status kepatuhan Haladyna.
