@@ -1,6 +1,6 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-22 (MAT-35, Batch 3 — penyelarasan JSONB MAT-144).
+> **Status:** 🔄 diperbarui 2026-10-22 (MAT-35, Batch 4 — R5 esai 38/2181 + R6 taksonomi 8.130 soal dikoreksi).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
 > **Lingkup:** enrichment aktif (MAT-35). DB: 11.869 soal hidup, 9.358 PG, 2.181 esai.
 > **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
@@ -23,6 +23,33 @@
 | **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **0 / 52** | 🔴 **0,00 %** |
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
+
+### Snapshot MAT-35 Batch 4 (2026-10-22) — R5 Rubrik Esai + R6 Koreksi Taksonomi
+
+> R5: rubrik esai diperluas via script r5-essay-rubric-jsonb.ts (auto-generate + hand-crafted).
+> R6: metadata taksonomi placeholder dikoreksi bulk via r6-taxonomy-correction.ts.
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 11.869 | — |
+| Soal pilihan ganda | 9.358 | — |
+| Soal esai | 2.181 | — |
+| Esai dengan `answer_key.scoringRubric` terisi | **38** | 🟡 **1,74 %** |
+| Soal dengan `grade != 'umum'` (grade terkoreksi) | **4.827** | 🟡 **40,7 %** |
+| Soal dengan `cognitive_level != 'understand'` (cognitive terkoreksi) | **8.686** | 🟡 **73,2 %** |
+| Opsi dengan `distractor_rationale` (relasional) | **188** | 🟡 **0,55 %** |
+
+**Batch 4 mengerjakan:**
+- **R5 (auto-generate rubrik esai)**: 26 esai baru → total 38 dari 2.181 esai (1,74 %)
+  - Topik: geometri, trigonometri, SPLDV, barisan/deret, statistika, persamaan kuadrat
+  - Script: `scripts/r5-essay-rubric-jsonb.ts` (DRY_RUN=0 LIVE)
+- **R6 (koreksi taksonomi placeholder)**: 8.130 soal diperbarui
+  - Grade: 4.825 soal dari 'umum' → grade spesifik (12: 2.103, 9: 1.871, 6: 851) via bundle title inference
+  - Cognitive: 8.684 soal dari 'understand' → remember (3.592), apply (3.151), analyze (1.941)
+  - Script: `scripts/r6-taxonomy-correction.ts` (DRY_RUN=0 LIVE)
+
+**Blocker tetap (warisan Batch 3):**
+- R2/R3/R4 JSONB scripts menunggu migrasi `data_payload.options` dari MAT-144
 
 ### Snapshot MAT-35 Batch 3 (2026-10-22) — Penyelarasan Arsitektur JSONB MAT-144
 
