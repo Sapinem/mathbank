@@ -36,6 +36,7 @@ import { lintKatex } from "@/lib/math/katex-lint";
 import {
   MatrixGridFields,
   MatchingFields,
+  StringListField,
   readMatrixPayload,
   readMatchingPayload,
   type MatrixPayload,
@@ -96,6 +97,69 @@ function emptyOptions(): OptionDraft[] {
   }));
 }
 
+/** Label kunci dari `answer_key` (kanonik `correctOptionIds` → mirror `correct`). */
+function correctLabelsOf(answerKey: unknown): string[] {
+  const key = (answerKey ?? {}) as Record<string, unknown>;
+  const raw = key.correctOptionIds ?? key.correct;
+  const list = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
+  return list
+    .filter((v): v is string => typeof v === "string")
+    .map((v) => v.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+/** Item opsi mentah di `data_payload.options` (bentuk kanonik MAT-145). */
+interface CanonicalOptionItem {
+  id?: unknown;
+  label?: unknown;
+  contentMarkdown?: unknown;
+  distractorRationale?: unknown;
+}
+
+/**
+ * Susun state opsi editor dari soal yang ada.
+ *
+ * Sumber utama: `data_payload.options` (single table + hybrid JSONB, zero join).
+ * Cadangan: `question.options` — proyeksi baca untuk soal yang payload-nya
+ * masih kosong. Keduanya aman bila `undefined`/bukan array.
+ */
+function readOptionDrafts(q?: PublicQuestion): OptionDraft[] {
+  const dp = (q?.dataPayload ?? {}) as Record<string, unknown>;
+  const raw = Array.isArray(dp.options)
+    ? (dp.options as CanonicalOptionItem[])
+    : [];
+  const correct = new Set(correctLabelsOf(q?.answerKey));
+
+  if (raw.length) {
+    return raw.map((item, i) => {
+      const label =
+        String(item?.id ?? item?.label ?? LETTERS[i] ?? "")
+          .trim()
+          .toUpperCase() || String(i + 1);
+      return {
+        label,
+        contentMarkdown: String(item?.contentMarkdown ?? ""),
+        isCorrect: correct.has(label),
+        distractorRationale:
+          typeof item?.distractorRationale === "string"
+            ? item.distractorRationale
+            : "",
+      };
+    });
+  }
+
+  if (q?.options?.length) {
+    return q.options.map((o) => ({
+      label: o.label,
+      contentMarkdown: o.contentMarkdown,
+      isCorrect: Boolean(o.isCorrect),
+      distractorRationale: o.distractorRationale ?? "",
+    }));
+  }
+
+  return emptyOptions();
+}
+
 export function QuestionEditor({
   existing,
 }: {
@@ -146,21 +210,37 @@ export function QuestionEditor({
     });
   }
 
-  const [options, setOptions] = useState<OptionDraft[]>(() => {
-    if (existing?.options?.length) {
-      return existing.options.map((o) => ({
-        label: o.label,
-        contentMarkdown: o.contentMarkdown,
-        isCorrect: Boolean(o.isCorrect),
-        distractorRationale: o.distractorRationale ?? "",
-      }));
-    }
-    return emptyOptions();
+  /**
+   * Opsi dibaca dari `data_payload.options` (bentuk kanonik MAT-145/146) —
+   * BUKAN dari tabel `question_options` yang sudah dihapus. Proyeksi baca
+   * (`projectOptions`) menyediakan bentuk kompatibel sebagai cadangan untuk
+   * soal lama, jadi urutannya: JSONB dulu, proyeksi kemudian.
+   */
+  const [options, setOptions] = useState<OptionDraft[]>(() =>
+    readOptionDrafts(existing),
+  );
+
+  /** `answer_key.acceptedAnswers` (isian singkat) — minimal satu baris. */
+  const [acceptedAnswers, setAcceptedAnswers] = useState<string[]>(() => {
+    const key = existing?.answerKey;
+    const list = Array.isArray(key?.acceptedAnswers)
+      ? key.acceptedAnswers.filter((a): a is string => typeof a === "string")
+      : [];
+    if (list.length) return list;
+    if (typeof key?.text === "string" && key.text.trim()) return [key.text];
+    return [""];
   });
 
-  const [answerText, setAnswerText] = useState(
-    existing?.answerKey?.text ?? "",
+  /** `answer_key.scoringRubric` (esai) — rubrik poin per langkah. */
+  const [scoringRubric, setScoringRubric] = useState<string>(
+    existing?.answerKey?.scoringRubric ?? "",
   );
+
+  /** `data_payload.rubricGuidelines` (isian/esai) — panduan penilaian. */
+  const [rubricGuidelines, setRubricGuidelines] = useState<string>(() => {
+    const dp = (existing?.dataPayload ?? {}) as Record<string, unknown>;
+    return typeof dp.rubricGuidelines === "string" ? dp.rubricGuidelines : "";
+  });
 
   interface SolutionDraft {
     id?: string;
@@ -257,6 +337,7 @@ export function QuestionEditor({
   const [matching, setMatching] = useState<MatchingPayload>(() =>
     readMatchingPayload(
       (existing?.dataPayload as Record<string, unknown> | undefined) ?? {},
+      (existing?.answerKey as Record<string, unknown> | undefined) ?? {},
     ),
   );
 
@@ -271,28 +352,133 @@ export function QuestionEditor({
   const katexDiags = lintKatex(content);
 
   const isText = (TEXT_TYPES as readonly string[]).includes(questionType);
-  const usesOptions = isOptionBased(questionType as never);
-  const multiCorrect = questionType === "multiple_choice_checkbox";
   const isMatrix = questionType === "matrix_grid";
   const isMatching = questionType === "matching";
+  // Matriks & menjodohkan menyimpan strukturnya di `data_payload`, bukan opsi A–E.
+  const usesOptions =
+    isOptionBased(questionType as never) && !isMatrix && !isMatching;
+  const multiCorrect = questionType === "multiple_choice_checkbox";
   const isChildCandidate = !isText && !isMatrix && !isMatching &&
     questionType !== "stimulus";
 
-  /** Susun `data_payload` sesuai tipe (G2.1). Tipe lain → {}. */
+  /** Opsi terisi (teks tidak kosong) — urut sesuai label A–E. */
+  const filledOptions = options.filter((o) => o.contentMarkdown.trim());
+  const correctLabels = options.filter((o) => o.isCorrect).map((o) => o.label);
+
+  /**
+   * Susun `data_payload` sesuai tipe (G2.1) — bentuk kanonik MAT-145.
+   *
+   * Kunci `type` HANYA disertakan bila struktur payload sudah memenuhi syarat
+   * minimum skema kanonik. Alasannya: gerbang tulis lapis 2 memvalidasi struktur
+   * secara ketat pada SETIAP simpan (termasuk draf). Tanpa aturan ini, guru yang
+   * baru mengisi 1 opsi / rubrik 12 karakter akan tertolak 422 saat menyimpan
+   * draf. Payload tanpa `type` tetap tersimpan utuh, lalu otomatis ikut
+   * tervalidasi begitu strukturnya lengkap.
+   */
   function buildDataPayload(): Record<string, unknown> {
     if (isMatrix) {
+      // Bentuk resmi pipeline ingest: { labels, rows:[{text, answer}] }.
       return {
-        columns: matrix.columns,
-        rows: matrix.rows.filter((r) => r.label.trim()),
+        labels: matrix.labels,
+        rows: matrix.rows
+          .filter((r) => r.text.trim())
+          .map((r) => ({ text: r.text.trim(), answer: r.answer })),
       };
+    }
+
+    if (isMatching) {
+      const premises = matching.premises
+        .filter((p) => p.contentMarkdown.trim())
+        .map((p) => ({ id: p.id, contentMarkdown: p.contentMarkdown.trim() }));
+      const responses = matching.responses
+        .filter((r) => r.contentMarkdown.trim())
+        .map((r) => ({ id: r.id, contentMarkdown: r.contentMarkdown.trim() }));
+      const base = { premises, responses };
+      const complete = premises.length >= 1 && responses.length >= 1;
+      return complete ? { type: "matching", ...base } : base;
+    }
+
+    if (isText) {
+      const base: Record<string, unknown> = {};
+      const rubric = rubricGuidelines.trim();
+      if (rubric) base.rubricGuidelines = rubric;
+      // Skema kanonik menuntut rubricGuidelines ≥ 20 karakter.
+      return rubric.length >= 20 ? { type: questionType, ...base } : base;
+    }
+
+    if (!usesOptions) return {};
+
+    const payloadOptions = filledOptions.map((o) => {
+      const item: Record<string, unknown> = {
+        id: o.label,
+        contentMarkdown: o.contentMarkdown.trim(),
+      };
+      // `distractorRationale` kanonik minimal 40 karakter; nilai lebih pendek
+      // tetap disimpan apa adanya (tanpa `type`) agar draf tidak tertolak.
+      const rationale = o.distractorRationale.trim();
+      if (rationale) item.distractorRationale = rationale;
+      return item;
+    });
+    const base = { options: payloadOptions, shuffleOptions: true };
+    // Skema kanonik: 2–8 opsi, rationale ≥ 40 karakter bila ada.
+    const rationaleOk = payloadOptions.every(
+      (o) =>
+        o.distractorRationale === undefined ||
+        String(o.distractorRationale).trim().length >= 40,
+    );
+    const complete =
+      payloadOptions.length >= 2 && payloadOptions.length <= 8 && rationaleOk;
+    return complete
+      ? {
+          type: multiCorrect ? "complex_multiple_choice" : "multiple_choice",
+          ...base,
+        }
+      : base;
+  }
+
+  /**
+   * Susun `answer_key` kanonik (MAT-145/146).
+   *
+   * - PG / PG kompleks → `correctOptionIds` (label A–E)
+   * - menjodohkan      → `matchingPairs` (premisId → responsId)
+   * - isian singkat    → `acceptedAnswers`
+   * - esai             → `scoringRubric`
+   * `explanationMarkdown` diisi service dari pembahasan utama (bukan di sini).
+   */
+  function buildAnswerKey(): Record<string, unknown> {
+    if (isMatrix) {
+      // Kunci matriks hidup per baris di `data_payload.rows[].answer`.
+      return {};
     }
     if (isMatching) {
-      return {
-        left: matching.left.filter((s) => s.trim()),
-        right: matching.right.filter((s) => s.trim()),
-      };
+      const validPremiseIds = new Set(
+        matching.premises
+          .filter((p) => p.contentMarkdown.trim())
+          .map((p) => p.id),
+      );
+      const validResponseIds = new Set(
+        matching.responses
+          .filter((r) => r.contentMarkdown.trim())
+          .map((r) => r.id),
+      );
+      const pairs: Record<string, string> = {};
+      for (const [premiseId, responseId] of Object.entries(matching.pairs)) {
+        if (validPremiseIds.has(premiseId) && validResponseIds.has(responseId)) {
+          pairs[premiseId] = responseId;
+        }
+      }
+      return Object.keys(pairs).length ? { matchingPairs: pairs } : {};
     }
-    return {};
+    if (isText) {
+      if (questionType === "essay") {
+        const rubric = scoringRubric.trim();
+        return rubric ? { scoringRubric: rubric } : {};
+      }
+      const answers = acceptedAnswers.map((a) => a.trim()).filter(Boolean);
+      return answers.length ? { acceptedAnswers: answers } : {};
+    }
+    if (!usesOptions) return {};
+    return correctLabels.length ? { correctOptionIds: correctLabels } : {};
   }
 
   const pending = create.isPending || update.isPending;
@@ -322,10 +508,7 @@ export function QuestionEditor({
   }
 
   function submit(status: "draft" | "review") {
-    const correct = options.filter((o) => o.isCorrect).map((o) => o.label);
     const validSolutions = solutions.filter((s) => s.contentMarkdown.trim());
-    const primarySolution = validSolutions.find((s) => s.isPrimary) ?? validSolutions[0];
-    const expText = primarySolution?.contentMarkdown.trim() || undefined;
 
     const payload: CreateQuestionInput = {
       questionType: questionType as CreateQuestionInput["questionType"],
@@ -333,26 +516,19 @@ export function QuestionEditor({
       cognitiveLevel: cognitiveLevel as CreateQuestionInput["cognitiveLevel"],
       grade,
       contentMarkdown: content.trim(),
+      // Single table + hybrid JSONB: opsi/premis/pernyataan & kunci SELALU
+      // ditulis ke `data_payload` + `answer_key` (zero join, tanpa
+      // `question_options`).
       dataPayload: buildDataPayload(),
       parentId: parentId || null,
       childOrder: 0,
       topicIds,
       tagIds: [],
       status,
-      answerKey: isText
-        ? { text: answerText.trim(), explanation: expText }
-        : { correct, explanation: expText },
-      options: usesOptions
-        ? options
-            .filter((o) => o.contentMarkdown.trim())
-            .map((o, i) => ({
-              label: o.label,
-              contentMarkdown: o.contentMarkdown.trim(),
-              isCorrect: o.isCorrect,
-              distractorRationale: o.distractorRationale.trim() || null,
-              orderIndex: i,
-            }))
-        : [],
+      answerKey: buildAnswerKey(),
+      // Jalur relasional lama tidak lagi dipakai; gerbang tulis menormalkan
+      // `options` bila ada, jadi kita kirim kosong secara eksplisit.
+      options: [],
       solutions: validSolutions.map((s) => ({
         id: s.id,
         title: s.title.trim() || "Pembahasan",
@@ -377,9 +553,78 @@ export function QuestionEditor({
     }
   }
 
-  const correctCount = options.filter((o) => o.isCorrect).length;
-  const readyToSubmit = content.trim().length > 0 &&
-    (isText ? answerText.trim().length > 0 : correctCount > 0);
+  const correctCount = correctLabels.length;
+
+  /** Semua pernyataan terisi punya kunci? */
+  const matrixRowsFilled = matrix.rows.filter((r) => r.text.trim());
+  const matrixReady =
+    matrixRowsFilled.length > 0 &&
+    matrixRowsFilled.every((r) => r.answer != null && r.answer !== "");
+
+  const matchingPremisesFilled = matching.premises.filter((p) =>
+    p.contentMarkdown.trim(),
+  );
+  const matchingResponsesFilled = matching.responses.filter((r) =>
+    r.contentMarkdown.trim(),
+  );
+  const matchingReady =
+    matchingPremisesFilled.length > 0 &&
+    matchingResponsesFilled.length > 0 &&
+    matchingPremisesFilled.every((p) => {
+      const target = matching.pairs[p.id];
+      return Boolean(
+        target && matchingResponsesFilled.some((r) => r.id === target),
+      );
+    });
+
+  const textReady =
+    questionType === "essay"
+      ? scoringRubric.trim().length > 0
+      : acceptedAnswers.some((a) => a.trim().length > 0);
+
+  const optionsReady = correctCount > 0 && filledOptions.length >= 2;
+
+  const readyToSubmit =
+    content.trim().length > 0 &&
+    (isText
+      ? textReady
+      : isMatrix
+        ? matrixReady
+        : isMatching
+          ? matchingReady
+          : optionsReady);
+
+  const submitHint = isText
+    ? "Isi pertanyaan & rubrik/kunci sebelum minta telaah"
+    : isMatrix
+      ? "Lengkapi pernyataan & kuncinya sebelum minta telaah"
+      : isMatching
+        ? "Lengkapi premis, respons & pasangannya sebelum minta telaah"
+        : "Isi pertanyaan, minimal 2 opsi & kunci sebelum minta telaah";
+
+  const answerComplete = isText
+    ? textReady
+    : isMatrix
+      ? matrixReady
+      : isMatching
+        ? matchingReady
+        : correctCount > 0;
+
+  const answerSummary = isText
+    ? textReady
+      ? "Kunci/rubrik terisi"
+      : "Kunci belum lengkap"
+    : isMatrix
+      ? matrixReady
+        ? `${matrixRowsFilled.length} pernyataan + kunci`
+        : "Kunci matriks belum lengkap"
+      : isMatching
+        ? matchingReady
+          ? `${matchingPremisesFilled.length} pasangan terkunci`
+          : "Pasangan belum lengkap"
+        : correctCount > 0
+          ? `${correctCount} kunci`
+          : "Kunci belum dipilih";
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -449,11 +694,7 @@ export function QuestionEditor({
             onClick={() => submit("review")}
             disabled={pending || !readyToSubmit}
             size="sm"
-            title={
-              readyToSubmit
-                ? undefined
-                : "Isi pertanyaan & kunci sebelum minta telaah"
-            }
+            title={readyToSubmit ? undefined : submitHint}
           >
             {pending ? (
               <Loader2 className="animate-spin" />
@@ -577,6 +818,7 @@ export function QuestionEditor({
                         placeholder={`Isi opsi ${o.label}…`}
                         rows={2}
                         aria-label={`Isi opsi ${o.label}`}
+                        className="min-w-0 flex-1"
                       />
                       <Button
                         variant="ghost"
@@ -605,7 +847,19 @@ export function QuestionEditor({
                       }
                       placeholder="Alasan pengecoh (opsional) — kenapa salah"
                       aria-label={`Alasan pengecoh opsi ${o.label}`}
+                      aria-describedby={`rationale-hint-${o.label}`}
                     />
+                    {o.distractorRationale.trim().length > 0 &&
+                      o.distractorRationale.trim().length < 40 && (
+                        <p
+                          id={`rationale-hint-${o.label}`}
+                          className="pl-7 text-xs text-amber-600 dark:text-amber-400"
+                        >
+                          {o.distractorRationale.trim().length}/40 karakter —
+                          sebutkan nama kesalahan, langkah salah, dan nilai
+                          keliru agar soal bisa dirilis.
+                        </p>
+                      )}
                   </div>
                 ))}
               </CardContent>
@@ -617,23 +871,51 @@ export function QuestionEditor({
               <CardHeader>
                 <CardTitle>
                   {questionType === "essay"
-                    ? "Rambu Jawaban Singkat"
-                    : "Kunci Jawaban"}
+                    ? "Kunci & Rubrik Penilaian"
+                    : "Kunci Jawaban & Rubrik"}
                 </CardTitle>
                 <CardDescription>
                   {questionType === "essay"
-                    ? "Rambu-rambu penilaian / kunci singkat esai."
-                    : "Jawaban singkat yang diharapkan."}
+                    ? "Rubrik poin per langkah matematis (answer_key.scoringRubric) + panduan penilaian."
+                    : "Jawaban yang diterima (answer_key.acceptedAnswers) + panduan penilaian."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <Textarea
-                  value={answerText}
-                  onChange={(e) => setAnswerText(e.target.value)}
-                  placeholder="Jawaban benar…"
-                  rows={3}
-                  aria-label="Jawaban teks"
-                />
+                {questionType === "essay" ? (
+                  <Field label="Rubrik penilaian (poin per langkah)">
+                    <Textarea
+                      value={scoringRubric}
+                      onChange={(e) => setScoringRubric(e.target.value)}
+                      placeholder={
+                        "Langkah 1 — Memodelkan persamaan (2 poin): …\nLangkah 2 — Menyelesaikan (3 poin): …\nLangkah 3 — Jawaban akhir + satuan (2 poin): …"
+                      }
+                      rows={5}
+                      aria-label="Rubrik penilaian esai"
+                    />
+                  </Field>
+                ) : (
+                  <StringListField
+                    label="Jawaban diterima"
+                    items={acceptedAnswers}
+                    onChange={setAcceptedAnswers}
+                    placeholder="Jawaban"
+                    addLabel="Tambah variasi jawaban"
+                  />
+                )}
+
+                <Field label="Panduan rubrik (untuk penilai)">
+                  <Textarea
+                    value={rubricGuidelines}
+                    onChange={(e) => setRubricGuidelines(e.target.value)}
+                    placeholder="Panduan langkah penilaian — mis. wajib menuliskan rumus, substitusi, dan satuan."
+                    rows={3}
+                    aria-label="Panduan rubrik penilaian"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {rubricGuidelines.trim().length}/20 karakter minimum untuk
+                    validasi penuh.
+                  </p>
+                </Field>
               </CardContent>
             </Card>
           )}
@@ -643,7 +925,7 @@ export function QuestionEditor({
               <CardHeader>
                 <CardTitle>Pernyataan Matriks</CardTitle>
                 <CardDescription>
-                  Tabel penilaian (kolom tetap: {matrix.columns.join(" / ")}).
+                  Tabel penilaian (kolom: {matrix.labels.join(" / ")}).
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -957,17 +1239,9 @@ export function QuestionEditor({
           <Card>
             <CardContent className="flex flex-col gap-2 pt-4">
               <div className="mb-1 flex items-center gap-2">
-                {isText ? (
-                  <Badge variant={answerText.trim() ? "secondary" : "outline"}>
-                    {answerText.trim() ? "Kunci terisi" : "Kunci kosong"}
-                  </Badge>
-                ) : (
-                  <Badge variant={correctCount > 0 ? "secondary" : "outline"}>
-                    {correctCount > 0
-                      ? `${correctCount} kunci`
-                      : "Kunci belum dipilih"}
-                  </Badge>
-                )}
+                <Badge variant={answerComplete ? "secondary" : "outline"}>
+                  {answerSummary}
+                </Badge>
               </div>
 
               <Button
@@ -986,11 +1260,7 @@ export function QuestionEditor({
               <Button
                 onClick={() => submit("review")}
                 disabled={pending || !readyToSubmit}
-                title={
-                  readyToSubmit
-                    ? undefined
-                    : "Isi pertanyaan & kunci sebelum minta telaah"
-                }
+                title={readyToSubmit ? undefined : submitHint}
               >
                 {pending ? (
                   <Loader2 className="animate-spin" />

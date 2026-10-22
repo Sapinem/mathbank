@@ -288,9 +288,9 @@ function QuestionCardInner({
         )}
 
         {/* Dukungan Opsi Tersembunyi untuk Pembaca Layar & Unit Test pada Mode List */}
-        {q.options.length > 0 && (
+        {(q.options?.length ?? 0) > 0 && (
           <div className="sr-only">
-            {q.options.map((o) => (
+            {(q.options ?? []).map((o) => (
               <span key={o.id} className={cn(o.isCorrect ? "text-success font-medium" : "")}>
                 {/* `noScroll`: blok sr-only tak terlihat — jangan jadikan kontainer
                     gulir (dulu membuat area scroll tak kasat mata di daftar). */}
@@ -364,9 +364,9 @@ function QuestionCardInner({
               />
 
               {/* OPSI PILIHAN GANDA (MENYATU DIDALAM AREA KARTU NASKAH) */}
-              {q.options.length > 0 && (
+              {(q.options?.length ?? 0) > 0 && (
                 <div className="mt-2.5 flex flex-col gap-1.5 border-t border-border/40 pt-2 text-xs">
-                  {q.options.map((o) => (
+                  {(q.options ?? []).map((o) => (
                     <div
                       key={o.id}
                       className={cn(
@@ -416,9 +416,9 @@ function QuestionCardInner({
                 noScroll
                 className="text-xs leading-relaxed text-foreground overflow-hidden max-h-[380px]"
               />
-              {q.options.length > 0 && (
+              {(q.options?.length ?? 0) > 0 && (
                 <div className="mt-1 flex flex-col gap-1.5 border-t border-border/40 pt-2 text-xs">
-                  {q.options.map((o) => (
+                  {(q.options ?? []).map((o) => (
                     <div
                       key={o.id}
                       className={cn(
