@@ -9,6 +9,7 @@ import {
   assertReady,
   type QuestionStatus,
 } from "@/lib/fsm/question-fsm";
+import { assertReleaseContract } from "./question-release";
 
 /**
  * Aksi massal (kurasi) — G3.1, **dioptimasi ACT-05**.
@@ -70,6 +71,7 @@ interface CandidateRow {
   id: string;
   status: string;
   questionType: string;
+  dataPayload: Record<string, unknown> | null;
   answerKey: Record<string, unknown> | null;
   authorId: string | null;
 }
@@ -105,6 +107,8 @@ export async function bulkQuestionAction(
         id: questions.id,
         status: questions.status,
         questionType: questions.questionType,
+        // MAT-150 — kontrak rilis massal butuh payload, bukan hanya answer_key.
+        dataPayload: questions.dataPayload,
         answerKey: questions.answerKey,
         authorId: questions.authorId,
       })
@@ -139,6 +143,13 @@ export async function bulkQuestionAction(
           if (target === "ready") {
             assertCan(actor, "question:setReady");
             assertReady({ questionType: row.questionType, answerKey: row.answerKey });
+            // MAT-150 — gerbang pedagogis yang sama dengan jalur satuan;
+            // tanpa ini aksi massal `set_ready` jadi jalan pintas rilis.
+            assertReleaseContract({
+              questionType: row.questionType,
+              dataPayload: row.dataPayload,
+              answerKey: row.answerKey,
+            });
           } else if (target === "archived") {
             assertCan(actor, "question:archive");
           } else {

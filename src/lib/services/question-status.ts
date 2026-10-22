@@ -6,6 +6,7 @@ import type { Actor } from "@/lib/auth/actor";
 import { transition, assertReady, type QuestionStatus } from "@/lib/fsm/question-fsm";
 import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
+import { assertReleaseContract } from "./question-release";
 
 /**
  * Transisi status soal (M14 — pecahan `question-service.ts`).
@@ -70,6 +71,15 @@ export async function changeQuestionStatus(
     // sebelum jawabannya diisi (kecuali stimulus). Lihat question-fsm.ts.
     assertReady({
       questionType: existing.questionType,
+      answerKey: existing.answerKey,
+    });
+    // **MAT-150** — kontrak rilis pedagogis (3 lapis Zod, sama dengan gerbang
+    // tulis MAT-146). Urutan wajib: FSM → izin → gerbang → UPDATE CAS.
+    // Tanpa ini, `draft → ready` melewati kewajiban distractor rationale,
+    // rubrik esai, dan `explanationMarkdown`. Galat → 422, bukan 500.
+    assertReleaseContract({
+      questionType: existing.questionType,
+      dataPayload: existing.dataPayload,
       answerKey: existing.answerKey,
     });
   } else if (to === "archived") {
