@@ -293,6 +293,33 @@ const writeEnvelopeSchema = z.object({
 });
 
 /**
+ * Kunci `answer_key` kanonik (MAT-145). `answerKeySchema` bersifat `.strict()`,
+ * sedangkan normalisasi sengaja MENAMBAH mirror legacy (`correct`,
+ * `explanation`, `text`) agar konsumen lama & ekspor Moodle tetap utuh.
+ *
+ * Tanpa penyaringan ini, setiap upaya rilis (`status: "ready"`) gagal dengan
+ * "Unrecognized keys: correct, explanation" — soal tidak akan pernah bisa
+ * dirilis. Karena itu lapis 3 (kontrak rilis) hanya menerima kunci kanonik.
+ */
+const CANONICAL_ANSWER_KEY_KEYS = [
+  "correctOptionIds",
+  "matchingPairs",
+  "matrixAnswers",
+  "acceptedAnswers",
+  "explanationMarkdown",
+  "scoringRubric",
+] as const;
+
+/** Buang mirror legacy dari `answer_key` sebelum validasi kontrak rilis. */
+function toCanonicalAnswerKey(answerKey: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of CANONICAL_ANSWER_KEY_KEYS) {
+    if (answerKey[key] !== undefined) out[key] = answerKey[key];
+  }
+  return out;
+}
+
+/**
  * Gerbang tulis soal — normalkan lalu validasi. **Wajib** dipanggil semua
  * jalur tulis. Melempar `QuestionPayloadValidationError` (HTTP 422) bila
  * payload tidak sesuai kontrak.
@@ -328,7 +355,9 @@ export function enforceQuestionWriteGate(
   if (input.status === "ready") {
     const release = releasedQuestionGuardSchema.safeParse({
       dataPayload,
-      answerKey,
+      // Mirror legacy (`correct`/`explanation`/`text`) dibuang: skema rilis
+      // bersifat `.strict()` dan hanya mengenal kunci kanonik.
+      answerKey: toCanonicalAnswerKey(answerKey),
     });
     if (!release.success) {
       throw new QuestionPayloadValidationError(

@@ -221,4 +221,67 @@ describe("enforceQuestionWriteGate — MAT-146", () => {
     expect(r.answerKey.explanationMarkdown).toBe("Pembahasan");
     expect(r.answerKey.explanation).toBe("Pembahasan");
   });
+
+  // ── Regresi: mirror legacy tidak boleh memblokir rilis (MAT-146) ──────────
+  // `answerKeySchema` bersifat `.strict()`; normalisasi selalu menambah mirror
+  // `correct` + `explanation`. Sebelum perbaikan, SETIAP soal gagal dirilis
+  // dengan "Unrecognized keys: correct, explanation".
+  const rationale = (label: string) =>
+    `Siswa salah menerapkan langkah pada opsi ${label} sehingga memperoleh nilai keliru 5 bukan 4.`;
+
+  it("status ready LOLOS bila pengecoh ber-rationale (mirror legacy disaring)", () => {
+    const r = enforceQuestionWriteGate({
+      questionType: "single_choice",
+      dataPayload: {
+        type: "multiple_choice",
+        options: [
+          { id: "A", contentMarkdown: "4" },
+          { id: "B", contentMarkdown: "5", distractorRationale: rationale("B") },
+        ],
+      },
+      answerKey: { correctOptionIds: ["A"], explanationMarkdown: "Pembahasan." },
+      status: "ready",
+    });
+    expect(r.answerKey.correctOptionIds).toEqual(["A"]);
+    // mirror legacy tetap tersimpan untuk ekspor/dedup
+    expect(r.answerKey.correct).toEqual(["A"]);
+    expect(r.answerKey.explanation).toBe("Pembahasan.");
+  });
+
+  it("status ready menolak pengecoh tanpa rationale dengan pesan rationale (bukan unrecognized keys)", () => {
+    let issues: { path: (string | number)[]; message: string }[] = [];
+    try {
+      enforceQuestionWriteGate({
+        questionType: "single_choice",
+        dataPayload: {
+          type: "multiple_choice",
+          options: [
+            { id: "A", contentMarkdown: "4" },
+            { id: "B", contentMarkdown: "5" },
+          ],
+        },
+        answerKey: { correctOptionIds: ["A"], explanationMarkdown: "Pembahasan." },
+        status: "ready",
+      });
+    } catch (e) {
+      issues = (e as { issues?: typeof issues }).issues ?? [];
+    }
+    expect(issues.some((i) => /distractorRationale/i.test(i.message))).toBe(true);
+    expect(issues.some((i) => /Unrecognized key/i.test(i.message))).toBe(false);
+  });
+
+  it("status ready menolak esai tanpa scoringRubric", () => {
+    expect(() =>
+      enforceQuestionWriteGate({
+        questionType: "essay",
+        dataPayload: {
+          type: "essay",
+          rubricGuidelines:
+            "Langkah 1 memisahkan variabel, langkah 2 menerapkan aturan rantai, langkah 3 jawaban akhir.",
+        },
+        answerKey: { explanationMarkdown: "Pembahasan." },
+        status: "ready",
+      }),
+    ).toThrow(/rubrik|scoringRubric/i);
+  });
 });
