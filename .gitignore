@@ -75,3 +75,8 @@ next-env.d.ts
 
 # Log runtime skrip operasional (embedding, ingest) — bukan artefak repo
 logs/
+
+# Artefak lokal agen/editor (bukan kode; jangan di-commit)
+/.codebuddy/
+/.scratch*/
+/.mat160-build-css.mjs
