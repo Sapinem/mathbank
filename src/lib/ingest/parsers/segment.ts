@@ -6,6 +6,7 @@
  * (artikel dilewati, bukan error).
  */
 import { pickHtmlAdapter, pickJsonAdapter, KNOWN_SOURCES } from "./adapters";
+import { isMathArticle } from "./math-subject";
 import type { ArticleMeta, SegmentResult } from "./types";
 
 /**
@@ -17,6 +18,21 @@ import type { ArticleMeta, SegmentResult } from "./types";
 export function segmentArticle(rawHtml: string, meta: ArticleMeta): SegmentResult {
   if (!rawHtml || rawHtml.trim().length === 0) {
     return { items: [], skipped: 0, warnings: ["HTML kosong"] };
+  }
+
+  // Gerbang mapel: hanya MATEMATIKA yang diproses dari **defantri** (keputusan
+  // produk) — sumber lain punya kurasi sendiri, jangan diganggu.
+  // Diperiksa dari judul + URL (slug) — judul bisa ambigu ("Olimpiade MIPA")
+  // padahal slug-nya matematika. Non-matematika ditandai `skipped`, bukan
+  // dibuang senyap (lihat service.ts → markDone("skipped", …)).
+  if (meta.source === "defantri" && !isMathArticle({ title: meta.title, url: meta.url })) {
+    return {
+      items: [],
+      skipped: 0,
+      warnings: [
+        `Bukan artikel matematika (judul: "${(meta.title ?? "").slice(0, 80)}") — dilewati`,
+      ],
+    };
   }
 
   const adapter = pickHtmlAdapter(meta, rawHtml);

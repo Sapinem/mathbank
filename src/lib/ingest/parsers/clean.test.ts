@@ -83,16 +83,16 @@ describe("clean — struktur → markdown", () => {
     expect(structureToMarkdown("<pre>If(a,b)</pre>")).not.toContain("If(a,b)");
   });
 
-  it("<br> di dalam <table> DIBIARKAN <br>", () => {
+  it("tabel → markdown; <br> dalam sel jadi spasi (bukan baris baru)", () => {
     const t = structureToMarkdown("<table><tr><td>A<br>B</td></tr></table>");
-    expect(t).toContain("<table>");
-    expect(t).toContain("<br");
-    expect(t).not.toContain("A\nB");
+    expect(t).toContain("| A B |"); // <br> → spasi, tak memecah baris markdown
+    expect(t).not.toContain("<table>");
   });
 
-  it("<table> DIPERTAHANKAN (tidak diubah markdown)", () => {
+  it("<table> DIUBAH jadi markdown pipe (bukan tag mentah)", () => {
     const t = structureToMarkdown("<table><tr><td>A</td></tr></table>");
-    expect(t).toContain("<table>");
+    expect(t).toContain("| A |");
+    expect(t).not.toContain("<table>");
   });
 });
 
@@ -145,6 +145,24 @@ describe("clean — normalisasi math", () => {
   it("perbaiki \\cancelto → \\overset{}{\\cancel{}} dan \\\\[Npt] → \\\\", () => {
     expect(normalizeMath("\\cancelto{a}{b}").text).toBe("\\overset{a}{\\cancel{b}}");
     expect(normalizeMath("x \\\\[10pt] y").text).toBe("x \\\\ y");
+  });
+
+  it("REGRESI: $inline$ sebelum $\\begin{align}…\\end{align}$ TIDAK bocor lintas-batas", () => {
+    // Bug nyata (korpus defantri): regex display-multiline melompati beberapa
+    // `$…$` inline dan menghasilkan `\[x^2\(… \)m\(…` — delimiter tak sepasang.
+    const src =
+      "Karena $x^{2}-px+q=0$ memiliki akar, misalkan $m$ dan $\\dfrac{1}{m}$ " +
+      "dengan syarat $m \\gt 0$.<br> Hasil kali,<br> $\\begin{align}m & = q\\end{align}$<br>";
+    const out = normalizeMath(src).text;
+    // Tiap `\[` harus ditutup `\]`; tiap `\(` ditutup `\)`.
+    const inline = (out.match(/\\\(/g) ?? []).length - (out.match(/\\\)/g) ?? []).length;
+    const display = (out.match(/\\\[/g) ?? []).length - (out.match(/\\\]/g) ?? []).length;
+    expect(inline).toBe(0);
+    expect(display).toBe(0);
+    // `$x^{2}-px+q=0$` tetap inline, bukan display.
+    expect(out).toContain("\\(x^{2}-px+q=0\\)");
+    // environment align tetap jadi display.
+    expect(out).toContain("\\[\\begin{align}");
   });
 });
 
@@ -203,6 +221,105 @@ describe("clean — stripTags melindungi math (Opsi C)", () => {
   it("tag asli tetap dibuang", () => {
     expect(stripTags("<span>Halo</span>")).toContain("Halo");
     expect(stripTags("<span>Halo</span>")).not.toContain("<span>");
+  });
+
+  it("tag INLINE tidak menyisipkan spasi di tengah kata (drop-cap)", () => {
+    // Temuan nyata defantri: `<span class="awal">C</span>alon` → harus "Calon".
+    expect(stripTags('<span class="awal">C</span>alon Guru')).toContain("Calon Guru");
+    expect(stripTags('<span class="awal">C</span>alon Guru')).not.toContain("C alon");
+    // Tebal/miring juga inline.
+    expect(stripTags("kata <b>pen</b>ting")).toContain("kata penting");
+    expect(stripTags("kata <i>pen</i>ting")).not.toContain("pen ting");
+  });
+
+  it("tag BLOK tetap jadi pemisah (kata tidak menempel)", () => {
+    expect(stripTags("<div>satu</div><div>dua</div>")).toMatch(/satu\s+dua/);
+  });
+
+  it("REGRESI KaTeX #1: `$6$` disusul `$$…$$` TIDAK jadi `$6\\[`", () => {
+    // Bug korpus: langkah display `$$…$$` dijalankan lebih dulu, lalu regex
+    // display `$…\begin…\end…$` meminjam `$` dari `$6$` → `$6\[`.
+    const t = "nilai dari $6$ orang\n$$\\begin{array}{c} x \\\\end{array}$$ habis";
+    const out = normalizeMath(t).text;
+    expect(out).toContain("\\(6\\)");
+    expect(out).not.toContain("$6");
+    expect(out).not.toContain("$");
+  });
+
+  it("REGRESI KaTeX #2: dolar UANG (US$5.500) BUKAN delimiter rumus", () => {
+    const out = normalizeMath("seharga US$5.500 dan US$7.000 selesai").text;
+    expect(out).toBe("seharga US$5.500 dan US$7.000 selesai");
+    expect(out).not.toContain("\\(");
+  });
+
+  // ── Label opsi defantri `$(A)$` ─────────────────────────────────────────────
+  // Bug: body `[^\s$]` menolak spasi sebelum `$` → `$(A)\ 63 $` tak dikonversi
+  // → label `\(A\)` tak dikenali → KUNCI HILANG (40 value="correct" → 0 kunci).
+  it("REGRESI label opsi: `$(A)\\ 63 $` → label `\\((A)` dikenali (kunci terbaca)", () => {
+    // Spasi sisa di akhir (dari `63 $`) tidak masalah — yang penting label `\\((A)`
+    // terdeteksi, karena kode hanya menyimpan kunci bila label ada.
+    expect(normalizeMath("$(A)\\ 63 $").text).toContain("\\((A)");
+    expect(normalizeMath("$(A)\\ 63 $").text).not.toContain("$");
+    expect(normalizeMath("$(B)\\ 55,\\!8 $").text).toContain("\\((B)");
+    expect(normalizeMath("$(B)\\ 55,\\!8 $").text).not.toContain("$");
+  });
+
+  it("REGRESI label di depan display `$$…$$` tetap dikenali", () => {
+    const out = normalizeMath("$(A)\\ $$\\begin{pmatrix} 1 & 2 \\end{pmatrix}$$").text;
+    expect(out).toContain("\\((A)");
+    expect(out).not.toContain("$(");
+  });
+
+  it("REGRESI label dgn `$$` penutup (typo sumber `$(D)\\ 2,\\ 3,\\ 9$$`)", () => {
+    const out = normalizeMath("$(D)\\ 2,\\ 3,\\ 9$$").text;
+    expect(out).toBe("\\((D)\\ 2,\\ 3,\\ 9\\)");
+    expect(out).not.toContain("$");
+  });
+
+  it("REGRESI KaTeX bersarang: rumus antar-teks JANGAN jadi satu `$…$`", () => {
+    // Sumber asli: dua rumus terpisah, teks di antaranya. Bug: inline regex
+    // (tanpa newline) meminjam `$` jauh → `$T=…\(sehingga\)x'=…$` (KaTeX error).
+    const t = "sejauh $T=\\begin{pmatrix}\na \\\\ -b\n\\end{pmatrix}$ sehingga setelah pergesaran diperoleh $x'=x+a$ dan $y'=y-b$";
+    const out = normalizeMath(t).text;
+    expect(out).not.toMatch(/\$[^$]*\\\(/); // tak ada `\(` di dalam `$…$`
+    expect(out).toContain("sehingga setelah pergesaran diperoleh");
+    // Tiap segmen rumus punya delimiter `\(`/`\)` sendiri.
+    expect((out.match(/\\\(/g) ?? []).length).toBe((out.match(/\\\)/g) ?? []).length);
+  });
+
+  it("REGRESI KaTeX bersarang: `dan$[ABCD]$. Tetapi yaitu $AE$` (kasus nyata)", () => {
+    const t = "yaitu $AE$. dan$[ABCD]$. Tetapi ada bagian";
+    const out = normalizeMath(t).text;
+    expect(out).toContain("Tetapi ada bagian");
+    expect(out).not.toMatch(/\\\([^)]*\\\(/); // tak ada `\(…\(`
+  });
+
+  it("tetap mengonversi rumus inline & display yang sah", () => {
+    expect(normalizeMath("nilai $x^2$ dan $10$ orang").text).toBe("nilai \\(x^2\\) dan \\(10\\) orang");
+    expect(normalizeMath("$$x+1$$").text).toBe("\\[x+1\\]");
+    expect(normalizeMath("$\\begin{array}{c} a \\end{array}$").text).toBe(
+      "\\[\\begin{array}{c} a \\end{array}\\]",
+    );
+  });
+
+  it("REGRESI: `$$` di TENGAH math tak tinggalkan NUL (\\u0000)", () => {
+    // Temuan korpus (integral tentu): sumber `$\int…+$$\int…+$$\int…$`
+    // → placeholder stripTags bersarang → sisa `\u0000` tertinggal.
+    // Akibat nyata: PostgreSQL menolak NUL → soal HILANG saat commit.
+    const src = "$\\int_{1}^{2} dx+$$\\int_{2}^{3} dx+$$\\int_{1}^{3} dx$";
+    const out = stripTags(src);
+    expect(out).not.toContain("\u0000");
+  });
+
+  it("REGRESI: hasil stripTags bebas NUL walau placeholder bersarang", () => {
+    const cases = [
+      "teks $a+$$b$$+c$ akhir",
+      "$x<3$ dan $$y$$ lalu $z>1$",
+      "<b>$p$$$q$</b>",
+    ];
+    for (const c of cases) {
+      expect(stripTags(c)).not.toContain("\u0000");
+    }
   });
 });
 

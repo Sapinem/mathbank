@@ -197,6 +197,119 @@ describe("adapter defantri", () => {
     expect(r.items[0]!.stem).toContain("Diketahui");
     expect(r.items[0]!.correct).toEqual(["B"]);
   });
+
+  it("REGRESI: '<!--more-->' TIDAK boleh mengalahkan pembuka soal", () => {
+    // Bug nyata (UTBK): Blogger menyisipkan <!--more--> DI ANTARA stem dan
+    // <div class="question">. Karena pembuka diambil via Math.max(), <!--more-->
+    // "menang" atas <h4>/<blockquote> → start jatuh setelah stem → stem KOSONG
+    // → soal DIBUANG (4 soal hilang di 1 artikel).
+    const html = `<h4>1. Soal pertama</h4><blockquote>Berapa $1+1$?
+      <!--more-->
+      <div class="question">
+        <label><input type="radio" name="q1" value="correct">$(A)$ 2</label>
+        <label><input type="radio" name="q1" value="corect">$(B)$ 3</label>
+      </div></blockquote>`;
+    const r = defantriAdapter(html, { source: "defantri" });
+    expect(r.items).toHaveLength(1);
+    expect(r.items[0]!.stem).toContain("1+1");
+    expect(r.items[0]!.correct).toEqual(["A"]);
+  });
+
+  it("REGRESI: stem 'pembuka bersama' SEBELUM <h4> tetap terambil", () => {
+    // Bug nyata (4 artikel OSNP): deskripsi soal ada di <p> SEBELUM <h4>,
+    // sedangkan radio di dalam <blockquote>. Tanpa ini, stem kosong → soal dibuang.
+    const html = `<p>Perhatikan jaring-jaring makanan berikut, terdapat $(1)$ rantai makanan.</p>
+      </div><br>
+      <h4>1. Soal OSN-P IPA SD/MI 2025</h4>
+      <blockquote>
+      <div class="question">
+        <label><input type="radio" name="q1" value="corect">$(A)$ $6$</label>
+        <label><input type="radio" name="q1" value="correct">$(B)$ $7$</label>
+      </div></blockquote>`;
+    const r = defantriAdapter(html, { source: "defantri" });
+    expect(r.items).toHaveLength(1);
+    expect(r.items[0]!.stem).toContain("jaring-jaring makanan");
+    expect(r.items[0]!.correct).toEqual(["B"]);
+  });
+
+  it("PEMBAHASAN: <details> 'Alternatif Pembahasan' ikut terambil", () => {
+    // Sumber defantri menaruh pembahasan di <details> setelah soal.
+    const html = `<h4>1. Soal</h4><blockquote>Berapa $1+1$?<br>
+      <div class="question">
+        <label><input type="radio" name="q1" value="correct">$(A)$ 2</label>
+        <label><input type="radio" name="q1" value="corect">$(B)$ 3</label>
+      </div></blockquote>
+      <details class='sp'><summary>Alternatif Pembahasan:</summary><p>Karena $1+1=2$ maka jawabannya $(A)$.</p></details>`;
+    const it = defantriAdapter(html, { source: "defantri" }).items[0]!;
+    expect(it.correct).toEqual(["A"]);
+    expect(it.explanation).toBeDefined();
+    expect(it.explanation).toContain("1+1=2");
+  });
+
+  it("PEMBAHASAN BS: <details> setelah `<ul>` benar-salah ikut terambil", () => {
+    // Temuan nyata TKA: beberapa grup BS dalam satu `<ul>`; `<details>`
+    // pembahasan ada SETELAH `</ul>` → dulu tak terbaca karena blok dipotong
+    // di radio berikutnya.
+    const html = `<h4>1. Soal TKA</h4>
+      <ul>
+        <li>Pernyataan satu.
+          <div class="question">
+            <label><input type="radio" name="q201" value="correct">Benar</label>
+            <label><input type="radio" name="q201" value="corect">Salah</label>
+          </div>
+        </li>
+        <li>Pernyataan dua.
+          <div class="question">
+            <label><input type="radio" name="q202" value="corect">Benar</label>
+            <label><input type="radio" name="q202" value="correct">Salah</label>
+          </div>
+        </li>
+      </ul>
+      <details class='sp'><summary>Alternatif Pembahasan:</summary>
+        <p>Karena $2+2=4$ maka pernyataan pertama benar.</p></details>
+      <h4>2. Soal berikutnya</h4>
+      <blockquote>Soal lain.<div class="question">
+        <label><input type="radio" name="q3" value="correct">$(A)$ a</label>
+        <label><input type="radio" name="q3" value="corect">$(B)$ b</label>
+      </div></blockquote>`;
+
+    const items = defantriAdapter(html, { source: "defantri" }).items;
+    const mg = items.find((i) => i.type === "matrix_grid");
+    expect(mg).toBeDefined();
+    // Bukti utama: pembahasan BS kini terbaca.
+    expect(mg!.explanation).toBeDefined();
+    expect(mg!.explanation).toContain("2+2=4");
+    // Tidak menyerobot pembahasan soal lain.
+    const pg = items.find((i) => i.type === "single_choice");
+    expect(pg!.explanation ?? "").not.toContain("2+2=4");
+  });
+
+  it("PEMBAHASAN: tanpa <details> → explanation kosong (bukan error)", () => {
+    const html = `<blockquote>Berapa $2+2$?<br><div class="question">
+      <label><input type="radio" name="q1" value="correct">$(A)$ 4</label>
+      <label><input type="radio" name="q1" value="corect">$(B)$ 5</label>
+      </div></blockquote>`;
+    const it = defantriAdapter(html, { source: "defantri" }).items[0]!;
+    expect(it.explanation).toBeUndefined();
+  });
+
+  it("REGRESI: opsi '$(A)$ $P \\gt Q$' → LaTeX tetap SEIMBANG", () => {
+    // Bug: pembuangan `\)` sisa label ikut memakan penutup math opsi
+    // (`\(P \gt Q` tanpa `\)`) → KaTeX rusak.
+    const html = `<blockquote>Manakah yang benar?<br><div class="question">
+      <label><input type="radio" name="q1" value="corect">$(A)$   $P \\gt Q$</label>
+      <label><input type="radio" name="q1" value="correct">$(B)$  $Q \\gt P$</label>
+      </div></blockquote>`;
+    const it = defantriAdapter(html, { source: "defantri" }).items[0]!;
+    expect(it.options).toHaveLength(2);
+    const a = it.options[0]!;
+    expect(a.label).toBe("A");
+    // `\(` harus seimbang dengan `\)`.
+    const open = (a.text.match(/\\\(/g) ?? []).length;
+    const close = (a.text.match(/\\\)/g) ?? []).length;
+    expect(open).toBe(close);
+    expect(a.text).toContain("P \\gt Q");
+  });
 });
 
 describe("pemilih adapter", () => {

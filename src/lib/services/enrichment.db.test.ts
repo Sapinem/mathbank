@@ -309,7 +309,8 @@ describe("enrichment — embedQuestions", () => {
     mockEmbedText.mockResolvedValue({ ok: true, vector: Array.from({ length: 1024 }, () => 0.01) });
     const r = await embedQuestions([id], guru);
     expect(r.ok).toBe(1);
-    const [q] = await sql`SELECT embedding IS NOT NULL AS has_emb, embedding_content_hash, embedding_model_name FROM questions WHERE id = ${id}`;
+    // ADR-0019: vektor kini di tabel `question_embeddings`.
+    const [q] = await sql`SELECT embedding IS NOT NULL AS has_emb, embedding_content_hash, embedding_model_name FROM question_embeddings WHERE question_id = ${id}`;
     expect(q.has_emb).toBe(true);
     expect(q.embedding_content_hash).toBeTruthy();
     expect(q.embedding_model_name).toBe("bge-m3");
@@ -330,8 +331,9 @@ describe("enrichment — embedQuestions", () => {
     mockEmbedText.mockResolvedValue({ ok: false, error: "timeout" });
     const r = await embedQuestions([id], guru);
     expect(r.ok).toBe(0);
-    const [q] = await sql`SELECT embedding IS NULL AS null_emb FROM questions WHERE id = ${id}`;
-    expect(q.null_emb).toBe(true);
+    // ADR-0019: cek di tabel `question_embeddings` — baris tidak ada.
+    const rows = await sql`SELECT 1 FROM question_embeddings WHERE question_id = ${id}`;
+    expect(rows.length).toBe(0);
   });
 
   it("id tak ditemukan → dilaporkan", async () => {

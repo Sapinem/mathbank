@@ -54,6 +54,60 @@ const EVENTS = [
     subtests: [],
     aliases: ["UAS", "ASAJ", "PAT", "PAS"],
   },
+  // ── Tambahan hasil inventarisasi korpus defantri (2026-10-06) ──────────
+  {
+    name: "TKA",
+    shortname: "TKA",
+    category: "asesmen",
+    // TKA SD/SMP tanpa subtest; SMA punya Wajib/Lanjut (keputusan pemilik).
+    subtests: ["Matematika Wajib", "Matematika Lanjut"],
+    aliases: ["Tes Kemampuan Akademik", "TKA SD", "TKA SMP", "TKA SMA", "Asesmen"],
+  },
+  {
+    name: "PAS-SAS",
+    shortname: "PAS",
+    category: "ujian_sekolah",
+    subtests: [],
+    aliases: ["PAS", "SAS", "Penilaian Akhir Semester", "Sumatif Akhir Semester", "Ganjil", "Genap"],
+  },
+  {
+    name: "SBMPTN",
+    shortname: "SBMPTN",
+    category: "sbmptn",
+    subtests: ["Matematika Dasar", "Matematika IPA"],
+    aliases: ["Seleksi Bersama Masuk PTN", "UTBK SBMPTN"],
+  },
+  {
+    name: "Try Out",
+    shortname: "TO",
+    category: "ujian_sekolah",
+    subtests: [],
+    aliases: ["Tryout", "TO", "Simulasi", "Latihan Ujian"],
+  },
+  {
+    name: "ANBK-AKM",
+    shortname: "ANBK",
+    category: "asesmen",
+    subtests: [],
+    aliases: ["ANBK", "AKM", "Asesmen Nasional", "Asesmen Kompetensi Minimum", "Numerasi"],
+  },
+  // UNBK/UN — ujian nasional (hingga 2021, digantikan Asesmen Nasional).
+  // Umum di defantri (16 artikel), karena itu dijadikan event tersendiri.
+  {
+    name: "Ujian Nasional",
+    shortname: "UN",
+    category: "ujian_sekolah",
+    subtests: [],
+    aliases: [
+      "UNBK",
+      "UNKP",
+      "UNAS",
+      "UN",
+      "Ujian Nasional Berbasis Komputer",
+      "Ujian Nasional",
+      "Simulasi UNBK",
+    ],
+  },
 ];
 
 async function seedEvents() {

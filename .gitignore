@@ -72,3 +72,6 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Log runtime skrip operasional (embedding, ingest) — bukan artefak repo
+logs/

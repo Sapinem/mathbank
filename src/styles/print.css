@@ -14,6 +14,172 @@
   margin: 15mm;
 }
 
+/* ══════════ PAGE (A4 portrait, UX-DR2) ══════════ */
+@page {
+  size: A4 portrait;
+  margin: 15mm 15mm;
+}
+
+.worksheet {
+  --paper-ink: #111111;
+  --paper-green: #0b6b3a;
+  --paper-rule: #d8d8d8;
+  --paper-muted: #333333;
+
+  font-family: 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
+  font-size: 10pt;
+  line-height: 1.42;
+  color: var(--paper-ink);
+  background: #ffffff;
+  orphans: 3;
+  widows: 3;
+}
+
+/* ══════════ HEADER BLOCK (UX-DR1) ══════════ */
+.header {
+  border: 1px solid var(--paper-green);
+  border-radius: 6px;
+  padding: 8px 11px 7px 11px;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.headerLeft {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+
+.logo {
+  background: var(--paper-green);
+  color: #ffffff;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 7pt;
+  font-weight: 700;
+  line-height: 1.18;
+  text-align: center;
+  letter-spacing: 0.2px;
+  white-space: pre-line;
+}
+
+.institution {
+  font-size: 8.5pt;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.tagline {
+  display: block;
+  font-weight: 400;
+  font-size: 7.3pt;
+  color: #444444;
+}
+
+.title {
+  font-size: 18pt;
+  font-weight: 800;
+  color: var(--paper-green);
+  letter-spacing: 0.6px;
+  line-height: 1;
+  text-align: right;
+}
+
+.headerRule {
+  border: 0;
+  border-top: 2.5px solid var(--paper-green);
+  margin: 7px 0 6px 0;
+}
+
+.headerInfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8.2pt;
+}
+
+.headerInfo > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+}
+
+.headerInfo b {
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  font-size: 8.6pt;
+}
+
+.headerInfo i {
+  font-style: normal;
+  color: var(--paper-muted);
+}
+
+.headerInfo .right {
+  text-align: right;
+}
+
+/* ══════════ INSTRUCTION CALLOUT (UX-DR1) ══════════ */
+.instruction {
+  border: 1px solid var(--paper-green);
+  border-radius: 6px;
+  padding: 6px 11px;
+  margin-top: 8px;
+  font-style: italic;
+  font-size: 8.8pt;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* ══════════ BODY: TWO COLUMNS (UX-DR1) ══════════ */
+.columns {
+  column-count: 2;
+  column-gap: 9mm;
+  column-rule: 1px solid var(--paper-rule);
+  margin-top: 12px;
+}
+
+.item {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin-bottom: 10px;
+  padding-left: 17px;
+  position: relative;
+}
+
+.num {
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+.options {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.options > li {
+  margin-bottom: 1.5px;
+}
+
+.optionsTwoCol {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.optionsTwoCol > li {
+  width: 50%;
+  padding-right: 6px;
+}
+
 /* Hanya berlaku saat mencetak. */
 @media print {
   /* Netralkan tinggi terkurung shell (h-svh/overflow) agar dokumen mengalir penuh. */
@@ -25,8 +191,9 @@
   }
 
   /* Sembunyikan shell + kontrol yang tak perlu dicetak. */
-  [data-app-shell],
-  .no-print {
+  .no-print,
+  aside,
+  header {
     display: none !important;
   }
 

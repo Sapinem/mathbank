@@ -52,15 +52,38 @@ function clean(html: string | undefined): string {
   return html ? cleanHtml(html).text.trim() : "";
 }
 
+/**
+ * Ganti URL gambar REMOTE pusmendik → `corpus://` LOKAL.
+ *
+ * Alasan: host pusmendik sertifikat TLS-nya rusak & bisa lambat/down; gambar
+ * sudah tersedia lokal di `<kode_mapel>/images/`. Konvensi nama lokal:
+ * `<KODE>-<namaAsli>` (mis. `MATD-72392_abc.jpg`).
+ *
+ *   https://pusmendik…/tka/cbt_images/72392_abc.jpg
+ *     → corpus://pusmendik_dayaserap/MATD-72392_abc.jpg
+ */
+function lokalkanGambar(teks: string, kode: string): string {
+  if (!teks || !kode) return teks;
+  return teks.replace(
+    /https?:\/\/[^)"'\s]*\/cbt_images\/([A-Za-z0-9_.-]+?\.(?:png|jpg|jpeg))/gi,
+    (_m, nama: string) => `corpus://pusmendik_dayaserap/${kode}-${nama}`,
+  );
+}
+
 export const pusmendikDayaserapAdapter: JsonAdapter = (data): SegmentResult => {
   const items: ParsedItem[] = [];
   const warnings: string[] = [];
   let skipped = 0;
 
-  const questions = (data as { questions?: QuestionNode[] } | null)?.questions;
+  const root = data as { questions?: QuestionNode[]; kd_mapel?: string } | null;
+  const questions = root?.questions;
   if (!Array.isArray(questions)) {
-    return { items: [], skipped: 0, warnings: ["Bukan JSON dayaserap (tak ada `questions`)"] };
+    return { items: [], skipped: 0, warnings: ["Bukan JSON dayaserap (tak ada `questions`)" ] };
   }
+  // Kode mapel (mis. MATD/AMATP) → awalan nama berkas gambar lokal.
+  const KODE = (root?.kd_mapel ?? "").trim();
+  /** clean + lokalkan gambar remote → corpus:// lokal. */
+  const bersih = (html: string | undefined): string => lokalkanGambar(clean(html), KODE);
 
   let idx = 0;
   for (const q of questions) {
@@ -71,8 +94,8 @@ export const pusmendikDayaserapAdapter: JsonAdapter = (data): SegmentResult => {
     }
     idx++;
     const ref = { index: idx, heading: qd.kode_soal };
-    const stem = clean(qd.pertanyaan);
-    const explanation = clean(qd.pembahasan) || undefined;
+    const stem = bersih(qd.pertanyaan);
+    const explanation = bersih(qd.pembahasan) || undefined;
     const kind = (qd.tipe_soal ?? "").toLowerCase();
 
     // ── PG Kompleks - KATEGORI → matrix_grid (pernyataan ↔ label Benar/Salah)
@@ -81,7 +104,7 @@ export const pusmendikDayaserapAdapter: JsonAdapter = (data): SegmentResult => {
         .map((l) => l.description ?? "")
         .filter(Boolean);
       const rows = (qd.pernyataan ?? []).map((p) => ({
-        text: clean(p.text),
+        text: bersih(p.text),
         answer: (p.jawaban ?? "").trim() || null,
       }));
       items.push(
@@ -98,7 +121,7 @@ export const pusmendikDayaserapAdapter: JsonAdapter = (data): SegmentResult => {
     // ── PG / MCMA → opsi {key, text}
     const rawOptions = (qd.pilihan ?? []).map((p) => ({
       label: p.key,
-      text: clean(p.text),
+      text: bersih(p.text),
     }));
     const kunciRaw = qd.kunci_jawaban;
     const correct = Array.isArray(kunciRaw)

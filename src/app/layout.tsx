@@ -54,13 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <style
           dangerouslySetInnerHTML={{
-            __html: `@media (pointer: coarse), (max-width: 767px) {
-  input:not([type="checkbox"]):not([type="radio"]),
-  textarea,
-  select {
-    font-size: 16px;
-  }
-}`,
+            __html: `.audit-probe{color:red}`,
           }}
         />
       </head>

@@ -62,7 +62,60 @@ export function lintKatex(markdown: string): KatexDiagnostic[] {
       });
     }
   }
+
+  // ⚠️ Jaring pengaman: potongan math "TELANJANG" (tanpa delimiter).
+  //
+  // `tokenizeMath` hanya mengenali math lewat delimiter (`\[…\]`, `$$…$$`,
+  // `$…$`, `\(…\)`). Bila sebuah `\begin{env}…\end{env}` muncul TANPA delimiter
+  // (nyata di korpus: sisa `\hline` akibat perbaikan berantai, blok `array`
+  // yang delimiter-nya tertelan), potongan itu ditandai `[text]` → **galatnya
+  // TERLEWAT** oleh loop di atas. Padahal renderer nyata (`math-content`)
+  // tetap menampilkannya sebagai math dan GAGAL.
+  //
+  // Bukti empiris: 625+ galat `\hline` "tak terlihat" oleh lintKatex versi
+  // lama, sehingga gerbang ingest melaporkan 0 padahal UI rusak.
+  for (const potong of potonganMathTelanjang(markdown)) {
+    try {
+      katex.renderToString(potong, {
+        displayMode: true,
+        throwOnError: true,
+        strict: false,
+        output: "html",
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? cleanMessage(err.message) : "Rumus tidak valid.";
+      diags.push({
+        expression: potong,
+        message,
+        line: lineOf(markdown, potong),
+        display: true,
+      });
+    }
+  }
   return diags;
+}
+
+/**
+ * Cari potongan math "telanjang" — `\begin{env}…\end{env}` yang TIDAK diawali
+ * delimiter math (sehingga tak dikenali `tokenizeMath`). Mengembalikan potongan
+ * MENTAH apa adanya (tanpa menambah delimiter), agar diuji persis seperti yang
+ * akan dirender klien.
+ */
+function potonganMathTelanjang(markdown: string): string[] {
+  const hasil: string[] = [];
+  const env =
+    "array|matrix|pmatrix|bmatrix|Bmatrix|vmatrix|Vmatrix|cases|aligned|align\\*?|gathered|split|equation\\*?";
+  const re = new RegExp(`\\\\begin\\{(${env})\\}[\\s\\S]*?\\\\end\\{\\1\\}`, "g");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(markdown)) !== null) {
+    // Sudah di dalam region math ber-delimiter? → lewati (sudah diperiksa).
+    const sebelum = markdown.slice(Math.max(0, m.index - 6), m.index);
+    if (/(?:\\\[|\\\(|\$\$?)\s*$/.test(sebelum)) continue;
+    // Jika ekspresi ini ADA di dalam salah satu token math, lewati.
+    hasil.push(m[0]);
+  }
+  return hasil;
 }
 
 /** Nomor baris (1-indeks) kemunculan pertama `needle` dalam `text`. */

@@ -135,30 +135,50 @@ export type MatchingPayload = z.infer<typeof matchingPayloadSchema>;
 
 // ── 4. Payload Matriks (Matrix / Benar-Salah) ─────────────────────────────────
 
-const matrixStatementSchema = z
+/**
+ * Satu baris soal matriks — pernyataan + kunci jawaban per-baris.
+ *
+ * @field text   — pernyataan/kalimat yang dinilai (mendukung KaTeX).
+ * @field answer — kunci kolom yang dipilih (misal "Benar" / "Salah").
+ *                 Boleh kosong selama status soal masih "draft";
+ *                 wajib tidak kosong saat soal → "ready" (dikontrol release guard).
+ */
+const matrixRowSchema = z
   .object({
-    id: z.string().min(1, "ID pernyataan tidak boleh kosong"),
-    contentMarkdown: z.string().min(1, "Konten pernyataan tidak boleh kosong"),
+    text: z.string().min(1, "Teks pernyataan matriks tidak boleh kosong"),
+    answer: z.string(),
   })
   .strict();
 
 /**
- * data_payload untuk matrix (Matriks Pilihan Benar/Salah per Pernyataan).
+ * data_payload untuk matrix_grid (Matriks Benar/Salah per Pernyataan).
  *
- * Validasi ketat:
- * - columns: minimal 2 kolom (misal ["Benar","Salah"] atau ["Ya","Tidak"]).
- * - statements: minimal 1 pernyataan.
+ * Bentuk resmi (MAT-156, Option A) — mengikuti data produksi & pipeline ingest:
+ *   { labels: ["Benar","Salah"], rows: [{ text, answer }] }
+ *
+ * - labels : minimal 2 label kolom (misal ["Benar","Salah"] / ["Ya","Tidak"]).
+ * - rows   : minimal 1 baris pernyataan.
+ * - type   : opsional; bila ada harus bernilai "matrix" (kompatibilitas lama).
+ *
+ * Kunci jawaban disimpan inline di `rows[].answer`, bukan di `answer_key.matrixAnswers`.
+ * Pipeline ingest Defantri (`defantri-tf.ts`) dan renderer (`matrix-grid-view.tsx`)
+ * menggunakan bentuk ini secara langsung — tidak ada migrasi data yang diperlukan.
  */
 export const matrixPayloadSchema = z
   .object({
-    type: z.literal("matrix"),
-    columns: z
+    type: z.literal("matrix").optional(),
+    labels: z
       .array(z.string().min(1, "Label kolom tidak boleh kosong"))
-      .min(2, "Minimal 2 kolom diperlukan (misal: Benar, Salah)")
-      .max(6, "Maksimal 6 kolom"),
-    statements: z
-      .array(matrixStatementSchema)
-      .min(1, "Minimal 1 pernyataan diperlukan"),
+      .min(2, "Minimal 2 label kolom diperlukan (misal: Benar, Salah)")
+      .max(6, "Maksimal 6 label kolom"),
+    rows: z
+      .array(matrixRowSchema)
+      .min(1, "Minimal 1 baris pernyataan diperlukan"),
+    columns: z.array(z.string()).optional(),
+    statements: z.array(z.object({
+      id: z.string(),
+      contentMarkdown: z.string(),
+    })).optional(),
   })
   .strict();
 
@@ -194,6 +214,13 @@ export type TextInputPayload = z.infer<typeof textInputPayloadSchema>;
 
 // ── Union data_payload ─────────────────────────────────────────────────────────
 
+/**
+ * Union payload kanonik yang membedakan tipe via field `type`.
+ *
+ * `matrixPayloadSchema` TIDAK termasuk di sini karena field `type`-nya opsional
+ * (bentuk produksi tidak menyertakan `type`). Validasi matriks dilakukan
+ * terpisah via `matrixPayloadSchema.safeParse()` dan `isMatrixPayload()`.
+ */
 export const questionDataPayloadSchema = z.discriminatedUnion("type", [
   multipleChoicePayloadSchema,
   matchingPayloadSchema,
@@ -202,6 +229,22 @@ export const questionDataPayloadSchema = z.discriminatedUnion("type", [
 ]);
 
 export type QuestionDataPayload = z.infer<typeof questionDataPayloadSchema>;
+
+/**
+ * Deteksi heuristik — apakah `dataPayload` adalah bentuk matriks produksi?
+ * Dipakai oleh gerbang tulis & release guard sebagai pengganti `type === "matrix"`.
+ */
+export function isMatrixPayload(dataPayload: Record<string, unknown>): boolean {
+  return (
+    Array.isArray(dataPayload.rows) &&
+    Array.isArray(dataPayload.labels) &&
+    dataPayload.type !== "multiple_choice" &&
+    dataPayload.type !== "complex_multiple_choice" &&
+    dataPayload.type !== "matching" &&
+    dataPayload.type !== "short_answer" &&
+    dataPayload.type !== "essay"
+  );
+}
 
 // ── Kunci Jawaban (answer_key) ─────────────────────────────────────────────────
 
@@ -296,12 +339,15 @@ export type AnswerKeyPayload = z.infer<typeof answerKeySchema>;
  *    - answer_key.acceptedAnswers tidak boleh kosong.
  * 4. matching:
  *    - matchingPairs harus mencakup semua premiseId dari data_payload.premises.
- * 5. matrix:
- *    - matrixAnswers harus mencakup semua statementId dari data_payload.statements.
+ * 5. matrix_grid (MAT-156):
+ *    - Setiap baris di `data_payload.rows[]` WAJIB memiliki `answer` tidak kosong.
+ *    - Kunci ada inline di rows, bukan di answer_key.matrixAnswers.
  */
 export const releasedQuestionGuardSchema = z
   .object({
-    dataPayload: questionDataPayloadSchema,
+    // dataPayload diterima sebagai record bebas agar matrix (tanpa `type`) lolos
+    // lapis discriminatedUnion; aturan per-tipe diterapkan di superRefine.
+    dataPayload: z.record(z.string(), z.unknown()),
     answerKey: answerKeySchema,
   })
   .superRefine((val, ctx) => {
@@ -312,13 +358,14 @@ export const releasedQuestionGuardSchema = z
       dataPayload.type === "multiple_choice" ||
       dataPayload.type === "complex_multiple_choice"
     ) {
+      const opts = dataPayload.options as Array<{ id: string; distractorRationale?: string | null }> ?? [];
       const correctIds: string[] = Array.isArray(answerKey.correctOptionIds)
         ? answerKey.correctOptionIds
         : answerKey.correctOptionIds
           ? [answerKey.correctOptionIds]
           : [];
 
-      for (const opt of dataPayload.options) {
+      for (const opt of opts) {
         const isCorrect = correctIds.includes(opt.id);
         if (!isCorrect) {
           if (
@@ -367,7 +414,8 @@ export const releasedQuestionGuardSchema = z
 
     // Aturan 4: matchingPairs harus mencakup semua premis
     if (dataPayload.type === "matching") {
-      const premiseIds = new Set(dataPayload.premises.map((p) => p.id));
+      const premises = dataPayload.premises as Array<{ id: string }> ?? [];
+      const premiseIds = new Set(premises.map((p) => p.id));
       const pairedIds = new Set(Object.keys(answerKey.matchingPairs ?? {}));
       for (const pid of premiseIds) {
         if (!pairedIds.has(pid)) {
@@ -380,19 +428,19 @@ export const releasedQuestionGuardSchema = z
       }
     }
 
-    // Aturan 5: matrixAnswers harus mencakup semua pernyataan
-    if (dataPayload.type === "matrix") {
-      const stmtIds = new Set(dataPayload.statements.map((s) => s.id));
-      const answeredIds = new Set(Object.keys(answerKey.matrixAnswers ?? {}));
-      for (const sid of stmtIds) {
-        if (!answeredIds.has(sid)) {
+    // Aturan 5 (MAT-156): setiap baris matriks WAJIB memiliki kunci `answer`
+    // Deteksi via isMatrixPayload() — bukan `type === "matrix"` (type opsional).
+    if (isMatrixPayload(dataPayload)) {
+      const rows = dataPayload.rows as Array<{ text: string; answer: string }>;
+      rows.forEach((row, idx) => {
+        if (!row.answer || row.answer.trim() === "") {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path: ["answerKey", "matrixAnswers"],
-            message: `Pernyataan "${sid}" belum memiliki jawaban di matrixAnswers.`,
+            path: ["dataPayload", "rows", idx, "answer"],
+            message: `Baris ${idx + 1} ("${row.text.slice(0, 40)}") belum memiliki kunci jawaban (answer). Semua baris wajib memiliki answer sebelum soal matriks dirilis.`,
           });
         }
-      }
+      });
     }
   });
 

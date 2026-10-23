@@ -116,12 +116,38 @@ export function BundleDetailView() {
                 <span className="w-6 shrink-0 text-right font-medium tabular-nums text-muted-foreground">
                   {idx + 1}.
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <MathContent content={it.question.contentMarkdown} />
                   {it.item.role === "stimulus" && (
-                    <Badge variant="secondary" className="mt-2 text-[10px]">
+                    <Badge variant="secondary" className="w-fit text-[10px]">
                       Stimulus
                     </Badge>
+                  )}
+                  {it.question.options.length > 0 && (
+                    <ul className="flex flex-col gap-1 pl-1">
+                      {it.question.options.map((o) => {
+                        const benar = o.isCorrect === true;
+                        return (
+                          <li
+                            key={o.id}
+                            className={
+                              "flex items-start gap-2 text-sm leading-relaxed " +
+                              (benar ? "font-medium text-foreground" : "text-muted-foreground")
+                            }
+                          >
+                            <span className="shrink-0 tabular-nums">{o.label}.</span>
+                            <span className="min-w-0 flex-1">
+                              <MathContent content={o.contentMarkdown} />
+                            </span>
+                            {benar && (
+                              <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                Kunci
+                              </Badge>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </div>
               </div>

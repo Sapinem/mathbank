@@ -179,23 +179,56 @@ export function BundlePrintView() {
       {/* ── Naskah (yang dicetak) ───────────────────────────────── */}
       {/* MAT-40: A4 physical page preview — max-w-[210mm] mensimulasikan lebar
           kertas A4; padding 15mm menyelaraskan dengan @page margin. */}
-      <div className="print-sheet mx-auto w-full max-w-[210mm] rounded-lg border bg-white p-[15mm] text-black shadow-sm print:border-0 print:p-0 print:shadow-none">
-        {/* Kop */}
-        <header className="mb-6 border-b pb-3">
-          <h1 className="text-lg font-bold">{bundle.title}</h1>
-          <p className="mt-1 text-xs">
-            {[bundle.grade, bundle.year ? `Tahun ${bundle.year}` : null]
-              .filter(Boolean)
-              .join(" · ")}
-            {bundle.durationMinutes ? ` · Waktu: ${bundle.durationMinutes} menit` : ""}
-            {` · ${questionItems.length} soal`}
-          </p>
-          {bundle.instructions && (
-            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed">
-              {bundle.instructions}
-            </p>
-          )}
+      <div className="print-sheet worksheet mx-auto w-full max-w-[210mm] rounded-lg border bg-white p-[15mm] text-black shadow-sm print:border-0 print:p-0 print:shadow-none">
+        {/* Kop Resmi (Format Varian C Prototype Soal) */}
+        <header className="header mb-4">
+          <div className="headerTop flex justify-between items-start">
+            <div className="headerLeft flex items-center gap-2">
+              <div className="logo bg-[#0b6b3a] text-white px-2 py-1 rounded text-[10px] font-bold text-center leading-tight">
+                MATH<br />MY ID
+              </div>
+              <div className="institution text-xs font-bold leading-tight">
+                MATH MY ID
+                <span className="tagline block font-normal text-[10px] text-gray-600">
+                  Bank Soal & Kurasi Matematika
+                </span>
+              </div>
+            </div>
+            <div className="title text-2xl font-extrabold text-[#0b6b3a] tracking-wide text-right">
+              {bundle.title}
+            </div>
+          </div>
+          <hr className="headerRule border-t-[2.5px] border-[#0b6b3a] my-2" />
+          <div className="headerInfo flex justify-between text-xs">
+            <div className="flex flex-col">
+              <b>{bundle.grade ? `Kelas ${bundle.grade}` : "Matematika"}</b>
+              <i className="not-italic text-gray-600">
+                {[bundle.year ? `Tahun ${bundle.year}` : null, `${questionItems.length} Soal`]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </i>
+            </div>
+            <div className="right text-right flex flex-col">
+              <i className="not-italic text-gray-600">
+                {new Intl.DateTimeFormat("id-ID", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }).format(new Date())}
+              </i>
+              {bundle.durationMinutes && (
+                <i className="not-italic text-gray-600">Waktu: {bundle.durationMinutes} menit</i>
+              )}
+            </div>
+          </div>
         </header>
+
+        {bundle.instructions && (
+          <div className="instruction border border-[#0b6b3a] rounded-md p-2.5 mb-4 text-xs italic">
+            {bundle.instructions}
+          </div>
+        )}
 
         {/* Daftar soal — 1 atau 2 kolom */}
         <ol

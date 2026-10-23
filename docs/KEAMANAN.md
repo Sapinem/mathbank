@@ -150,7 +150,7 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 
 | # | Utang | Prioritas |
 |---|-------|-----------|
-| S1 | Token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Lihat `src/lib/api/rate-limit.ts`. **✅ SELESAI** (2026-09-30): (a) 3 route GET yang terlewat ditambal; (b) rate-limit **login Better Auth** diverifikasi aktif (rule bawaan `/sign-in` 3/10 s) + **storage database** (tabel `rate_limit`, persisten) + IP asli via `cf-connecting-ip` (Cloudflare) → tahan spoof. Lihat `docs/RENCANA-RATE-LIMIT.md`. | ✅ |
+| S1 | Token bucket in-memory, per aktor/IP, 429 + `Retry-After`. Lihat `src/lib/api/rate-limit.ts`. **✅ SELESAI** (2026-09-30): (a) 3 route GET yang terlewat ditambal; (b) rate-limit **login Better Auth** diverifikasi aktif (rule bawaan `/sign-in` 3/10 s) + **storage database** (tabel `rate_limit`, persisten) + IP asli via `cf-connecting-ip` (Cloudflare) → tahan spoof **untuk endpoint auth Better Auth saja**; limiter aplikasi (`/img`, MCP, route anonim) masih memakai `X-Forwarded-For` mentah → **spoofable** (audit 2026-10-17, SEC-02). Lihat `docs/RENCANA-RATE-LIMIT.md`. **Status dikoreksi → 🟠** (audit 2026-10-17 SEC-02). | 🟠 |
 | S2 | ~~Security headers~~ **✅ SELESAI** (2026-09-29): CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS (produksi). Di `next.config.ts`. Pengerasan lanjutan: nonce/hash CSP (kini `'unsafe-inline'`). | ✅ |
 | S3 | Proyeksi kolom (`src/lib/db/projections/question.ts`); `answer_key`+`isCorrect` hanya untuk viewer berwenang; `embedding*`/`aiTagged*` **selalu** dibuang. CONSTRAINT #34. **✅ pada jalur `/questions`** (13 tes). **⚠️ UTANG:** jalur baca **paket** (`listBundleItems`) belum meneruskan `actor` → kunci selalu dibuang (under-exposure, inkonsisten — NEW4, M13). | 🟠 |
 | S4 | **Verifikasi email** — kini `requireEmailVerification: false` | 🟠 |
@@ -163,7 +163,26 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 
 ---
 
-## 9. Respons Insiden (garis besar)
+## 9b. Register Temuan Audit 2026-10-17 (🔴 TERBUKA)
+
+Sumber: `MathBankAuditor/reports/2026-10-17/audit-security-and-hardening.md` (skill
+`security-and-hardening`). Bukti eksekusi: `src/lib/security/audit-2026-10-17.proof.test.ts`.
+Baris di sini **wajib** diperbarui saat temuan ditutup (jangan biarkan `KEAMANAN.md`
+mengklaim lebih dari kenyataan).
+
+| # | Temuan | Tingkat | Status |
+|---|---|:--:|:--:|
+| SEC-01 | `question:flag` ditegakkan tanpa `ownerId` — aturan `own` mati, guru 403 pada semua soal (melanggar #35) | 🟠 HIGH | 🔴 terbuka |
+| SEC-02 | Rate limit aplikasi memakai `X-Forwarded-For` mentah → bypass (reproduksi: 400 req tanpa 429). **Koreksi klaim S1:** "tahan spoof" hanya berlaku untuk rate limit Better Auth | 🟠 HIGH | 🔴 terbuka |
+| SEC-03 | `TLS_RELAXED_HOSTS` mematikan verifikasi sertifikat + redirect ikut tanpa verifikasi | 🟠 HIGH | 🔴 terbuka |
+| SEC-04 | `corpus://` path traversal (`..` lolos regex segmen) | 🟠 HIGH | 🔴 terbuka |
+| SEC-05 | `MATHBANK_EXPORT_DIR` tanpa allowlist → `rm -r` + `git add -A` di sembarang folder | 🟠 HIGH | 🔴 terbuka |
+| SEC-06 | SSRF via `ai.base_url` (tanpa allowlist skema/host) | 🟠 HIGH | 🔴 terbuka |
+| MS-01..09, LS-01..07 | Lihat laporan (§3–§4) | 🟡 / 🔵 | 🔴 terbuka |
+
+---
+
+## 9c. Respons Insiden (garis besar)
 
 1. **Deteksi** — alert dari log/observabilitas (lihat `OBSERVABILITAS.md`, menyusul).
 2. **Isolasi** — cabut sesi/API key terdampak; blokir sumber.
@@ -178,7 +197,8 @@ Audit 2026-09-29 mencatat yang **BELUM** ada — dicatat jujur sebagai utang:
 - [ ] `BETTER_AUTH_SECRET` diset & kuat.
 - [ ] `AUTH_DEV_BYPASS` **false** / kosong.
 - [ ] Security headers aktif (S2).
-- [ ] Rate limiting umum aktif (S1).
+- [ ] Rate limiting umum aktif (S1) **dan** IP klien diambil dari sumber tepercaya (SEC-02), store bersama bila multi-instance.
+- [ ] SEC-01..06 (register §9b) tertutup & tes regresinya hijau.
 - [ ] CORS dibatasi sesuai kebutuhan.
 - [ ] `answer_key` tak bocor ke output publik (S3).
 - [ ] Backup terjadwal + uji restore (E4).

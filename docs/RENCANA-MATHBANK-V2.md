@@ -200,5 +200,24 @@ Berdasarkan tinjauan kode komprehensif (*AI-Powered Multi-Axis Code Review*) per
 6. **[MEDIUM] Pemisahan Metrik Gagal pada API Ingest Commit:** Pisahkan metrik `failedQuestions` (butir soal ditolak DB) dan `failedArticles` (antrean artikel gagal total) pada respons `/api/v1/ingest/commit`.
 7. **[LOW] Integrasi Dinamis Kop Cetak `printConfig`:** Sambungkan kop cetak di `bundle-print-view.tsx` dengan konfigurasi `bundle.printConfig.institutionName` dan `tagline` (ADR-0021).
 
+
+---
+
+## 10. Catatan Evaluasi Menyeluruh Arsitektur & Rekomendasi Eksekusi v2.0 (16 Oktober 2026)
+
+Melengkapi catatan tinjauan kode per 7 Oktober 2026 di atas, evaluasi arsitektur menyeluruh dilakukan pada 16 Oktober 2026 (detail lengkap di [`docs/plans/2026-10-16-evaluasi-arsitektur-dan-catatan-persiapan-v2.md`](file:///home/hari/projects/mathbank/docs/plans/2026-10-16-evaluasi-arsitektur-dan-catatan-persiapan-v2.md)). Poin-poin arsitektural yang diratifikasi sebagai bagian dari persiapan v2.0 meliputi:
+
+1. **[DATABASE] Alokasi Memori Buffer Pool & Isolasi Vektor (Fase 1):**
+   - Memisahkan kolom `embedding vector(1024)` dari tabel `questions` ke tabel 1:1 `question_embeddings`.
+   - Menerapkan Partial HNSW Index (`WHERE status = 'ready' AND deleted_at IS NULL`) guna mereduksi konsumsi RAM buffer pool PostgreSQL hingga $>90\%$.
+2. **[INGESTION] Ketahanan Ingest Massal & Toleransi Parsial (Fase 2):**
+   - Mengakhiri pola *all-or-nothing rollback* pada ingest batch via MCP tool. Butir soal yang valid langsung disimpan ke database, sedangkan butir yang gagal diisolasi dan dilaporkan per indeks (`{ stored, failed, failures }`).
+3. **[SECURITY] Hardening Anti-SSRF Media Fetching (Fase 3):**
+   - Memasang manual DNS pre-resolution (`dns.lookup`) dan konfigurasi `redirect: 'manual'` pada `src/lib/ingest/media/fetch.ts` guna mencegah serangan DNS rebinding dan eksfiltrasi endpoint metadata internal cloud (`169.254.169.254`).
+4. **[PUBLISHING] Standardisasi Layout Cetak Naskah A4 2-Kolom (Fase 2):**
+   - Menegakkan gutter penomoran 24px (`padding-left: 24px;` pada `.item`) agar nomor soal 2-digit (`10.` s.d. `99.`) tidak menabrak naskah soal.
+   - Mengintegrasikan konfigurasi dinamis `bundle.printConfig` (kop institusi, instruksi, durasi) ke antarmuka cetak `/bundles/[id]/print`.
+5. **[QUALITY] Pembersihan Lingkungan CI/CD & Penegakan Konvensi Penamaan (Fase 4):**
+   - Menertibkan berkas investigasi di `scripts/dev/` agar patuh terhadap aturan penamaan bahasa Inggris (CONSTRAINT #28b) dan bebas dari galat ESLint (CONSTRAINT #2), menjamin kelulusan mutlak pada `pnpm check`.
 ---
 *Cetak biru v2.0 ini merupakan acuan resmi bagi arsitek dan tim pengembang MathBank.*

@@ -213,3 +213,5 @@
   background-color: transparent !important;
   background: transparent !important;
 }
+/* AUDIT PROBE */
+.audit-probe-layer { color: blue; }

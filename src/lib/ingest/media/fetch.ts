@@ -23,10 +23,17 @@ import { readFile } from "node:fs/promises";
 import { join, extname } from "node:path";
 
 /**
- * Root direktori gambar korpus Defantri (baca saja — tidak pernah ditulis).
- * Berkas fisik: `<CORPUS_IMAGE_BASE>/<slug>/<filename>`.
+ * Root direktori korpus gambar (baca saja — tidak pernah ditulis).
+ *
+ * ⚠️ Dulu HARD-CODED ke `defantri` saja, sehingga sumber lain (mis.
+ * `pusmendik_dayaserap`) gagal resolve. Sekarang **generik per-sumber**:
+ * `corpus://<sumber>/<…sisa>` → `<CORPORA_BASE>/<sumber>/images/<…sisa>`.
+ *
+ * Dua tata letak didukung (keduanya terjadi nyata):
+ *   - `corpus://defantri/<slug>/<file>`            → `<…>/defantri/images/<slug>/<file>`
+ *   - `corpus://pusmendik_dayaserap/<file>`        → `<…>/pusmendik_dayaserap/images/<file>`
  */
-const CORPUS_IMAGE_BASE = "/home/hari/projects/qbank/data/corpora/defantri/images";
+const CORPORA_BASE = "/home/hari/projects/qbank/data/corpora";
 
 /** Domain yang sertifikat SSL-nya rusak di sumber (temuan: pusmendik kemdikdasmen). */
 const TLS_RELAXED_HOSTS = ["pusmendik.kemendikdasmen.go.id"];
@@ -352,9 +359,12 @@ async function fetchCorpusImage(url: string, maxBytes: number): Promise<FetchRes
   if (!parts.every((p) => safe.test(p))) {
     return { ok: false, error: `corpus:// path mengandung karakter tidak aman: ${url}` };
   }
-  // Gabungkan path — abaikan segmen pertama (nama sumber, mis. "defantri")
-  const [, ...rest2] = parts;
-  const absPath = join(CORPUS_IMAGE_BASE, ...rest2);
+  // Resolusi path: segmen pertama = nama SUMBER korpus, sisanya relatif
+  // terhadap `<sumber>/images/`.
+  //   corpus://defantri/<slug>/<file>       → corpora/defantri/images/<slug>/<file>
+  //   corpus://pusmendik_dayaserap/<file>   → corpora/pusmendik_dayaserap/images/<file>
+  const [sumber, ...sisa] = parts;
+  const absPath = join(CORPORA_BASE, sumber!, "images", ...sisa);
 
   let bytes: Uint8Array;
   try {
