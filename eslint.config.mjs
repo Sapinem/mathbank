@@ -98,6 +98,43 @@ const eslintConfig = defineConfig([
     ...noBareSelectInApi,
   },
   /**
+   * BATAS LAPISAN — `src/lib/ingest/parsers/**` adalah L4 MURNI (AGENTS §9.1).
+   *
+   * Parser tidak boleh menyentuh DB, service, komponen React, atau API Next.
+   * Aturan ini lahir dari bug nyata: `katex-repair.ts` sempat mengimpor
+   * `@/components/math/math-content` (`"use client"`) hanya untuk memakai
+   * `tokenizeMath`, sehingga lapisan ingest menarik React tanpa ketahuan.
+   * Konvensi saja tidak cukup — pagar ini yang menahan pengulangannya.
+   */
+  {
+    files: ["src/lib/ingest/parsers/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/lib/db", "@/lib/db/*"],
+              message: "Parser adalah L4 murni — jangan akses DB. Pindahkan ke src/lib/ingest/{service,commit,queue}.ts.",
+            },
+            {
+              group: ["@/lib/services", "@/lib/services/*"],
+              message: "Parser adalah L4 murni — jangan panggil service. Orkestrasi ada di src/lib/ingest/service.ts.",
+            },
+            {
+              group: ["@/components", "@/components/*"],
+              message: "Parser adalah L4 murni — jangan impor komponen/UI. Logika murni taruh di src/lib/math/.",
+            },
+            {
+              group: ["next", "next/*"],
+              message: "Parser adalah L4 murni — jangan impor API Next.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  /**
    * M15 — aksesibilitas (WCAG 2.2 AA). `eslint-config-next` sudah mendaftarkan
    * plugin `jsx-a11y`; di sini kita **melengkapi aturannya** agar masalah a11y
    * tertangkap saat menulis (mis. alt gambar, label kontrol, peran ARIA). Tidak
