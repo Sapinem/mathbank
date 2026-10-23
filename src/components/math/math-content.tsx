@@ -418,35 +418,21 @@ function CellContent({ value }: { value: string }) {
  * Gambar dari shortcode `{{img:<shortId>}}`.
  *
  * Berkas disajikan lewat `/img/{shortId}` (route yang menerjemahkan short_id →
- * berkas). ACT-17: dimensi hanya dipasang bila SUMBER memberi tahu keduanya —
- * menebak rasio (mis. 4:3) justru merusak gambar non-4:3 karena `aspect-ratio`
- * memaksa kotak yang salah, dan `width` menarik gambar kecil ke atas (blur).
- * Tanpa dimensi, biarkan browser memakai rasio asli berkas (tidak ada regresi).
+ * berkas). Shortcode `{{img:…}}` TIDAK membawa dimensi, jadi jangan menebak
+ * rasio (mis. 4:3): `aspect-ratio` memaksa kotak yang salah untuk gambar
+ * non-4:3 dan `width` menarik gambar kecil ke atas (blur). Biarkan browser
+ * memakai rasio asli berkas.
  * Bila gagal dimuat, teks pengganti ditampilkan agar soal tetap terbaca
  * dan guru tahu ada gambar yang bermasalah — bukan ruang kosong tanpa penjelasan.
  */
-function MediaImage({
-  shortId,
-  width,
-  height,
-  alt,
-}: {
-  shortId: string;
-  width?: number;
-  height?: number;
-  alt?: string;
-}) {
-  // Kedua dimensi wajib ada; setengah-setengah tetap membuat rasio salah.
-  const sized = width != null && height != null && width > 0 && height > 0;
+function MediaImage({ shortId, alt }: { shortId: string; alt?: string }) {
   return (
     <span className="inline-block align-middle">
       {/* eslint-disable-next-line @next/next/no-img-element -- media dari storage lokal (bukan CDN); next/image butuh loader khusus. */}
       <img
         src={`/img/${shortId}`}
         alt={alt || `Gambar ${shortId}`}
-        {...(sized ? { width, height } : {})}
         loading="lazy"
-        style={sized ? { aspectRatio: `${width} / ${height}` } : undefined}
         className="my-2 inline-block max-h-96 max-w-full rounded border border-border"
         onError={(e) => {
           const el = e.currentTarget;

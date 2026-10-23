@@ -23,7 +23,6 @@
 .worksheet {
   --paper-ink: #111111;
   --paper-green: #0b6b3a;
-  --paper-rule: #d8d8d8;
   --paper-muted: #333333;
 
   font-family: 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
@@ -142,49 +141,6 @@
    berada di `@layer utilities` — aturan unlayered selalu menang, sehingga
    `.print-columns { column-count: 2 }` di scope global membatalkan
    `columns-1` di layar dan memaksa 2 kolom pada ponsel (regresi mobile-first). */
-.columns {
-  column-count: 2;
-  column-gap: 9mm;
-  column-rule: 1px solid var(--paper-rule);
-  margin-top: 12px;
-}
-
-.item {
-  break-inside: avoid;
-  page-break-inside: avoid;
-  margin-bottom: 10px;
-  padding-left: 17px;
-  position: relative;
-}
-
-.num {
-  position: absolute;
-  left: 0;
-  font-weight: 700;
-}
-
-.options {
-  list-style: none;
-  padding: 0;
-  margin: 4px 0 0 0;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.options > li {
-  margin-bottom: 1.5px;
-}
-
-.optionsTwoCol {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.optionsTwoCol > li {
-  width: 50%;
-  padding-right: 6px;
-}
-
 /* Hanya berlaku saat mencetak. */
 @media print {
   /* Ukuran & margin halaman A4 (Publishing Engine V2) */
