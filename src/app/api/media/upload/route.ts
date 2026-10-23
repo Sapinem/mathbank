@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { uploadMedia } from "@/lib/services/media-service";
 import { mediaStorageRoot } from "@/lib/ingest/config";
@@ -27,10 +28,13 @@ const ALLOWED = new Set([
   "image/avif",
 ]);
 
+const emptyQuerySchema = z.object({}).optional();
+
 export const POST = wrapRoute({
   permission: "media:manage",
   rateLimit: { capacity: 30, refillPerSec: 0.5 },
   status: 201,
+  query: emptyQuerySchema,
   handler: async ({ req }) => {
     const form = await req.formData();
     const file = form.get("file");

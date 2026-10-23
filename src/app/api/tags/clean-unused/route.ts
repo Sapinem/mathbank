@@ -1,5 +1,9 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { cleanUnusedTags } from "@/lib/services/taxonomy-service";
+
+const emptyBodySchema = z.object({}).optional();
+const emptyQuerySchema = z.object({}).optional();
 
 /**
  * POST /api/tags/clean-unused — hapus semua label tak terpakai ('usage_count = 0').
@@ -10,6 +14,8 @@ import { cleanUnusedTags } from "@/lib/services/taxonomy-service";
 export const POST = wrapRoute({
   rateLimit: { capacity: 5, refillPerSec: 0.1 },
   permission: "taxonomy:manage",
+  body: emptyBodySchema,
+  query: emptyQuerySchema,
   handler: async ({ actor }) => {
     const removed = await cleanUnusedTags(actor);
     return { removed };

@@ -1,8 +1,7 @@
-import type { NextRequest } from "next/server";
-import { resolveActor } from "@/lib/auth/resolve";
+import { z } from "zod";
+import { wrapRoute } from "@/lib/api/route-wrapper";
 import { exportBundleToGitsync } from "@/lib/services/moodle-export-service";
 import { recordViewAudit } from "@/lib/services/audit";
-import { ForbiddenError, NotFoundError } from "@/lib/auth/guards";
 
 /**
  * `POST /api/bundles/[id]/export/moodle` — ekspor paket ke folder **GitSync** di disk (M12).
@@ -18,80 +17,64 @@ import { ForbiddenError, NotFoundError } from "@/lib/auth/guards";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function json(status: number, body: object): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+class ExportBlockedError extends Error {
+  httpStatus = 422;
+  code: string;
+  details: unknown;
+
+  constructor(code: string, message: string, details?: unknown) {
+    super(message);
+    this.name = "ExportBlockedError";
+    this.code = code;
+    this.details = details;
+  }
 }
 
-export async function POST(
-  req: NextRequest,
-  args: { params: Promise<{ id: string }> },
-): Promise<Response> {
-  let actor;
-  try {
-    actor = await resolveActor(req.headers);
-  } catch {
-    return json(401, { error: { code: "UNAUTHORIZED", message: "Autentikasi diperlukan." } });
-  }
-  if (!actor) {
-    return json(401, { error: { code: "UNAUTHORIZED", message: "Autentikasi diperlukan." } });
-  }
+const paramsSchema = z.object({ id: z.string().uuid() });
+const bodySchema = z.object({}).optional();
 
-  const { id } = await args.params;
-
-  try {
-    const { summary, result, write } = await exportBundleToGitsync(id, actor);
+export const POST = wrapRoute({
+  rateLimit: { capacity: 10, refillPerSec: 0.2 },
+  params: paramsSchema,
+  body: bodySchema,
+  handler: async ({ params, actor }) => {
+    const { summary, result, write } = await exportBundleToGitsync(params.id, actor);
 
     // D4: ada soal tanpa kunci → tolak (jangan tulis berkas cacat).
     // API-01: CONSTRAINT #17 — error TIDAK boleh menyertakan `data`.
     // Ringkasan dipindah ke `error.details`.
     if (!result.ok) {
-      return json(422, {
-        error: {
-          code: "EXPORT_BLOCKED",
-          message: "Ekspor dibatalkan: ada soal tanpa kunci jawaban.",
-          details: summary,
-        },
-      });
+      throw new ExportBlockedError(
+        "EXPORT_BLOCKED",
+        "Ekspor dibatalkan: ada soal tanpa kunci jawaban.",
+        summary,
+      );
     }
 
     if (result.exported === 0) {
-      return json(422, {
-        error: {
-          code: "NOTHING_EXPORTED",
-          message: "Tak ada soal yang bisa diekspor (tipe tak didukung).",
-          details: summary,
-        },
-      });
+      throw new ExportBlockedError(
+        "NOTHING_EXPORTED",
+        "Tak ada soal yang bisa diekspor (tipe tak didukung).",
+        summary,
+      );
     }
 
     // M13 S7: catat EKSPOR (akses baca massal + kunci jawaban) sebagai audit.
     await recordViewAudit({
       entityType: "bundle",
-      entityId: id,
+      entityId: params.id,
       action: "export",
       actor,
       changeSummary: `Ekspor GitSync: ${result.exported} soal (${write?.directory ?? "-"})`,
     });
 
-    return json(200, {
-      data: {
-        ...summary,
-        directory: write?.directory ?? null,
-        written: write?.written ?? 0,
-        committed: write?.committed ?? false,
-        commitHash: write?.commitHash ?? null,
-        note: write?.note ?? "",
-      },
-    });
-  } catch (err) {
-    if (err instanceof ForbiddenError)
-      return json(403, { error: { code: err.code, message: err.message } });
-    if (err instanceof NotFoundError)
-      return json(404, { error: { code: err.code, message: err.message } });
-    console.error("[moodle-export] error:", (err as Error).message);
-    return json(500, { error: { code: "INTERNAL_ERROR", message: "Gagal menyusun ekspor." } });
-  }
-}
+    return {
+      ...summary,
+      directory: write?.directory ?? null,
+      written: write?.written ?? 0,
+      committed: write?.committed ?? false,
+      commitHash: write?.commitHash ?? null,
+      note: write?.note ?? "",
+    };
+  },
+});

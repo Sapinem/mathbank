@@ -14,10 +14,13 @@ const createSchema = z.object({
   expiresInDays: z.coerce.number().int().min(0).max(365).optional(),
 });
 
+const emptyQuerySchema = z.object({}).optional();
+
 /** GET /api/system/agent-keys — daftar kunci agen (tanpa nilai rahasia). */
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "user:manage",
+  query: emptyQuerySchema,
   handler: async ({ actor }) => ({ items: await listAgentKeys(actor) }),
 });
 

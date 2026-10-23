@@ -7,6 +7,9 @@ import {
 } from "@/lib/services/topic-service";
 import { NotFoundError } from "@/lib/auth/guards";
 
+const paramsSchema = z.object({ id: z.string().uuid() });
+const emptyQuerySchema = z.object({}).optional();
+
 const patchSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   parentId: z.string().uuid().nullable().optional(),
@@ -18,6 +21,8 @@ const patchSchema = z.object({
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params }) => {
     const t = await getTopic(params.id);
     if (!t) throw new NotFoundError("Topik tidak ditemukan.");
@@ -29,6 +34,7 @@ export const GET = wrapRoute({
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
   permission: "taxonomy:manage",
+  params: paramsSchema,
   body: patchSchema,
   handler: async ({ params, body, actor }) => updateTopic(params.id, body, actor),
 });
@@ -37,6 +43,8 @@ export const PATCH = wrapRoute({
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
   permission: "taxonomy:manage",
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params, actor }) => {
     await deleteTopic(params.id, actor);
     return { ok: true };

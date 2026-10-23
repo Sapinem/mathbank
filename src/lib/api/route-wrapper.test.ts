@@ -374,3 +374,41 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
     expect(calls).toBe(2);
   });
 });
+
+describe("Pilar 3 v2.0 — params validation & public auth: false", () => {
+  it("mem-parse dan memvalidasi params rute dinamis yang sah", async () => {
+    const handler = wrapRoute({
+      params: z.object({ id: z.string().uuid() }),
+      handler: async ({ params }) => ({ id: params.id }),
+    });
+    const validUuid = "123e4567-e89b-12d3-a456-426614174000";
+    const res = await handler(req(), { params: Promise.resolve({ id: validUuid }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.id).toBe(validUuid);
+  });
+
+  it("menolak params yang cacat dengan 400 VALIDATION_ERROR", async () => {
+    const handler = wrapRoute({
+      params: z.object({ id: z.string().uuid() }),
+      handler: async ({ params }) => ({ id: params.id }),
+    });
+    const res = await handler(req(), { params: Promise.resolve({ id: "bukan-uuid" }) });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("auth: false mengizinkan akses anonim tanpa header sesi", async () => {
+    const handler = wrapRoute({
+      auth: false,
+      handler: async () => ({ public: true }),
+    });
+    // Request tanpa auth header
+    const rawReq = new Request("http://localhost/api/public");
+    const res = await handler(rawReq);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.public).toBe(true);
+  });
+});

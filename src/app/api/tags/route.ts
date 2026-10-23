@@ -4,11 +4,13 @@ import { createTag } from "@/lib/services/taxonomy-service";
 import { listTags } from "@/lib/services/taxonomy-service";
 
 const createSchema = z.object({ name: z.string().trim().min(1).max(100) });
+const emptyQuerySchema = z.object({}).optional();
 
 /** GET /api/tags — daftar label (dengan usageCount). */
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  query: emptyQuerySchema,
   handler: async () => listTags(),
 });
 

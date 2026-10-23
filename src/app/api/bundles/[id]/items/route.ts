@@ -6,6 +6,9 @@ import {
   listBundleItems,
 } from "@/lib/services/bundle-service";
 
+const paramsSchema = z.object({ id: z.string().uuid() });
+const emptyQuerySchema = z.object({}).optional();
+
 const postSchema = z.object({
   questionId: z.string().uuid(),
   role: z.enum(["question", "stimulus"]).optional(),
@@ -21,6 +24,8 @@ const putSchema = z.object({
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params, actor }) => listBundleItems(params.id, actor),
 });
 
@@ -28,6 +33,7 @@ export const GET = wrapRoute({
 export const POST = wrapRoute({
   rateLimit: { capacity: 60, refillPerSec: 2 },
   permission: "question:view", // #35: aturan sebenarnya di service (assertBundleWrite)
+  params: paramsSchema,
   body: postSchema,
   handler: async ({ params, body, actor }) =>
     addItem(params.id, body.questionId, actor, {
@@ -40,6 +46,7 @@ export const POST = wrapRoute({
 export const PUT = wrapRoute({
   rateLimit: { capacity: 60, refillPerSec: 2 },
   permission: "question:view", // #35: aturan sebenarnya di service (assertBundleWrite)
+  params: paramsSchema,
   body: putSchema,
   handler: async ({ params, body, actor }) => {
     await reorderItems(params.id, body.itemIds, actor);

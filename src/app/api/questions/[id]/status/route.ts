@@ -1,6 +1,9 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { changeStatusSchema } from "@/lib/contracts/question";
 import { changeQuestionStatus } from "@/lib/services/question-service";
+
+const paramsSchema = z.object({ id: z.string().uuid() });
 
 /**
  * PATCH /api/questions/[id]/status — ubah status lewat FSM (L6).
@@ -14,6 +17,7 @@ import { changeQuestionStatus } from "@/lib/services/question-service";
  */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
+  params: paramsSchema,
   body: changeStatusSchema,
   handler: async ({ params, body, actor }) =>
     changeQuestionStatus(params.id, body.status, actor, body.notes),

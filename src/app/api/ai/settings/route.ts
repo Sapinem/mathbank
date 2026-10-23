@@ -1,6 +1,9 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { aiSettingsSchema } from "@/lib/contracts/ai";
 import { getAiSettings, saveAiSettings } from "@/lib/services/ai-settings-service";
+
+const emptyQuerySchema = z.object({}).optional();
 
 /**
  * GET /api/ai/settings — pengaturan AI (secret dimask).
@@ -10,6 +13,7 @@ import { getAiSettings, saveAiSettings } from "@/lib/services/ai-settings-servic
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "settings:manage",
+  query: emptyQuerySchema,
   handler: async () => {
     const items = await getAiSettings();
     return { items };
