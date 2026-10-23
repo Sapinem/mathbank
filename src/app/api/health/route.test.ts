@@ -21,9 +21,10 @@ const req = (url = "http://localhost/api/health") => new Request(url);
 
 const healthy = {
   ok: true,
-  counts: { tables: 27, checkConstraints: 2, hnswIndexes: 1, triggers: 26 },
+  counts: { tables: 26, checkConstraints: 2, hnswIndexes: 1, triggers: 24 },
   missingTriggers: [],
   missingChecks: [],
+  forbiddenTablesPresent: [],
   pkUsesUuidv7: true,
   problems: [],
 };
@@ -56,6 +57,20 @@ describe("GET /api/health", () => {
     const body = await res.json();
     expect(body.data.status).toBe("degraded");
     expect(body.data.invariants.missingTriggers).toContain("trg_topics_cycle");
+  });
+
+  it("503 saat tabel terlarang masih ada (invarian negatif)", async () => {
+    mockCheck.mockResolvedValue({
+      ...healthy,
+      ok: false,
+      // Nilai yang BENAR-BENAR bisa dihasilkan gate (FORBIDDEN_TABLES / pola *_backup).
+      forbiddenTablesPresent: ["question_options"],
+      problems: ["Tabel terlarang masih ada: question_options"],
+    });
+    const res = await GET(req());
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.data.invariants.forbiddenTablesPresent).toEqual(["question_options"]);
   });
 
   it("503 & status down bila DB tak terjangkau", async () => {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkDbInvariants } from "@/lib/db/invariants";
+import { toInvariantsDto } from "@/lib/db/schema-expectations";
+import { PUBLIC_DB_DOWN_MESSAGE } from "@/lib/api/public-messages";
 import { log } from "@/lib/telemetry/logger";
 
 /**
@@ -24,8 +26,6 @@ import { log } from "@/lib/telemetry/logger";
  */
 export const dynamic = "force-dynamic";
 
-/** Pesan publik tetap — sengaja tidak memuat nama tabel/host/error driver. */
-const PUBLIC_DB_DOWN_MESSAGE = "Layanan basis data tidak tersedia.";
 
 export async function GET(req: Request) {
   const startedAt = Date.now();
@@ -46,14 +46,7 @@ export async function GET(req: Request) {
         db: "up",
         uptimeSec: Math.round(process.uptime()),
         latencyMs: Date.now() - startedAt,
-        invariants: {
-          ok: report.ok,
-          counts: report.counts,
-          missingTriggers: report.missingTriggers,
-          missingChecks: report.missingChecks,
-          pkUsesUuidv7: report.pkUsesUuidv7,
-          problems: report.problems,
-        },
+        invariants: toInvariantsDto(report),
       },
     };
     return NextResponse.json(body, { status: report.ok ? 200 : 503 });

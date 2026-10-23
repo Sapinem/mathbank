@@ -1,41 +1,27 @@
 /**
- * Verifikasi invarian DB — SATU sumber kebenaran untuk health check (P1) &
- * guard startup (P2). Dipakai `/api/health` dan log saat server menyala.
+ * Verifikasi invarian DB — health check (P1) & guard startup (P2).
+ * Dipakai `/api/health`, `/api/ready`, dan log saat server menyala.
  *
  * Latar: invarian bisnis (trigger, CHECK, HNSW, uuidv7) hidup di
  * `drizzle/manual/db_safety.sql` yang diterapkan lewat `pnpm db:migrate`.
  * Bila seseorang menjalankan `drizzle-kit push/migrate` langsung, invarian itu
  * TIDAK terpasang → aplikasi berjalan "tanpa jaring pengaman". Modul ini
  * mendeteksi kondisi itu lebih awal (bukan menunggu insiden).
+ *
+ * Angka & aturan lulus/gagal TINGGAL di `schema-expectations.ts` (murni, tanpa
+ * impor db) supaya `scripts/db-verify.ts` dan `scripts/snapshot-metrics.ts`
+ * memakai sumber yang sama tanpa ikut membuka koneksi kedua. Modul ini hanya
+ * mengumpulkan fakta dari DB lalu menyerahkannya ke `evaluateInvariants()`.
  */
 import { sql } from "drizzle-orm";
 import { db } from "./index";
 import {
-  EXPECTED_INVARIANTS,
   REQUIRED_CHECKS,
   REQUIRED_TRIGGERS,
+  evaluateInvariants,
+  isForbiddenTable,
+  type InvariantReport,
 } from "./schema-expectations";
-
-// Angka & daftar objek kritis TINGGAL di `schema-expectations.ts` (murni, tanpa
-// impor db) supaya `scripts/db-verify.ts` dan `scripts/snapshot-metrics.ts`
-// memakai sumber yang sama tanpa ikut membuka koneksi kedua. Diekspor ulang di
-// sini agar pemanggil lama (`/api/health`, `/api/ready`) tidak berubah.
-export { EXPECTED_INVARIANTS, REQUIRED_CHECKS, REQUIRED_TRIGGERS };
-
-export type InvariantReport = {
-  ok: boolean;
-  counts: {
-    tables: number;
-    checkConstraints: number;
-    hnswIndexes: number;
-    triggers: number;
-  };
-  missingTriggers: string[];
-  missingChecks: string[];
-  pkUsesUuidv7: boolean;
-  /** Daftar masalah dalam bahasa manusia (kosong bila sehat). */
-  problems: string[];
-};
 
 type CountRow = {
   tables: number;
@@ -45,16 +31,19 @@ type CountRow = {
 };
 
 /**
- * Periksa seluruh invarian. Read-only & cepat (satu round-trip + 3 kueri kecil).
+ * Periksa seluruh invarian. Read-only & cepat (satu round-trip + 4 kueri kecil).
  * Tidak melempar — kembalikan laporan agar pemanggil memutuskan (log/blok).
+ *
+ * Catatan hitungan: `tables` MENGECUALIKAN tabel sisa migrasi (`*_backup`).
+ * Tanpa pengecualian itu, satu tabel sisa menjadi kelonggaran yang menutupi
+ * hilangnya satu tabel skema sungguhan.
  */
 export async function checkDbInvariants(): Promise<InvariantReport> {
-  const problems: string[] = [];
-
   const countRows = await db.execute<CountRow>(sql`
     SELECT
       (SELECT count(*) FROM information_schema.tables
-        WHERE table_schema='public' AND table_type='BASE TABLE') AS tables,
+        WHERE table_schema='public' AND table_type='BASE TABLE'
+          AND right(table_name, 7) <> '_backup') AS tables,
       (SELECT count(*) FROM pg_constraint
         WHERE contype='c' AND connamespace='public'::regnamespace) AS checks,
       (SELECT count(*) FROM pg_indexes
@@ -69,39 +58,44 @@ export async function checkDbInvariants(): Promise<InvariantReport> {
     triggers: Number(c.triggers),
   };
 
-  for (const key of Object.keys(EXPECTED_INVARIANTS) as (keyof typeof EXPECTED_INVARIANTS)[]) {
-    if (counts[key] < EXPECTED_INVARIANTS[key]) {
-      problems.push(`${key}: ${counts[key]} < ${EXPECTED_INVARIANTS[key]}`);
-    }
-  }
-
   const checkRows = await db.execute<{ conname: string }>(sql`
     SELECT conname FROM pg_constraint
      WHERE contype='c' AND connamespace='public'::regnamespace
   `);
   const checkNames = new Set(checkRows.map((r) => r.conname));
-  const missingChecks = REQUIRED_CHECKS.filter((n) => !checkNames.has(n));
-  for (const n of missingChecks) problems.push(`CHECK hilang: ${n}`);
 
   const trigRows = await db.execute<{ tgname: string }>(sql`
     SELECT tgname FROM pg_trigger WHERE NOT tgisinternal
   `);
   const trigNames = new Set(trigRows.map((r) => r.tgname));
-  const missingTriggers = REQUIRED_TRIGGERS.filter((n) => !trigNames.has(n));
-  for (const n of missingTriggers) problems.push(`TRIGGER hilang: ${n}`);
 
   const pkRows = await db.execute<{ column_default: string | null }>(sql`
     SELECT column_default FROM information_schema.columns
      WHERE table_name='questions' AND column_name='id'
   `);
   const pkUsesUuidv7 = (pkRows[0]?.column_default ?? "").includes("uuidv7");
-  if (!pkUsesUuidv7) problems.push("PK default bukan uuidv7()");
+
+  // Invarian negatif: tabel yang seharusnya sudah di-drop (MAT-144/MAT-146)
+  // atau sisa migrasi (*_backup). Hitungan `tables` saja tak bisa menangkapnya.
+  const tableRows = await db.execute<{ table_name: string }>(sql`
+    SELECT table_name FROM information_schema.tables
+     WHERE table_schema='public' AND table_type='BASE TABLE'
+  `);
+  const tableNames = new Set(tableRows.map((r) => r.table_name));
+
+  const { ok, problems } = evaluateInvariants(counts, {
+    tables: tableNames,
+    checks: checkNames,
+    triggers: trigNames,
+    pkUsesUuidv7,
+  });
 
   return {
-    ok: problems.length === 0,
+    ok,
     counts,
-    missingTriggers,
-    missingChecks,
+    missingTriggers: REQUIRED_TRIGGERS.filter((n) => !trigNames.has(n)),
+    missingChecks: REQUIRED_CHECKS.filter((n) => !checkNames.has(n)),
+    forbiddenTablesPresent: [...tableNames].filter(isForbiddenTable).sort(),
     pkUsesUuidv7,
     problems,
   };

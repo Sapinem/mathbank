@@ -63,7 +63,7 @@ Judul halaman | "MathBank" | **"QBank — Bank Soal Matematika"** |
 **Setiap kali mengubah skema, lakukan SEMUA ini:**
 
 1. `pnpm db:generate` → **periksa isi `.sql`** (pernah muncul baris "hantu" dari objek yang tak tercatat)
-2. Update `src/lib/db/invariants.ts` **dan** `scripts/db-verify.ts` (angka `tables`/`triggers`)
+2. Update **`src/lib/db/schema-expectations.ts`** — satu-satunya tempat angka `tables`/`triggers`, daftar trigger/CHECK wajib, dan daftar tabel terlarang. `invariants.ts`, `scripts/db-verify.ts`, dan `scripts/snapshot-metrics.ts` hanya **mengimpor** dari sana; menyunting ketiganya tidak mengubah ambang apa pun.
 3. Update **`drizzle/manual/db_safety.sql`** bila ada tabel baru/dihapus — daftar trigger `updated_at` **manual**, mudah terlupa
 4. `pnpm db:migrate` (**DB utama**) **DAN** `DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate` (**DB uji**)
 5. `pnpm db:verify` di **KEDUA** DB
@@ -122,7 +122,7 @@ Yang perlu dibaca cepat dari snapshot terbaru:
 Invarian skema tetap dijaga `pnpm db:verify` (angka minimum: `src/lib/db/schema-expectations.ts`).
 
 - ADR berlaku: **0009** (bundle satu tabel), **0010** (event), **0011** (stimulus), **0014** (sumber menempel bundle), **0015** (gabung books/institutions), **0016** (`collections`), **0017** (buang enum `exercise`), **0018** (drop `collections.origin`), **0019** (isolasi vektor), **0020** (event makro vs provenance naskah), **0021** (print config), **0022** (`wrapRoute`, larangan Server Actions). Total 22 ADR di `docs/ADR/`.
-- **Utang terbuka:** soal belum bertopik & tanpa media (angkanya di snapshot §1) · **belum ada satu pun soal `ready`** — 98,9% soal PG belum punya `distractorRationale`, 0 rubrik (snapshot §2) · layanan embedding `:3005` tidak selalu hidup · `main` tertinggal jauh di belakang branch kerja sehingga CI belum pernah menguji pekerjaan terbaru.
+- **Utang terbuka:** soal belum bertopik & tanpa media (angka di snapshot §1) · **kelengkapan pedagogis** — berapa soal `ready`, berapa punya `distractorRationale`/`rubric` (angka di snapshot §2; jangan disalin ke sini) · layanan embedding `:3005` tidak selalu hidup · `main` tertinggal jauh di belakang branch kerja sehingga CI belum pernah menguji pekerjaan terbaru.
 
 ## 9. Arsitektur 6 lapisan & layanan embedding
 
@@ -137,7 +137,7 @@ Invarian skema tetap dijaga `pnpm db:verify` (angka minimum: `src/lib/db/schema-
 | **L2 API** | `wrapRoute`, rate limit, Zod di boundary | `src/lib/api/`, `src/app/api/` | ⚠️ Zod baru 17/51 route |
 | **L3 Service** | orkestrasi domain, transaksi | `src/lib/services/`, `src/lib/ingest/` | ⚠️ beberapa fungsi > 300 baris |
 | **L4 Engine** | fungsi murni: KaTeX lint/repair, export, cetak | `src/lib/math/`, `src/lib/export/` | ✅ siap |
-| **L5 Data Access** | Drizzle, 26 tabel, 86 index, HNSW | `src/lib/db/` | ✅ siap |
+| **L5 Data Access** | Drizzle, 26 tabel, 84 index, HNSW | `src/lib/db/` | ✅ siap |
 | **L6 Infra** | PG18 + pgvector, Docker Compose, Caddy, health/metrics | `docker-compose.yml`, `Caddyfile` | ✅ siap |
 
 **Aturan:** logika murni **hanya** di L4; route **tidak** menyentuh Drizzle langsung (lewat L3/L5); jangan menambah lapisan baru tanpa ADR.

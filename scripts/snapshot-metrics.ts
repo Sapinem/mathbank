@@ -10,22 +10,48 @@
  * Jalankan: `pnpm metrics:snapshot`
  * Keluaran: `docs/SNAPSHOT-METRIK-<YYYY-MM-DD>.md` (menimpa berkas hari yang sama)
  * Exit 1 bila invarian skema di bawah harapan — sehingga bisa dipakai sebagai gerbang.
+ *
+ * Gerbang invarian TIDAK ditulis di sini: dipanggil lewat `evaluateInvariants()`,
+ * sumber yang sama dengan `pnpm db:verify` dan health check. Sebelumnya salinan
+ * di berkas ini hanya memeriksa angka, sehingga snapshot bisa hijau saat
+ * `db:verify` merah.
  */
 import { config } from "dotenv";
 import { writeFileSync } from "node:fs";
 import postgres from "postgres";
-import { EXPECTED_INVARIANTS } from "../src/lib/db/schema-expectations";
+import {
+  EXPECTED_INVARIANTS,
+  evaluateInvariants,
+  isForbiddenTable,
+} from "../src/lib/db/schema-expectations";
 
 config({ path: ".env", quiet: true });
 
+/**
+ * Hitungan tabel MENGECUALIKAN sisa migrasi (`*_backup`): tabel seperti
+ * `question_options_mat146_backup` bukan bagian skema, dan bila ikut dihitung
+ * ia menjadi kelonggaran yang menutupi hilangnya satu tabel sungguhan.
+ */
 const SQL_SCHEMA = `SELECT
   (SELECT count(*) FROM information_schema.tables
-    WHERE table_schema='public' AND table_type='BASE TABLE') AS tables,
+    WHERE table_schema='public' AND table_type='BASE TABLE'
+      AND right(table_name, 7) <> '_backup') AS tables,
   (SELECT count(*) FROM pg_constraint
     WHERE contype='c' AND connamespace='public'::regnamespace) AS checks,
   (SELECT count(*) FROM pg_indexes WHERE schemaname='public') AS indexes,
   (SELECT count(*) FROM pg_indexes WHERE indexdef ILIKE '%hnsw%') AS hnsw,
   (SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal) AS triggers`;
+
+const SQL_TABLE_NAMES = `SELECT table_name AS name FROM information_schema.tables
+  WHERE table_schema='public' AND table_type='BASE TABLE'`;
+
+const SQL_CHECK_NAMES = `SELECT conname AS name FROM pg_constraint
+  WHERE contype='c' AND connamespace='public'::regnamespace`;
+
+const SQL_TRIGGER_NAMES = `SELECT tgname AS name FROM pg_trigger WHERE NOT tgisinternal`;
+
+const SQL_PK = `SELECT column_default FROM information_schema.columns
+  WHERE table_name='questions' AND column_name='id'`;
 
 const SQL_QUESTIONS = `SELECT
   count(*) FILTER (WHERE deleted_at IS NULL) AS aktif,
@@ -71,17 +97,41 @@ const SQL_BUNDLES = `SELECT
 
 const SQL_EMBEDDING_DIM = `SELECT vector_dims(embedding) AS dim FROM question_embeddings LIMIT 1`;
 
-/** Tabel sisa migrasi/backup — objek yang tak seharusnya hidup di DB produksi. */
-const SQL_LEFTOVER_TABLES = `SELECT table_name FROM information_schema.tables
-  WHERE table_schema='public' AND table_type='BASE TABLE'
-    AND table_name LIKE '%\\_backup' ESCAPE '\\'
-  ORDER BY 1`;
+/** Postgres mengembalikan `count(*)` sebagai bigint (string di driver ini). */
+type Num = number | string;
 
-const n = (v: unknown): number => Number(v ?? 0);
+type SchemaRow = {
+  tables: Num; checks: Num; indexes: Num; hnsw: Num; triggers: Num;
+};
+type QuestionsRow = {
+  aktif: Num; draft: Num; review: Num; ready: Num;
+  soft_deleted: Num; ber_kunci: Num; ditandai: Num; ber_event: Num;
+};
+type EnrichmentRow = { soal_pg: Num; ber_distraktor: Num; ber_rubrik: Num };
+type RelationsRow = {
+  tautan_topik: Num; soal_bertopik: Num; tautan_media: Num; soal_bermedia: Num;
+  tautan_tag: Num; soal_bertag: Num; embedding: Num;
+  topik: Num; aset_media: Num; tag: Num; sumber: Num; event: Num;
+};
+type BundlesRow = { aktif: Num; arsip: Num; butir: Num; rata_butir: Num | null };
+type NameRow = { name: string };
+type PkRow = { column_default: string | null };
+
+/**
+ * Baca kolom numerik dengan tegas: kolom yang hilang/ganti nama HARUS gagal,
+ * bukan menjadi 0. Sebelumnya `Number(v ?? 0)` mengubah alias SQL yang berubah
+ * nama menjadi "0 (0,0%)" dengan exit 0 — persis mode kegagalan "angka palsu"
+ * yang skrip ini ada untuk menghapus.
+ */
+const n = (v: Num | null | undefined, field: string): number => {
+  if (v === undefined || v === null) {
+    throw new Error(`kolom "${field}" tidak ada di hasil query — periksa alias SQL`);
+  }
+  return Number(v);
+};
+
 const pct = (part: number, total: number): string =>
   total === 0 ? "—" : `${((part / total) * 100).toFixed(1).replace(".", ",")}%`;
-
-type Row = Record<string, unknown>;
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -92,44 +142,63 @@ async function main() {
   const sql = postgres(url, { max: 1, onnotice: () => {} });
 
   try {
-    const [schema] = await sql.unsafe<Row[]>(SQL_SCHEMA);
-    const [q] = await sql.unsafe<Row[]>(SQL_QUESTIONS);
-    const [enr] = await sql.unsafe<Row[]>(SQL_ENRICHMENT);
-    const [rel] = await sql.unsafe<Row[]>(SQL_RELATIONS);
-    const [b] = await sql.unsafe<Row[]>(SQL_BUNDLES);
-    const [dim] = await sql.unsafe<Row[]>(SQL_EMBEDDING_DIM);
-    const leftovers = await sql.unsafe<Row[]>(SQL_LEFTOVER_TABLES);
+    const [schema] = await sql.unsafe<SchemaRow[]>(SQL_SCHEMA);
+    const [q] = await sql.unsafe<QuestionsRow[]>(SQL_QUESTIONS);
+    const [enr] = await sql.unsafe<EnrichmentRow[]>(SQL_ENRICHMENT);
+    const [rel] = await sql.unsafe<RelationsRow[]>(SQL_RELATIONS);
+    const [b] = await sql.unsafe<BundlesRow[]>(SQL_BUNDLES);
+    const dimRows = await sql.unsafe<{ dim: Num }[]>(SQL_EMBEDDING_DIM);
+    const tableNames = new Set(
+      (await sql.unsafe<NameRow[]>(SQL_TABLE_NAMES)).map((r) => r.name),
+    );
+    const checkNames = new Set(
+      (await sql.unsafe<NameRow[]>(SQL_CHECK_NAMES)).map((r) => r.name),
+    );
+    const triggerNames = new Set(
+      (await sql.unsafe<NameRow[]>(SQL_TRIGGER_NAMES)).map((r) => r.name),
+    );
+    const [pk] = await sql.unsafe<PkRow[]>(SQL_PK);
 
-    const s = schema!;
+    if (!schema || !q || !enr || !rel || !b) {
+      throw new Error("salah satu query agregat tidak mengembalikan baris");
+    }
+
     const counts = {
-      tables: n(s.tables),
-      checkConstraints: n(s.checks),
-      hnswIndexes: n(s.hnsw),
-      triggers: n(s.triggers),
+      tables: n(schema.tables, "tables"),
+      checkConstraints: n(schema.checks, "checks"),
+      hnswIndexes: n(schema.hnsw, "hnsw"),
+      triggers: n(schema.triggers, "triggers"),
     };
-    const problems = (Object.keys(EXPECTED_INVARIANTS) as (keyof typeof EXPECTED_INVARIANTS)[])
-      .filter((k) => counts[k] < EXPECTED_INVARIANTS[k])
-      .map((k) => `${k}: ${counts[k]} < ${EXPECTED_INVARIANTS[k]}`);
 
-    const aktif = n(q!.aktif);
-    const draft = n(q!.draft);
-    const ready = n(q!.ready);
-    const soalPg = n(enr!.soal_pg);
-    const berDistraktor = n(enr!.ber_distraktor);
-    const berRubrik = n(enr!.ber_rubrik);
-    const tautanTopik = n(rel!.tautan_topik);
-    const soalBertopik = n(rel!.soal_bertopik);
-    const tautanMedia = n(rel!.tautan_media);
-    const soalBermedia = n(rel!.soal_bermedia);
-    const tautanTag = n(rel!.tautan_tag);
-    const soalBertag = n(rel!.soal_bertag);
-    const embedding = n(rel!.embedding);
+    const verdict = evaluateInvariants(counts, {
+      tables: tableNames,
+      checks: checkNames,
+      triggers: triggerNames,
+      pkUsesUuidv7: (pk?.column_default ?? "").includes("uuidv7"),
+    });
+
+    const leftovers = [...tableNames].filter(isForbiddenTable).sort();
+
+    const aktif = n(q.aktif, "aktif");
+    const draft = n(q.draft, "draft");
+    const ready = n(q.ready, "ready");
+    const soalPg = n(enr.soal_pg, "soal_pg");
+    const berDistraktor = n(enr.ber_distraktor, "ber_distraktor");
+    const berRubrik = n(enr.ber_rubrik, "ber_rubrik");
+    const tautanTopik = n(rel.tautan_topik, "tautan_topik");
+    const soalBertopik = n(rel.soal_bertopik, "soal_bertopik");
+    const tautanMedia = n(rel.tautan_media, "tautan_media");
+    const soalBermedia = n(rel.soal_bermedia, "soal_bermedia");
+    const tautanTag = n(rel.tautan_tag, "tautan_tag");
+    const soalBertag = n(rel.soal_bertag, "soal_bertag");
+    const embedding = n(rel.embedding, "embedding");
 
     // Tanggal LOKAL, bukan UTC: snapshot yang dibuat lewat tengah malam lokal
     // tidak boleh mundur sehari hanya karena zona waktu.
     const now = new Date();
     const tanggal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const berkas = `docs/SNAPSHOT-METRIK-${tanggal}.md`;
+    const dimLabel = dimRows[0] ? `vector(${Number(dimRows[0].dim)})` : "belum ada vektor";
 
     const doc = `# Snapshot Metrik DB — ${tanggal}
 
@@ -141,14 +210,14 @@ async function main() {
 
 | Aspek | Nilai |
 |---|---|
-| Skema | **${counts.tables} tabel** · **${counts.triggers} trigger** · ${counts.checkConstraints} CHECK · **${n(s.indexes)} index** (${counts.hnswIndexes} HNSW) |
-| Soal | **${aktif.toLocaleString("id-ID")}** — ${pct(draft, aktif)} \`draft\`, **${ready} \`ready\`**, ${n(q!.soft_deleted)} soft-deleted, ${pct(n(q!.ber_kunci), aktif)} ber-\`answer_key\`, ${pct(n(q!.ditandai), aktif)} \`is_flagged\` |
-| Bundle | **${n(b!.aktif)} aktif** · ${n(b!.arsip)} arsip · ${n(b!.butir).toLocaleString("id-ID")} butir · rata-rata ${b!.rata_butir ? Number(b!.rata_butir).toLocaleString("id-ID") : "—"} butir/paket |
-| Topik | **${n(rel!.topik).toLocaleString("id-ID")}** · ${soalBertopik.toLocaleString("id-ID")} soal terpetakan (${tautanTopik.toLocaleString("id-ID")} tautan — ${pct(soalBertopik, aktif)}) |
-| Media | **${n(rel!.aset_media).toLocaleString("id-ID")}** aset · ${tautanMedia.toLocaleString("id-ID")} tautan menjangkau ${soalBermedia.toLocaleString("id-ID")} soal (${pct(soalBermedia, aktif)}) |
-| Tag | **${n(rel!.tag)}** · ${tautanTag.toLocaleString("id-ID")} tautan (${soalBertag.toLocaleString("id-ID")} soal) |
-| Provenance | **${n(rel!.sumber)} sumber** · **${n(rel!.event)} event** · ${pct(n(q!.ber_event), aktif)} soal ber-\`event_id\` |
-| Vektor | **${embedding.toLocaleString("id-ID")} embedding** (${pct(embedding, aktif)}) · \`vector(${n(dim?.dim)})\` |
+| Skema | **${counts.tables} tabel** · **${counts.triggers} trigger** · ${counts.checkConstraints} CHECK · **${n(schema.indexes, "indexes")} index** (${counts.hnswIndexes} HNSW) |
+| Soal | **${aktif.toLocaleString("id-ID")}** — ${pct(draft, aktif)} \`draft\`, **${ready} \`ready\`**, ${n(q.soft_deleted, "soft_deleted")} soft-deleted, ${pct(n(q.ber_kunci, "ber_kunci"), aktif)} ber-\`answer_key\`, ${pct(n(q.ditandai, "ditandai"), aktif)} \`is_flagged\` |
+| Bundle | **${n(b.aktif, "aktif")} aktif** · ${n(b.arsip, "arsip")} arsip · ${n(b.butir, "butir").toLocaleString("id-ID")} butir · rata-rata ${b.rata_butir === null ? "—" : Number(b.rata_butir).toLocaleString("id-ID")} butir/paket |
+| Topik | **${n(rel.topik, "topik").toLocaleString("id-ID")}** · ${soalBertopik.toLocaleString("id-ID")} soal terpetakan (${tautanTopik.toLocaleString("id-ID")} tautan — ${pct(soalBertopik, aktif)}) |
+| Media | **${n(rel.aset_media, "aset_media").toLocaleString("id-ID")}** aset · ${tautanMedia.toLocaleString("id-ID")} tautan menjangkau ${soalBermedia.toLocaleString("id-ID")} soal (${pct(soalBermedia, aktif)}) |
+| Tag | **${n(rel.tag, "tag")}** · ${tautanTag.toLocaleString("id-ID")} tautan (${soalBertag.toLocaleString("id-ID")} soal) |
+| Provenance | **${n(rel.sumber, "sumber")} sumber** · **${n(rel.event, "event")} event** · ${pct(n(q.ber_event, "ber_event"), aktif)} soal ber-\`event_id\` |
+| Vektor | **${embedding.toLocaleString("id-ID")} embedding** (${pct(embedding, aktif)}) · \`${dimLabel}\` |
 
 ## 2. Kelengkapan pedagogis (gerbang rilis)
 
@@ -169,23 +238,29 @@ ${(Object.keys(EXPECTED_INVARIANTS) as (keyof typeof EXPECTED_INVARIANTS)[])
   .map((k) => `| \`${k}\` | ${counts[k]} | ${EXPECTED_INVARIANTS[k]} | ${counts[k] >= EXPECTED_INVARIANTS[k] ? "✓" : "✗"} |`)
   .join("\n")}
 
-${problems.length === 0
-  ? "✓ Semua invarian memenuhi minimum. Selisih **di atas** minimum (mis. jumlah tabel lebih banyak) tidak otomatis sehat — periksa §4."
-  : problems.map((p) => `✗ ${p}`).join("\n")}
+${verdict.ok
+  ? "✓ Semua invarian memenuhi minimum."
+  : verdict.problems.map((p) => `✗ ${p}`).join("\n")}
 
-Sumber angka minimum: \`src/lib/db/schema-expectations.ts\` — sama dengan \`pnpm db:verify\`.
+Aturan lulus/gagal: \`evaluateInvariants()\` di \`src/lib/db/schema-expectations.ts\` — sama persis dengan \`pnpm db:verify\` dan health check.
 
 ## 4. Objek di luar harapan
 
 ${leftovers.length === 0
-  ? "✓ Tidak ada tabel backup sisa migrasi."
-  : leftovers.map((l) => `⚠️ \`${String(l.table_name)}\` — tabel sisa migrasi, bukan bagian skema. Perlu keputusan pemilik: arsipkan isinya lalu DROP.`).join("\n")}
+  ? "✓ Tidak ada tabel sisa migrasi / objek terlarang."
+  : leftovers.map((name) => `⚠️ \`${name}\` — tabel sisa migrasi, bukan bagian skema. Gerbang health/ready melaporkannya sebagai terlarang sampai pemilik mengarsipkan isinya lalu DROP.`).join("\n")}
 
 ## 5. Query sumber (reproduksi)
 
 \`\`\`sql
 -- skema
 ${SQL_SCHEMA};
+
+-- nama objek (dipakai gerbang invarian)
+${SQL_TABLE_NAMES};
+${SQL_CHECK_NAMES};
+${SQL_TRIGGER_NAMES};
+${SQL_PK};
 
 -- soal
 ${SQL_QUESTIONS};
@@ -201,9 +276,6 @@ ${SQL_BUNDLES};
 
 -- dimensi vektor
 ${SQL_EMBEDDING_DIM};
-
--- tabel sisa migrasi
-${SQL_LEFTOVER_TABLES};
 \`\`\`
 
 Reproduksi cepat: \`pnpm metrics:snapshot\` (menulis ulang berkas ini) atau \`pnpm db:verify\` untuk invarian saja.
@@ -214,8 +286,8 @@ Reproduksi cepat: \`pnpm metrics:snapshot\` (menulis ulang berkas ini) atau \`pn
     console.log(
       `  soal ${aktif} (draft ${draft}, ready ${ready}) · distraktor ${berDistraktor}/${soalPg} · rubrik ${berRubrik} · embedding ${embedding}`,
     );
-    if (problems.length > 0) {
-      console.error(`✗ Invarian skema di bawah harapan: ${problems.join("; ")}`);
+    if (!verdict.ok) {
+      console.error(`✗ Invarian skema bermasalah: ${verdict.problems.join("; ")}`);
       process.exitCode = 1;
     }
   } finally {

@@ -7,14 +7,20 @@
  *
  * Jalankan: `pnpm db:verify` (dipanggil dari `pnpm check`).
  * Butuh DATABASE_URL (dibaca dari .env).
+ *
+ * Aturan lulus/gagal TIDAK ditulis di sini: semuanya lewat
+ * `evaluateInvariants()` di `src/lib/db/schema-expectations.ts`, sumber yang
+ * sama dengan health check dan snapshot metrik. Skrip ini hanya mengumpulkan
+ * fakta dan mencetaknya.
  */
 import { config } from "dotenv";
 import postgres from "postgres";
 import {
   EXPECTED_INVARIANTS,
-  FORBIDDEN_TABLES,
   REQUIRED_CHECKS,
   REQUIRED_TRIGGERS,
+  evaluateInvariants,
+  isForbiddenTable,
 } from "../src/lib/db/schema-expectations";
 
 config({ path: ".env" });
@@ -29,13 +35,12 @@ async function main() {
   }
   const sql = postgres(url, { max: 1, onnotice: () => {} });
 
-  const failures: string[] = [];
-
   try {
     const [counts] = await sql<Row[]>`
       SELECT
         (SELECT count(*) FROM information_schema.tables
-          WHERE table_schema='public' AND table_type='BASE TABLE') AS tables,
+          WHERE table_schema='public' AND table_type='BASE TABLE'
+            AND right(table_name, 7) <> '_backup') AS tables,
         (SELECT count(*) FROM pg_constraint
           WHERE contype='c' AND connamespace='public'::regnamespace) AS checks,
         (SELECT count(*) FROM pg_indexes
@@ -53,66 +58,63 @@ async function main() {
     for (const key of Object.keys(EXPECTED_INVARIANTS) as (keyof typeof EXPECTED_INVARIANTS)[]) {
       const want = EXPECTED_INVARIANTS[key];
       const have = got[key];
-      const ok = have >= want;
-      console.log(
-        `${ok ? "✓" : "✗"} ${key}: ${have} (harap ≥ ${want})`,
-      );
-      if (!ok) failures.push(`${key}: ${have} < ${want}`);
+      console.log(`${have >= want ? "✓" : "✗"} ${key}: ${have} (harap ≥ ${want})`);
     }
 
-    // Tabel terlarang (invarian negatif MAT-144/MAT-146)
-    const forbiddenRows = await sql<{ table_name: string }[]>`
+    // Objek bernama — satu query per jenis, dipakai untuk cetak DAN evaluasi.
+    const tableRows = await sql<{ table_name: string }[]>`
       SELECT table_name FROM information_schema.tables
        WHERE table_schema='public' AND table_type='BASE TABLE'
-         AND table_name IN ${sql(FORBIDDEN_TABLES as unknown as string[])}
     `;
-    for (const name of FORBIDDEN_TABLES) {
-      const exists = forbiddenRows.some((r) => r.table_name === name);
-      console.log(`${exists ? "✗" : "✓"} tabel ${name} sudah di-drop`);
-      if (exists) failures.push(`tabel terlarang masih ada: ${name}`);
-    }
+    const tableNames = new Set(tableRows.map((r) => r.table_name));
 
-    // Constraint kritis
     const checkRows = await sql<{ conname: string }[]>`
       SELECT conname FROM pg_constraint
        WHERE contype='c' AND connamespace='public'::regnamespace
     `;
     const checkNames = new Set(checkRows.map((r) => r.conname));
-    for (const name of REQUIRED_CHECKS) {
-      const ok = checkNames.has(name);
-      console.log(`${ok ? "✓" : "✗"} CHECK ${name}`);
-      if (!ok) failures.push(`CHECK hilang: ${name}`);
-    }
 
-    // Trigger kritis
     const trigRows = await sql<{ tgname: string }[]>`
       SELECT tgname FROM pg_trigger WHERE NOT tgisinternal
     `;
     const trigNames = new Set(trigRows.map((r) => r.tgname));
-    for (const name of REQUIRED_TRIGGERS) {
-      const ok = trigNames.has(name);
-      console.log(`${ok ? "✓" : "✗"} TRIGGER ${name}`);
-      if (!ok) failures.push(`TRIGGER hilang: ${name}`);
-    }
 
     // PK default wajib uuidv7() (PG 18) — cegah regresi ke gen_random_uuid().
     const [pkDefault] = await sql<{ column_default: string | null }[]>`
       SELECT column_default FROM information_schema.columns
        WHERE table_name='questions' AND column_name='id'
     `;
-    const pkOk = (pkDefault?.column_default ?? "").includes("uuidv7");
-    console.log(`${pkOk ? "✓" : "✗"} PK default = uuidv7() (kini: ${pkDefault?.column_default ?? "-"})`);
-    if (!pkOk) failures.push("PK default bukan uuidv7()");
+    const pkUsesUuidv7 = (pkDefault?.column_default ?? "").includes("uuidv7");
+
+    const forbiddenPresent = [...tableNames].filter(isForbiddenTable).sort();
+    for (const name of forbiddenPresent) console.log(`✗ tabel terlarang masih ada: ${name}`);
+    if (forbiddenPresent.length === 0) console.log("✓ tak ada tabel terlarang/sisa migrasi");
+
+    for (const name of REQUIRED_CHECKS) {
+      console.log(`${checkNames.has(name) ? "✓" : "✗"} CHECK ${name}`);
+    }
+    for (const name of REQUIRED_TRIGGERS) {
+      console.log(`${trigNames.has(name) ? "✓" : "✗"} TRIGGER ${name}`);
+    }
+    console.log(`${pkUsesUuidv7 ? "✓" : "✗"} PK default = uuidv7() (kini: ${pkDefault?.column_default ?? "-"})`);
+
+    const verdict = evaluateInvariants(got, {
+      tables: tableNames,
+      checks: checkNames,
+      triggers: trigNames,
+      pkUsesUuidv7,
+    });
+
+    if (!verdict.ok) {
+      console.error(`\n✗ Skema DRIFT — ${verdict.problems.length} masalah:`);
+      for (const p of verdict.problems) console.error(`  - ${p}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log("\n✓ Skema OK — tak ada drift.");
   } finally {
     await sql.end();
   }
-
-  if (failures.length > 0) {
-    console.error(`\n✗ Skema DRIFT — ${failures.length} masalah:`);
-    for (const f of failures) console.error(`  - ${f}`);
-    process.exit(1);
-  }
-  console.log("\n✓ Skema OK — tak ada drift.");
 }
 
 main().catch((err) => {

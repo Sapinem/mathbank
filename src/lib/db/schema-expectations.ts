@@ -49,3 +49,99 @@ export const REQUIRED_CHECKS = ["chk_questions_difficulty", "chk_topics_level"] 
  * ada migrasi/dump lama yang ter-apply ulang.
  */
 export const FORBIDDEN_TABLES = ["question_options"] as const;
+
+/**
+ * Pola tabel sisa migrasi. Tabel seperti `question_options_mat146_backup`
+ * BUKAN bagian skema: ia tidak dihitung sebagai tabel (lihat klausa
+ * `right(table_name, 7) <> '_backup'` di ketiga pemanggil) dan dilaporkan
+ * sebagai objek terlarang sampai pemilik mengarsipkan lalu me-DROP-nya.
+ */
+export const LEFTOVER_TABLE_PATTERN = /_backup$/;
+
+/** Satu definisi "objek terlarang" — dipakai gerbang maupun laporan snapshot. */
+export function isForbiddenTable(name: string): boolean {
+  return (
+    (FORBIDDEN_TABLES as readonly string[]).includes(name) || LEFTOVER_TABLE_PATTERN.test(name)
+  );
+}
+
+/**
+ * Bentuk laporan invarian. Tinggal di modul murni (bukan di `invariants.ts`)
+ * supaya proyeksi HTTP-nya bisa dipakai route tanpa ikut menarik koneksi DB —
+ * dan bisa diuji tanpa DATABASE_URL.
+ */
+export type InvariantReport = {
+  ok: boolean;
+  counts: InvariantCounts;
+  missingTriggers: string[];
+  missingChecks: string[];
+  /** Tabel terlarang yang masih ada — invarian negatif (mis. sisa migrasi). */
+  forbiddenTablesPresent: string[];
+  pkUsesUuidv7: boolean;
+  /** Daftar masalah dalam bahasa manusia (kosong bila sehat). */
+  problems: string[];
+};
+
+export type InvariantCounts = {
+  tables: number;
+  checkConstraints: number;
+  hnswIndexes: number;
+  triggers: number;
+};
+
+/** Objek yang benar-benar ada di DB, dipakai untuk invarian bernama. */
+export type InvariantPresence = {
+  tables: ReadonlySet<string>;
+  checks: ReadonlySet<string>;
+  triggers: ReadonlySet<string>;
+  pkUsesUuidv7: boolean;
+};
+
+/**
+ * Putuskan lulus/gagal. Murni: tanpa DB, tanpa I/O — bisa diuji langsung.
+ * Mengembalikan SEMUA masalah (bukan berhenti di yang pertama).
+ */
+export function evaluateInvariants(
+  counts: InvariantCounts,
+  present: InvariantPresence,
+): { ok: boolean; problems: string[] } {
+  const problems: string[] = [];
+
+  for (const key of Object.keys(EXPECTED_INVARIANTS) as (keyof InvariantCounts)[]) {
+    if (counts[key] < EXPECTED_INVARIANTS[key]) {
+      problems.push(key + ": " + counts[key] + " < " + EXPECTED_INVARIANTS[key]);
+    }
+  }
+
+  for (const name of REQUIRED_CHECKS) {
+    if (!present.checks.has(name)) problems.push("CHECK hilang: " + name);
+  }
+  for (const name of REQUIRED_TRIGGERS) {
+    if (!present.triggers.has(name)) problems.push("TRIGGER hilang: " + name);
+  }
+  for (const name of present.tables) {
+    if (isForbiddenTable(name)) problems.push("Tabel terlarang masih ada: " + name);
+  }
+  if (!present.pkUsesUuidv7) problems.push("PK default bukan uuidv7()");
+
+  return { ok: problems.length === 0, problems };
+}
+
+/**
+ * Proyeksi `InvariantReport` untuk respons HTTP.
+ *
+ * KENAPA ada: `/api/health` dan `/api/ready` dulu menyalin field satu per satu,
+ * sehingga field baru yang lupa ditambahkan di salah satunya membuat dua probe
+ * memberi jawaban berbeda soal DB yang sama.
+ */
+export function toInvariantsDto(report: InvariantReport) {
+  return {
+    ok: report.ok,
+    counts: report.counts,
+    missingTriggers: report.missingTriggers,
+    missingChecks: report.missingChecks,
+    forbiddenTablesPresent: report.forbiddenTablesPresent,
+    pkUsesUuidv7: report.pkUsesUuidv7,
+    problems: report.problems,
+  };
+}
