@@ -45,9 +45,8 @@ describe("questionColumns — proyeksi aman (S3)", () => {
   it("field internal SELALU dikecualikan (tanpa & dengan kunci)", () => {
     for (const withAnswerKey of [false, true]) {
       const cols = questionColumns({ withAnswerKey }) as Record<string, unknown>;
-      expect(cols.embedding).toBeUndefined();
-      expect(cols.embeddingContentHash).toBeUndefined();
-      expect(cols.embeddingModelName).toBeUndefined();
+      // ADR-0019: embedding* pindah ke tabel `question_embeddings` —
+      // kolom ini sudah tidak ada di `questions`, jadi tak perlu dikecualikan.
       expect(cols.aiTagged).toBeUndefined();
       expect(cols.aiTaggedAt).toBeUndefined();
     }

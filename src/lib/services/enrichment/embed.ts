@@ -6,7 +6,7 @@
  */
 import { eq, inArray, and, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { questions } from "@/lib/db/schema/question";
+import { questions, questionEmbeddings } from "@/lib/db/schema/question";
 import type { Actor } from "@/lib/auth/actor";
 import { assertCan } from "@/lib/auth/guards";
 import { embedText, embeddingModel } from "@/lib/embedding/bge-m3";
@@ -29,15 +29,17 @@ export async function embedQuestions(
   nearFlagged: number;
 }> {
   // Izin dicek **per-soal** (termasuk aturan `own`).
+  // ADR-0019: hash embedding dibaca dari tabel `question_embeddings` via LEFT JOIN.
   const rows = await db
     .select({
       id: questions.id,
       contentMarkdown: questions.contentMarkdown,
-      embeddingContentHash: questions.embeddingContentHash,
+      embeddingContentHash: questionEmbeddings.embeddingContentHash,
       authorId: questions.authorId,
       isFlagged: questions.isFlagged,
     })
     .from(questions)
+    .leftJoin(questionEmbeddings, eq(questionEmbeddings.questionId, questions.id))
     .where(and(inArray(questions.id, questionIds), isNull(questions.deletedAt)));
 
   const results: Array<{ questionId: string; ok: boolean; skipped?: boolean; error?: string }> = [];
@@ -62,15 +64,24 @@ export async function embedQuestions(
       results.push({ questionId: q.id, ok: false, error: r.error });
       continue;
     }
+    // ADR-0019: vektor disimpan ke tabel terpisah `question_embeddings`.
     await db
-      .update(questions)
-      .set({
+      .insert(questionEmbeddings)
+      .values({
+        questionId: q.id,
         embedding: r.vector,
         embeddingContentHash: contentHash,
         embeddingModelName: model,
-        updatedAt: new Date(),
       })
-      .where(eq(questions.id, q.id));
+      .onConflictDoUpdate({
+        target: questionEmbeddings.questionId,
+        set: {
+          embedding: r.vector,
+          embeddingContentHash: contentHash,
+          embeddingModelName: model,
+          updatedAt: new Date(),
+        },
+      });
 
     // Dedup NEAR (ADR-0012, #42/#43): setelah embedding tersedia, tandai bila
     // ada soal sangat mirip DENGAN penalaran sama. Soal TETAP (bukan auto-gabung)

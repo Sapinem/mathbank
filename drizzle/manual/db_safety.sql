@@ -39,7 +39,8 @@ DECLARE
     'cognitive_levels', 'difficulty_levels', 'events', 'grades',
     'ingest_queue', 'media_assets',
     -- MAT-146: `question_options` DIHAPUS (opsi kini JSONB di questions.data_payload).
-    'questions', 'session', 'solutions', 'sources', 'tags',
+    -- ADR-0019: `question_embeddings` ditambahkan (Pilar 1 v2.0).
+    'question_embeddings', 'questions', 'session', 'solutions', 'sources', 'tags',
     'topics', 'user', 'verification'
   ];
 BEGIN
@@ -175,15 +176,11 @@ CREATE TRIGGER trg_question_tags_usage
 -- ============================================================================
 -- 5. Index HNSW untuk pencarian vektor (embedding vector(1024), cosine)
 -- ============================================================================
-CREATE INDEX IF NOT EXISTS idx_questions_embedding_hnsw
-  ON questions
-  USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64);
-
--- Index tambahan: cari cepat soal yang sudah punya embedding.
-CREATE INDEX IF NOT EXISTS idx_questions_has_embedding
-  ON questions (id)
-  WHERE embedding IS NOT NULL;
+-- ADR-0019: vektor pindah ke tabel `question_embeddings` (Pilar 1 v2.0).
+-- HNSW index sudah dibuat di migrasi Drizzle 0018 pada tabel baru.
+-- Index lama di `questions` di-drop karena kolom sudah tidak ada.
+DROP INDEX IF EXISTS idx_questions_embedding_hnsw;
+DROP INDEX IF EXISTS idx_questions_has_embedding;
 
 
 -- ============================================================================

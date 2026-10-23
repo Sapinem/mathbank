@@ -127,6 +127,13 @@
       "when": 1792687302926,
       "tag": "0017_thick_ultimates",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792765522688,
+      "tag": "0018_adr-0019-isolasi-question-embeddings",
+      "breakpoints": true
     }
   ]
 }

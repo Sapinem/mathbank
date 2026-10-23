@@ -1,6 +1,6 @@
 import { and, eq, isNull, sql, desc, asc, inArray, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { questions, type Question } from "@/lib/db/schema/question";
+import { questions, questionEmbeddings, type Question } from "@/lib/db/schema/question";
 import { embedText } from "@/lib/embedding/bge-m3";
 import type { Actor } from "@/lib/auth/actor";
 import { solutions } from "@/lib/db/schema/solution";
@@ -43,9 +43,6 @@ export interface QuestionSolutionView {
  */
 export type PublicQuestion = Omit<
   Question,
-  | "embedding"
-  | "embeddingContentHash"
-  | "embeddingModelName"
   | "aiTagged"
   | "aiTaggedAt"
   | "answerKey"
@@ -343,9 +340,10 @@ export async function listQuestions(
     const emb = await embedText(query.q.trim());
     if (emb.ok && emb.vector) {
       const literal = `[${emb.vector.join(",")}]`;
+      // ADR-0019: vektor pindah ke tabel `question_embeddings` (Pilar 1 v2.0).
       // Hanya soal yang sudah punya embedding.
-      semanticWhere = sql`${questions.embedding} IS NOT NULL`;
-      orderBy = [asc(sql`${questions.embedding} <=> ${literal}::vector`)];
+      semanticWhere = sql`${questionEmbeddings.embedding} IS NOT NULL`;
+      orderBy = [asc(sql`${questionEmbeddings.embedding} <=> ${literal}::vector`)];
     }
   }
 
@@ -355,10 +353,28 @@ export async function listQuestions(
       : semanticWhere
     : finalWhere;
 
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(questions)
-    .where(combined);
+  // ADR-0019: mode semantik memerlukan LEFT JOIN ke `question_embeddings`.
+  // Join ditambahkan HANYA bila semanticWhere aktif agar query non-semantik
+  // tetap ringan (zero join ke tabel vektor).
+  const baseQuery = semanticWhere
+    ? db
+        .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
+        .from(questions)
+        .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
+    : db
+        .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
+        .from(questions);
+
+  const countQuery = semanticWhere
+    ? db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(questions)
+        .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
+    : db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(questions);
+
+  const [{ count }] = await countQuery.where(combined);
 
   // Urutkan: semantik (bila aktif) > relevansi trigram > terbaru dulu.
   const finalOrder: SQL[] =
@@ -370,9 +386,7 @@ export async function listQuestions(
         ]
       : [desc(questions.createdAt)]);
 
-  const rows = await db
-    .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
-    .from(questions)
+  const rows = await baseQuery
     .where(combined)
     .orderBy(...finalOrder)
     .limit(query.limit)

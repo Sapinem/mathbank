@@ -78,10 +78,8 @@ export const questions = pgTable(
     eventItemNumber: varchar("event_item_number", { length: 50 }),
     eventNotes: text("event_notes"),
 
-    // Embedding inline (satu tempat)
-    embedding: vector1024("embedding"),
-    embeddingContentHash: varchar("embedding_content_hash", { length: 64 }),
-    embeddingModelName: varchar("embedding_model_name", { length: 100 }),
+    // ADR-0019: Vektor pindah ke tabel `question_embeddings` (Pilar 1 v2.0).
+    // Kolom `embedding`, `embeddingContentHash`, `embeddingModelName` DIHAPUS.
     aiTagged: boolean("ai_tagged").default(false).notNull(),
     aiTaggedAt: timestamp("ai_tagged_at", { withTimezone: true }),
 
@@ -140,6 +138,53 @@ export const questions = pgTable(
  * Konsekuensi: baca soal = **zero join**.
  */
 
+/**
+ * question_embeddings — vektor terisolasi 1:1 (ADR-0019, Pilar 1 v2.0).
+ *
+ * PK = question_id (bukan id terpisah) → hemat 1 kolom + 1 index.
+ * CASCADE: hapus soal → hapus vektor otomatis.
+ *
+ * Dampak: ukuran baris `questions` turun ~4.5 KB → ~280 bytes (hemat 93% RAM
+ * buffer pool PostgreSQL). Query daftar/filter/pagination tak lagi memuat
+ * vektor 1024-float yang tidak dipakai.
+ */
+export const questionEmbeddings = pgTable(
+  "question_embeddings",
+  {
+    questionId: uuid("question_id")
+      .primaryKey()
+      .references(() => questions.id, { onDelete: "cascade" }),
+    embedding: vector1024("embedding").notNull(),
+    embeddingContentHash: varchar("embedding_content_hash", { length: 64 }),
+    embeddingModelName: varchar("embedding_model_name", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    // HNSW index pada tabel kecil ini (hanya baris ber-vektor).
+    // Semua baris di sini PASTI punya embedding (notNull), jadi tidak perlu
+    // partial — tabel itu sendiri sudah "partisi" dari questions.
+    index("idx_question_embeddings_hnsw").using(
+      "hnsw",
+      sql`${t.embedding} vector_cosine_ops`,
+    ),
+  ],
+);
+
+export const questionEmbeddingsRelations = relations(
+  questionEmbeddings,
+  ({ one }) => ({
+    question: one(questions, {
+      fields: [questionEmbeddings.questionId],
+      references: [questions.id],
+    }),
+  }),
+);
+
 export const questionsRelations = relations(questions, ({ one, many }) => ({
   parent: one(questions, {
     fields: [questions.parentId],
@@ -149,6 +194,11 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
   children: many(questions, { relationName: "questionChildren" }),
   // ADR-0014: relasi `source` & `sources` (per-butir) dihapus — sumber via bundle.
   event: one(events, { fields: [questions.eventId], references: [events.id] }),
+  // ADR-0019: vektor terisolasi 1:1.
+  questionEmbedding: one(questionEmbeddings, {
+    fields: [questions.id],
+    references: [questionEmbeddings.questionId],
+  }),
 }));
 
 export type Question = typeof questions.$inferSelect;
