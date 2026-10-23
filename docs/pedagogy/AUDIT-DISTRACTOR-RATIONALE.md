@@ -484,7 +484,7 @@ Skrip bersifat **read-only** (hanya `SELECT`), tidak memodifikasi DB, skema, ata
 | Batch 7 | 2524bc2 | 63 | 285 | 43 |
 | **Batch 8** | **0ee341f** | **71** | **317** | **48** |
 | **Batch 9** | **b83092f** | **78** | **352** | **54** |
-| **Batch 10** | *(pending commit)* | **94** | **424** | **68** |
+| **Batch 10** | **65a002a** | **94** | **424** | **68** |
 
 **Target awal audit:** 52 SC → 100% rationale, 26 esai → rubrik penuh.
 **Update skala:** DB produksi jauh lebih besar (9.335 SC, 2.181 esai per batch 10).
