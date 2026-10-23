@@ -1,6 +1,6 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 11 — R4 Batch 11: 8 soal pertaksamaan/statistik/matriks transformasi/bilangan berpangkat/peluang/suku banyak (94 SC / 422 entries) + R5 Batch 6: 8 rubrik esai garis singgung elips/kombinatorik/rekurens/geometri/nilai mutlak/Stirling/g(n) (70/2202)).
+> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 12 — R4 Batch 12: 10 soal Bangun Datar SMP (104 SC / 462 entries) + R5 Batch 7: 8 rubrik esai trigonometri/rekurens/refleksi geometri/pertidaksamaan irasional/floor function/fuzzy set (84/2181)).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
 > **Lingkup:** enrichment aktif (MAT-35). DB: 11.891 soal hidup, 9.336 SC, 2.181 esai.
 > **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
@@ -24,6 +24,44 @@
 | **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **0 / 52** | 🔴 **0,00 %** |
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
+
+### Snapshot MAT-35 Batch 12 (2026-10-23) — R4 Batch 12 + R5 Batch 7
+
+> R4 Batch 12: 10 soal Bangun Datar SMP dikurasi — sudut segitiga (ekspresi variabel), diagonal persegipanjang, luas daerah diarsir (aljabar), luas huruf U & L, keliling bangun gabungan, trapesium sebangun, kawat pagar (keliling × lapis), luas segitiga basis bersama, syarat segitiga.
+> R5 Batch 7: 8 rubrik esai baru — rasio trigonometri (Bahasa Indonesia & Inggris), relasi rekurens (2 persamaan), refleksi geometri (garis x+y=0 dan y=x), pertidaksamaan irasional, floor function bilangan rasional, himpunan kabur (fuzzy set).
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 9.335 (SC) | — |
+| Soal single_choice | 9.335 | — |
+| Soal esai | 2.181 | — |
+| **SC dengan ≥1 `distractorRationale` di JSONB** | **104** | 🟡 **1,11 %** |
+| **Total entries `distractorRationale` di JSONB** | **~462** | 🟡 — |
+| Esai dengan `answer_key.scoringRubric` terisi | **84** | 🟡 **3,85 %** |
+| Double-encoded `data_payload.options` | **0** | ✅ bersih |
+
+**Batch 12 mengerjakan:**
+- **R4 Batch 12** (`scripts/r4-batch12-rationale.ts`): 10 soal baru dikurasi (40 entries)
+  - Sudut BAC dalam segitiga (8x+1, 4x+7, 2x+4) — miskonsepsi substitusi parsial
+  - Diagonal persegipanjang (6x+4)=(7x-1) → x=5, d=34 — miskonsepsi x sebagai diagonal
+  - Luas diarsir B: [A+B]=35, [B+C]=60, A+C=55 → B=20 — miskonsepsi faktor dua
+  - Luas huruf U (3 persegipanjang: 90+90+48=228) — dekomposisi bangun
+  - Keliling bangun (Pythagoras 12-16-20) — menjumlah sisi vs menghitung hipotenusa
+  - Luas huruf L (8+10=18) — identifikasi komponen bangun komposit
+  - Trapesium sebangun (skala 4/5, L_jalan=600-384=216) — kesalahan faktor skala
+  - Kawat pagar 3 lapis: K=84, total=252 — miskonsepsi luas vs keliling
+  - Luas diarsir ABE&BED (ABC+CDE=48+88=136) — miskonsepsi segitiga bersama BCE
+  - Syarat segitiga b+c>a — miskonsepsi arah pertidaksamaan
+  - 40 entries baru, 230–450 chars per rationale, Haladyna R21 ✓, KaTeX ✓
+- **R5 Batch 7** (`scripts/r5-batch7-rubrik.ts`): 8 rubrik esai baru
+  - Rasio trig segitiga 9-12-15: sin/cos/tan/sec/csc/cot (Bahasa Indonesia, 12 poin)
+  - Rasio trig segitiga (Inggris, 12 poin)
+  - Relasi rekurens dua persamaan: persamaan karakteristik + kondisi awal (16 poin)
+  - Refleksi terhadap garis x+y=0: 3 sub-soal + verifikasi (12 poin)
+  - Refleksi terhadap garis y=x: 3 sub-soal + verifikasi (12 poin)
+  - Pertidaksamaan irasional dua soal: domain + pengkuadratan + analisis tanda (16 poin)
+  - Bilangan rasional floor function (olimpiade, DOK 4, 14 poin)
+  - Himpunan kabur: support, core, α-cut (12 poin)
 
 ### Snapshot MAT-35 Batch 10 (2026-10-23) — R4 Batch 10 + R5 Batch 5
 
