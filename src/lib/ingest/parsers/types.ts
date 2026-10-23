@@ -219,7 +219,12 @@ export function buildQuestionPayload(item: ParsedItem): BuiltQuestionPayload {
     }
 
     if (Object.keys(matrixAnswers).length > 0) answerKey.matrixAnswers = matrixAnswers;
-    return { dataPayload: { type: "matrix", columns, statements }, answerKey, warnings };
+    const rows = statements.map((s) => ({ text: s.contentMarkdown, answer: matrixAnswers[s.id] ?? "" }));
+    return {
+      dataPayload: { type: "matrix", columns, statements, labels: columns, rows },
+      answerKey,
+      warnings,
+    };
   }
 
   // ── Menjodohkan ───────────────────────────────────────────────────────────

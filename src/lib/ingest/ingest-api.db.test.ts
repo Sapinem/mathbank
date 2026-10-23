@@ -112,6 +112,9 @@ describe("alur API ingest", () => {
     const json = await res.json();
     expect(json.data.summary.processed).toBe(1);
     expect(json.data.summary.created).toBeGreaterThanOrEqual(1);
+    expect(json.data.summary.storedCount).toBeGreaterThanOrEqual(1);
+    expect(json.data.summary.failedCount).toBe(0);
+    expect(Array.isArray(json.data.summary.failures)).toBe(true);
 
     const q = await sql`SELECT q.status FROM questions q
       JOIN bundle_items bi ON bi.question_id = q.id

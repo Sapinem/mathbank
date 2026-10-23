@@ -137,8 +137,17 @@ export function isPrivateOrBlockedHost(hostname: string): boolean {
     return true;
   }
 
+  // IPv4-mapped IPv6 check (::ffff:127.0.0.1 dll)
+  if (host.includes("::ffff:")) {
+    const mapped = host.replace(/^\[?::ffff:/i, "").replace(/\]$/, "");
+    if (isPrivateOrBlockedHost(mapped)) return true;
+  }
+
   return false;
 }
+
+/** Alias untuk isPrivateOrBlockedHost (Pilar 2). */
+export const isBlockedIp = isPrivateOrBlockedHost;
 
 /**
  * Gerbang anti-SSRF (SEC-01): tolak bila protokol bukan http(s), host LITERAL
@@ -165,7 +174,7 @@ async function assertPublicTarget(
   }
   if (isTlsRelaxed(rawUrl, relaxedHosts)) return; // host di-pin, disengaja
   if (isPrivateOrBlockedHost(u.hostname)) {
-    throw new Error("Akses ke jaringan lokal/privat diblokir (anti-SSRF)");
+    throw new Error("Akses ke jaringan lokal/privat diblokir / terblokir (anti-SSRF)");
   }
   let ips: string[];
   try {
@@ -175,9 +184,19 @@ async function assertPublicTarget(
   }
   for (const ip of ips) {
     if (isPrivateOrBlockedHost(ip)) {
-      throw new Error(`DNS ${u.hostname} → ${ip} diblokir (anti-SSRF)`);
+      throw new Error(`DNS ${u.hostname} → ${ip} diblokir / terblokir (anti-SSRF)`);
     }
   }
+}
+
+/** Validasi URL sebelum fetch (anti-SSRF): hanya http/https, resolve DNS, tolak IP terblokir/privat. */
+export async function validateMediaUrl(
+  urlStr: string,
+  opts?: { tlsRelaxedHosts?: string[]; dnsResolver?: DnsResolver }
+): Promise<void> {
+  const relaxed = opts?.tlsRelaxedHosts ?? TLS_RELAXED_HOSTS;
+  const resolver = opts?.dnsResolver ?? defaultDnsResolver;
+  await assertPublicTarget(urlStr, relaxed, resolver);
 }
 
 /** Respons mentah satu hop (termasuk lokasi redirect bila ada). */
@@ -456,3 +475,8 @@ export async function fetchImage(url: string, opts: FetchOptions = {}): Promise<
   }
   return { ok: false, error: lastErr };
 }
+
+/** Alias fetchMedia untuk fetchImage (Pilar 2). */
+export const fetchMedia = fetchImage;
+export type FetchMediaOpts = FetchOptions;
+export type FetchMediaResult = FetchResult;

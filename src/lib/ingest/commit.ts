@@ -15,15 +15,24 @@ import { db } from "@/lib/db";
 import { sources } from "@/lib/db/schema/source";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions } from "@/lib/db/schema/question";
+import { ingestQueue } from "@/lib/db/schema/system";
 import { createQuestion } from "@/lib/services/question-service";
 import { slugify } from "@/lib/taxonomy/tree";
 import { ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import type { AnswerKey } from "@/lib/contracts/question";
 import { answerKeySchema, questionDataPayloadSchema } from "@/lib/validations/question-payload";
+import { validateKatexContract } from "@/lib/ai/enrich";
 import { contentHash, itemHash } from "./hash";
 import { buildQuestionPayload, type BuiltQuestionPayload } from "./parsers/types";
 import type { ParsedItem } from "./parsers/types";
+
+/** Rincian butir yang gagal/ditolak saat commit (Pilar 2 v2.0). */
+export interface CommitFailure {
+  index: number;
+  stemPreview: string; // 80 char pertama soal
+  reason: string;      // pesan error spesifik
+}
 
 /** Hasil commit satu artikel. */
 export interface CommitResult {
@@ -34,14 +43,20 @@ export interface CommitResult {
   linked: number;
   skipped: number;
   /**
-   * Butir yang **ditolak gerbang Zod** (MAT-147) — mis. opsi < 2, frasa
-   * terlarang ("semua jawaban benar"), atau kolom matriks kosong.
+   * Butir yang **ditolak gerbang Zod / KaTeX** (MAT-147 / Pilar 2) — mis. opsi < 2, frasa
+   * terlarang ("semua jawaban benar"), atau rumus KaTeX rusak.
    *
    * Dihitung terpisah dari `failed` (galat DB) supaya operator tahu mana yang
    * perlu diperbaiki di parser/sumber dan mana yang murni galat teknis.
    */
   rejected: number;
   failed: number;
+  /** Jumlah soal tersimpan (created + linked). */
+  storedCount: number;
+  /** Jumlah butir yang gagal/ditolak (rejected + failed). */
+  failedCount: number;
+  /** Daftar kegagalan terstruktur per-indeks (Pilar 2). */
+  failures: CommitFailure[];
   questionIds: string[];
   /** Pesan galat DB **dan** alasan penolakan validasi (berprefiks `#<ref>`). */
   errors: string[];
@@ -251,6 +266,56 @@ function gatePayload(built: BuiltQuestionPayload): PayloadGate {
 }
 
 /**
+ * Validasi per-butir sebelum menyentuh DB (Pilar 2 v2.0).
+ * Memeriksa stem tidak kosong dan sintaks KaTeX berpasangan (CONSTRAINT #29).
+ * Melempar Error bila cacat.
+ */
+export function validateParsedItem(item: ParsedItem): void {
+  if (!item.stem || !item.stem.trim()) {
+    throw new Error("Stem/teks soal tidak boleh kosong");
+  }
+
+  const stemCheck = validateKatexContract(item.stem);
+  if (!stemCheck.ok) {
+    const issues = stemCheck.issues.map((i) => i.message).join("; ");
+    throw new Error(`Validasi KaTeX gagal pada stem: ${issues}`);
+  }
+
+  for (const opt of item.options ?? []) {
+    if (opt.text) {
+      const optCheck = validateKatexContract(opt.text);
+      if (!optCheck.ok) {
+        const issues = optCheck.issues.map((i) => i.message).join("; ");
+        throw new Error(`Validasi KaTeX gagal pada opsi ${opt.label || ""}: ${issues}`);
+      }
+    }
+  }
+
+  if (item.explanation) {
+    const expCheck = validateKatexContract(item.explanation);
+    if (!expCheck.ok) {
+      const issues = expCheck.issues.map((i) => i.message).join("; ");
+      throw new Error(`Validasi KaTeX gagal pada pembahasan: ${issues}`);
+    }
+  }
+
+  if (item.dataPayload && typeof item.dataPayload === "object") {
+    const dp = item.dataPayload as Record<string, unknown>;
+    const rows = Array.isArray(dp.rows) ? dp.rows : Array.isArray(dp.statements) ? dp.statements : [];
+    for (const r of rows) {
+      const text = typeof r?.text === "string" ? r.text : typeof r?.contentMarkdown === "string" ? r.contentMarkdown : "";
+      if (text) {
+        const rowCheck = validateKatexContract(text);
+        if (!rowCheck.ok) {
+          const issues = rowCheck.issues.map((i) => i.message).join("; ");
+          throw new Error(`Validasi KaTeX gagal pada baris pernyataan: ${issues}`);
+        }
+      }
+    }
+  }
+}
+
+/**
  * Commit daftar `ParsedItem` (dari satu artikel) → soal draft.
  *
  * Dedup berbasis `contentHash(stem, opsi)` **tanpa sumber** (ADR-0012):
@@ -286,6 +351,9 @@ export async function commitItems(
     skipped: 0,
     rejected: 0,
     failed: 0,
+    storedCount: 0,
+    failedCount: 0,
+    failures: [],
     questionIds: [],
     errors: [],
   };
@@ -294,10 +362,29 @@ export async function commitItems(
   // wacana/stimulus ke induknya lewat `parentRefIndex`).
   const idByRefIndex = new Map<number, string>();
 
-  for (const it of items) {
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i]!;
+    const itemIndex = it.ref?.index !== undefined ? it.ref.index : i;
+
     // Aturan mutu: stem kosong → lewati (jangan simpan sampah).
     if (!it.stem || it.stem.trim().length === 0) {
       result.skipped++;
+      continue;
+    }
+
+    // Validasi per-butir (KaTeX & format dasar) sebelum menyentuh DB (Pilar 2).
+    try {
+      validateParsedItem(it);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      result.rejected++;
+      result.failedCount++;
+      result.errors.push(`#${itemIndex} ditolak: ${msg}`);
+      result.failures.push({
+        index: itemIndex,
+        stemPreview: (it.stem ?? "").trim().slice(0, 80),
+        reason: msg,
+      });
       continue;
     }
 
@@ -309,9 +396,10 @@ export async function commitItems(
       //     beberapa naskah → satu soal, banyak keanggotaan bundle.)
       const existing = await findQuestionByContentHash(hash);
       if (existing) {
-        await linkQuestionToBundle(bundleId, existing.id, String(it.ref.index));
-        idByRefIndex.set(it.ref.index, existing.id);
+        await linkQuestionToBundle(bundleId, existing.id, String(itemIndex));
+        idByRefIndex.set(itemIndex, existing.id);
         result.linked++;
+        result.storedCount++;
         result.questionIds.push(existing.id);
         continue;
       }
@@ -323,7 +411,14 @@ export async function commitItems(
       if (!gate.ok) {
         // Gagal secara anggun: butir dicatat & dilaporkan, bukan melempar 500.
         result.rejected++;
-        result.errors.push(`#${it.ref.index} ditolak: ${gate.message}`);
+        result.failedCount++;
+        const msg = `#${itemIndex} ditolak: ${gate.message}`;
+        result.errors.push(msg);
+        result.failures.push({
+          index: itemIndex,
+          stemPreview: (it.stem ?? "").trim().slice(0, 80),
+          reason: gate.message,
+        });
         continue;
       }
 
@@ -373,15 +468,80 @@ export async function commitItems(
         },
         actor,
       );
-      await linkQuestionToBundle(bundleId, q.id, String(it.ref.index));
-      idByRefIndex.set(it.ref.index, q.id);
+      await linkQuestionToBundle(bundleId, q.id, String(itemIndex));
+      idByRefIndex.set(itemIndex, q.id);
       result.created++;
+      result.storedCount++;
       result.questionIds.push(q.id);
     } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       result.failed++;
-      result.errors.push(e instanceof Error ? e.message : String(e));
+      result.failedCount++;
+      result.errors.push(msg);
+      result.failures.push({
+        index: itemIndex,
+        stemPreview: (it.stem ?? "").trim().slice(0, 80),
+        reason: msg,
+      });
     }
   }
 
   return result;
+}
+
+/**
+ * Commit hasil parse butir-soal secara per-item (Pilar 2 v2.0).
+ *
+ * Menerima daftar ParsedItem dan queueItemId (atau CommitOptions langsung).
+ * Mengembalikan ringkasan tersimpan & gagal per-indeks.
+ */
+export async function commitParsedItems(
+  items: ParsedItem[],
+  queueItemIdOrOptions: string | CommitOptions,
+  actor?: Actor,
+  opts?: CommitOptions,
+): Promise<CommitResult> {
+  const machine: Actor = actor ?? {
+    id: "system:ingest",
+    name: "Mesin Ingest",
+    roles: ["machine"],
+    via: "apikey",
+  };
+
+  let commitOpts: CommitOptions;
+  if (typeof queueItemIdOrOptions === "string") {
+    const queueId = queueItemIdOrOptions;
+    let foundSource = "pipeline";
+    let foundUrl: string | null = null;
+    let foundTitle = `Queue ${queueId}`;
+    let foundGrade: string | null = null;
+
+    try {
+      const [queueItem] = await db
+        .select()
+        .from(ingestQueue)
+        .where(eq(ingestQueue.id, queueId))
+        .limit(1);
+      if (queueItem) {
+        foundSource = queueItem.sourceOrigin;
+        foundUrl = queueItem.sourceUrl;
+        foundTitle = queueItem.title;
+        foundGrade = queueItem.targetGrade;
+      }
+    } catch {
+      // jika queueId bukan UUID atau mode uji
+    }
+
+    commitOpts = {
+      sourceOrigin: opts?.sourceOrigin ?? foundSource,
+      sourceUrl: opts?.sourceUrl ?? foundUrl,
+      articleTitle: opts?.articleTitle ?? foundTitle,
+      grade: opts?.grade ?? foundGrade,
+      topicId: opts?.topicId ?? null,
+    };
+  } else {
+    commitOpts = queueItemIdOrOptions;
+  }
+
+  return commitItems(items, machine, commitOpts);
 }
