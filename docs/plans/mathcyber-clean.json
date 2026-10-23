@@ -1,0 +1,1924 @@
+{
+  "clean": [
+    {
+      "file": "2020-beaver-computing-challenge-9-10.json",
+      "judul": "2020-beaver-computing-challenge-9-10.json",
+      "item": 15,
+      "pg": 12,
+      "kunci": 9
+    },
+    {
+      "file": "20th-imso-mathematics-short-answer-problems-primary.json",
+      "judul": "20th-imso-mathematics-short-answer-problems-primary.json",
+      "item": 25,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "analogi-logika-matematika-pada-rangkaian-listrik.json",
+      "judul": "analogi-logika-matematika-pada-rangkaian-listrik.json",
+      "item": 4,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "arithmetic-sequences-and-series-word-problems.json",
+      "judul": "arithmetic-sequences-and-series-word-problems.json",
+      "item": 23,
+      "pg": 15,
+      "kunci": 15
+    },
+    {
+      "file": "arithmetic-sequences-series.json",
+      "judul": "arithmetic-sequences-series.json",
+      "item": 33,
+      "pg": 32,
+      "kunci": 32
+    },
+    {
+      "file": "asesmen-kompetensi-guru-kompetensi-pedagogis.json",
+      "judul": "asesmen-kompetensi-guru-kompetensi-pedagogis.json",
+      "item": 22,
+      "pg": 22,
+      "kunci": 22
+    },
+    {
+      "file": "aturan-bayes.json",
+      "judul": "aturan-bayes.json",
+      "item": 11,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "basic-trigonometry-problems.json",
+      "judul": "basic-trigonometry-problems.json",
+      "item": 28,
+      "pg": 20,
+      "kunci": 19
+    },
+    {
+      "file": "bilangan-fibonacci.json",
+      "judul": "bilangan-fibonacci.json",
+      "item": 15,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "bunga-angsuran-anuitas.json",
+      "judul": "bunga-angsuran-anuitas.json",
+      "item": 12,
+      "pg": 10,
+      "kunci": 10
+    },
+    {
+      "file": "compound-events-in-probability.json",
+      "judul": "compound-events-in-probability.json",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "distribusi-eksponensial-dan-gama.json",
+      "judul": "distribusi-eksponensial-dan-gama.json",
+      "item": 8,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "distribusi-geometrik-binomial-negatif.json",
+      "judul": "distribusi-geometrik-binomial-negatif.json",
+      "item": 8,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "distribusi-poisson-materi-soal-dan-pembahasan.json",
+      "judul": "distribusi-poisson-materi-soal-dan-pembahasan.json",
+      "item": 26,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "fungsi-lantai-dan-fungsi-atap.json",
+      "judul": "fungsi-lantai-dan-fungsi-atap.json",
+      "item": 21,
+      "pg": 11,
+      "kunci": 11
+    },
+    {
+      "file": "geometric-sequences-series.json",
+      "judul": "geometric-sequences-series.json",
+      "item": 19,
+      "pg": 17,
+      "kunci": 17
+    },
+    {
+      "file": "himpunan-ganda-multiset.json",
+      "judul": "himpunan-ganda-multiset.json",
+      "item": 12,
+      "pg": 9,
+      "kunci": 9
+    },
+    {
+      "file": "identitas-sophie-germain.json",
+      "judul": "identitas-sophie-germain.json",
+      "item": 8,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "kalimat-terbuka-dan-kalimat-tertutup.json",
+      "judul": "kalimat-terbuka-dan-kalimat-tertutup.json",
+      "item": 7,
+      "pg": 5,
+      "kunci": 5
+    },
+    {
+      "file": "kejadian-majemuk-peluang.json",
+      "judul": "kejadian-majemuk-peluang.json",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "kelas-kesetaraan-dan-partisi.json",
+      "judul": "kelas-kesetaraan-dan-partisi.json",
+      "item": 12,
+      "pg": 6,
+      "kunci": 6
+    },
+    {
+      "file": "ketaksamaan-qm-am-gm-hm-materi-soal-dan-pembahasan.json",
+      "judul": "ketaksamaan-qm-am-gm-hm-materi-soal-dan-pembahasan.json",
+      "item": 35,
+      "pg": 18,
+      "kunci": 17
+    },
+    {
+      "file": "kompetisi-hardiknas-posi-matematika-guru-sma-tahun-2021.json",
+      "judul": "kompetisi-hardiknas-posi-matematika-guru-sma-tahun-2021.json",
+      "item": 30,
+      "pg": 30,
+      "kunci": 2
+    },
+    {
+      "file": "konsep-akar-ramanujan.json",
+      "judul": "konsep-akar-ramanujan.json",
+      "item": 16,
+      "pg": 14,
+      "kunci": 14
+    },
+    {
+      "file": "kumpulan-rumus-deret-khusus.json",
+      "judul": "kumpulan-rumus-deret-khusus.json",
+      "item": 8,
+      "pg": 8,
+      "kunci": 8
+    },
+    {
+      "file": "latihan-soal-persamaan-diferensial-homogen.json",
+      "judul": "latihan-soal-persamaan-diferensial-homogen.json",
+      "item": 9,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "lcc-empat-pilar-mpr-ri.json",
+      "judul": "lcc-empat-pilar-mpr-ri.json",
+      "item": 44,
+      "pg": 30,
+      "kunci": 30
+    },
+    {
+      "file": "letak-titik-dan-perbandingan-ruas-garis.json",
+      "judul": "letak-titik-dan-perbandingan-ruas-garis.json",
+      "item": 3,
+      "pg": 3,
+      "kunci": 3
+    },
+    {
+      "file": "masalah-kombinatorika-mencari-banyak-rute.json",
+      "judul": "masalah-kombinatorika-mencari-banyak-rute.json",
+      "item": 11,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "materi-dan-soal-logika-penalaran-deduksi-penarikan-kesimpulan.json",
+      "judul": "materi-dan-soal-logika-penalaran-deduksi-penarikan-kesimpula",
+      "item": 10,
+      "pg": 10,
+      "kunci": 0
+    },
+    {
+      "file": "materi-soal-dan-kunci-jawaban-penalaran-analisis.json",
+      "judul": "materi-soal-dan-kunci-jawaban-penalaran-analisis.json",
+      "item": 7,
+      "pg": 7,
+      "kunci": 0
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-dekomposisi-pecahan-parsial.json",
+      "judul": "materi-soal-dan-pembahasan-dekomposisi-pecahan-parsial.json",
+      "item": 12,
+      "pg": 10,
+      "kunci": 10
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-deret-teleskopik.json",
+      "judul": "materi-soal-dan-pembahasan-deret-teleskopik.json",
+      "item": 30,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-fungsi-naik-dan-fungsi-turun.json",
+      "judul": "materi-soal-dan-pembahasan-fungsi-naik-dan-fungsi-turun.json",
+      "item": 13,
+      "pg": 11,
+      "kunci": 11
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-gerbang-logika.json",
+      "judul": "materi-soal-dan-pembahasan-gerbang-logika.json",
+      "item": 4,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-integral-parsial.json",
+      "judul": "materi-soal-dan-pembahasan-integral-parsial.json",
+      "item": 22,
+      "pg": 11,
+      "kunci": 11
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-jumlahan-newton.json",
+      "judul": "materi-soal-dan-pembahasan-jumlahan-newton.json",
+      "item": 9,
+      "pg": 8,
+      "kunci": 8
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-kongruensi-modulo.json",
+      "judul": "materi-soal-dan-pembahasan-kongruensi-modulo.json",
+      "item": 51,
+      "pg": 24,
+      "kunci": 24
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-kurva-indiferens.json",
+      "judul": "materi-soal-dan-pembahasan-kurva-indiferens.json",
+      "item": 8,
+      "pg": 4,
+      "kunci": 4
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-lingkaran-dalam-luar-segitiga.json",
+      "judul": "materi-soal-dan-pembahasan-lingkaran-dalam-luar-segitiga.jso",
+      "item": 17,
+      "pg": 13,
+      "kunci": 13
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-luas-segitiga-dan-segi-n-pada-bidang-koordinat-kartesius.json",
+      "judul": "materi-soal-dan-pembahasan-luas-segitiga-dan-segi-n-pada-bid",
+      "item": 11,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-masalah-nilai-maksimum-dan-nilai-minimum-menggunakan-turunan.json",
+      "judul": "materi-soal-dan-pembahasan-masalah-nilai-maksimum-dan-nilai-",
+      "item": 24,
+      "pg": 19,
+      "kunci": 19
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-persamaan-trigonometri-2.json",
+      "judul": "materi-soal-dan-pembahasan-persamaan-trigonometri-2.json",
+      "item": 12,
+      "pg": 10,
+      "kunci": 10
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-ruang-vektor-umum.json",
+      "judul": "materi-soal-dan-pembahasan-ruang-vektor-umum.json",
+      "item": 29,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-teorema-bendera-inggris.json",
+      "judul": "materi-soal-dan-pembahasan-teorema-bendera-inggris.json",
+      "item": 8,
+      "pg": 8,
+      "kunci": 8
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-teorema-ceva.json",
+      "judul": "materi-soal-dan-pembahasan-teorema-ceva.json",
+      "item": 7,
+      "pg": 5,
+      "kunci": 5
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-teorema-menelaus.json",
+      "judul": "materi-soal-dan-pembahasan-teorema-menelaus.json",
+      "item": 9,
+      "pg": 8,
+      "kunci": 8
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-teorema-ptolemy.json",
+      "judul": "materi-soal-dan-pembahasan-teorema-ptolemy.json",
+      "item": 4,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-teorema-sisa-cina.json",
+      "judul": "materi-soal-dan-pembahasan-teorema-sisa-cina.json",
+      "item": 13,
+      "pg": 6,
+      "kunci": 6
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-teorema-stewart.json",
+      "judul": "materi-soal-dan-pembahasan-teorema-stewart.json",
+      "item": 6,
+      "pg": 5,
+      "kunci": 5
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-turunan-fungsi-implisit.json",
+      "judul": "materi-soal-dan-pembahasan-turunan-fungsi-implisit.json",
+      "item": 21,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "materi-soal-dasar-graf-dan-terminologi.json",
+      "judul": "materi-soal-dasar-graf-dan-terminologi.json",
+      "item": 28,
+      "pg": 15,
+      "kunci": 15
+    },
+    {
+      "file": "materi-soal-keterhubungan-graf.json",
+      "judul": "materi-soal-keterhubungan-graf.json",
+      "item": 7,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "materi-soal-operasi-graf-subgraf.json",
+      "judul": "materi-soal-operasi-graf-subgraf.json",
+      "item": 14,
+      "pg": 10,
+      "kunci": 10
+    },
+    {
+      "file": "materi-soal-pembahasan-bilangan-prima.json",
+      "judul": "materi-soal-pembahasan-bilangan-prima.json",
+      "item": 17,
+      "pg": 7,
+      "kunci": 7
+    },
+    {
+      "file": "materi-soal-pohon-teori-graf.json",
+      "judul": "materi-soal-pohon-teori-graf.json",
+      "item": 9,
+      "pg": 3,
+      "kunci": 3
+    },
+    {
+      "file": "operasi-baris-elementer-dan-eliminasi-gauss-jordan.json",
+      "judul": "operasi-baris-elementer-dan-eliminasi-gauss-jordan.json",
+      "item": 20,
+      "pg": 9,
+      "kunci": 9
+    },
+    {
+      "file": "operasi-biner-dasar-grup.json",
+      "judul": "operasi-biner-dasar-grup.json",
+      "item": 21,
+      "pg": 8,
+      "kunci": 8
+    },
+    {
+      "file": "osn-k-matematika-sma-2021-dasar.json",
+      "judul": "osn-k-matematika-sma-2021-dasar.json",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "osn-k-matematika-sma-2022-dasar.json",
+      "judul": "osn-k-matematika-sma-2022-dasar.json",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "osn-k-matematika-sma-2023-dasar.json",
+      "judul": "osn-k-matematika-sma-2023-dasar.json",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "osn-k-matematika-sma-2024-dasar.json",
+      "judul": "osn-k-matematika-sma-2024-dasar.json",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "osn-k-matematika-sma-2025-dasar.json",
+      "judul": "osn-k-matematika-sma-2025-dasar.json",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "pck-ujian-ppg-terbaru.json",
+      "judul": "pck-ujian-ppg-terbaru.json",
+      "item": 25,
+      "pg": 25,
+      "kunci": 0
+    },
+    {
+      "file": "peluang-permainan-kartu-remi.json",
+      "judul": "peluang-permainan-kartu-remi.json",
+      "item": 15,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "pembuktian-dengan-metode-ketunggalan.json",
+      "judul": "pembuktian-dengan-metode-ketunggalan.json",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "pembuktian-dengan-metode-kontradiksi.json",
+      "judul": "pembuktian-dengan-metode-kontradiksi.json",
+      "item": 27,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "pembuktian-kombinatorial.json",
+      "judul": "pembuktian-kombinatorial.json",
+      "item": 17,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "penalaran-umum-kualitas-simpulan.json",
+      "judul": "penalaran-umum-kualitas-simpulan.json",
+      "item": 20,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "pengantar-logika-kabur.json",
+      "judul": "pengantar-logika-kabur.json",
+      "item": 9,
+      "pg": 7,
+      "kunci": 7
+    },
+    {
+      "file": "penggunaan-sifat-aljabar-lanjutan.json",
+      "judul": "penggunaan-sifat-aljabar-lanjutan.json",
+      "item": 21,
+      "pg": 14,
+      "kunci": 14
+    },
+    {
+      "file": "pigeonhole-principle.json",
+      "judul": "pigeonhole-principle.json",
+      "item": 28,
+      "pg": 16,
+      "kunci": 16
+    },
+    {
+      "file": "pola-dan-barisan-huruf.json",
+      "judul": "pola-dan-barisan-huruf.json",
+      "item": 20,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "predikat-dan-kuantor-dalam-logika-matematika.json",
+      "judul": "predikat-dan-kuantor-dalam-logika-matematika.json",
+      "item": 14,
+      "pg": 2,
+      "kunci": 2
+    },
+    {
+      "file": "prinsip-sarang-merpati-materi-soal-dan-pembahasan.json",
+      "judul": "prinsip-sarang-merpati-materi-soal-dan-pembahasan.json",
+      "item": 28,
+      "pg": 16,
+      "kunci": 16
+    },
+    {
+      "file": "probability-problem-solution.json",
+      "judul": "probability-problem-solution.json",
+      "item": 32,
+      "pg": 26,
+      "kunci": 26
+    },
+    {
+      "file": "qm-am-gm-hm-inequality.json",
+      "judul": "qm-am-gm-hm-inequality.json",
+      "item": 35,
+      "pg": 18,
+      "kunci": 17
+    },
+    {
+      "file": "relasi-rekurens-homogen-linear-koefisien-konstan.json",
+      "judul": "relasi-rekurens-homogen-linear-koefisien-konstan.json",
+      "item": 27,
+      "pg": 14,
+      "kunci": 14
+    },
+    {
+      "file": "relations-functions-problems.json",
+      "judul": "relations-functions-problems.json",
+      "item": 25,
+      "pg": 24,
+      "kunci": 24
+    },
+    {
+      "file": "simple-algebraic-expressions-word-problems.json",
+      "judul": "simple-algebraic-expressions-word-problems.json",
+      "item": 36,
+      "pg": 18,
+      "kunci": 18
+    },
+    {
+      "file": "sistem-kongruensi-linear.json",
+      "judul": "sistem-kongruensi-linear.json",
+      "item": 8,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "situational-judgment-test-sjt-ujian-ppg-terbaru.json",
+      "judul": "situational-judgment-test-sjt-ujian-ppg-terbaru.json",
+      "item": 25,
+      "pg": 25,
+      "kunci": 0
+    },
+    {
+      "file": "soal-babak-final-mathematics-competition-mc-limas-ke-6-tingkat-smp-beserta-pembahasannya.json",
+      "judul": "soal-babak-final-mathematics-competition-mc-limas-ke-6-tingk",
+      "item": 15,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-aksioma-kelengkapan-analisis-real.json",
+      "judul": "soal-dan-pembahasan-aksioma-kelengkapan-analisis-real.json",
+      "item": 20,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-analisis-kompleks-tingkat-dasar-bagian-ii.json",
+      "judul": "soal-dan-pembahasan-analisis-kompleks-tingkat-dasar-bagian-i",
+      "item": 15,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-analisis-kurva-kompleks-dan-integral-kontur-integral-garis.json",
+      "judul": "soal-dan-pembahasan-analisis-kurva-kompleks-dan-integral-kon",
+      "item": 14,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-aritmetika-sosial.json",
+      "judul": "soal-dan-pembahasan-aritmetika-sosial.json",
+      "item": 30,
+      "pg": 26,
+      "kunci": 26
+    },
+    {
+      "file": "soal-dan-pembahasan-asimtot-fungsi-aljabar.json",
+      "judul": "soal-dan-pembahasan-asimtot-fungsi-aljabar.json",
+      "item": 23,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "soal-dan-pembahasan-babak-penyisihan-kategori-kelas-9-kompetisi-matematika-nalaria-realistik-kmnr-tahun-2016.json",
+      "judul": "soal-dan-pembahasan-babak-penyisihan-kategori-kelas-9-kompet",
+      "item": 25,
+      "pg": 25,
+      "kunci": 24
+    },
+    {
+      "file": "soal-dan-pembahasan-bangun-ruang-pra-olimpiade.json",
+      "judul": "soal-dan-pembahasan-bangun-ruang-pra-olimpiade.json",
+      "item": 24,
+      "pg": 14,
+      "kunci": 14
+    },
+    {
+      "file": "soal-dan-pembahasan-bangun-ruang-tingkat-smp-sederajat.json",
+      "judul": "soal-dan-pembahasan-bangun-ruang-tingkat-smp-sederajat.json",
+      "item": 33,
+      "pg": 31,
+      "kunci": 31
+    },
+    {
+      "file": "soal-dan-pembahasan-barisan-dan-deret-aritmetika.json",
+      "judul": "soal-dan-pembahasan-barisan-dan-deret-aritmetika.json",
+      "item": 33,
+      "pg": 31,
+      "kunci": 31
+    },
+    {
+      "file": "soal-dan-pembahasan-barisan-dan-deret-geometri.json",
+      "judul": "soal-dan-pembahasan-barisan-dan-deret-geometri.json",
+      "item": 19,
+      "pg": 17,
+      "kunci": 17
+    },
+    {
+      "file": "soal-dan-pembahasan-bentuk-aljabar-sederhana.json",
+      "judul": "soal-dan-pembahasan-bentuk-aljabar-sederhana.json",
+      "item": 36,
+      "pg": 18,
+      "kunci": 18
+    },
+    {
+      "file": "soal-dan-pembahasan-deret-laurent-dalam-analisis-kompleks.json",
+      "judul": "soal-dan-pembahasan-deret-laurent-dalam-analisis-kompleks.js",
+      "item": 8,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-dimensi-tiga-konsep-jarak-titik-garis-dan-bidang.json",
+      "judul": "soal-dan-pembahasan-dimensi-tiga-konsep-jarak-titik-garis-da",
+      "item": 34,
+      "pg": 34,
+      "kunci": 34
+    },
+    {
+      "file": "soal-dan-pembahasan-dimensi-tiga-konsep-sudut-titik-garis-dan-bidang.json",
+      "judul": "soal-dan-pembahasan-dimensi-tiga-konsep-sudut-titik-garis-da",
+      "item": 14,
+      "pg": 14,
+      "kunci": 14
+    },
+    {
+      "file": "soal-dan-pembahasan-faktorial.json",
+      "judul": "soal-dan-pembahasan-faktorial.json",
+      "item": 46,
+      "pg": 26,
+      "kunci": 26
+    },
+    {
+      "file": "soal-dan-pembahasan-fungsi-analitik-dan-harmonik-serta-teoremanya-dalam-sistem-bilangan-kompleks.json",
+      "judul": "soal-dan-pembahasan-fungsi-analitik-dan-harmonik-serta-teore",
+      "item": 8,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-fungsi-trigonometri-dan-grafiknya.json",
+      "judul": "soal-dan-pembahasan-fungsi-trigonometri-dan-grafiknya.json",
+      "item": 16,
+      "pg": 13,
+      "kunci": 12
+    },
+    {
+      "file": "soal-dan-pembahasan-hasil-kali-dalam.json",
+      "judul": "soal-dan-pembahasan-hasil-kali-dalam.json",
+      "item": 10,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-himpunan-soal-cerita.json",
+      "judul": "soal-dan-pembahasan-himpunan-soal-cerita.json",
+      "item": 11,
+      "pg": 3,
+      "kunci": 3
+    },
+    {
+      "file": "soal-dan-pembahasan-html.json",
+      "judul": "soal-dan-pembahasan-html.json",
+      "item": 15,
+      "pg": 12,
+      "kunci": 12
+    },
+    {
+      "file": "soal-dan-pembahasan-induksi-matematika-pada-keterbagian-bilangan.json",
+      "judul": "soal-dan-pembahasan-induksi-matematika-pada-keterbagian-bila",
+      "item": 30,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-integral-dengan-metode-substitusi-aljabar.json",
+      "judul": "soal-dan-pembahasan-integral-dengan-metode-substitusi-aljaba",
+      "item": 18,
+      "pg": 18,
+      "kunci": 18
+    },
+    {
+      "file": "soal-dan-pembahasan-integral-lipat-dua.json",
+      "judul": "soal-dan-pembahasan-integral-lipat-dua.json",
+      "item": 9,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-integral-tak-wajar.json",
+      "judul": "soal-dan-pembahasan-integral-tak-wajar.json",
+      "item": 8,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-integral-tentu.json",
+      "judul": "soal-dan-pembahasan-integral-tentu.json",
+      "item": 26,
+      "pg": 24,
+      "kunci": 24
+    },
+    {
+      "file": "soal-dan-pembahasan-irisan-kerucut-elips.json",
+      "judul": "soal-dan-pembahasan-irisan-kerucut-elips.json",
+      "item": 42,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-kesebangunan-dan-kekongruenan.json",
+      "judul": "soal-dan-pembahasan-kesebangunan-dan-kekongruenan.json",
+      "item": 38,
+      "pg": 33,
+      "kunci": 33
+    },
+    {
+      "file": "soal-dan-pembahasan-ketidaksamaan-dan-pertidaksamaan-bagian-dasar.json",
+      "judul": "soal-dan-pembahasan-ketidaksamaan-dan-pertidaksamaan-bagian-",
+      "item": 15,
+      "pg": 15,
+      "kunci": 15
+    },
+    {
+      "file": "soal-dan-pembahasan-kompetisi-sains-nasional-ksn-tingkat-kabupaten-bidang-matematika-sma-ma-tahun-2020.json",
+      "judul": "soal-dan-pembahasan-kompetisi-sains-nasional-ksn-tingkat-kab",
+      "item": 20,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-konsep-garis-dan-sudut-tingkat-smp-sederajat.json",
+      "judul": "soal-dan-pembahasan-konsep-garis-dan-sudut-tingkat-smp-seder",
+      "item": 36,
+      "pg": 33,
+      "kunci": 33
+    },
+    {
+      "file": "soal-dan-pembahasan-konsep-sifat-dan-aturan-dalam-perhitungan-turunan-bagian-dasar.json",
+      "judul": "soal-dan-pembahasan-konsep-sifat-dan-aturan-dalam-perhitunga",
+      "item": 21,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "soal-dan-pembahasan-koset-dan-subgrup-normal.json",
+      "judul": "soal-dan-pembahasan-koset-dan-subgrup-normal.json",
+      "item": 8,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-kuis-kihajar-stem-2020-tahap-final-tingkat-sma-ma.json",
+      "judul": "soal-dan-pembahasan-kuis-kihajar-stem-2020-tahap-final-tingk",
+      "item": 25,
+      "pg": 19,
+      "kunci": 4
+    },
+    {
+      "file": "soal-dan-pembahasan-kuis-kihajar-stem-2020-tingkat-sma-ma.json",
+      "judul": "soal-dan-pembahasan-kuis-kihajar-stem-2020-tingkat-sma-ma.js",
+      "item": 39,
+      "pg": 30,
+      "kunci": 29
+    },
+    {
+      "file": "soal-dan-pembahasan-lingkaran-tingkat-sd.json",
+      "judul": "soal-dan-pembahasan-lingkaran-tingkat-sd.json",
+      "item": 47,
+      "pg": 25,
+      "kunci": 19
+    },
+    {
+      "file": "soal-dan-pembahasan-notasi-sigma.json",
+      "judul": "soal-dan-pembahasan-notasi-sigma.json",
+      "item": 35,
+      "pg": 27,
+      "kunci": 27
+    },
+    {
+      "file": "soal-dan-pembahasan-olimpiade-sains-nasional-bidang-matematika-smp-tingkat-provinsi-tahun-2019.json",
+      "judul": "soal-dan-pembahasan-olimpiade-sains-nasional-bidang-matemati",
+      "item": 18,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-on-mipa-pt-matematika-seleksi-universitas-tanjungpura-tahun-2018.json",
+      "judul": "soal-dan-pembahasan-on-mipa-pt-matematika-seleksi-universita",
+      "item": 40,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-peluang-tingkat-smp-sederajat.json",
+      "judul": "soal-dan-pembahasan-peluang-tingkat-smp-sederajat.json",
+      "item": 39,
+      "pg": 26,
+      "kunci": 26
+    },
+    {
+      "file": "soal-dan-pembahasan-perbandingan-dan-skala.json",
+      "judul": "soal-dan-pembahasan-perbandingan-dan-skala.json",
+      "item": 37,
+      "pg": 33,
+      "kunci": 33
+    },
+    {
+      "file": "soal-dan-pembahasan-perbandingan-trigonometri-dasar.json",
+      "judul": "soal-dan-pembahasan-perbandingan-trigonometri-dasar.json",
+      "item": 28,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "soal-dan-pembahasan-perhitungan-nilai-mutlak.json",
+      "judul": "soal-dan-pembahasan-perhitungan-nilai-mutlak.json",
+      "item": 26,
+      "pg": 22,
+      "kunci": 22
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-diferensial-linear-orde-dua-dengan-koefisien-konstan.json",
+      "judul": "soal-dan-pembahasan-persamaan-diferensial-linear-orde-dua-de",
+      "item": 9,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-diferensial-linear-orde-dua-non-homogen-dengan-koefisien-konstan.json",
+      "judul": "soal-dan-pembahasan-persamaan-diferensial-linear-orde-dua-no",
+      "item": 9,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-eksponen.json",
+      "judul": "soal-dan-pembahasan-persamaan-eksponen.json",
+      "item": 27,
+      "pg": 25,
+      "kunci": 25
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-garis-singgung-menggunakan-turunan.json",
+      "judul": "soal-dan-pembahasan-persamaan-garis-singgung-menggunakan-tur",
+      "item": 24,
+      "pg": 18,
+      "kunci": 18
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-irasional-bentuk-akar.json",
+      "judul": "soal-dan-pembahasan-persamaan-irasional-bentuk-akar.json",
+      "item": 22,
+      "pg": 17,
+      "kunci": 17
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-nilai-mutlak.json",
+      "judul": "soal-dan-pembahasan-persamaan-nilai-mutlak.json",
+      "item": 21,
+      "pg": 12,
+      "kunci": 12
+    },
+    {
+      "file": "soal-dan-pembahasan-pertidaksamaan-irasional-bentuk-akar.json",
+      "judul": "soal-dan-pembahasan-pertidaksamaan-irasional-bentuk-akar.jso",
+      "item": 17,
+      "pg": 14,
+      "kunci": 14
+    },
+    {
+      "file": "soal-dan-pembahasan-pertidaksamaan-nilai-mutlak.json",
+      "judul": "soal-dan-pembahasan-pertidaksamaan-nilai-mutlak.json",
+      "item": 22,
+      "pg": 18,
+      "kunci": 18
+    },
+    {
+      "file": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagian-2.json",
+      "judul": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagia",
+      "item": 20,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagian-3.json",
+      "judul": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagia",
+      "item": 20,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagian-4.json",
+      "judul": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagia",
+      "item": 20,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagian-5.json",
+      "judul": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagia",
+      "item": 20,
+      "pg": 19,
+      "kunci": 19
+    },
+    {
+      "file": "soal-dan-pembahasan-refleksi-geometri.json",
+      "judul": "soal-dan-pembahasan-refleksi-geometri.json",
+      "item": 14,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-relasi-dan-fungsi-tingkat-smp-sederajat.json",
+      "judul": "soal-dan-pembahasan-relasi-dan-fungsi-tingkat-smp-sederajat.",
+      "item": 25,
+      "pg": 24,
+      "kunci": 24
+    },
+    {
+      "file": "soal-dan-pembahasan-relasi-rekurensi-dengan-fungsi-pembangkit.json",
+      "judul": "soal-dan-pembahasan-relasi-rekurensi-dengan-fungsi-pembangki",
+      "item": 5,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-residu-fungsi-kompleks-dan-pengintegralan-dengan-residu.json",
+      "judul": "soal-dan-pembahasan-residu-fungsi-kompleks-dan-pengintegrala",
+      "item": 11,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-soal-cerita-aplikasi-barisan-dan-deret-aritmetika.json",
+      "judul": "soal-dan-pembahasan-soal-cerita-aplikasi-barisan-dan-deret-a",
+      "item": 23,
+      "pg": 15,
+      "kunci": 15
+    },
+    {
+      "file": "soal-dan-pembahasan-soal-cerita-aplikasi-barisan-dan-deret-geometri.json",
+      "judul": "soal-dan-pembahasan-soal-cerita-aplikasi-barisan-dan-deret-g",
+      "item": 11,
+      "pg": 11,
+      "kunci": 11
+    },
+    {
+      "file": "soal-dan-pembahasan-soal-cerita-nilai-mutlak.json",
+      "judul": "soal-dan-pembahasan-soal-cerita-nilai-mutlak.json",
+      "item": 19,
+      "pg": 5,
+      "kunci": 5
+    },
+    {
+      "file": "soal-dan-pembahasan-teknik-substitusi-trigonometri-pada-integral.json",
+      "judul": "soal-dan-pembahasan-teknik-substitusi-trigonometri-pada-inte",
+      "item": 22,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-teorema-binomial-dan-perluasannya.json",
+      "judul": "soal-dan-pembahasan-teorema-binomial-dan-perluasannya.json",
+      "item": 29,
+      "pg": 13,
+      "kunci": 13
+    },
+    {
+      "file": "soal-dan-pembahasan-teorema-pythagoras.json",
+      "judul": "soal-dan-pembahasan-teorema-pythagoras.json",
+      "item": 31,
+      "pg": 27,
+      "kunci": 27
+    },
+    {
+      "file": "soal-dan-pembahasan-terlengkap-kecepatan-jarak-dan-waktu.json",
+      "judul": "soal-dan-pembahasan-terlengkap-kecepatan-jarak-dan-waktu.jso",
+      "item": 34,
+      "pg": 33,
+      "kunci": 33
+    },
+    {
+      "file": "soal-dan-pembahasan-transformasi-geometri-tingkat-sma.json",
+      "judul": "soal-dan-pembahasan-transformasi-geometri-tingkat-sma.json",
+      "item": 26,
+      "pg": 26,
+      "kunci": 26
+    },
+    {
+      "file": "soal-dan-pembahasan-transformasi-geometri.json",
+      "judul": "soal-dan-pembahasan-transformasi-geometri.json",
+      "item": 8,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-turunan-fungsi-aljabar.json",
+      "judul": "soal-dan-pembahasan-turunan-fungsi-aljabar.json",
+      "item": 36,
+      "pg": 29,
+      "kunci": 29
+    },
+    {
+      "file": "soal-dan-pembahasan-turunan-fungsi-trigonometri.json",
+      "judul": "soal-dan-pembahasan-turunan-fungsi-trigonometri.json",
+      "item": 41,
+      "pg": 27,
+      "kunci": 27
+    },
+    {
+      "file": "soal-dan-pembahasan-uji-konvergensi-deret-series-convergence-tests.json",
+      "judul": "soal-dan-pembahasan-uji-konvergensi-deret-series-convergence",
+      "item": 7,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-dan-pembahasan-ujian-sekolah-berstandar-nasional-usbn-tingkat-smp-sederajat-tahun-pelajaran-2018-2019-bidang-studi-matematika-kurikulum-2013.json",
+      "judul": "soal-dan-pembahasan-ujian-sekolah-berstandar-nasional-usbn-t",
+      "item": 35,
+      "pg": 29,
+      "kunci": 27
+    },
+    {
+      "file": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-x-semester-genap-ta-2018-2019-smkn-3-pontianak.json",
+      "judul": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-x-semester",
+      "item": 30,
+      "pg": 25,
+      "kunci": 25
+    },
+    {
+      "file": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-xi-semester-genap-ta-2018-2019-smkn-3-pontianak.json",
+      "judul": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-xi-semeste",
+      "item": 33,
+      "pg": 24,
+      "kunci": 24
+    },
+    {
+      "file": "soal-dan-pembahasan-utbk-analisis-kecukupan-data.json",
+      "judul": "soal-dan-pembahasan-utbk-analisis-kecukupan-data.json",
+      "item": 41,
+      "pg": 41,
+      "kunci": 41
+    },
+    {
+      "file": "soal-dan-pembahasan-volume-benda-putar-menggunakan-integral.json",
+      "judul": "soal-dan-pembahasan-volume-benda-putar-menggunakan-integral.",
+      "item": 12,
+      "pg": 8,
+      "kunci": 8
+    },
+    {
+      "file": "soal-dan-penyelesaian-uts-kalkulus-integral.json",
+      "judul": "soal-dan-penyelesaian-uts-kalkulus-integral.json",
+      "item": 8,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-final-ogm-kpm-sd-tahun-2021.json",
+      "judul": "soal-final-ogm-kpm-sd-tahun-2021.json",
+      "item": 25,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-final-ogm-kpm-smp-2021.json",
+      "judul": "soal-final-ogm-kpm-smp-2021.json",
+      "item": 25,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-geometri-bidang-datar.json",
+      "judul": "soal-geometri-bidang-datar.json",
+      "item": 28,
+      "pg": 28,
+      "kunci": 28
+    },
+    {
+      "file": "soal-jawaban-osnp-ips-sd.json",
+      "judul": "soal-jawaban-osnp-ips-sd.json",
+      "item": 52,
+      "pg": 40,
+      "kunci": 0
+    },
+    {
+      "file": "soal-latihan-dan-pembahasan-deret-series-analisis-real-2.json",
+      "judul": "soal-latihan-dan-pembahasan-deret-series-analisis-real-2.jso",
+      "item": 10,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-latihan-dan-penyelesaian-grup-siklik.json",
+      "judul": "soal-latihan-dan-penyelesaian-grup-siklik.json",
+      "item": 7,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-latihan-dan-penyelesaian-himpunan-set.json",
+      "judul": "soal-latihan-dan-penyelesaian-himpunan-set.json",
+      "item": 31,
+      "pg": 2,
+      "kunci": 2
+    },
+    {
+      "file": "soal-latihan-dan-penyelesaian-persamaan-diferensial-eksak.json",
+      "judul": "soal-latihan-dan-penyelesaian-persamaan-diferensial-eksak.js",
+      "item": 6,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "soal-latihan-dan-penyelesaian-subgrup-aljabar-abstrak.json",
+      "judul": "soal-latihan-dan-penyelesaian-subgrup-aljabar-abstrak.json",
+      "item": 8,
+      "pg": 2,
+      "kunci": 1
+    },
+    {
+      "file": "soal-latihan-fungsi-pembangkit-dasar-part-2.json",
+      "judul": "soal-latihan-fungsi-pembangkit-dasar-part-2.json",
+      "item": 19,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-latihan-fungsi-pembangkit-dasar.json",
+      "judul": "soal-latihan-fungsi-pembangkit-dasar.json",
+      "item": 16,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-latihan-fungsi-pembangkit-untuk-kombinasi.json",
+      "judul": "soal-latihan-fungsi-pembangkit-untuk-kombinasi.json",
+      "item": 15,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-latihan-limit-barisan-analisis-real.json",
+      "judul": "soal-latihan-limit-barisan-analisis-real.json",
+      "item": 11,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-latihan-penyelesaian-persamaan-diferensial-dengan-variabel-terpisah.json",
+      "judul": "soal-latihan-penyelesaian-persamaan-diferensial-dengan-varia",
+      "item": 13,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "soal-latihan-penyelesaian-persamaan-diferensial-linear-orde-satu.json",
+      "judul": "soal-latihan-penyelesaian-persamaan-diferensial-linear-orde-",
+      "item": 14,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-on-mipa-pt-dan-pembahasan-bidang-aljabar-linear.json",
+      "judul": "soal-on-mipa-pt-dan-pembahasan-bidang-aljabar-linear.json",
+      "item": 14,
+      "pg": 2,
+      "kunci": 2
+    },
+    {
+      "file": "soal-on-mipa-pt-dan-pembahasan-bidang-analisis-real.json",
+      "judul": "soal-on-mipa-pt-dan-pembahasan-bidang-analisis-real.json",
+      "item": 20,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "soal-osi-posi-matematika-sma-2021.json",
+      "judul": "soal-osi-posi-matematika-sma-2021.json",
+      "item": 30,
+      "pg": 30,
+      "kunci": 0
+    },
+    {
+      "file": "soal-pembahasan-persamaan-pangkat-sederhana.json",
+      "judul": "soal-pembahasan-persamaan-pangkat-sederhana.json",
+      "item": 28,
+      "pg": 28,
+      "kunci": 28
+    },
+    {
+      "file": "soal-pembahasan-ukm-ppg.json",
+      "judul": "soal-pembahasan-ukm-ppg.json",
+      "item": 20,
+      "pg": 20,
+      "kunci": 20
+    },
+    {
+      "file": "soal-persiapan-ujian-seleksi-program-pendidikan-profesi-guru-ppg.json",
+      "judul": "soal-persiapan-ujian-seleksi-program-pendidikan-profesi-guru",
+      "item": 5,
+      "pg": 5,
+      "kunci": 0
+    },
+    {
+      "file": "soal-seleksi-tingkat-kabupaten-kota-ksm-tahun-2018.json",
+      "judul": "soal-seleksi-tingkat-kabupaten-kota-ksm-tahun-2018.json",
+      "item": 25,
+      "pg": 25,
+      "kunci": 0
+    },
+    {
+      "file": "soal-sistem-persamaan-linear-aljabar-linear.json",
+      "judul": "soal-sistem-persamaan-linear-aljabar-linear.json",
+      "item": 11,
+      "pg": 8,
+      "kunci": 8
+    },
+    {
+      "file": "soal-tes-penalaran-verbal-analogi.json",
+      "judul": "soal-tes-penalaran-verbal-analogi.json",
+      "item": 15,
+      "pg": 15,
+      "kunci": 15
+    },
+    {
+      "file": "special-angle-trigonometry.json",
+      "judul": "special-angle-trigonometry.json",
+      "item": 2,
+      "pg": 0,
+      "kunci": 0
+    },
+    {
+      "file": "sudut-apit-antargaris.json",
+      "judul": "sudut-apit-antargaris.json",
+      "item": 4,
+      "pg": 4,
+      "kunci": 3
+    },
+    {
+      "file": "teorema-bintang-dan-garis.json",
+      "judul": "teorema-bintang-dan-garis.json",
+      "item": 18,
+      "pg": 13,
+      "kunci": 13
+    },
+    {
+      "file": "teorema-pick.json",
+      "judul": "teorema-pick.json",
+      "item": 13,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "tes-kebinekaan-pmm.json",
+      "judul": "tes-kebinekaan-pmm.json",
+      "item": 30,
+      "pg": 30,
+      "kunci": 0
+    },
+    {
+      "file": "tes-kemampuan-figural-diagram-venn.json",
+      "judul": "tes-kemampuan-figural-diagram-venn.json",
+      "item": 26,
+      "pg": 1,
+      "kunci": 1
+    },
+    {
+      "file": "tes-penalaran-verbal-sinonim-dan-antonim.json",
+      "judul": "tes-penalaran-verbal-sinonim-dan-antonim.json",
+      "item": 10,
+      "pg": 10,
+      "kunci": 10
+    }
+  ],
+  "kotor": [
+    {
+      "file": "anava-satu-jalur.json",
+      "err": 24
+    },
+    {
+      "file": "applications-of-trigonometric-identities.json",
+      "err": 5
+    },
+    {
+      "file": "aproksimasi-kuadrat-terkecil.json",
+      "err": 7
+    },
+    {
+      "file": "bahasa-panda-kriptogram.json",
+      "err": 13
+    },
+    {
+      "file": "barisan-dan-deret-soal-hots-dan-olimpiade.json",
+      "err": 4
+    },
+    {
+      "file": "bilangan-palindrom-materi-soal-dan-pembahasan.json",
+      "err": 1
+    },
+    {
+      "file": "compound-events.json",
+      "err": 2
+    },
+    {
+      "file": "conditional-probability.json",
+      "err": 3
+    },
+    {
+      "file": "distribusi-hipergeometrik.json",
+      "err": 1
+    },
+    {
+      "file": "distribusi-peluang-diskret-dan-kontinu.json",
+      "err": 16
+    },
+    {
+      "file": "frekuensi-harapan-peluang.json",
+      "err": 2
+    },
+    {
+      "file": "fungsi-genap-dan-fungsi-ganjil.json",
+      "err": 1
+    },
+    {
+      "file": "keterbagian-bilangan.json",
+      "err": 2
+    },
+    {
+      "file": "konversi-satuan-suhu.json",
+      "err": 2
+    },
+    {
+      "file": "latihan-soal-fungsi-pembangkit-untuk-permutasi.json",
+      "err": 5
+    },
+    {
+      "file": "logika-berbasis-literasi-memahami-dialog.json",
+      "err": 2
+    },
+    {
+      "file": "luas-daerah-integral.json",
+      "err": 1
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-aturan-cramer.json",
+      "err": 1
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-determinan-matriks.json",
+      "err": 5
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-fungsi-permintaan-penawaran-konsumsi-dan-tabungan.json",
+      "err": 1
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-pecahan-berlanjut.json",
+      "err": 1
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-peluang-bersyarat.json",
+      "err": 3
+    },
+    {
+      "file": "materi-soal-dan-pembahasan-persamaan-logaritma.json",
+      "err": 4
+    },
+    {
+      "file": "materi-soal-pembahasan-fungsi-sepenggal.json",
+      "err": 1
+    },
+    {
+      "file": "materi-soal-representasi-isomorfisme-graf.json",
+      "err": 1
+    },
+    {
+      "file": "normalitas-data-uji-kolmogorov-smirnov.json",
+      "err": 2
+    },
+    {
+      "file": "numerasi-bilangan-smp.json",
+      "err": 4
+    },
+    {
+      "file": "pembuktian-identitas-trigonometri.json",
+      "err": 4
+    },
+    {
+      "file": "penaksiran-rasio-varians-dua-populasi.json",
+      "err": 4
+    },
+    {
+      "file": "penaksiran-rata-rata-satu-populasi.json",
+      "err": 3
+    },
+    {
+      "file": "penaksiran-rata-rata-selisih-dua-populasi-bebas.json",
+      "err": 17
+    },
+    {
+      "file": "penaksiran-selisih-rata-rata-dua-populasi-berpasangan.json",
+      "err": 11
+    },
+    {
+      "file": "penaksiran-varians-satu-populasi.json",
+      "err": 4
+    },
+    {
+      "file": "penalaran-umum-analisis-argumen.json",
+      "err": 2
+    },
+    {
+      "file": "pengantar-statistika-dasar.json",
+      "err": 2
+    },
+    {
+      "file": "penyisihan-ogm-kpm-smp-2021.json",
+      "err": 1
+    },
+    {
+      "file": "perhitungan-modulo-pada-isbn.json",
+      "err": 5
+    },
+    {
+      "file": "persamaan-diferensial-tingkat-dasar.json",
+      "err": 1
+    },
+    {
+      "file": "persamaan-diophantine.json",
+      "err": 3
+    },
+    {
+      "file": "pertumbuhan-dan-peluruhan.json",
+      "err": 2
+    },
+    {
+      "file": "prinsip-inklusi-eksklusi.json",
+      "err": 1
+    },
+    {
+      "file": "probability-combinatorics-problem-shs.json",
+      "err": 15
+    },
+    {
+      "file": "proofs-of-trigonometric-identities.json",
+      "err": 4
+    },
+    {
+      "file": "rata-rata-varians-variabel-acak.json",
+      "err": 4
+    },
+    {
+      "file": "regresi-linear-sederhana.json",
+      "err": 22
+    },
+    {
+      "file": "relasi-dalam-matematika-diskret.json",
+      "err": 4
+    },
+    {
+      "file": "singapore-math-kangaroo-2015-student.json",
+      "err": 1
+    },
+    {
+      "file": "sistem-bilangan-konversi-cara-hitung.json",
+      "err": 1
+    },
+    {
+      "file": "sistem-linear-kuadrat.json",
+      "err": 1
+    },
+    {
+      "file": "soal-babak-final-mathematics-competition-mc-limas-ke-6-beserta-pembahasannya.json",
+      "err": 2
+    },
+    {
+      "file": "soal-cerita-sistem-persamaan-linear-tiga-variabel.json",
+      "err": 12
+    },
+    {
+      "file": "soal-dan-bahas-penerapan-identitas-trigonometri.json",
+      "err": 5
+    },
+    {
+      "file": "soal-dan-kunci-jawaban-kompetensi-sosial-dan-kultural.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-aplikasi-soal-cerita-persamaan-dan-fungsi-kuadrat.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-aplikasi-soal-cerita-statistika.json",
+      "err": 10
+    },
+    {
+      "file": "soal-dan-pembahasan-aplikasi-trigonometri.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-aplikasi-turunan-diferensial.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-babak-penyisihan-kategori-kelas-7-8-matematika-nalaria-realistik.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-bilangan-kompleks-dasar.json",
+      "err": 4
+    },
+    {
+      "file": "soal-dan-pembahasan-deret-geometri-tak-hingga.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-distribusi-binomial.json",
+      "err": 4
+    },
+    {
+      "file": "soal-dan-pembahasan-distribusi-normal.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-faktor-kelipatan-bilangan.json",
+      "err": 11
+    },
+    {
+      "file": "soal-dan-pembahasan-final-ogm-kpm-sma-2020.json",
+      "err": 18
+    },
+    {
+      "file": "soal-dan-pembahasan-fungsi-eksponen-pangkat.json",
+      "err": 4
+    },
+    {
+      "file": "soal-dan-pembahasan-fungsi-kompleks.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-fungsi-kuadrat.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-fungsi-logaritma.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-fungsi-tingkat-lanjut.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-garis-singgung-lingkaran-tingkat-smp.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-gelanggang-ring-dalam-aljabar-abstrak.json",
+      "err": 11
+    },
+    {
+      "file": "soal-dan-pembahasan-gradien-dan-persamaan-garis-lurus.json",
+      "err": 3
+    },
+    {
+      "file": "soal-dan-pembahasan-himpunan-tingkat-smp-sederajat.json",
+      "err": 3
+    },
+    {
+      "file": "soal-dan-pembahasan-induksi-matematika.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-irisan-kerucut-hiperbola.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-irisan-kerucut-persamaan-lingkaran.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-jumlah-riemann.json",
+      "err": 4
+    },
+    {
+      "file": "soal-dan-pembahasan-keliling-dan-luas-bangun-datar.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-kombinatorika-tingkat-lanjut.json",
+      "err": 7
+    },
+    {
+      "file": "soal-dan-pembahasan-komposisi-dan-invers-fungsi.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-kuis-kihajar-stem-2020-tahap-advance-tingkat-sma-ma.json",
+      "err": 3
+    },
+    {
+      "file": "soal-dan-pembahasan-limit-euler.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-limit-fungsi-aljabar-dan-trigonometri-versi-hots-olimpiade.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-limit-fungsi-aljabar.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-limit-tak-hingga.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-lingkaran-tingkat-smp.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-logika-matematika.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-matriks-determinan-dan-invers-matriks-versi-hots-dan-olimpiade.json",
+      "err": 4
+    },
+    {
+      "file": "soal-dan-pembahasan-matriks-determinan-dan-invers-matriks.json",
+      "err": 5
+    },
+    {
+      "file": "soal-dan-pembahasan-ogm-kpm-tahun-2021.json",
+      "err": 3
+    },
+    {
+      "file": "soal-dan-pembahasan-on-mipa-pt-matematika-bidang-analisis-kompleks.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-on-mipa-pt-matematika-bidang-struktur-aljabar.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-on-mipa-pt-matematika-seleksi-universitas-tanjungpura-tahun-2019.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-osn-bidang-matematika-smp-kabupaten-kota-2019.json",
+      "err": 5
+    },
+    {
+      "file": "soal-dan-pembahasan-pangkat-akar-dan-logaritma-2.json",
+      "err": 5
+    },
+    {
+      "file": "soal-dan-pembahasan-pangkat-akar-dan-logaritma.json",
+      "err": 7
+    },
+    {
+      "file": "soal-dan-pembahasan-peluang-tingkat-sma.json",
+      "err": 16
+    },
+    {
+      "file": "soal-dan-pembahasan-perbandingan-trigonometri-sudut-istimewa.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-kuadrat-versi-hots.json",
+      "err": 2
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-kuadrat.json",
+      "err": 5
+    },
+    {
+      "file": "soal-dan-pembahasan-persamaan-trigonometri.json",
+      "err": 8
+    },
+    {
+      "file": "soal-dan-pembahasan-program-linear-tingkat-sma-sederajat.json",
+      "err": 56
+    },
+    {
+      "file": "soal-dan-pembahasan-ranah-pengetahuan-kuantitatif-utbk-bagian-1.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-simulasi-i-ujian-nasional-matematika-tingkat-smk-jurusan-psp.json",
+      "err": 11
+    },
+    {
+      "file": "soal-dan-pembahasan-sistem-koordinat-kartesius.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-sistem-persamaan-linear-dua-variabel-spldv.json",
+      "err": 10
+    },
+    {
+      "file": "soal-dan-pembahasan-sistem-persamaan-linear-tiga-variabel.json",
+      "err": 7
+    },
+    {
+      "file": "soal-dan-pembahasan-statistika-tingkat-sma-sederajat.json",
+      "err": 46
+    },
+    {
+      "file": "soal-dan-pembahasan-suku-banyak-polinomial-tingkat-sma-sederajat.json",
+      "err": 19
+    },
+    {
+      "file": "soal-dan-pembahasan-super-lengkap-limit-fungsi-trigonometri.json",
+      "err": 3
+    },
+    {
+      "file": "soal-dan-pembahasan-titik-tengah-ruas-garis-dan-jarak-dua-titik.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-uas-struktur-aljabar-teori-grup-tahun-ajaran-2018-2019.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-ujian-nasional-matematika-jurusan-psp-tingkat-smk-tahun-2015-2016.json",
+      "err": 13
+    },
+    {
+      "file": "soal-dan-pembahasan-ujian-nasional-matematika-sma-jurusan-peminatan-mipa-tahun-2016.json",
+      "err": 7
+    },
+    {
+      "file": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-x-semester-ganjil-smkn-3-pontianak-tahun-ajaran-2017-2018.json",
+      "err": 4
+    },
+    {
+      "file": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-x-semester-ganjil-smkn-3-pontianak-tahun-ajaran-2018-2019.json",
+      "err": 4
+    },
+    {
+      "file": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-xi-semester-ganjil-ta-2019-2020-smkn-3-pontianak.json",
+      "err": 1
+    },
+    {
+      "file": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-xii-semester-ganjil-ta-2017-2018-smkn-3-pontianak.json",
+      "err": 12
+    },
+    {
+      "file": "soal-dan-pembahasan-ulangan-umum-matematika-kelas-xii-semester-ganjil-ta-2018-2019-smkn-3-pontianak.json",
+      "err": 12
+    },
+    {
+      "file": "soal-dan-pembahasan-ulangan-umum-matematika-wajib-kelas-xi-ips-semester-ganjil-ta-2018-2019-sma-taruna-bumi-khatulistiwa-kubu-raya.json",
+      "err": 12
+    },
+    {
+      "file": "soal-dan-pembahasan-usbn-matematika-tahun-ajaran-2018-2019-tingkat-smk.json",
+      "err": 15
+    },
+    {
+      "file": "soal-dan-pembahasan-vektor-tingkat-sma-sederajat.json",
+      "err": 1
+    },
+    {
+      "file": "soal-final-ogm-kpm-sma-2021.json",
+      "err": 2
+    },
+    {
+      "file": "soal-jawaban-osnp-ipa-sd.json",
+      "err": 3
+    },
+    {
+      "file": "soal-kuis-kihajar-stem-2020-tahap-intermediate-sma.json",
+      "err": 1
+    },
+    {
+      "file": "soal-latihan-dan-penyelesaian-homomorfisma-grup-struktur-aljabar.json",
+      "err": 2
+    },
+    {
+      "file": "soal-pembahasan-statistika-utbk-snbt.json",
+      "err": 4
+    },
+    {
+      "file": "sumasi-rangkap.json",
+      "err": 1
+    },
+    {
+      "file": "system-of-linear-equations-in-two-variables.json",
+      "err": 5
+    },
+    {
+      "file": "teknik-pembuktian-definisi-dan-terminologi-matematika.json",
+      "err": 4
+    },
+    {
+      "file": "tes-kemampuan-akademik-mtk-sma-1.json",
+      "err": 3
+    },
+    {
+      "file": "tka-matematika-lanjut-sma-paket-2.json",
+      "err": 6
+    },
+    {
+      "file": "tka-matematika-sma-paket-2.json",
+      "err": 10
+    },
+    {
+      "file": "tka-matematika-sma-paket-3.json",
+      "err": 13
+    },
+    {
+      "file": "tka-matematika-smp-paket-1.json",
+      "err": 9
+    },
+    {
+      "file": "tka-matematika-smp-paket-2.json",
+      "err": 7
+    },
+    {
+      "file": "tka-matematika-smp-paket-3.json",
+      "err": 11
+    },
+    {
+      "file": "tka-matematika-tl-sma-paket-1.json",
+      "err": 6
+    },
+    {
+      "file": "tka-matematika-tl-sma-paket-3.json",
+      "err": 6
+    },
+    {
+      "file": "tka-mtk-sma-2026-p1.json",
+      "err": 7
+    },
+    {
+      "file": "tka-ppkn-sma.json",
+      "err": 5
+    },
+    {
+      "file": "trigonometric-equations.json",
+      "err": 8
+    },
+    {
+      "file": "uji-kesamaan-varians-dari-dua-populasi.json",
+      "err": 4
+    },
+    {
+      "file": "uji-rata-rata-satu-populasi.json",
+      "err": 5
+    },
+    {
+      "file": "uji-selisih-rata-rata-dua-populasi-bebas.json",
+      "err": 17
+    },
+    {
+      "file": "uji-selisih-rata-rata-dua-populasi-berpasangan.json",
+      "err": 11
+    },
+    {
+      "file": "uji-varians-satu-populasi.json",
+      "err": 1
+    }
+  ]
+}

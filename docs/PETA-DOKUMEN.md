@@ -1,7 +1,7 @@
 # PETA-DOKUMEN.md — Indeks Kanonikal & Tata Kelola Dokumen MathBank
 
 > **Status:** Kanonikal Hidup (*Living Document*)  
-> **Terakhir Diperbarui:** 19 Oktober 2026 (registrasi audit evaluasi V2 & sinkronisasi metrik; lihat §4)  
+> **Terakhir Diperbarui:** 23 Oktober 2026 (registrasi `docs/sprint0/`, `docs/verification/`, `docs/architecture/`, AXIOM, ARAHAN-SLUG, dan 14 berkas `docs/plans/`; lihat §4)  
 > **Otoritas:** Zaid (Chief of Staff / Lead Orchestrator) & Dewan Direksi Math My Id  
 
 ---
@@ -50,6 +50,8 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
 - `docs/BACKUP-RECOVERY.md`: Strategi backup (cron harian 02:00, retensi 7 harian + arsip mingguan 30 hari), RPO/RTO, dan uji restore wajib.
 - `docs/RESTORE-RUNBOOK.md`: **Prosedur pemulihan langkah-demi-langkah** (perintah + ekspektasi keluaran) untuk insiden, termasuk cara menimpa DB produksi dengan aman, tabel nilai invarian yang harus cocok, troubleshooting, dan riwayat drill restore (ACT-07 / MAT-124).
 - `docs/KEAMANAN.md`: Protokol mitigasi kerentanan (anti-SSRF, sanitasi input KaTeX, auth guard).
+- `docs/AXIOM-VS-MATHBANK-COMPARISON.md`: 📋 **Komparasi Arsitektur Axiom vs MathBank** — pembanding skema `questions`/solutions/taxonomy/bundles/media, kapabilitas eksklusif MathBank, dan batas integrasi lintas repo (Axiom ≠ MathBank).
+- `docs/architecture/QUESTION_PAYLOAD_DECISION.md`: 📋 **Keputusan Penyimpanan Soal Dinamis** — single table + hybrid JSONB (`data_payload`/`answer_key`), alasan tidak memakai tabel opsi terpisah.
 - `MathBankAuditor/reports/`: Laporan audit skill-based (di luar `docs/`; tetap wajib terdaftar — CONSTRAINTS #31).
   - `MathBankAuditor/reports/2026-10-18/audit-react-19-actions-and-optimistic-ui.md`: 🔴 **Audit React 19 Actions & Optimistic UI (skill `react-19-actions-and-optimistic-ui`)** — 20 temuan (R-01..R-20). Temuan HIGH: R-01 anti-double-submit **Idempotency-Key tidak pernah dikirim klien** padahal server sudah mendukung; R-02 drag reorder paket **tanpa** optimistic update (`setQueryData`); R-04 `setState` saat render di `BundleBuilder` (risiko lost update `instructions`); R-10 form login/ganti-sandi tanpa `<form>`/`type="submit"`. Mencatat bahwa §1 skill (React Compiler) **tidak berlaku** (compiler tak terpasang) dan §2/§3 (Server Actions) **dilarang ADR-0022** — sehingga 0 penggunaan `useActionState`/`useOptimistic` dinilai sebagai konflik kontrak yang sah, bukan cacat. `pnpm typecheck` lulus; `pnpm lint` gagal (7 error **di `scripts/dev/**`**, bukan `src/**`). §Catatan Verifikasi ada.
   - `MathBankAuditor/reports/2026-10-17/audit-security-and-hardening.md`: 🔴 **Audit Keamanan v2 (skill `security-and-hardening`)** — 6 HIGH (SEC-01 `question:flag` tanpa `ownerId`; SEC-02 spoof `X-Forwarded-For`; SEC-03 SSRF TLS *relaxed*; SEC-04 traversal `corpus://`; SEC-05 root ekspor GitSync; SEC-06 SSRF `ai.base_url`) + 9 MEDIUM + 7 LOW; §Catatan Verifikasi ada; bukti eksekusi di `src/lib/security/audit-2026-10-17.proof.test.ts`. **Menggantikan** `MathBankAuditor/reports/17.10.2026/audit-security-and-hardening.md`.
@@ -64,6 +66,7 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
   - `docs/audit/CROSS-AUDIT-EXECUTIVE-SUMMARY.md`: 🎯 **Ringkasan Eksekutif Cross-Audit V2** — skor kesehatan tertimbang **6,0/10** per pilar (Pillar 1 Data 3,2 KRITIS); top 5 blocker P0 (embedding 0%, topik 0%, media 0%, draft 100%, PERF waterfall+bulk); estimasi 4 minggu remediasi; 3 keputusan strategis menunggu persetujuan CEO.
   - `docs/audit/CROSS-AUDIT-ACTION-PLAN-V2.md`: 🗺️ **Action Plan Terkonsolidasi V2** — dependency graph 4 sprint (Sprint 0→3) + backlog P2 pasca-rilis; 22 ACT detail (ID/aksi/PIC/effort/deps/DoD); Definition of Done V2 (9 indikator terukur: `pnpm check` hijau, ≥8.000 ready, embedding ≥99%, topik ≥95%, media ≥1.500, p95 ≤300ms, CLS ≤0,05, 0 kebocoran, 51/51 Zod, backup harian).
   - `docs/audit/ARAHAN-CROSS-AUDIT-KONSOLIDASI-V2.md`: 📋 **Arahan Konsolidasi Cross-Audit** (MAT-114 revisi) — instruksi ke Paperclip/Tariq untuk **bukan evaluasi dari awal** melainkan ingest 9 audit existing, cross-reference, validasi evidence, dan hasilkan 3 output terkonsolidasi (master findings + executive summary + action plan); success criteria & 7 aturan penting.
+  - `docs/audit/ARAHAN-SLUG-REMOVAL-2TAHAP.md`: 📋 **Pertimbangan Penghapusan Slug (MAT-125)** — usulan 2 tahap: soft deprecation (nullable) lalu hard removal. **Status 2026-10-23:** Tahap A sudah dieksekusi (`topics.slug`/`tags.slug` nullable, MAT-131A; unique index dipertahankan), Tahap B (drop kolom) belum; keputusan CEO masih kosong.
   - `docs/audit/audit-performance-optimization.md`: ⚠️ **Audit Performa & Optimasi v2 (skill `performance-optimization`)** — 2 CRITICAL (PERF-01 waterfall `useAllBundles`; PERF-02 ±10 query/soal pada aksi massal), 5 HIGH (ETag media, dimensi gambar/CLS, telemetri high-cardinality, batch enrichment/embedding sekuensial, heap gambar), + MEDIUM/LOW; §8.2 mengoreksi 5 klaim audit performa sebelumnya lewat bukti `PgDialect` & alur kode.
   - `docs/audit/2026-10-18-audit-observability-instrumentation.md`: ⚠️ **Audit Observability & Instrumentation** — skill `observability-and-instrumentation` **tak tersedia** sehingga baseline = `OBSERVABILITAS.md`/`SLA-SLO.md`/`KONTRAK-API.md`/`KEAMANAN.md`; 20 temuan (redaksi kunci-saja bocor di `Error.message`, galat pra-access-log hilang, label metrik path mentah tanpa batas, `percentile()` salah ≥512 sampel, `/api/health` bocor `err.message` publik, `prune()` mati); menautkan `SEC-02` sebagai temuan lama; §Catatan Verifikasi ada.
 - **`docs/SNAPSHOT-METRIK-2026-10-21.md`**: 📊 **Snapshot Metrik DB Terverifikasi (2026-10-21)** — angka acuan resmi untuk `AGENTS.md` §8, `README.md` §Metrik Database, dan koreksi snapshot 2026-10-19 di `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md`. Memuat query `psql`/`db:verify` yang dapat direproduksi per baris metrik (26 tabel · 24 trigger · 86 index · 11.889 soal · 579 bundle · 174 topik · 2.617 media · 17 tag · 5 sumber · 11 event · 11.867 embedding), tabel delta vs 2026-10-19 (embedding 0→11.867, `question_topics` 0→14.442, `question_media` 0→1.639, index 87→86), daftar drift dokumentasi, prosedur penerapan patch `AGENTS.md`, dan §Catatan Verifikasi (termasuk batas: `pnpm test`/`lint` penuh tidak dijalankan, health `:3005` timeout). Pemilik: Tariq (MAT-116).
@@ -78,6 +81,33 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
   - `docs/plans/2026-10-07-catatan-remediasi-review-v2.md`: ⏳ **Catatan Remediasi Review Kode v2.0** — Rekomendasi perbaikan 7 cacat hasil audit (ESLint dev scripts, sterilisasi event PAS/TO, KaTeX delimiter regex, noScroll matrix grid, gutter cetak 24px, metrik commit API, kop dinamis).
   - `docs/plans/2026-10-16-evaluasi-arsitektur-dan-catatan-persiapan-v2.md`: ⏳ **Evaluasi Arsitektur & Catatan Persiapan v2.0** — Evaluasi menyeluruh L1–L9, isolasi buffer pool vektor 1:1, toleransi parsial ingest MCP, mitigasi SSRF DNS rebinding, standardisasi cetak A4 2-kolom, dan checklist persiapan v2.0.
   - `docs/plans/2026-10-19-sinkronisasi-metrik-agents-readme.md`: ✅ **Sinkronisasi Metrik DB & Dokumentasi Arsitektur (MAT-116)** — metode verifikasi angka (db:verify + psql), tabel drift yang ditutup, **teks final §8/§9 `AGENTS.md`** (disetujui `1fe757d9`; penerapan tertahan gerbang berkas terlindungi — lihat `docs/plans/mat-116-agents-md-8-9.patch`, patch git siap terap yang sudah lolos `git apply --check`), dan status integrasi embedding `:3005`. **Revisi 4 (2026-10-21):** angka disegarkan dari DB (embedding **11.867/11.889**, topik **8.468 soal**, media **1.639 tautan**, index **86**), patch `mat-116-agents-md-8-9.patch` **diregenerasi** & lolos `git apply --check`; `AGENTS.md` masih tertahan gerbang berkas terlindungi — bukti di `docs/SNAPSHOT-METRIK-2026-10-21.md`.
+  - `docs/plans/2026-10-06-ingest-m4thlab.md`: ✅ **Ingest Sumber m4thlab** — hasil ingest + metrik per sumber.
+  - `docs/plans/2026-10-06-ingest-mathcyber.md`: ✅ **Ingest Sumber mathcyber** — hasil ingest + metrik.
+  - `docs/plans/2026-10-06-ingest-mandiri.md`: ✅ **Ingest Mandiri** — jalur ingest tanpa server/build.
+  - `docs/plans/2026-10-06-spesifikasi-parser-defantri.md`: 📋 **Spesifikasi Parser defantri** — acuan wajib dari pemilik (contoh HTML nyata + aturan parsing).
+  - `docs/plans/2026-10-06-metodologi-cek-katex.md`: ⚠️ **Metodologi cek KaTeX** — koreksi metode deteksi (regex tebakan vs parse nyata).
+  - `docs/plans/2026-10-06-temuan-dolar-bertumpuk.md`: ⚠️ **Temuan `$…$$`** — sengaja tidak diperbaiki (prinsip presisi).
+  - `docs/plans/2026-10-06-temuan-katex-bersarang.md`: ⚠️ **Temuan KaTeX bersarang** — sebagian diperbaiki, sisa dibiarkan.
+  - `docs/plans/2026-10-06-temuan-kunci-mathcyber.md`: ⚠️ **Temuan kunci mathcyber** — kunci ada di sumber, tidak diisi otomatis (presisi).
+  - `docs/plans/2026-10-06-temuan-mcma-belum-didukung.md`: ⏳ **Temuan MCMA** — `multiple_choice_checkbox` teridentifikasi, belum ditangani.
+  - `docs/plans/2026-10-06-temuan-event-tidak-terisi.md`: ✅ **Temuan event tidak terisi** — diperbaiki (backfill `event_id`).
+  - `docs/plans/2026-10-06-temuan-pembahasan-defantri.md`: ✅ **Temuan pembahasan defantri** — bug pembahasan benar-salah diperbaiki.
+  - `docs/plans/2026-10-08-rencana-konsolidasi-bank-soal-ce.md`: 📋 **Rencana Konsolidasi Bank Soal (compound-engineering loop)** — diagnosa 3 lapis masalah lintas 15 folder proyek.
+  - `docs/plans/perbaikan-manual-mathcyber.md`: ⚠️ **Daftar perbaikan manual mathcyber** — ekspresi KaTeX yang perlu koreksi tangan.
+  - `docs/plans/mathcyber-clean.json`: 📦 **Artefak data** — hasil pembersihan mathcyber (input skrip, bukan dokumen naratif).
 - **`docs/RENCANA-ADOPSI-ARSITEKTUR-MATHCORE-SOAL.md`**: 📋 **Rencana Adopsi Arsitektur** — 5 inovasi unggul dari MathCore (isolasi tabel vektor 1:1, banned Server Actions) dan Soal (silsilah multi-kemunculan AD-13, paged media CSS A4 2-kolom, toleransi parsial ingest MCP) untuk menyempurnakan MathBank.
 - **`docs/RENCANA-MATHBANK-V2.md`**: 🚀 **Cetak Biru Strategis MathBank v2.0** — Usulan komprehensif v2.0 mencakup pemisahan Hot/Cold storage, partial HNSW index, pemisahan mutlak event vs provenance, publishing paged media CSS 2-kolom, 4 fase roadmap migrasi, dan agenda remediasi hasil audit.
+
+- `docs/sprint0/`: Laporan Sprint 0 (MAT-118/119/120) — bukti pelaksanaan ACT-01..ACT-05.
+  - `docs/sprint0/SALMAN-PROGRESS.md`: ✅ ACT-01/02/03/05 (backup harian, scrubbing logger & health leak, label metrik, bulk update status).
+  - `docs/sprint0/ICHSAN-PROGRESS.md`: ✅ ACT-04 (hapus HTTP waterfall `BundleListView`).
+  - `docs/sprint0/FARUQ-GRADE-PLAN.md`: 📋 Rencana mapping grade SD/SMP/SMA.
+  - `docs/sprint0/FARUQ-DIFFICULTY-PLAN.md`: 📋 Rencana distribusi difficulty 1–5.
+  - `docs/sprint0/FARUQ-FLAGGED-ANALYSIS.md`: 📋 Analisis distribusi soal terflag.
+  - `docs/sprint0/FARUQ-SAMPLE-REVIEW.md`: 📋 Review sampel kualitas soal.
+  - `docs/sprint0/FARUQ-SHORT-QUESTIONS.md`: 📋 Analisis soal <50 karakter.
+- `docs/verification/`: Verifikasi independen (bukan audit — §Catatan Verifikasi #44 hanya wajib untuk `docs/audit/`).
+  - `docs/verification/MAT-148-independent-verification-hafiz.md`: ✅ Verifikasi independen MAT-148.
+  - `docs/verification/MAT-148-jsonb-ui-verification.md`: ✅ Verifikasi UI JSONB (editor, kartu, detail).
+  - `docs/verification/MAT-154-integration-verification.md`: ✅ Verifikasi integrasi (build, hidrasi, multi-viewport, 5 tipe).
 
