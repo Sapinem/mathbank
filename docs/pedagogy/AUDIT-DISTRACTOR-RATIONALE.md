@@ -1,6 +1,6 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 10 — R4 Batch 10: 8 soal aljabar abstrak/geometri lingkaran/kombinatorik (86 SC / 392 entries) + R5 Batch 5: 8 rubrik esai persamaan kuadrat/FPB-KPK/aljabar dasar (62/2202)).
+> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 11 — R4 Batch 11: 8 soal pertaksamaan/statistik/matriks transformasi/bilangan berpangkat/peluang/suku banyak (94 SC / 422 entries) + R5 Batch 6: 8 rubrik esai garis singgung elips/kombinatorik/rekurens/geometri/nilai mutlak/Stirling/g(n) (70/2202)).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
 > **Lingkup:** enrichment aktif (MAT-35). DB: 11.891 soal hidup, 9.336 SC, 2.181 esai.
 > **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
@@ -484,7 +484,8 @@ Skrip bersifat **read-only** (hanya `SELECT`), tidak memodifikasi DB, skema, ata
 | Batch 7 | 2524bc2 | 63 | 285 | 43 |
 | **Batch 8** | **0ee341f** | **71** | **317** | **48** |
 | **Batch 9** | **b83092f** | **78** | **352** | **54** |
-| **Batch 10** | **65a002a** | **94** | **424** | **68** |
+| **Batch 10** | **65a002a** | **86** | **392** | **62** |
+| **Batch 11** | *(pending commit)* | **94** | **422** | **70** |
 
 **Target awal audit:** 52 SC → 100% rationale, 26 esai → rubrik penuh.
 **Update skala:** DB produksi jauh lebih besar (9.335 SC, 2.181 esai per batch 10).
