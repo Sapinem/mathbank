@@ -1050,7 +1050,7 @@ export function QuestionEditor({
                             })
                           }
                         >
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full pointer-coarse:min-h-[44px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1127,7 +1127,7 @@ export function QuestionEditor({
               <FieldGroup>
               <Field label="Tipe Soal">
                 <Select value={questionType} onValueChange={(v) => v && setQuestionType(v)}>
-                  <SelectTrigger className="w-full" aria-label="Tipe soal">
+                  <SelectTrigger className="w-full pointer-coarse:min-h-[44px]" aria-label="Tipe soal">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1151,7 +1151,7 @@ export function QuestionEditor({
 
               <Field label="Jenjang">
                 <Select value={grade} onValueChange={(v) => v && setGrade(v)}>
-                  <SelectTrigger className="w-full" aria-label="Jenjang">
+                  <SelectTrigger className="w-full pointer-coarse:min-h-[44px]" aria-label="Jenjang">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1173,7 +1173,7 @@ export function QuestionEditor({
                   value={String(difficulty)}
                   onValueChange={(v) => v && setDifficulty(Number(v))}
                 >
-                  <SelectTrigger className="w-full" aria-label="Kesulitan">
+                  <SelectTrigger className="w-full pointer-coarse:min-h-[44px]" aria-label="Kesulitan">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1197,7 +1197,7 @@ export function QuestionEditor({
                   value={cognitiveLevel}
                   onValueChange={(v) => v && setCognitiveLevel(v)}
                 >
-                  <SelectTrigger className="w-full" aria-label="Level kognitif">
+                  <SelectTrigger className="w-full pointer-coarse:min-h-[44px]" aria-label="Level kognitif">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1222,7 +1222,7 @@ export function QuestionEditor({
                     value={parentId || "__none__"}
                     onValueChange={(v) => v && setParentId(v === "__none__" ? "" : v)}
                   >
-                    <SelectTrigger className="w-full" aria-label="Wacana stimulus induk">
+                    <SelectTrigger className="w-full pointer-coarse:min-h-[44px]" aria-label="Wacana stimulus induk">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
