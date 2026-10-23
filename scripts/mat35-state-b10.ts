@@ -56,7 +56,7 @@ async function main() {
   `;
 
   console.log(`\n=== TOP BUNDLES WITHOUT DR ===`);
-  bundlesWithout.forEach((r: any) => {
+  bundlesWithout.forEach((r) => {
     console.log(`  [${r.sc_without_dr}/${r.total_sc} missing] ${r.bundle_name}`);
   });
 
@@ -75,7 +75,7 @@ async function main() {
   `;
   console.log(`\n=== ESSAYS WITHOUT RUBRIC (sample 8) ===`);
   const seen = new Set<string>();
-  essNeed.forEach((r: any) => {
+  essNeed.forEach((r) => {
     if (seen.has(r.id)) return;
     seen.add(r.id);
     console.log(`  [${r.bundle}] ${r.id}`);
@@ -97,7 +97,7 @@ async function main() {
     LIMIT 10
   `;
   console.log(`\n=== SC WITHOUT DR by event_subtest ===`);
-  byEvent.forEach((r: any) => console.log(`  ${r.event_subtest||'(null)'}: ${r.cnt}`));
+  byEvent.forEach((r) => console.log(`  ${r.event_subtest||'(null)'}: ${r.cnt}`));
 
   await sql.end();
 }

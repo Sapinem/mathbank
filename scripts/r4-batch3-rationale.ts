@@ -23,6 +23,8 @@ const DB_URL = process.env.DATABASE_URL!;
 const DRY_RUN = process.env.DRY_RUN !== "0";
 const sql = postgres(DB_URL, { max: 1, connect_timeout: 30, idle_timeout: 30 });
 
+type QuestionOption = { id: string; distractorRationale?: string };
+
 interface QuestionRationale {
   questionId: string;
   note: string;
@@ -107,14 +109,14 @@ async function updateRationale(q: QuestionRationale): Promise<number> {
     return 0;
   }
 
-  const options = (row.options as any[]) || [];
+  const options = (row.options as QuestionOption[]) || [];
   if (!Array.isArray(options) || options.length === 0) {
     console.warn(`  SKIP — no options array: ${q.questionId}`);
     return 0;
   }
 
   let count = 0;
-  const updated = options.map((opt: any) => {
+  const updated = options.map((opt) => {
     const label = opt.id as string;
     if (label === q.correctLabel) return opt; // skip correct option
     const rationale = q.options[label];
@@ -126,8 +128,10 @@ async function updateRationale(q: QuestionRationale): Promise<number> {
   if (DRY_RUN) {
     console.log(`  [DRY] Would update ${count} options for ${q.questionId} (${q.note})`);
     updated
-      .filter((o: any) => o.distractorRationale)
-      .forEach((o: any) =>
+      .filter((o): o is QuestionOption & { distractorRationale: string } =>
+        Boolean(o.distractorRationale)
+      )
+      .forEach((o) =>
         console.log(`    opt ${o.id} (${o.distractorRationale.length} chars): ${o.distractorRationale.substring(0, 80)}...`)
       );
     return count;
@@ -158,7 +162,7 @@ async function main() {
   }
 
   // Verify
-  const [stats] = await sql`
+  const [stats] = await sql<{ sc_with_rationale: number; total_entries: number }[]>`
     SELECT
       COUNT(*) FILTER (
         WHERE EXISTS (
@@ -178,8 +182,8 @@ async function main() {
   console.log(`  Questions processed: ${totalQuestions}`);
   console.log(`  Option entries written: ${totalEntries}`);
   console.log(`\n── DB State (all SC) ──`);
-  console.log(`  SC with ≥1 distractorRationale: ${(stats as any).sc_with_rationale}`);
-  console.log(`  Total distractorRationale entries: ${(stats as any).total_entries}`);
+  console.log(`  SC with ≥1 distractorRationale: ${stats.sc_with_rationale}`);
+  console.log(`  Total distractorRationale entries: ${stats.total_entries}`);
 
   await sql.end();
 }

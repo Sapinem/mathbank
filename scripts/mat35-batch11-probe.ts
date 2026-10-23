@@ -4,6 +4,8 @@ import postgres from "postgres";
 const url = process.env.DATABASE_URL!;
 const sql = postgres(url, { max: 2 });
 
+type QuestionOption = { id: string; label?: string; text?: string; content?: string };
+
 async function main() {
   // Current metrics
   const metrics = await sql`
@@ -50,14 +52,14 @@ async function main() {
   console.log(`\n=== ${candidates.length} Candidates for Batch 11 ===`);
   candidates.forEach((r, i) => {
     const exp = (r.explanation || "").substring(0, 400);
-    const opts = (r.options as any[]) || [];
+    const opts = (r.options as QuestionOption[]) || [];
     console.log(`\n--- ${i + 1}. ID: ${r.id} ---`);
     console.log(`Bundle: ${r.bundle_title || "N/A"}`);
     console.log(`Grade: ${r.grade} | Cognitive: ${r.cognitive_level} | Difficulty: ${r.difficulty}`);
     console.log(`Content (100): ${(r.content_markdown || "").substring(0, 100)}`);
     console.log(`Correct: ${r.correct || r.correct_ids}`);
     console.log(`Options count: ${opts.length}`);
-    opts.forEach((o: any) => {
+    opts.forEach((o) => {
       console.log(`  [${o.label || o.id}] ${(o.text || o.content || "").substring(0, 60)}`);
     });
     console.log(`Explanation (400): ${exp}`);

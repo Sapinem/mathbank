@@ -3,6 +3,8 @@ config({ path: ".env" });
 import postgres from "postgres";
 const url = process.env.DATABASE_URL!;
 const sql = postgres(url, { max: 2 });
+
+type QuestionOption = { id: string; contentMarkdown?: string };
 async function main() {
   // Find that question with star-and-bars / combinatorics content
   const r = await sql`
@@ -14,7 +16,7 @@ async function main() {
     LIMIT 3
   `;
   r.forEach(row => {
-    const opts = (row.options as any[] || []);
+    const opts = (row.options as QuestionOption[]) || [];
     console.log("\n=== " + row.id + " ===");
     console.log("CONTENT:", (row.content_markdown||'').substring(0,300));
     console.log("CORRECT:", row.correct);

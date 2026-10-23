@@ -4,6 +4,8 @@ import postgres from "postgres";
 const url = process.env.DATABASE_URL!;
 const sql = postgres(url, { max: 2 });
 
+type QuestionOption = { id: string; contentMarkdown?: string; content?: string };
+
 async function main() {
   // SC questions without rationale that have explanation text (for R4 next batch)
   const scNeedingRationale = await sql`
@@ -41,8 +43,8 @@ async function main() {
     console.log("stem:", q.stem?.substring(0, 200));
     const exp = q.explanation_md || q.explanation || "";
     console.log("explanation:", exp.substring(0, 300));
-    const opts = (q.options as any[]);
-    opts?.forEach((o: any) => {
+    const opts = (q.options as QuestionOption[]);
+    opts?.forEach((o) => {
       console.log(`  opt ${o.id}: ${(o.contentMarkdown || o.content || "").substring(0, 60)}`);
     });
   }

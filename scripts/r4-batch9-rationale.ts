@@ -16,7 +16,6 @@
 import { config } from "dotenv";
 config({ path: ".env" });
 import postgres from "postgres";
-import { sql as sqlTag } from "drizzle-orm";
 
 const url = process.env.DATABASE_URL!;
 const sql = postgres(url, { max: 2 });

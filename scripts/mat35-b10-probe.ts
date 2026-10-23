@@ -3,6 +3,8 @@ config({ path: ".env" });
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL!, { max: 2 });
 
+type QuestionOption = { id: string; contentMarkdown?: string };
+
 const B10_IDS = [
   '01a11644-d8bf-718c-b60d-159f0ca43f64', // bangun datar - garis sejajar segitiga
   '01a11644-da65-7558-b545-20be11f21cd7', // segitiga - garis bagi
@@ -25,14 +27,14 @@ async function main() {
     WHERE id = ANY(${B10_IDS})
   `;
   rows.forEach(r => {
-    const opts = (r.options as any[] || []);
+    const opts = (r.options as QuestionOption[]) || [];
     console.log(`\n${'='.repeat(60)}`);
     console.log(`ID: ${r.id}`);
     console.log(`CONTENT: ${r.content_markdown}`);
     console.log(`CORRECT: ${r.correct} | correctIds: ${r.correct_ids}`);
     console.log(`GRADE: ${r.grade} | COG: ${r.cognitive_level} | DIFF: ${r.difficulty}`);
     console.log(`OPTIONS:`);
-    opts.forEach((o: any) => console.log(`  ${o.id}: ${o.contentMarkdown}`));
+    opts.forEach((o) => console.log(`  ${o.id}: ${o.contentMarkdown}`));
     console.log(`EXPLANATION:\n${r.explanation}`);
   });
   await sql.end();

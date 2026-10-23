@@ -87,6 +87,10 @@ const eslintConfig = defineConfig([
     // Build artifacts dari dev server alternatif (bukan kode sumber):
     ".next-mat47/**",
     ".next-*/**",
+    // Scratch & skrip sekali-pakai yang memang gitignored (bukan kode produk).
+    // Tanpa ini, `pnpm lint` merah karena file yang tak pernah di-commit.
+    ".scratch-*/**",
+    "scripts/dev/**",
   ]),
   // CONSTRAINT #34 — berlaku khusus jalur API.
   {

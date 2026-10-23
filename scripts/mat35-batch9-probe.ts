@@ -3,6 +3,8 @@ config({ path: ".env" });
 import postgres from "postgres";
 const url = process.env.DATABASE_URL!;
 const sql = postgres(url, { max: 2 });
+
+type QuestionOption = { id: string; contentMarkdown?: string };
 async function main() {
   const candidates = await sql`
     SELECT q.id, q.content_markdown,
@@ -23,7 +25,7 @@ async function main() {
     ORDER BY q.id
   `;
   candidates.forEach(r => {
-    const opts = (r.options as any[] || []);
+    const opts = (r.options as QuestionOption[]) || [];
     console.log(`\n=== ${r.id} ===`);
     console.log(`CONTENT: ${(r.content_markdown||'').substring(0,250)}`);
     console.log(`CORRECT: ${r.correct}`);

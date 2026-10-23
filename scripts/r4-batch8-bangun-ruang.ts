@@ -9,12 +9,13 @@
 import { config } from "dotenv";
 config({ path: ".env" });
 import postgres from "postgres";
-import { sql as drizzleHelper } from "drizzle-orm";
 
 const url = process.env.DATABASE_URL!;
 const sql = postgres(url, { max: 2 });
 
 const DRY_RUN = process.env.DRY_RUN !== "0";
+
+type QuestionOption = { id: string; distractorRationale?: string };
 
 /**
  * Rationale per soal: keyed by question UUID → array of {optionId, distractorRationale}
@@ -230,7 +231,7 @@ async function main() {
   for (const [questionId, rationales] of Object.entries(RATIONALE_DATA)) {
     // Fetch current options
     const [row] = await sql<
-      { id: string; options: any[] }[]
+      { id: string; options: QuestionOption[] }[]
     >`SELECT id, data_payload->'options' as options FROM questions WHERE id = ${questionId}`;
 
     if (!row) {
@@ -238,14 +239,14 @@ async function main() {
       continue;
     }
 
-    const options: any[] = row.options ?? [];
+    const options: QuestionOption[] = row.options ?? [];
     if (!Array.isArray(options) || options.length === 0) {
       console.warn(`No options found for ${questionId}`);
       continue;
     }
 
     let modified = false;
-    const updatedOptions = options.map((opt: any) => {
+    const updatedOptions = options.map((opt) => {
       const found = rationales.find((r) => r.optionId === opt.id);
       if (found) {
         modified = true;

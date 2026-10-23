@@ -188,7 +188,7 @@ async function main() {
   }
 
   // Verify count
-  const [stats] = await sql`
+  const [stats] = await sql<{ essays_with_rubric: number; total_essays: number }[]>`
     SELECT
       COUNT(*) FILTER (
         WHERE answer_key->>'scoringRubric' IS NOT NULL
@@ -202,7 +202,7 @@ async function main() {
   console.log(`\n── Summary ──`);
   console.log(`  Written: ${written}/${rubrics.length}`);
   console.log(`\n── DB State (all essays) ──`);
-  console.log(`  Essays with scoringRubric: ${(stats as any).essays_with_rubric} / ${(stats as any).total_essays}`);
+  console.log(`  Essays with scoringRubric: ${stats.essays_with_rubric} / ${stats.total_essays}`);
 
   await sql.end();
 }

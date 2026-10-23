@@ -164,7 +164,7 @@ async function applyRationalesJsonb(items: QuestionRationale[]): Promise<{
       ? Array.isArray(correctIdsJsonb) ? correctIdsJsonb : [correctIdsJsonb]
       : correctRaw ? [correctRaw] : [];
 
-    let updatedOptions = [...optionsJsonb];
+    const updatedOptions = [...optionsJsonb];
     let changed = false;
 
     for (let i = 0; i < updatedOptions.length; i++) {

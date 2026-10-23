@@ -216,7 +216,7 @@ async function main() {
       console.warn(`  SKIP: ${r.questionId} not found`);
       continue;
     }
-    const ak = rows[0].answer_key as Record<string, any> ?? {};
+    const ak = rows[0].answer_key as Record<string, unknown> ?? {};
     const updated = { ...ak, scoringRubric: r.scoringRubric };
 
     if (DRY_RUN) {

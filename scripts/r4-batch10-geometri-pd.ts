@@ -8,6 +8,8 @@ config({ path: ".env" });
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL!, { max: 2 });
 
+type QuestionOption = { id: string; distractorRationale?: string };
+
 interface DistItem {
   questionId: string;
   bundle: string;
@@ -275,14 +277,14 @@ async function main() {
         console.warn(`  [SKIP] ${item.questionId} — not found`);
         continue;
       }
-      const payload = rows[0].data_payload as { options?: any[] };
-      const opts: any[] = payload?.options ?? [];
+      const payload = rows[0].data_payload as { options?: QuestionOption[] };
+      const opts: QuestionOption[] = payload?.options ?? [];
 
       // Merge rationale in
       let changed = false;
       for (const ratEntry of item.options) {
         if (ratEntry.distractorRationale === null) continue; // correct key
-        const opt = opts.find((o: any) => o.id === ratEntry.id);
+        const opt = opts.find((o) => o.id === ratEntry.id);
         if (!opt) {
           console.warn(`  [WARN] ${item.questionId} opt ${ratEntry.id} not found`);
           continue;
@@ -312,8 +314,8 @@ async function main() {
         } rationale entries`
       );
       updated++;
-    } catch (e: any) {
-      console.error(`  [ERR] ${item.questionId}: ${e.message}`);
+    } catch (e: unknown) {
+      console.error(`  [ERR] ${item.questionId}: ${e instanceof Error ? e.message : String(e)}`);
       errors++;
     }
   }

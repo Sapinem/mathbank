@@ -132,7 +132,7 @@ async function main() {
       ? JSON.parse(correctRaw).map((s: string) => s.toUpperCase())
       : [item.correctLabel.toUpperCase()];
 
-    let updatedOptions = [...optionsJsonb];
+    const updatedOptions = [...optionsJsonb];
     let changed = false;
 
     for (let i = 0; i < updatedOptions.length; i++) {

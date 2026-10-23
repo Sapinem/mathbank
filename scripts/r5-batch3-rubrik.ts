@@ -149,7 +149,7 @@ async function main() {
 
   for (const rubric of RUBRICS) {
     const [row] = await sql<
-      { id: string; answer_key: any }[]
+      { id: string; answer_key: Record<string, unknown> }[]
     >`SELECT id, answer_key FROM questions WHERE id = ${rubric.questionId} AND question_type = 'essay'`;
 
     if (!row) {

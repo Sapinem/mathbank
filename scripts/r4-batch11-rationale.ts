@@ -6,12 +6,13 @@
 import { config } from "dotenv";
 config({ path: ".env" });
 import postgres from "postgres";
-import { sql as sqlTag } from "drizzle-orm";
 
 const url = process.env.DATABASE_URL!;
 const sql = postgres(url, { max: 2 });
 
 const DRY_RUN = process.env.DRY_RUN !== "0";
+
+type QuestionOption = { id: string; distractorRationale?: string };
 
 interface OptionRationale {
   id: string; // option label: A, B, C, D, E
@@ -34,14 +35,14 @@ async function applyRationale(qc: QuestionCuration): Promise<void> {
     console.warn(`  SKIP: question ${qc.questionId} not found`);
     return;
   }
-  const currentOpts: any[] = Array.isArray(rows[0].opts)
-    ? rows[0].opts
-    : JSON.parse(rows[0].opts || "[]");
+  const currentOpts: QuestionOption[] = Array.isArray(rows[0].opts)
+    ? (rows[0].opts as QuestionOption[])
+    : JSON.parse((rows[0].opts as string) || "[]");
 
   const ratMap: Record<string, string> = {};
   for (const o of qc.options) ratMap[o.id] = o.distractorRationale;
 
-  const updated = currentOpts.map((o: any) => {
+  const updated = currentOpts.map((o) => {
     const dr = ratMap[o.id];
     if (dr) {
       return { ...o, distractorRationale: dr };
@@ -51,7 +52,7 @@ async function applyRationale(qc: QuestionCuration): Promise<void> {
 
   if (DRY_RUN) {
     console.log(`  DRY_RUN: would update ${qc.questionId}, ${Object.keys(ratMap).length} options`);
-    updated.forEach((o: any) => {
+    updated.forEach((o) => {
       if (o.distractorRationale) {
         console.log(`    [${o.id}] (${o.distractorRationale.length} chars): ${o.distractorRationale.substring(0, 80)}...`);
       }

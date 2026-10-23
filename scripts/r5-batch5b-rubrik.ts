@@ -8,6 +8,8 @@ config({ path: ".env" });
 import postgres from "postgres";
 const sql = postgres(process.env.DATABASE_URL!, { max: 2 });
 
+type JsonValue = Parameters<typeof sql.json>[0];
+
 interface EssayRubric {
   questionId: string;
   title: string;
@@ -80,12 +82,12 @@ async function main() {
         continue;
       }
       // answer_key may be stored as a jsonb-wrapped string or a real jsonb object
-      let ak: Record<string, any>;
+      let ak: Record<string, JsonValue>;
       const raw = rows[0].answer_key;
       if (typeof raw === 'string') {
         try { ak = JSON.parse(raw); } catch { ak = {}; }
       } else {
-        ak = (raw as Record<string, any>) || {};
+        ak = (raw as Record<string, JsonValue>) || {};
       }
       if (ak.scoringRubric && String(ak.scoringRubric).length > 20) {
         console.log(`  [SKIP] ${item.questionId} — rubric already present (${String(ak.scoringRubric).length} chars)`);
@@ -104,8 +106,8 @@ async function main() {
       `;
       console.log(`  [OK] ${item.questionId} "${item.title}" — rubric written (${item.totalPoints} pts)`);
       updated++;
-    } catch (e: any) {
-      console.error(`  [ERR] ${item.questionId}: ${e.message}`);
+    } catch (e: unknown) {
+      console.error(`  [ERR] ${item.questionId}: ${e instanceof Error ? e.message : String(e)}`);
       errors++;
     }
   }

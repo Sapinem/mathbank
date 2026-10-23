@@ -73,8 +73,7 @@ function inferGrade(bundleTitle: string, bundleGrade: string): string {
 
 function inferCognitiveLevel(
   difficulty: number,
-  questionType: string,
-  _stem: string
+  questionType: string
 ): CognitiveLevel {
   // Essay selalu minimal apply (harus uraikan proses)
   if (questionType === "essay") {
@@ -157,11 +156,7 @@ async function main() {
 
   for (const q of deduped) {
     const newGrade = inferGrade(q.bundle_title ?? "", q.bundle_grade ?? "umum");
-    const newCognitive = inferCognitiveLevel(
-      q.difficulty,
-      q.question_type,
-      q.content_markdown
-    );
+    const newCognitive = inferCognitiveLevel(q.difficulty, q.question_type);
 
     const gradeChanged = newGrade !== q.grade;
     const cogChanged = newCognitive !== (q.cognitive_level as CognitiveLevel);
