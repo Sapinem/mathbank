@@ -1,5 +1,58 @@
 # Changelog — MathBank
 
+## [Gerbang Mutu] — Satu evaluator invarian, pagar lapisan, commit batch terpisah
+
+Hasil tinjauan kode (skill `ce-code-review`, cakupan `HEAD~6..working tree`, 16 berkas /
+822 baris) menemukan tiga kelas masalah: angka invarian yang disalin di tiga tempat
+dan sudah berbeda, pagar lapisan yang bisa dilewati impor relatif, dan satu fungsi
+ingest yang menembus plafon panjang. Ketiganya diperbaiki di `a3e8924` dan `b53af4b`.
+
+**1. Gerbang invarian: satu angka, satu aturan lulus.** Sebelumnya `invariants.ts`
+menulis `tables: 27`, `db-verify.ts` menulis 26, dan `AGENTS.md` §8 menyalin angka
+lain lagi — ketiganya "hijau" dengan arti berbeda. Kini `evaluateInvariants()` di
+`src/lib/db/schema-expectations.ts` (modul **murni**, tanpa impor `db`) menjadi
+satu-satunya penentu; health check, `pnpm db:verify`, dan `scripts/snapshot-metrics.ts`
+memanggilnya, jadi snapshot tidak bisa hijau saat `db:verify` merah.
+
+**2. Hitungan tabel tak lagi punya kelonggaran.** Kueri hitung mengecualikan sisa
+migrasi (`right(table_name, 7) <> '_backup'`), sehingga ambang 26 berarti **tepat 26
+tabel**. Sebelumnya `question_options_mat146_backup` ikut terhitung dan menutupi
+hilangnya satu tabel sungguhan. Invarian negatif kini satu predikat
+(`isForbiddenTable()`: daftar terlarang + pola `*_backup`), dan sisa migrasi
+**dilaporkan sebagai masalah** sampai pemilik mengarsipkan lalu me-DROP-nya.
+
+**3. Pagar lapisan menutup impor relatif.** `no-restricted-imports` hanya mencocokkan
+specifier literal, jadi `../../../db` lolos tanpa satu pun pesan lint — kopling yang
+dilarang §9.1 bisa kembali diam-diam. Ditambahkan pola glob (`**/db`, `**/services`,
+`../queue`, `../commit`, `**/components`) plus zona `import/no-restricted-paths`.
+Diuji dengan berkas probe: `../../../db`, `../queue`, `../../../services/x`,
+`../../../components/…` kini semuanya error.
+
+**4. `commitIngestBatch` jadi modul sendiri.** `ingest/service.ts` 333 → **251 baris**
+(kembali di bawah plafon ~300, CONSTRAINT #16) dan tak lagi mengimpor `@/lib/db` di
+module scope. Kegagalan penandaan event **setelah** batch ter-commit dilaporkan lewat
+`eventsError` — bukan 500 yang membuat pemanggil mengira tak ada yang tersimpan lalu
+kena 409 saat mengulang.
+
+**5. `/api/ready` berhenti membocorkan detail koneksi.** `err.message` driver
+(memuat host/port/user database) diganti `PUBLIC_DB_DOWN_MESSAGE` + `Cache-Control:
+no-store`; detail tetap ke log server yang sudah di-scrub.
+
+**Bukti uji.** `schema-expectations.test.ts` 8 kasus murni (tanpa `DATABASE_URL`);
+`invariants.db.test.ts` membuat lalu me-DROP `zz_probe_invarian_backup` untuk
+membuktikan tabel sisa **dilaporkan tapi tidak dihitung**; `ready/route.test.ts`
+memastikan `ECONNREFUSED`/`5433`/`mathbank` tidak muncul di respons;
+`commit-batch.test.ts` 3 kasus termasuk jalur gagal-event. Keputusan dicatat di
+`docs/ADR/0023-satu-evaluator-invarian-skema.md`.
+
+**Belum selesai (jujur).** (a) `question_options_mat146_backup` **masih ada** di DB
+dev, jadi `pnpm db:verify` masih merah — menunggu keputusan pemilik: jalankan
+`fix-double-encoded-options.ts` (DRY_RUN=1: 8/8 soal, 0 gagal), arsipkan, lalu DROP.
+(b) `pnpm check` masih gagal di ambang coverage (lines 91,39% < 92%, statements
+88,65% < 90%); diukur ulang di `git worktree` bersih pada HEAD dan angkanya **identik**
+— jadi ini **bukan** regresi dari perubahan di atas, melainkan berkas yang tak
+tersentuh (`pusmendik-tka.ts` 43%, `defantri.ts` 70%, `ingest-media.ts`).
+
 ## [Sprint 0 / Backend] ACT-01, ACT-02, ACT-03, ACT-05 — backup, keamanan log, label metrik, bulk status
 
 **ACT-01 — backup harian + retensi dua tingkat.** `scripts/backup-db.mjs` kini
