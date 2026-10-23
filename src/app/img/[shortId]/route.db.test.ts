@@ -38,7 +38,7 @@ async function mkAsset(opts: {
   raster?: string;
   svg?: string;
   mime?: string;
-  hash: string;
+  hash: string | null;
 }) {
   const [row] = await sql`
     INSERT INTO media_assets (short_id, title, original_image_path, svg_path, mime_type, file_size, content_hash, source_origin)
@@ -165,5 +165,28 @@ describe("GET /img/[shortId]", () => {
     const res = await call("SERVE008", { "if-none-match": '"beda-hash"' });
     expect(res.status).toBe(200);
     expect(res.headers.get("etag")).toBe('"servehash-8"');
+  });
+
+  it("ACT-17: TANPA content_hash tidak memasang ETag (jangan pakai shortId sebagai pengganti)", async () => {
+    const rel = "gg/gggg.png";
+    await put(rel, PNG_BYTES);
+    await mkAsset({ shortId: "SERVE009", raster: rel, hash: null });
+
+    const res = await call("SERVE009");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("etag")).toBeNull();
+
+    // Regresi lama: ETag jatuh ke shortId → klien yang mengirim balik nilai itu
+    // menerima 304 padahal berkas bisa sudah diganti. Tanpa hash, wajib 200.
+    const res2 = await call("SERVE009", { "if-none-match": '"SERVE009"' });
+    expect(res2.status).toBe(200);
+  });
+
+  it("ACT-17: berkas hilang + If-None-Match cocok tetap 404 (bukan 304)", async () => {
+    // Baris aset ada & hash cocok, tetapi berkasnya tidak ada di storage.
+    await mkAsset({ shortId: "SERVE010", raster: "hh/hilang.png", hash: "servehash-10" });
+
+    const res = await call("SERVE010", { "if-none-match": '"servehash-10"' });
+    expect(res.status).toBe(404);
   });
 });

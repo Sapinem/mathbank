@@ -85,13 +85,13 @@ export async function GET(
       try {
         const info = await stat(abs);
         if (!info.isFile()) continue;
-        const bytes = await readFile(abs);
 
         // ACT-17: ETag dari HASH ISI berkas — hanya bila hash tersedia.
         // Fallback ke shortId berbahaya: mengganti berkas tidak mengubah ETag,
         // sehingga klien terus menerima 304 dengan gambar lama.
-        // Pemeriksaan dilakukan SETELAH berkas terbaca, agar aset yang barisnya
-        // ada tapi berkasnya hilang tetap dijawab 404 (bukan 304).
+        // Cek diletakkan SETELAH `stat` membuktikan berkas ada (aset yang
+        // barisnya ada tapi berkasnya hilang tetap 404, bukan 304) dan SEBELUM
+        // `readFile` — menjawab 304 tidak perlu membaca byte berkas.
         const etag = asset.contentHash ? `"${asset.contentHash}"` : null;
         if (etag && req.headers.get("if-none-match") === etag) {
           return new NextResponse(null, {
@@ -99,6 +99,8 @@ export async function GET(
             headers: { ETag: etag, "Cache-Control": CACHE_CONTROL },
           });
         }
+
+        const bytes = await readFile(abs);
         const headers: Record<string, string> = {
           "Content-Type": c.mime,
           "Content-Length": String(bytes.length),
