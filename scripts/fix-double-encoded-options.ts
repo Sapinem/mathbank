@@ -62,12 +62,23 @@ async function main() {
     console.log(`  [${DRY_RUN ? "DRY" : "FIX"}] ${id.substring(0, 8)}: ${parsed.length} options${hasRationale ? " (has rationale)" : ""}`);
 
     if (!DRY_RUN) {
-      await sql`
+      // sql.json() mengirim nilai sebagai JSONB sungguhan. Bentuk
+      // `${JSON.stringify(parsed)}::jsonb` di-stringify LAGI oleh postgres.js
+      // (cast ::jsonb memicu serialisasi JSON), sehingga kolom tetap string —
+      // skrip melaporkan "Fixed: 8" tanpa satu pun baris berubah.
+      const updated = await sql`
         UPDATE questions
-        SET data_payload = jsonb_set(data_payload, '{options}', ${JSON.stringify(parsed)}::jsonb)
+        SET data_payload = jsonb_set(data_payload, '{options}', ${sql.json(parsed)})
         WHERE id = ${id}::uuid
+          AND jsonb_typeof(data_payload->'options') = 'string'
+        RETURNING jsonb_typeof(data_payload->'options') AS t
       `;
-      fixed++;
+      if (updated[0]?.t === "array") {
+        fixed++;
+      } else {
+        console.log(`  [FAIL] ${id.substring(0, 8)}: tipe setelah update masih ${String(updated[0]?.t ?? "tidak tersentuh")}`);
+        failed++;
+      }
     } else {
       fixed++;
     }

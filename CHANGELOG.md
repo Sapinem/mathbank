@@ -45,10 +45,31 @@ memastikan `ECONNREFUSED`/`5433`/`mathbank` tidak muncul di respons;
 `commit-batch.test.ts` 3 kasus termasuk jalur gagal-event. Keputusan dicatat di
 `docs/ADR/0023-satu-evaluator-invarian-skema.md`.
 
-**Belum selesai (jujur).** (a) `question_options_mat146_backup` **masih ada** di DB
-dev, jadi `pnpm db:verify` masih merah — menunggu keputusan pemilik: jalankan
-`fix-double-encoded-options.ts` (DRY_RUN=1: 8/8 soal, 0 gagal), arsipkan, lalu DROP.
-(b) `pnpm check` masih gagal di ambang coverage (lines 91,39% < 92%, statements
+**6. Tabel sisa diarsipkan lalu di-DROP (keputusan pemilik).** `pg_dump` 18
+(`/usr/lib/postgresql/18/bin`, bukan `pg_dump` 17 di PATH — server 18 menolak)
+mengarsipkan `question_options_mat146_backup` ke
+`backups/question_options_mat146_backup_20261024-014228.dump` (1,41 MB; 43.245 baris).
+Arsip **diuji pulih** ke DB sementara sebelum DROP: `pg_restore` → 43.245 baris, sama
+dengan sumber. Setelah DROP: `pnpm db:verify` **hijau** di DB dev dan DB uji, dan
+snapshot §4 tidak lagi melaporkan objek di luar harapan.
+
+**7. Skrip `fix-double-encoded-options.ts` ternyata tidak pernah memperbaiki apa pun.**
+Percobaan pertama melaporkan `Fixed: 8` padahal 8 soal **tetap** string. Sebabnya:
+`jsonb_set(…, ${JSON.stringify(parsed)}::jsonb)` — postgres.js membaca cast `::jsonb`
+lalu men-serialisasi string itu **sekali lagi**, jadi nilainya masuk sebagai JSON
+*string*, bukan array. Skrip kini memakai `sql.json(parsed)` (pola yang sudah dipakai
+`r4-batch2-rationale.ts`) dan memverifikasi hasilnya lewat `RETURNING jsonb_typeof(…)`
+— `fixed` hanya bertambah bila tipenya benar-benar `array`. Hasil: 8 soal, opsi
+5/5 tanpa isi kosong, 4 rasional per soal, `answer_key` utuh (`C`/`B`); sisa string = 0.
+
+**Bukti tambahan.** `db:verify` DB dev & DB uji: 26 tabel / 24 trigger / 3 CHECK /
+1 HNSW, `PK default = uuidv7()`; 20 tes unit terkait lulus; `invariants.db.test.ts`
+2/2 lulus terhadap DB uji (perhatikan: tes ini mengimpor `db`, jadi harus dijalankan
+dengan `DATABASE_URL="$TEST_DATABASE_URL"`, bukan `DATABASE_URL` DB dev — kalau tidak,
+probe dibuat di DB uji tetapi invarian dibaca dari DB dev dan tes gagal menyesatkan).
+Snapshot diperbarui: PG 9.349 → **9.357**, ber-`distractorRationale` 104 → **112**.
+
+**Belum selesai (jujur).** (a) `pnpm check` masih gagal di ambang coverage (lines 91,39% < 92%, statements
 88,65% < 90%); diukur ulang di `git worktree` bersih pada HEAD dan angkanya **identik**
 — jadi ini **bukan** regresi dari perubahan di atas, melainkan berkas yang tak
 tersentuh (`pusmendik-tka.ts` 43%, `defantri.ts` 70%, `ingest-media.ts`).

@@ -65,9 +65,13 @@ Keputusan ini lahir dari review kode (skill `ce-code-review`, 7 reviewer) atas
 - `pnpm db:verify` mengukur tabel nyata: DB dev melaporkan `tables: 26`, bukan 27.
 
 **Negatif / utang:**
-- `pnpm db:verify` di DB dev **merah** sampai `question_options_mat146_backup`
-  diarsipkan lalu di-DROP. Ini disengaja: gerbang akhirnya melihat objek yang selama
-  ini tak terlihat. Keputusan menghapus data ada pada pemilik (backup tersedia).
+- Gerbang sempat memerahkan DB dev (`question_options_mat146_backup`), dan itu
+  disengaja: gerbang akhirnya melihat objek yang selama ini tak terlihat. Tindak
+  lanjutnya sudah dijalankan **2026-10-24** atas persetujuan pemilik: tabel diarsipkan
+  ke `backups/question_options_mat146_backup_20261024-014228.dump` (43.245 baris,
+  dipulihkan ke DB sementara untuk membuktikan arsipnya utuh) lalu di-DROP.
+  `pnpm db:verify` kini hijau di DB dev dan DB uji. Konsekuensinya: gerbang ini
+  akan memerahkan build lagi bila sisa migrasi baru muncul — memang itu tujuannya.
 - Gerbang tetap tidak bisa membedakan "tabel A diganti tabel B" (jumlah sama). Deteksi
   per-nama hanya ada untuk trigger dan CHECK, bukan tabel — lihat `REQUIRED_TABLES`
   sebagai usulan yang belum diambil.
@@ -86,3 +90,9 @@ Keputusan ini lahir dari review kode (skill `ce-code-review`, 7 reviewer) atas
 - Verifikasi saat keputusan diambil: `pnpm test` 1124 lulus · `pnpm test:db` 24 berkas
   lulus · `tsc`/`lint`/`build` bersih · `pnpm db:verify` DB uji hijau, DB dev merah
   hanya karena tabel sisa (bukti gerbang bekerja).
+- Verifikasi setelah tindak lanjut (2026-10-24): tabel sisa diarsipkan + di-DROP,
+  `pnpm db:verify` **hijau di kedua DB** (26 tabel / 24 trigger / 3 CHECK / 1 HNSW),
+  `invariants.db.test.ts` 2/2 lulus, snapshot §4 bersih. Skrip perbaikan opsi
+  (`fix-double-encoded-options.ts`) ikut diperbaiki: memakai `sql.json()` dan
+  memverifikasi hasil lewat `RETURNING jsonb_typeof(...)` — sebelumnya melaporkan
+  sukses tanpa mengubah satu baris pun.

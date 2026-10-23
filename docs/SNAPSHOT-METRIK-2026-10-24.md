@@ -8,7 +8,7 @@
 
 | Aspek | Nilai |
 |---|---|
-| Skema | **27 tabel** · **24 trigger** · 3 CHECK · **84 index** (1 HNSW) |
+| Skema | **26 tabel** · **24 trigger** · 3 CHECK · **84 index** (1 HNSW) |
 | Soal | **11.869** — 100,0% `draft`, **0 `ready`**, 33 soft-deleted, 96,8% ber-`answer_key`, 25,4% `is_flagged` |
 | Bundle | **577 aktif** · 2 arsip · 12.344 butir · rata-rata 21,4 butir/paket |
 | Topik | **252** · 8.468 soal terpetakan (14.442 tautan — 71,3%) |
@@ -23,8 +23,8 @@ Angka ini yang menentukan berapa soal yang **boleh** keluar ke siswa — bukan j
 
 | Ukuran | Nilai | Arti |
 |---|---|---|
-| Soal pilihan ganda | 9.349 | punya `data_payload.options` array |
-| Punya `distractorRationale` | **104** (1,1% dari PG) | syarat kontrak rilis |
+| Soal pilihan ganda | 9.357 | punya `data_payload.options` array |
+| Punya `distractorRationale` | **112** (1,2% dari PG) | syarat kontrak rilis |
 | Punya `answer_key.rubric` | **0** | syarat soal esai |
 | Status `ready` | **0** | satu-satunya status yang boleh dipakai siswa |
 
@@ -32,18 +32,18 @@ Angka ini yang menentukan berapa soal yang **boleh** keluar ke siswa — bukan j
 
 | Invarian | Aktual | Minimum | Status |
 |---|---|---|---|
-| `tables` | 27 | 26 | ✓ |
+| `tables` | 26 | 26 | ✓ |
 | `checkConstraints` | 3 | 2 | ✓ |
 | `hnswIndexes` | 1 | 1 | ✓ |
 | `triggers` | 24 | 24 | ✓ |
 
-✓ Semua invarian memenuhi minimum. Selisih **di atas** minimum (mis. jumlah tabel lebih banyak) tidak otomatis sehat — periksa §4.
+✓ Semua invarian memenuhi minimum.
 
-Sumber angka minimum: `src/lib/db/schema-expectations.ts` — sama dengan `pnpm db:verify`.
+Aturan lulus/gagal: `evaluateInvariants()` di `src/lib/db/schema-expectations.ts` — sama persis dengan `pnpm db:verify` dan health check.
 
 ## 4. Objek di luar harapan
 
-⚠️ `question_options_mat146_backup` — tabel sisa migrasi, bukan bagian skema. Perlu keputusan pemilik: arsipkan isinya lalu DROP.
+✓ Tidak ada tabel sisa migrasi / objek terlarang.
 
 ## 5. Query sumber (reproduksi)
 
@@ -51,12 +51,22 @@ Sumber angka minimum: `src/lib/db/schema-expectations.ts` — sama dengan `pnpm 
 -- skema
 SELECT
   (SELECT count(*) FROM information_schema.tables
-    WHERE table_schema='public' AND table_type='BASE TABLE') AS tables,
+    WHERE table_schema='public' AND table_type='BASE TABLE'
+      AND right(table_name, 7) <> '_backup') AS tables,
   (SELECT count(*) FROM pg_constraint
     WHERE contype='c' AND connamespace='public'::regnamespace) AS checks,
   (SELECT count(*) FROM pg_indexes WHERE schemaname='public') AS indexes,
   (SELECT count(*) FROM pg_indexes WHERE indexdef ILIKE '%hnsw%') AS hnsw,
   (SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal) AS triggers;
+
+-- nama objek (dipakai gerbang invarian)
+SELECT table_name AS name FROM information_schema.tables
+  WHERE table_schema='public' AND table_type='BASE TABLE';
+SELECT conname AS name FROM pg_constraint
+  WHERE contype='c' AND connamespace='public'::regnamespace;
+SELECT tgname AS name FROM pg_trigger WHERE NOT tgisinternal;
+SELECT column_default FROM information_schema.columns
+  WHERE table_name='questions' AND column_name='id';
 
 -- soal
 SELECT
@@ -106,12 +116,6 @@ SELECT
 
 -- dimensi vektor
 SELECT vector_dims(embedding) AS dim FROM question_embeddings LIMIT 1;
-
--- tabel sisa migrasi
-SELECT table_name FROM information_schema.tables
-  WHERE table_schema='public' AND table_type='BASE TABLE'
-    AND table_name LIKE '%\_backup' ESCAPE '\'
-  ORDER BY 1;
 ```
 
 Reproduksi cepat: `pnpm metrics:snapshot` (menulis ulang berkas ini) atau `pnpm db:verify` untuk invarian saja.
