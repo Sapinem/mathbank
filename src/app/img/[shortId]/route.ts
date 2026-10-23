@@ -62,6 +62,19 @@ export async function GET(
     const asset = await findAssetByShortId(shortId);
     if (!asset) return errorJson("NOT_FOUND", "Media tidak ditemukan.", 404);
 
+    // ACT-17: Dukungan ETag / If-None-Match → 304 Not Modified
+    const etag = `"${asset.contentHash || shortId}"`;
+    const ifNoneMatch = req.headers.get("if-none-match");
+    if (ifNoneMatch === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          "ETag": etag,
+          "Cache-Control": CACHE_CONTROL,
+        },
+      });
+    }
+
     // 3) Fallback Tri-Facet: SVG (vektor) → raster asli → thumbnail.
     const candidates: { path: string; mime: string }[] = [];
     if (asset.svgPath) candidates.push({ path: asset.svgPath, mime: "image/svg+xml" });
@@ -89,6 +102,7 @@ export async function GET(
         const headers: Record<string, string> = {
           "Content-Type": c.mime,
           "Content-Length": String(bytes.length),
+          "ETag": etag,
           "Cache-Control": CACHE_CONTROL,
           "X-Content-Type-Options": "nosniff",
         };

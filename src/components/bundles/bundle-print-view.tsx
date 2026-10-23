@@ -10,6 +10,7 @@ import { MathContent } from "@/components/math/math-content";
 import { isOptionBased } from "@/lib/contracts/question";
 import { useBundle } from "@/lib/hooks/use-bundles";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
+import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
 import { cn } from "@/lib/utils";
 
 /**
@@ -46,7 +47,7 @@ export function BundlePrintView() {
   const { data: bundle, isPending, isError, error } = useBundle(bundleId);
 
   const [columns, setColumns] = useState<ColumnMode>("1");
-  const [keyMode, setKeyMode] = useState<KeyMode>("hidden");
+  const [keyModeOverride, setKeyModeOverride] = useState<KeyMode | null>(null);
   const [includeAnswerSheet, setIncludeAnswerSheet] = useState(true);
   const [includeExplanation, setIncludeExplanation] = useState(false);
 
@@ -62,6 +63,21 @@ export function BundlePrintView() {
   const canShowKey = items.some((it) => it.question.answerKey != null);
   // Bisa tampilkan pembahasan bila ada minimal satu soal punya explanation.
   const canShowExplanation = items.some((it) => it.question.answerKey?.explanation != null);
+
+  const config: BundlePrintConfig = bundle.printConfig ?? {
+    institutionName: "Math My ID",
+    twoColumnLayout: true,
+    includeAnswerKey: false,
+    showQuestionNumber: true,
+    pageSize: "A4",
+  };
+  const effectiveKeyMode: KeyMode =
+    keyModeOverride ?? (config.includeAnswerKey ? "separate" : "hidden");
+  const institution = config.institutionName || "MATH MY ID";
+  const tagline = config.tagline ?? "Bank Soal & Kurasi Matematika";
+  const instructions = config.instructions ?? bundle.instructions;
+  const durationMinutes = config.durationMinutes ?? bundle.durationMinutes;
+  const isTwoColumn = config.twoColumnLayout !== false;
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,26 +112,26 @@ export function BundlePrintView() {
           <div className="flex gap-1">
             <Button
               size="sm"
-              variant={keyMode === "hidden" ? "default" : "outline"}
-              onClick={() => setKeyMode("hidden")}
+              variant={effectiveKeyMode === "hidden" ? "default" : "outline"}
+              onClick={() => setKeyModeOverride("hidden")}
               className="min-h-[44px]"
             >
               Sembunyikan
             </Button>
             <Button
               size="sm"
-              variant={keyMode === "inline" ? "default" : "outline"}
+              variant={effectiveKeyMode === "inline" ? "default" : "outline"}
               disabled={!canShowKey}
-              onClick={() => setKeyMode("inline")}
+              onClick={() => setKeyModeOverride("inline")}
               className="min-h-[44px]"
             >
               Tandai tebal
             </Button>
             <Button
               size="sm"
-              variant={keyMode === "separate" ? "default" : "outline"}
+              variant={effectiveKeyMode === "separate" ? "default" : "outline"}
               disabled={!canShowKey}
-              onClick={() => setKeyMode("separate")}
+              onClick={() => setKeyModeOverride("separate")}
               className="min-h-[44px]"
             >
               Lembar terpisah
@@ -181,17 +197,19 @@ export function BundlePrintView() {
           kertas A4; padding 15mm menyelaraskan dengan @page margin. */}
       <div className="print-sheet worksheet mx-auto w-full max-w-[210mm] rounded-lg border bg-white p-[15mm] text-black shadow-sm print:border-0 print:p-0 print:shadow-none">
         {/* Kop Resmi (Format Varian C Prototype Soal) */}
-        <header className="header mb-4">
+        <header className="header print-header mb-4">
           <div className="headerTop flex justify-between items-start">
             <div className="headerLeft flex items-center gap-2">
               <div className="logo bg-[#0b6b3a] text-white px-2 py-1 rounded text-[10px] font-bold text-center leading-tight">
                 MATH<br />MY ID
               </div>
               <div className="institution text-xs font-bold leading-tight">
-                MATH MY ID
-                <span className="tagline block font-normal text-[10px] text-gray-600">
-                  Bank Soal & Kurasi Matematika
-                </span>
+                {institution.toUpperCase()}
+                {tagline && (
+                  <span className="tagline block font-normal text-[10px] text-gray-600">
+                    {tagline}
+                  </span>
+                )}
               </div>
             </div>
             <div className="title text-2xl font-extrabold text-[#0b6b3a] tracking-wide text-right">
@@ -217,31 +235,31 @@ export function BundlePrintView() {
                   year: "numeric",
                 }).format(new Date())}
               </i>
-              {bundle.durationMinutes && (
-                <i className="not-italic text-gray-600">Waktu: {bundle.durationMinutes} menit</i>
+              {durationMinutes && (
+                <i className="not-italic text-gray-600">Waktu: {durationMinutes} menit</i>
               )}
             </div>
           </div>
         </header>
 
-        {bundle.instructions && (
-          <div className="instruction border border-[#0b6b3a] rounded-md p-2.5 mb-4 text-xs italic">
-            {bundle.instructions}
+        {instructions && (
+          <div className="instruction print-instruction border border-[#0b6b3a] rounded-md p-2.5 mb-4 text-xs italic">
+            {instructions}
           </div>
         )}
 
         {/* Daftar soal — 1 atau 2 kolom */}
         <ol
-          className={
-            columns === "2"
-              ? "columns-1 gap-8 sm:columns-2 [&>li]:break-inside-avoid"
-              : "flex flex-col gap-5"
-          }
+          className={cn(
+            isTwoColumn
+              ? "print-columns columns-1 gap-8 sm:columns-2 [&>li]:break-inside-avoid"
+              : "print-single-column flex flex-col gap-5",
+          )}
         >
           {items.map((it) => {
             if (it.item.role === "stimulus") {
               return (
-                <li key={it.item.id} className="print-question list-none">
+                <li key={it.item.id} className="print-question print-stimulus list-none">
                   <div className="rounded border-l-4 border-gray-300 bg-gray-50 p-3 text-sm">
                     <MathContent content={it.question.contentMarkdown} />
                   </div>
@@ -251,16 +269,19 @@ export function BundlePrintView() {
             // Nomor urut soal (1..n)
             const num = questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
             const correct = correctLabelsOf(it);
+            const showNumber = config.showQuestionNumber !== false;
             return (
-              <li key={it.item.id} className="print-question flex gap-2">
-                <span className="w-6 shrink-0 text-right font-medium tabular-nums">{num}.</span>
-                <div className="min-w-0 flex-1">
+              <li key={it.item.id} className="print-question print-item flex gap-2">
+                {showNumber && (
+                  <span className="print-item-number w-6 shrink-0 text-right font-medium tabular-nums">{num}.</span>
+                )}
+                <div className={cn("min-w-0 flex-1", !showNumber && "pl-0")}>
                   <MathContent content={it.question.contentMarkdown} />
                   {isOptionBased(it.question.questionType as never) &&
                     it.question.options.length > 0 && (
                       <ul
                         className={cn(
-                          "mt-1.5 gap-1 text-sm",
+                          "print-options mt-1.5 gap-1 text-sm",
                           columns === "2"
                             ? "grid grid-cols-1 sm:grid-cols-2"
                             : "flex flex-col",
@@ -268,7 +289,7 @@ export function BundlePrintView() {
                       >
                         {it.question.options.map((o) => {
                           const isKey =
-                            keyMode === "inline" && (o.isCorrect || correct.includes(o.label));
+                            effectiveKeyMode === "inline" && (o.isCorrect || correct.includes(o.label));
                           return (
                             <li key={o.id} className="flex gap-2 break-inside-avoid">
                               <span className={isKey ? "font-bold" : "font-medium"}>
@@ -289,7 +310,7 @@ export function BundlePrintView() {
         </ol>
 
         {/* Lembar kunci jawaban terpisah */}
-        {keyMode === "separate" && canShowKey && (
+        {effectiveKeyMode === "separate" && canShowKey && (
           <section className="print-sheet-answerkey mt-8 border-t pt-4">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Kunci Jawaban</h2>
             <ol className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:grid-cols-3">

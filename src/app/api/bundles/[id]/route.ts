@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
+import { bundlePrintConfigSchema } from "@/lib/contracts/bundle";
 import {
   getBundle,
   updateBundle,
@@ -21,6 +22,7 @@ const patchSchema = z.object({
   grade: z.string().max(20).nullable().optional(),
   durationMinutes: z.number().int().min(1).max(600).optional(),
   instructions: z.string().max(5000).nullable().optional(),
+  printConfig: bundlePrintConfigSchema.optional(),
   status: z.enum(["draft", "review", "ready", "archived"]).optional(),
 });
 

@@ -7,6 +7,18 @@ import { z } from "zod";
  * `origin` ('ingest' | 'manual') membedakan jalur pembuatan.
  */
 
+/** Skema validasi konfigurasi cetak naskah soal (Pilar 4 · Publishing Engine V2). */
+export const bundlePrintConfigSchema = z.object({
+  institutionName: z.string().max(255).optional(),
+  tagline: z.string().max(500).optional(),
+  instructions: z.string().max(2000).optional(),
+  durationMinutes: z.number().int().min(1).max(600).optional(),
+  twoColumnLayout: z.boolean().optional(),
+  includeAnswerKey: z.boolean().optional(),
+  showQuestionNumber: z.boolean().optional(),
+  pageSize: z.enum(["A4", "Letter"]).optional(),
+});
+
 /** Field yang boleh diisi saat buat paket. */
 const baseFields = {
   title: z.string().trim().min(1).max(255),
@@ -18,6 +30,7 @@ const baseFields = {
   grade: z.string().trim().max(20).nullish(),
   durationMinutes: z.number().int().min(1).max(600).optional(),
   instructions: z.string().max(5000).nullish(),
+  printConfig: bundlePrintConfigSchema.optional(),
 };
 
 export const createBundleSchema = z.object(baseFields);
@@ -32,6 +45,7 @@ export const updateBundleSchema = z.object({
   grade: baseFields.grade,
   durationMinutes: baseFields.durationMinutes,
   instructions: baseFields.instructions,
+  printConfig: bundlePrintConfigSchema.optional(),
   status: z.enum(["draft", "review", "ready", "archived"]).optional(),
 });
 
@@ -44,6 +58,7 @@ export const listBundlesQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
+export type BundlePrintConfigContract = z.infer<typeof bundlePrintConfigSchema>;
 export type CreateBundleContract = z.infer<typeof createBundleSchema>;
 export type UpdateBundleContract = z.infer<typeof updateBundleSchema>;
 export type ListBundlesQuery = z.infer<typeof listBundlesQuerySchema>;
