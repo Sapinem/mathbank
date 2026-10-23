@@ -45,10 +45,15 @@ function setupHooks(tags: TagRow[], pending = false, error: Error | null = null)
     isError: !!error,
     error,
   } as ReturnType<typeof useTags>);
-  vi.mocked(useCreateTag).mockReturnValue(noopMutation as ReturnType<typeof useCreateTag>);
-  vi.mocked(useUpdateTag).mockReturnValue(noopMutation as ReturnType<typeof useUpdateTag>);
-  vi.mocked(useDeleteTag).mockReturnValue(noopMutation as ReturnType<typeof useDeleteTag>);
-  vi.mocked(useMergeTags).mockReturnValue(noopMutation as ReturnType<typeof useMergeTags>);
+  // Stub mutasi minimal: komponen hanya memakai `mutate`/`isPending`, sedangkan
+  // `UseMutationResult` TanStack Query mewajibkan belasan field lain (context,
+  // failureCount, reset, …). Cast lewat `unknown` sekali di sini (bukan `any`)
+  // agar sisa berkas tetap type-safe (MAT-159).
+  const stubMutation = noopMutation as unknown;
+  vi.mocked(useCreateTag).mockReturnValue(stubMutation as ReturnType<typeof useCreateTag>);
+  vi.mocked(useUpdateTag).mockReturnValue(stubMutation as ReturnType<typeof useUpdateTag>);
+  vi.mocked(useDeleteTag).mockReturnValue(stubMutation as ReturnType<typeof useDeleteTag>);
+  vi.mocked(useMergeTags).mockReturnValue(stubMutation as ReturnType<typeof useMergeTags>);
 }
 
 function renderLabels() {

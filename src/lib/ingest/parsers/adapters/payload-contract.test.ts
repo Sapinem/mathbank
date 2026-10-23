@@ -35,13 +35,22 @@ function baseItem(over: Partial<ParsedItem> = {}): ParsedItem {
   };
 }
 
-/** Payload harus lolos kedua skema; mengembalikan hasil parse untuk diperiksa. */
+/**
+ * Payload harus lolos kedua skema; mengembalikan hasil parse untuk diperiksa.
+ *
+ * `safeParse` mengembalikan `data?: T`, jadi pengecekan `expect(...).toBe(true)`
+ * saja tidak menyempitkan tipe (MAT-159). Setelah asersi, hasilnya dijaga
+ * dengan `if (!x.success) throw` supaya pemanggil menerima tipe yang sudah
+ * pasti — tanpa `!`/`as` yang menyembunyikan kegagalan nyata.
+ */
 function expectSchemaValid(item: ParsedItem) {
   const built = buildQuestionPayload(item);
   const data = questionDataPayloadSchema.safeParse(built.dataPayload);
   expect(data.success, JSON.stringify(data.error?.issues)).toBe(true);
+  if (!data.success) throw new Error(`data_payload ditolak skema: ${JSON.stringify(data.error.issues)}`);
   const key = answerKeySchema.safeParse(built.answerKey);
   expect(key.success, JSON.stringify(key.error?.issues)).toBe(true);
+  if (!key.success) throw new Error(`answer_key ditolak skema: ${JSON.stringify(key.error.issues)}`);
   return { built, dataPayload: data.data, answerKey: key.data };
 }
 

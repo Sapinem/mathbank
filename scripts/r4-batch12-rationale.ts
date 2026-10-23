@@ -17,6 +17,14 @@ const DATABASE_URL = process.env.DATABASE_URL!;
 
 const sql = postgres(DATABASE_URL, { max: 2 });
 
+/**
+ * postgres.js `sql.json()` hanya menerima tipe JSON murni (`JSONValue`),
+ * sedangkan payload di skrip ini dibangun dinamis (`Record<string, unknown>`).
+ * Sempitkan sekali di sini — bukan `any` di titik pemakaian (MAT-159).
+ */
+const toJsonb = (value: unknown): Parameters<typeof sql.json>[0] =>
+  value as Parameters<typeof sql.json>[0];
+
 interface OptionWithRationale {
   id: string;
   contentMarkdown: string;
@@ -389,7 +397,7 @@ async function applyPatch(q: QuestionPatch): Promise<boolean> {
     SET data_payload = jsonb_set(
       data_payload,
       '{options}',
-      ${sql.json(updated)}::jsonb,
+      ${sql.json(toJsonb(updated))}::jsonb,
       true
     )
     WHERE id = ${q.id}::uuid

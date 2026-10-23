@@ -202,13 +202,17 @@ type PayloadGate =
   | { ok: true; dataPayload: Record<string, unknown>; answerKey: AnswerKey }
   | { ok: false; message: string };
 
-/** Rangkum `ZodError.issues` jadi satu baris pendek (maks 4 issue). */
-function formatIssues(error: {
-  issues: { path: (string | number)[]; message: string }[];
-}): string {
+/**
+ * Rangkum `ZodError.issues` jadi satu baris pendek (maks 4 issue).
+ *
+ * `path` di Zod 4 bertipe `PropertyKey[]` (bisa memuat `symbol`), bukan
+ * `(string | number)[]` — karena itu tiap segmen di-`String()` lebih dulu
+ * (MAT-159).
+ */
+function formatIssues(error: { issues: { path: PropertyKey[]; message: string }[] }): string {
   return error.issues
     .slice(0, 4)
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+    .map((i) => `${i.path.map(String).join(".") || "(root)"}: ${i.message}`)
     .join("; ");
 }
 
@@ -339,6 +343,12 @@ export async function commitItems(
           contentMarkdown: it.stem,
           // Opsi & kunci TIDAK lagi lewat parameter relasional `options`
           // (MAT-147): keduanya sudah di dalam JSONB di bawah.
+          //
+          // `options: []` tetap dikirim karena kontrak `CreateQuestionInput`
+          // mewajibkan field itu (default Zod `[]` = wajib di tipe keluaran).
+          // Nilai kosong membuat normalisasi gerbang tulis tidak menyentuh
+          // `data_payload.options` — bentuk legacy ini hanya jaring kompatibilitas.
+          options: [],
           dataPayload: gate.dataPayload,
           answerKey: gate.answerKey,
           status: "draft", // keputusan: SEMUA draft

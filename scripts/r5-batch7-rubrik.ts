@@ -14,6 +14,14 @@ config({ path: ".env" });
 const DRY_RUN = process.env.DRY_RUN !== "0";
 const sql = postgres(process.env.DATABASE_URL!, { max: 2 });
 
+/**
+ * postgres.js `sql.json()` hanya menerima tipe JSON murni (`JSONValue`),
+ * sedangkan payload di skrip ini dibangun dinamis. Sempitkan sekali di sini —
+ * bukan `any` di titik pemakaian (MAT-159).
+ */
+const toJsonb = (value: unknown): Parameters<typeof sql.json>[0] =>
+  value as Parameters<typeof sql.json>[0];
+
 interface RubrikStep {
   step: string;
   points: number;
@@ -457,7 +465,7 @@ async function applyRubrik(essay: EssayRubrik): Promise<boolean> {
   // Write back: if original was string-encoded, keep as JSONB object
   await sql`
     UPDATE questions
-    SET answer_key = ${sql.json(updatedAk)}::jsonb
+    SET answer_key = ${sql.json(toJsonb(updatedAk))}::jsonb
     WHERE id = ${essay.id}::uuid
     AND deleted_at IS NULL
   `;
