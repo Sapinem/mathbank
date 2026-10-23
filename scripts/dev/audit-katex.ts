@@ -14,7 +14,7 @@ async function auditKatex() {
   const { questions } = await import("../../src/lib/db/schema/question");
   const { sources } = await import("../../src/lib/db/schema/source");
   const { bundles, bundleItems } = await import("../../src/lib/db/schema/bundle");
-  const { tokenizeMath } = await import("../../src/components/math/math-content");
+  const { tokenizeMath } = await import("../../src/lib/math/tokenize");
   const { eq } = await import("drizzle-orm");
 
   const rows = await db

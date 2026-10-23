@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  tokenizeMath,
-  renderMath,
-  mathCacheSize,
-  clearMathCache,
-} from "./math-content";
+import { tokenizeMath } from "@/lib/math/tokenize";
+import { renderMath, mathCacheSize, clearMathCache } from "./math-content";
 
 describe("tokenizeMath", () => {
   it("mengenali $...$ (inline)", () => {

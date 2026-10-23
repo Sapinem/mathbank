@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tokenizeMath } from "./math-content";
+import { tokenizeMath } from "@/lib/math/tokenize";
 
 /**
  * Tokenisasi `{{img:<shortId>}}` di MathContent (G4.4).

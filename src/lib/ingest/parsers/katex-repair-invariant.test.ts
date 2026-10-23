@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { repairAdaptive, katexErrorCount, REPAIRS } from "./katex-repair";
+import { repairAdaptive, katexErrorCount, countMathTokens, REPAIRS } from "./katex-repair";
 
 /**
  * Setiap perbaikan di `REPAIRS` harus:
@@ -47,6 +47,30 @@ describe("katex-repair — invariant seluruh perbaikan", () => {
         const out = r.apply(t);
         expect(katexErrorCount(out)).toBeLessThanOrEqual(base + 1);
       }
+    }
+  });
+
+  it("INVARIANT: perbaikan tidak boleh MENGHILANGKAN rumus", () => {
+    // Galat bisa "turun" hanya karena delimiter dibuang — token math hilang
+    // dari hitungan, isinya jadi teks mentah. Itu bukan perbaikan.
+    for (const [label, t] of KASUS) {
+      const r = repairAdaptive(t);
+      expect(countMathTokens(r.text), label).toBeGreaterThanOrEqual(countMathTokens(t));
+    }
+  });
+
+  it("regresi: satu galat inline TIDAK menghapus delimiter rumus lain", () => {
+    const t = "\\(\\Salah\\) dan \\(x^{2}+1\\)";
+    const r = repairAdaptive(t);
+    expect(r.after).toBe(0);
+    expect(r.text).toContain("\\(x^{2}+1\\)");
+    expect(countMathTokens(r.text)).toBe(2);
+  });
+
+  it("perintah pembatas ukuran tidak diubah jadi teks", () => {
+    const t = "\\(\\Bigl( x \\Bigr)\\)";
+    for (const r of REPAIRS) {
+      expect(r.apply(t)).not.toContain("\\text{Bigl}");
     }
   });
 

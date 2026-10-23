@@ -9,7 +9,7 @@
  * **Tidak** memblokir simpan — hanya memberi peringatan (keputusan G2).
  */
 import katex from "katex";
-import { tokenizeMath } from "@/components/math/math-content";
+import { tokenizeMath } from "@/lib/math/tokenize";
 
 export interface KatexDiagnostic {
   /** Potongan rumus yang bermasalah (mentah). */

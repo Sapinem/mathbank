@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tokenizeMath, splitTableBlocks } from "./math-content";
+import { tokenizeMath, splitTableBlocks } from "@/lib/math/tokenize";
 
 /**
  * Dukungan tabel markdown GFM (pipe table) di MathContent.

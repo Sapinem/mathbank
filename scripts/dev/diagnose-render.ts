@@ -9,7 +9,7 @@ config({ path: ".env" });
 async function diagnoseRender() {
   const { db } = await import("../../src/lib/db");
   const { questions } = await import("../../src/lib/db/schema/question");
-  const { tokenizeMath } = await import("../../src/components/math/math-content");
+  const { tokenizeMath } = await import("../../src/lib/math/tokenize");
   const { eq } = await import("drizzle-orm");
 
   const ids = process.argv.slice(2);

@@ -13,7 +13,7 @@
  * Ini dijalankan sebagai LAPIS AKHIR setelah `normalizeMath`, jadi tidak
  * mengganggu kasus yang sudah benar.
  */
-import { tokenizeMath } from "@/components/math/math-content";
+import { tokenizeMath } from "@/lib/math/tokenize";
 import katex from "katex";
 
 /**
@@ -83,7 +83,12 @@ const LATEX_COMMANDS = new Set([
   "Alpha", "Beta", "Epsilon", "Zeta", "Eta", "Iota", "Kappa", "Mu", "Nu", "Xi", "Rho", "Tau",
   "Upsilon", "Chi", "Omicron", "Pi", "Times", "Div", "Cdot", "Pm", "Mp", "Leq", "Geq", "Neq",
   "Approx", "Equiv", "Propto", "Infty", "Partial", "Nabla", "Overline", "Underline", "Bigcup",
-  "Bigcap", "Bigvee", "Bigwedge"
+  "Bigcap", "Bigvee", "Bigwedge",
+  // Pembatas ukuran & simbol himpunan/logika yang SAH di KaTeX. Tanpa entri
+  // ini, `backslash-teks-palsu` mengubah `\Bigl(` menjadi `\text{Bigl}(`
+  // (teks biasa, bukan pembatas) — rusak tapi galat tidak bertambah.
+  "Bigl", "Bigr", "Biggl", "Biggr", "Box", "Cup", "Cap", "Subset", "Supset",
+  "Vdash", "Checkmark", "Square", "Diamond", "Triangle", "Angle"
 ]);
 
 export const REPAIRS: Repair[] = [
@@ -288,10 +293,12 @@ export const REPAIRS: Repair[] = [
       out = out.replace(/\\\(([^()\\]{1,3})\\\)/g, (m, isi: string) =>
         /[A-Za-z0-9]/.test(isi) && !/^[\s_\-+*.,;:!?]$/.test(isi) ? m : isi,
       );
-      // ⚠️ SISA `\(…\)` yang masih tertinggal di TENGAH rumus (bukan pemisah):
-      // buang delimiter-nya, sisakan isinya (sudah math-mode).
-      // Contoh nyata: `…\right)\(Untuk titik\)A\left(…` → `…\right)Untuk titik A\left(…`.
-      out = out.replace(/\\\(([\s\S]*?)\\\)/g, "$1");
+      // ⚠️ JANGAN tambahkan `out.replace(/\\\(([\s\S]*?)\\\)/g, "$1")` di sini.
+      // Dulu baris itu ada dan membuang SELURUH delimiter `\(…\)` di teks,
+      // bukan hanya sisa di dalam rumus — sehingga soal dengan satu galat
+      // kehilangan semua rumus inline-nya (`\(\Salah\) dan \(x^{2}+1\)`
+      // → `\Salah dan x^{2}+1`) dan tetap dilaporkan "0 galat".
+      // Sisa `\(…\)` di dalam display ditangani `inline-dalam-display`.
       return out;
     },
   },
@@ -696,6 +703,17 @@ export const REPAIRS: Repair[] = [
 ];
 
 /**
+ * Jumlah token math ber-delimiter pada teks.
+ *
+ * Dipakai sebagai PAGAR: "memperbaiki" dengan membuang delimiter memang
+ * menurunkan galat (token hilang dari hitungan), padahal isinya rusak. Setiap
+ * kandidat perbaikan wajib mempertahankan jumlah token math.
+ */
+export function countMathTokens(text: string): number {
+  return tokenizeMath(text).filter((t) => t.kind === "math").length;
+}
+
+/**
  * Jalankan perbaikan secara adaptif: hanya pertahankan yang MENURUNKAN galat
  * KaTeX. Idempoten & aman — teks tanpa galat dikembalikan apa adanya.
  */
@@ -706,6 +724,10 @@ export function repairAdaptive(text: string): { text: string; applied: string[];
   let cur = text;
   let best = before;
   const applied: string[] = [];
+  // Pagar anti "memperbaiki dengan menghapus": jumlah token math tidak boleh
+  // turun. Semua kandidat yang diterima menjaga nilai ini, jadi cukup dihitung
+  // sekali di awal.
+  const tokenAwal = countMathTokens(cur);
   // ⚠️ ULANGI seluruh daftar sampai tak ada perbaikan yang menurunkan galat.
   // Alasan (bug nyata): satu perbaikan bisa MEMBUKA jalan perbaikan lain
   // (mis. `bracket-dalam-inline` merapikan dulu, baru `bracket-bersarang-…`
@@ -725,6 +747,9 @@ export function repairAdaptive(text: string): { text: string; applied: string[];
         continue;
       }
       if (next === cur) continue;
+      // Tolak kandidat yang menghilangkan rumus (delimiter dibuang / token
+      // dilebur). Tanpa pagar ini, "galat turun" bisa berarti "math hilang".
+      if (countMathTokens(next) < tokenAwal) continue;
       const n = katexErrorCount(next);
       // ⚠️ Terima yang MENURUNKAN galat, ATAU yang SERI tapi MENGUBAH teks —
       // karena perbaikan setengah jalan (mis. rapikan `\{…\}` dulu) bisa
