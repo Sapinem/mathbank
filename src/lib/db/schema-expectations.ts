@@ -10,10 +10,8 @@
  * `scripts/db-verify.ts`, dan tabel di `AGENTS.md` §8) dan ketiganya pernah
  * berbeda. Salinan tangan selalu basi.
  *
- * ⚠️ Sisa pekerjaan: `src/lib/db/invariants.ts` masih menyimpan salinan
- * `EXPECTED_INVARIANTS`/`REQUIRED_*` karena berkas itu sedang disentuh
- * perubahan MAT-146. Setelah itu selesai, ganti isinya dengan `export *`
- * dari berkas ini.
+ * Dipakai oleh: `src/lib/db/invariants.ts` (health check & guard startup),
+ * `scripts/db-verify.ts` (gerbang skema), dan `scripts/snapshot-metrics.ts`.
  */
 
 /** Harapan minimum skema (rata-rata setelah 0000..0017). */

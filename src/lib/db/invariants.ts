@@ -10,33 +10,17 @@
  */
 import { sql } from "drizzle-orm";
 import { db } from "./index";
+import {
+  EXPECTED_INVARIANTS,
+  REQUIRED_CHECKS,
+  REQUIRED_TRIGGERS,
+} from "./schema-expectations";
 
-/** Harapan minimum skema — selaras `scripts/db-verify.ts`. */
-export const EXPECTED_INVARIANTS = {
-  // MAT-39: collections & collection_items dihapus (28 → 26).
-  // ADR-0019: question_embeddings ditambahkan (26 → 27).
-  tables: 27,
-  checkConstraints: 2,
-  hnswIndexes: 1,
-  // MAT-39: collections trigger dihapus (25 → 24).
-  // ADR-0019: question_embeddings trigger ditambahkan (24 → 25).
-  triggers: 25,
-} as const;
-
-/** Trigger & CHECK kritis yang WAJIB ada (bukan sekadar jumlah). */
-export const REQUIRED_TRIGGERS = [
-  "trg_questions_updated_at",
-  "trg_questions_stimulus_depth",
-  "trg_topics_cycle",
-  "trg_question_topics_usage",
-  "trg_question_tags_usage",
-  "trg_audit_logs_immutable",
-] as const;
-
-export const REQUIRED_CHECKS = [
-  "chk_questions_difficulty",
-  "chk_topics_level",
-] as const;
+// Angka & daftar objek kritis TINGGAL di `schema-expectations.ts` (murni, tanpa
+// impor db) supaya `scripts/db-verify.ts` dan `scripts/snapshot-metrics.ts`
+// memakai sumber yang sama tanpa ikut membuka koneksi kedua. Diekspor ulang di
+// sini agar pemanggil lama (`/api/health`, `/api/ready`) tidak berubah.
+export { EXPECTED_INVARIANTS, REQUIRED_CHECKS, REQUIRED_TRIGGERS };
 
 export type InvariantReport = {
   ok: boolean;
