@@ -25,6 +25,8 @@ const patchSchema = z.object({
   ),
 });
 
+const emptyQuerySchema = z.object({}).optional();
+
 /**
  * GET /api/settings — pengaturan umum (secret dimask).
  * Hanya `settings:manage` (admin).
@@ -32,6 +34,7 @@ const patchSchema = z.object({
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "settings:manage",
+  query: emptyQuerySchema,
   handler: async () => {
     const items = await getSettings([...GENERAL_KEYS]);
     return { items };

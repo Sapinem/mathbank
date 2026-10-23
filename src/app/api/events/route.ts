@@ -11,10 +11,13 @@ const eventSchema = z.object({
   aliases: z.array(z.string().max(100)).max(50).optional(),
 });
 
+const emptyQuerySchema = z.object({}).optional();
+
 /** GET /api/events — daftar event (dengan subtes & aliases). */
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  query: emptyQuerySchema,
   handler: async () => listEvents(),
 });
 

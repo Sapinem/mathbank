@@ -41,24 +41,31 @@ import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
  *   error  → { error: { code, message } }
  */
 
-export interface RouteContext<TQuery, TBody> {
+export interface RouteContext<TQuery, TBody, TParams = Record<string, string>> {
   actor: Actor;
   query: TQuery;
   body: TBody;
   req: Request;
   /** Parameter rute dinamis, mis. { id } untuk /api/questions/[id]. */
-  params: Record<string, string>;
+  params: TParams;
 }
 
-export interface RouteOptions<TQuery, TBody, TResult> {
-  /** Izin yang dibutuhkan (dari matriks L1). */
+export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>> {
+  /**
+   * Membutuhkan autentikasi aktor (default: true).
+   * Bila false, endpoint dapat diakses publik tanpa login.
+   */
+  auth?: boolean;
+  /** Izin yang dibutuhkan (dari matriks L1). Otomatis mewajibkan autentikasi. */
   permission?: Permission;
   /** Skema query string (Zod). */
   query?: ZodType<TQuery>;
   /** Skema body JSON (Zod). */
   body?: ZodType<TBody>;
+  /** Skema parameter rute URL dinamis (Zod), mis. { id: z.string().uuid() }. */
+  params?: ZodType<TParams>;
   /** Handler inti. */
-  handler: (ctx: RouteContext<TQuery, TBody>) => Promise<TResult>;
+  handler: (ctx: RouteContext<TQuery, TBody, TParams>) => Promise<TResult>;
   /** Status sukses (default 200). */
   status?: number;
   /**
@@ -230,6 +237,31 @@ function errorResponse(
       ),
     );
   }
+  if (
+    err &&
+    typeof err === "object" &&
+    "httpStatus" in err &&
+    typeof (err as { httpStatus: unknown }).httpStatus === "number"
+  ) {
+    const e = err as {
+      httpStatus: number;
+      code?: string;
+      message?: string;
+      details?: unknown;
+    };
+    return withRid(
+      NextResponse.json(
+        {
+          error: {
+            code: e.code ?? "ERROR",
+            message: e.message ?? "Terjadi kesalahan",
+            ...(e.details !== undefined ? { details: e.details } : {}),
+          },
+        },
+        { status: e.httpStatus },
+      ),
+    );
+  }
   if (err instanceof RateLimitError) {
     const retryAfterSec = Math.ceil(err.retryAfterMs / 1000);
     return withRid(
@@ -280,8 +312,8 @@ function errorResponse(
  * Pemakaian:
  *   export const GET = wrapRoute({ query: listQuery, handler: async ({query, actor}) => ... });
  */
-export function wrapRoute<TQuery, TBody, TResult>(
-  opts: RouteOptions<TQuery, TBody, TResult>,
+export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>>(
+  opts: RouteOptions<TQuery, TBody, TResult, TParams>,
 ) {
   return async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
     // **#6 (enterprise):** ID permintaan untuk traceability. Pakai header dari
@@ -308,18 +340,22 @@ export function wrapRoute<TQuery, TBody, TResult>(
     try {
       const actor = await resolveActor(req.headers);
       actorIdForCleanup = actor?.id ?? null;
-      if (!actor) throw new UnauthorizedError();
-      if (actor.mustChangePassword && !opts.allowPasswordChangePending) {
+      const requireAuth = opts.auth ?? true;
+      if (requireAuth && !actor) throw new UnauthorizedError();
+      if (actor && actor.mustChangePassword && !opts.allowPasswordChangePending) {
         throw new PasswordChangeRequiredError();
       }
-      if (opts.permission) assertCan(actor, opts.permission);
+      if (opts.permission) {
+        if (!actor) throw new UnauthorizedError();
+        assertCan(actor, opts.permission);
+      }
 
       // Rate limit (bila diaktifkan) — di-key per aktor, fallback IP.
       if (opts.rateLimit) {
         const policy =
           opts.rateLimit === true ? DEFAULT_POLICY : opts.rateLimit;
         const key = rateLimitKey(
-          actor.id,
+          actor?.id ?? null,
           clientIp(req),
           opts.rateLimitScope ?? opts.permission ?? "default",
         );
@@ -335,14 +371,18 @@ export function wrapRoute<TQuery, TBody, TResult>(
         ? opts.body.parse(await parseJsonBody(req))
         : (undefined as TBody);
 
-      const params = (await args?.params) ?? {};
+      const rawParams = (await args?.params) ?? {};
+      const params = opts.params
+        ? opts.params.parse(rawParams)
+        : (rawParams as TParams);
 
       // **#4:** idempotensi (opsional) — hanya bila diaktifkan & klien kirim key.
       const idemKey = opts.idempotent
         ? req.headers.get("idempotency-key")?.slice(0, 128)
         : null;
       if (idemKey) {
-        const state = checkIdempotency(`${actor.id}:${idemKey}`);
+        const actorKey = actor?.id ?? clientIp(req) ?? "anon";
+        const state = checkIdempotency(`${actorKey}:${idemKey}`);
         if (state.kind === "replay") {
           const replay = NextResponse.json(state.body, { status: state.status });
           replay.headers.set("X-Request-ID", requestId);
@@ -364,12 +404,19 @@ export function wrapRoute<TQuery, TBody, TResult>(
         }
       }
 
-      const data = await opts.handler({ actor, query, body, req, params });
+      const data = await opts.handler({
+        actor: actor as Actor,
+        query,
+        body,
+        req,
+        params,
+      });
       const res = NextResponse.json({ data }, { status: opts.status ?? 200 });
       res.headers.set("X-Request-ID", requestId);
       if (idemKey) {
+        const actorKey = actor?.id ?? clientIp(req) ?? "anon";
         rememberResponse(
-          `${actor.id}:${idemKey}`,
+          `${actorKey}:${idemKey}`,
           opts.status ?? 200,
           { data },
         );
@@ -381,8 +428,8 @@ export function wrapRoute<TQuery, TBody, TResult>(
       // (key sama) tidak terjebak 409 — kesalahan bukan hasil yang di-cache.
       if (opts.idempotent) {
         const k = req.headers.get("idempotency-key")?.slice(0, 128);
-        const actorId = actorIdForCleanup; // diisi sesudah resolve (lihat di bawah)
-        if (k && actorId) getIdempotencyStore().forget(`${actorId}:${k}`);
+        const actorKey = actorIdForCleanup ?? clientIp(req) ?? "anon";
+        if (k) getIdempotencyStore().forget(`${actorKey}:${k}`);
       }
       return finish(
         errorResponse(err, requestId, {

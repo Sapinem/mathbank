@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { count, desc, eq, isNull, and, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
@@ -6,6 +7,8 @@ import { sources } from "@/lib/db/schema/source";
 import { bundles } from "@/lib/db/schema/bundle";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 
+const emptyQuerySchema = z.object({}).optional();
+
 /**
  * GET /api/stats — ringkasan dasbor (RENCANA-UI §3.1 "dasbor ramai").
  * Dihitung langsung dari DB (bukan data contoh).
@@ -13,6 +16,7 @@ import { wrapRoute } from "@/lib/api/route-wrapper";
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  query: emptyQuerySchema,
   handler: async () => {
     const [
       [total],

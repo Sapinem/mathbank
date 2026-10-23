@@ -1,5 +1,9 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { hardDeleteQuestion } from "@/lib/services/question-service";
+
+const paramsSchema = z.object({ id: z.string().uuid() });
+const emptyQuerySchema = z.object({}).optional();
 
 /**
  * DELETE /api/questions/[id]/permanent — hapus PERMANEN (hard delete).
@@ -13,6 +17,8 @@ import { hardDeleteQuestion } from "@/lib/services/question-service";
  */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 5, refillPerSec: 0.1 },
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params, actor }) => {
     await hardDeleteQuestion(params.id, actor);
     return { ok: true };

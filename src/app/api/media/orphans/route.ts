@@ -1,5 +1,8 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { findOrphanAssets } from "@/lib/services/media-service";
+
+const emptyQuerySchema = z.object({}).optional();
 
 /**
  * GET /api/media/orphans — aset yang tak dipakai soal mana pun (G4.6 hygiene).
@@ -10,5 +13,6 @@ import { findOrphanAssets } from "@/lib/services/media-service";
 export const GET = wrapRoute({
   permission: "media:manage",
   rateLimit: true,
+  query: emptyQuerySchema,
   handler: async () => findOrphanAssets(),
 });

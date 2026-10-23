@@ -1,6 +1,9 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { getAiConfig } from "@/lib/ai/config";
 import { listModels } from "@/lib/ai/client";
+
+const emptyQuerySchema = z.object({}).optional();
 
 /**
  * GET /api/ai/models — daftar model dari provider (fftur "pilih model yang tersedia").
@@ -10,6 +13,7 @@ import { listModels } from "@/lib/ai/client";
 export const GET = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 0.5 },
   permission: "settings:manage",
+  query: emptyQuerySchema,
   handler: async () => {
     const cfg = await getAiConfig();
     if (!cfg.baseUrl) return { models: [], error: "ai.base_url belum diatur." };

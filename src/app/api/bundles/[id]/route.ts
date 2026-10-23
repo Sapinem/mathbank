@@ -8,6 +8,9 @@ import {
 } from "@/lib/services/bundle-service";
 import { NotFoundError } from "@/lib/auth/guards";
 
+const paramsSchema = z.object({ id: z.string().uuid() });
+const emptyQuerySchema = z.object({}).optional();
+
 const patchSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   bundleType: z.enum(["source", "exam"]).optional(),
@@ -25,6 +28,8 @@ const patchSchema = z.object({
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params, actor }) => {
     const b = await getBundle(params.id);
     if (!b) throw new NotFoundError("Paket tidak ditemukan.");
@@ -43,6 +48,7 @@ export const GET = wrapRoute({
  */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
+  params: paramsSchema,
   body: patchSchema,
   handler: async ({ params, body, actor }) => updateBundle(params.id, body, actor),
 });
@@ -54,6 +60,8 @@ export const PATCH = wrapRoute({
  */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params, actor }) => {
     await archiveBundle(params.id, actor);
     return { ok: true };

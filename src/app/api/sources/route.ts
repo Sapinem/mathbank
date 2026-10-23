@@ -17,10 +17,13 @@ const createSchema = z.object({
   city: z.string().trim().max(100).nullish(),
 });
 
+const emptyQuerySchema = z.object({}).optional();
+
 /** GET /api/sources — daftar sumber (dengan usageCount). */
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  query: emptyQuerySchema,
   handler: async () => listSources(),
 });
 

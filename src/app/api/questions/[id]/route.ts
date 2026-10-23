@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { updateQuestionSchema } from "@/lib/contracts/question";
 import {
@@ -8,10 +9,15 @@ import {
 import { recordViewAudit } from "@/lib/services/audit";
 import { NotFoundError } from "@/lib/auth/guards";
 
+const paramsSchema = z.object({ id: z.string().uuid() });
+const emptyQuerySchema = z.object({}).optional();
+
 /** GET /api/questions/[id] — detail soal + opsi. */
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params, actor }) => {
     const q = await getQuestion(params.id, { viewer: actor });
     if (!q) throw new NotFoundError("Soal tidak ditemukan.");
@@ -40,6 +46,7 @@ export const GET = wrapRoute({
  */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
+  params: paramsSchema,
   body: updateQuestionSchema,
   handler: async ({ params, body, actor }) => updateQuestion(params.id, body, actor),
 });
@@ -52,6 +59,8 @@ export const PATCH = wrapRoute({
  */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 10, refillPerSec: 0.2 },
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params, actor }) => {
     await deleteQuestion(params.id, actor);
     return { ok: true };

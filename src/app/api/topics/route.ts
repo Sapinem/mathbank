@@ -9,10 +9,13 @@ const createSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
 });
 
+const emptyQuerySchema = z.object({}).optional();
+
 /** GET /api/topics — daftar topik (untuk filter & editor). */
 export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
+  query: emptyQuerySchema,
   handler: async () => listTopics(),
 });
 

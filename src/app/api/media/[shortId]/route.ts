@@ -1,13 +1,19 @@
+import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { ConflictError, NotFoundError } from "@/lib/auth/guards";
 import { deleteAsset, getMediaDetail, updateMediaMeta } from "@/lib/services/media-service";
 import { updateMediaSchema } from "@/lib/contracts/media";
 import { isValidShortId } from "@/lib/media/short-id";
 
+const paramsSchema = z.object({ shortId: z.string().min(1) });
+const emptyQuerySchema = z.object({}).optional();
+
 /** GET /api/media/[shortId] — detail aset + daftar soal yang memakainya. */
 export const GET = wrapRoute({
   permission: "question:view",
   rateLimit: true,
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params }) => {
     const shortId = params.shortId ?? "";
     if (!isValidShortId(shortId)) throw new NotFoundError("Media tidak ditemukan.");
@@ -21,6 +27,7 @@ export const GET = wrapRoute({
 export const PATCH = wrapRoute({
   permission: "media:manage",
   rateLimit: true,
+  params: paramsSchema,
   body: updateMediaSchema,
   handler: async ({ params, body }) => {
     const shortId = params.shortId ?? "";
@@ -41,6 +48,8 @@ export const PATCH = wrapRoute({
 export const DELETE = wrapRoute({
   permission: "media:manage",
   rateLimit: true,
+  params: paramsSchema,
+  query: emptyQuerySchema,
   handler: async ({ params }) => {
     const shortId = params.shortId ?? "";
     if (!isValidShortId(shortId)) throw new NotFoundError("Media tidak ditemukan.");
