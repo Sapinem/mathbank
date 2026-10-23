@@ -22,6 +22,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:verify": "tsx scripts/db-verify.ts",
+    "metrics:snapshot": "tsx scripts/snapshot-metrics.ts",
     "theme:build": "tsx scripts/theme/build.ts",
     "theme:check": "tsx scripts/theme/check.ts",
     "seed:taxonomy": "tsx scripts/seed-taxonomy.ts",

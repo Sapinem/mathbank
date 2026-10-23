@@ -108,25 +108,21 @@ pnpm build
 
 ## 8. Kondisi proyek saat ini (perbarui bila berubah)
 
-**Snapshot terverifikasi 2026-10-21.** Angka di bawah dihitung langsung dari DB produksi lokal
-(`psql "$DATABASE_URL"`) dan `pnpm db:verify` pada **DB utama dan DB uji**. Riwayat: snapshot
-2026-10-19 di `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md` — baris embedding, topik, media, dan
-jumlah index di sana **sudah usang**. **Jangan menulis angka dari ingatan** — hitung ulang, lalu
-perbarui tabel ini. Bukti & perintah verifikasi: `docs/SNAPSHOT-METRIK-2026-10-21.md`.
+**Angka metrik DIHASILKAN, bukan disimpan di sini.** Jalankan `pnpm metrics:snapshot` →
+`docs/SNAPSHOT-METRIK-<tanggal>.md`. Tabel angka dulu tinggal di bagian ini dan sudah basi
+(per 2026-10-24: jumlah soal, cakupan embedding, dan cakupan Zod semuanya berbeda dari DB).
+Salinan tangan selalu basi, dan angka basi menghasilkan "temuan" palsu.
 
-| Aspek | Nilai aktual (2026-10-21) |
-|---|---|
-| Skema | **26 tabel** · **24 trigger** · 3 CHECK · **86 index** (1 HNSW) · `db:verify` hijau (DB utama & DB uji) |
-| Soal | **11.889** — 100% `draft`, 0 `ready`, 22 soft-deleted; `answer_key` non-kosong 11.108 (93,4%); `is_flagged` 3.034 (25,5%) |
-| Bundle | **579** (577 aktif, 2 arsip) · rata-rata 21,4 soal/paket |
-| Topik | **174** · **8.468 soal terpetakan** (14.442 tautan `question_topics` — 71,2%) |
-| Media | **2.617** aset · **1.639 tautan** `question_media` menjangkau **1.506 soal** (12,7%) |
-| Tag | **17** tag · 35.598 tautan `question_tags` (11.866 soal) |
-| Provenance | **5 sumber** · **11 event** · 2.281 soal ber-`event_id` (19,2%) |
-| Vektor | **11.867 embedding** (99,8%) · `vector(1024)` · index HNSW **terisi** |
+Yang perlu dibaca cepat dari snapshot terbaru:
+- **§1 Ringkasan** — skema, volume soal/bundle/topik/media/tag/provenance/vektor.
+- **§2 Kelengkapan pedagogis** — gerbang rilis: berapa soal punya `distractorRationale`/`rubric`
+  dan berapa yang berstatus `ready`. Ini angka yang menentukan produk bisa dipakai.
+- **§4 Objek di luar harapan** — tabel sisa migrasi yang masih hidup di DB.
+
+Invarian skema tetap dijaga `pnpm db:verify` (angka minimum: `src/lib/db/schema-expectations.ts`).
 
 - ADR berlaku: **0009** (bundle satu tabel), **0010** (event), **0011** (stimulus), **0014** (sumber menempel bundle), **0015** (gabung books/institutions), **0016** (`collections`), **0017** (buang enum `exercise`), **0018** (drop `collections.origin`), **0019** (isolasi vektor), **0020** (event makro vs provenance naskah), **0021** (print config), **0022** (`wrapRoute`, larangan Server Actions). Total 22 ADR di `docs/ADR/`.
-- **Utang terbuka (2026-10-21):** 3.421 soal belum bertopik (28,8%) · 10.383 soal tanpa media (978 aset belum tertaut) · cakupan Zod route API 17/51 · layanan embedding `:3005` tidak selalu hidup (soal baru tak bisa di-embed saat mati) · status `pnpm test`/`pnpm lint` penuh perlu verifikasi ulang pemilik CI (MAT-115).
+- **Utang terbuka:** soal belum bertopik & tanpa media (angkanya di snapshot §1) · **belum ada satu pun soal `ready`** — 98,9% soal PG belum punya `distractorRationale`, 0 rubrik (snapshot §2) · layanan embedding `:3005` tidak selalu hidup · `main` tertinggal jauh di belakang branch kerja sehingga CI belum pernah menguji pekerjaan terbaru.
 
 ## 9. Arsitektur 6 lapisan & layanan embedding
 
