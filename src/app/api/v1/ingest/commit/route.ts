@@ -1,7 +1,7 @@
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { ingestCommitSchema } from "@/lib/contracts/ingest";
 import { listPending } from "@/lib/ingest/queue";
-import { commitIngestBatch } from "@/lib/ingest/service";
+import { commitIngestBatch } from "@/lib/ingest/commit-batch";
 import { ConflictError } from "@/lib/auth/guards";
 
 /**

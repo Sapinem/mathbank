@@ -16,9 +16,6 @@ import { segmentArticle, segmentJson } from "./parsers/segment";
 import { ingestArticleMedia, applyMedia, type MediaCache } from "./media/ingest-media";
 import { commitItems, type CommitFailure } from "./commit";
 import { markDone, markProcessing, toMediaManifest } from "./queue";
-import { mediaStorageRoot } from "./config";
-import { db } from "@/lib/db";
-import { resolveEventsForBundles, findUnknownEvents } from "./event-resolve";
 import { registerMediaAsset } from "@/lib/services/media-service";
 import type { IngestQueueItem } from "@/lib/db/schema/system";
 import type { ParsedItem } from "./parsers/types";
@@ -242,85 +239,6 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
       error: msg,
     };
   }
-}
-
-/** Ringkasan satu putaran commit batch. */
-export interface CommitBatchSummary {
-  processed: number;
-  created: number;
-  linked: number;
-  skipped: number;
-  /** Soal gagal dibuat (galat DB) + artikel yang gagal total. */
-  failed: number;
-  storedCount: number;
-  failedCount: number;
-  failures: CommitFailure[];
-  /** Sisa antrean yang belum diproses pada putaran ini. */
-  remaining: number;
-}
-
-/** Hasil satu putaran commit: ringkasan, detail per artikel, dan event. */
-export interface CommitBatchResult {
-  summary: CommitBatchSummary;
-  results: ProcessResult[];
-  eventsTagged: number;
-  unknownEvents: string[];
-}
-
-/**
- * Proses satu batch antrean `pending` → soal draft, lalu isi event otomatis.
- *
- * KENAPA di sini (ADR-0022): route cukup memvalidasi body lalu memanggil satu
- * fungsi domain. Sebelumnya route handler meng-`import()` db + event-resolve
- * sendiri dan merakit agregatnya — orkestrasi domain bocor ke lapisan HTTP,
- * sehingga alur ini hanya bisa diuji lewat route.
- *
- * EVENT: hanya menempelkan event yang SUDAH ada di katalog. Event baru tidak
- * dibuat otomatis; dilaporkan lewat `unknownEvents` agar pemilik memutuskan.
- */
-export async function commitIngestBatch(
-  items: IngestQueueItem[],
-  opts: { actor: Actor; limit: number; mediaDelayMs?: number; grade?: string | null },
-): Promise<CommitBatchResult> {
-  const batch = items.slice(0, opts.limit);
-  const root = mediaStorageRoot();
-  const results: ProcessResult[] = [];
-  for (const item of batch) {
-    results.push(
-      await processQueueItem(item, {
-        actor: opts.actor,
-        mediaRoot: root,
-        mediaDelayMs: opts.mediaDelayMs,
-        grade: opts.grade ?? null,
-      }),
-    );
-  }
-
-  const summary: CommitBatchSummary = {
-    processed: results.length,
-    created: results.reduce((a, r) => a + r.created, 0),
-    linked: results.reduce((a, r) => a + r.linked, 0),
-    skipped: results.reduce((a, r) => a + r.skipped, 0),
-    failed:
-      results.reduce((a, r) => a + r.failed, 0) + results.filter((r) => r.status === "failed").length,
-    storedCount: results.reduce((a, r) => a + r.storedCount, 0),
-    failedCount: results.reduce((a, r) => a + r.failedCount, 0),
-    failures: results.flatMap((r) => r.failures),
-    remaining: Math.max(0, items.length - batch.length),
-  };
-
-  const bundleIds = results.map((r) => r.bundleId).filter((x): x is string => Boolean(x));
-  if (bundleIds.length === 0) {
-    return { summary, results, eventsTagged: 0, unknownEvents: [] };
-  }
-
-  const ev = await resolveEventsForBundles(db, bundleIds);
-  return {
-    summary,
-    results,
-    eventsTagged: ev.bundlesTagged,
-    unknownEvents: await findUnknownEvents(db, bundleIds),
-  };
 }
 
 /** Parse JSON aman; kembalikan `null` bila rusak. */

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { checkDbInvariants } from "@/lib/db/invariants";
+import { toInvariantsDto } from "@/lib/db/schema-expectations";
+import { PUBLIC_DB_DOWN_MESSAGE } from "@/lib/api/public-messages";
+import { log } from "@/lib/telemetry/logger";
 
 /**
  * GET /api/ready — **readiness** probe (M16).
@@ -23,29 +26,32 @@ export async function GET() {
           status: report.ok ? "ready" : "degraded",
           db: "up",
           latencyMs: Date.now() - startedAt,
-          invariants: {
-            ok: report.ok,
-            counts: report.counts,
-            missingTriggers: report.missingTriggers,
-            missingChecks: report.missingChecks,
-            pkUsesUuidv7: report.pkUsesUuidv7,
-            problems: report.problems,
-          },
+          invariants: toInvariantsDto(report),
         },
       },
       { status: report.ok ? 200 : 503 },
     );
   } catch (err) {
+    // ACT-02: detail HANYA ke log server; publik dapat pesan generik.
+    log.error({
+      msg: "readiness check gagal — basis data tak terjangkau",
+      route: "/api/ready",
+      method: "GET",
+      code: "READY_DB_DOWN",
+      status: 503,
+      durationMs: Date.now() - startedAt,
+      err,
+    });
     return NextResponse.json(
       {
         data: {
           status: "down",
           db: "down",
           latencyMs: Date.now() - startedAt,
-          error: err instanceof Error ? err.message : "unknown",
+          message: PUBLIC_DB_DOWN_MESSAGE,
         },
       },
-      { status: 503 },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
 }

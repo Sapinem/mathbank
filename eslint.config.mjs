@@ -98,13 +98,23 @@ const eslintConfig = defineConfig([
     ...noBareSelectInApi,
   },
   /**
-   * BATAS LAPISAN — `src/lib/ingest/parsers/**` adalah L4 MURNI (AGENTS §9.1).
+   * BATAS LAPISAN — `src/lib/ingest/parsers/**` adalah fungsi MURNI di lapisan
+   * L3 (AGENTS §9.1 menempatkan `src/lib/ingest/` di L3; L4 hanya
+   * `src/lib/math/` dan `src/lib/export/`).
    *
    * Parser tidak boleh menyentuh DB, service, komponen React, atau API Next.
    * Aturan ini lahir dari bug nyata: `katex-repair.ts` sempat mengimpor
    * `@/components/math/math-content` (`"use client"`) hanya untuk memakai
    * `tokenizeMath`, sehingga lapisan ingest menarik React tanpa ketahuan.
    * Konvensi saja tidak cukup — pagar ini yang menahan pengulangannya.
+   *
+   * DUA lapis, dan keduanya perlu:
+   *  - `no-restricted-imports` mencocokkan SPECIFIER LITERAL, jadi hanya
+   *    menangkap alias (`@/lib/db`). Ia tidak melihat `../../../db`.
+   *  - `import/no-restricted-paths` me-resolve PATH, jadi menangkap impor
+   *    relatif dan modul saudara yang sama-sama membuka DB
+   *    (`../commit`, `@/lib/ingest/queue`).
+   * Tanpa lapis kedua, pagar ini hijau sementara kopling yang dilarang kembali.
    */
   {
     files: ["src/lib/ingest/parsers/**/*.ts"],
@@ -113,22 +123,52 @@ const eslintConfig = defineConfig([
         "error",
         {
           patterns: [
+            // Pola `**/...` wajib ada: aturan ini mencocokkan SPECIFIER, dan
+            // parser di repo ini mengimpor saudaranya secara relatif
+            // (`../commit`, `../../../db`). Alias saja tidak menutup jalur itu.
             {
-              group: ["@/lib/db", "@/lib/db/*"],
+              group: ["@/lib/db", "@/lib/db/*", "**/lib/db", "**/lib/db/*", "**/db", "**/db/*"],
               message: "Parser adalah L4 murni — jangan akses DB. Pindahkan ke src/lib/ingest/{service,commit,queue}.ts.",
             },
             {
-              group: ["@/lib/services", "@/lib/services/*"],
+              group: ["@/lib/services", "@/lib/services/*", "**/lib/services", "**/lib/services/*", "**/services", "**/services/*"],
               message: "Parser adalah L4 murni — jangan panggil service. Orkestrasi ada di src/lib/ingest/service.ts.",
             },
             {
-              group: ["@/components", "@/components/*"],
+              group: ["@/components", "@/components/*", "**/components", "**/components/*", "**/components/**"],
               message: "Parser adalah L4 murni — jangan impor komponen/UI. Logika murni taruh di src/lib/math/.",
+            },
+            {
+              group: [
+                "**/ingest/commit", "**/ingest/queue", "**/ingest/service", "**/ingest/event-resolve",
+                "**/commit", "**/queue", "**/service", "**/event-resolve",
+                "../commit", "../../commit", "../queue", "../../queue", "../service", "../../service",
+                "../event-resolve", "../../event-resolve",
+              ],
+              message: "Modul itu membuka DB. Orkestrasi ada di src/lib/ingest/service.ts — parser harus murni.",
             },
             {
               group: ["next", "next/*"],
               message: "Parser adalah L4 murni — jangan impor API Next.",
             },
+          ],
+        },
+      ],
+      // Lapis kedua: resolusi PATH, menangkap impor relatif & modul saudara
+      // yang membuka DB. Plugin `import` sudah didaftarkan eslint-config-next
+      // (dan di-shim di atas), jadi TIDAK didaftarkan ulang di sini.
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            { target: "./src/lib/ingest/parsers", from: "./src/lib/db", message: "Parser murni — jangan akses DB." },
+            { target: "./src/lib/ingest/parsers", from: "./src/lib/services", message: "Parser murni — jangan panggil service." },
+            { target: "./src/lib/ingest/parsers", from: "./src/lib/components", message: "Parser murni — jangan impor komponen/UI." },
+            { target: "./src/lib/ingest/parsers", from: "./src/components", message: "Parser murni — jangan impor komponen/UI." },
+            { target: "./src/lib/ingest/parsers", from: "./src/lib/ingest/commit", message: "commit membuka DB — orkestrasi ada di ingest/service.ts." },
+            { target: "./src/lib/ingest/parsers", from: "./src/lib/ingest/queue", message: "queue membuka DB — orkestrasi ada di ingest/service.ts." },
+            { target: "./src/lib/ingest/parsers", from: "./src/lib/ingest/service", message: "service mengimpor db — parser tak boleh memanggilnya." },
+            { target: "./src/lib/ingest/parsers", from: "./src/lib/ingest/event-resolve", message: "event-resolve membuka DB." },
           ],
         },
       ],

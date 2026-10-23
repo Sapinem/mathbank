@@ -8,8 +8,6 @@ import {
   KNOWN_SOURCES,
   HTML_SOURCES,
   JSON_SOURCES,
-  HTML_ADAPTERS,
-  JSON_ADAPTERS,
 } from "./index";
 
 // ── Fixture mini (potongan nyata dari korpus) ─────────────────
@@ -343,18 +341,19 @@ describe("pemilih adapter", () => {
 });
 
 describe("registry adapter — satu descriptor per sumber", () => {
-  it("map adapter DITURUNKAN dari daftar sumber (tak bisa lepas sinkron)", () => {
-    expect(Object.keys(HTML_ADAPTERS).sort()).toEqual(HTML_SOURCES.map((s) => s.source).sort());
-    expect(Object.keys(JSON_ADAPTERS).sort()).toEqual(JSON_SOURCES.map((s) => s.source).sort());
-  });
-
   it("nama sumber unik (tidak ada pendaftaran ganda)", () => {
     expect(new Set(KNOWN_SOURCES).size).toBe(KNOWN_SOURCES.length);
   });
 
-  it("setiap sumber HTML menyatakan detektornya secara eksplisit (RegExp atau null)", () => {
+  // Asersi pada NILAI, bukan himpunan key: peta adapter diturunkan dari daftar
+  // sumber, jadi membandingkan key-nya dengan daftar itu tidak bisa gagal.
+  // Yang perlu dibuktikan adalah adapter yang benar-benar terpasang per sumber.
+  it("setiap sumber terhubung ke adapter-nya lewat entry point publik", () => {
     for (const s of HTML_SOURCES) {
-      expect(s.detect === null || s.detect instanceof RegExp).toBe(true);
+      expect(pickHtmlAdapter({ source: s.source }, "")).toBe(s.adapter);
+    }
+    for (const s of JSON_SOURCES) {
+      expect(pickJsonAdapter({ source: s.source })).toBe(s.adapter);
     }
   });
 });
