@@ -36,6 +36,16 @@ type ColumnMode = "1" | "2";
 /** Cara kunci jawaban disajikan. */
 type KeyMode = "hidden" | "inline" | "separate";
 
+/**
+ * Nilai `size` CSS untuk tiap `pageSize`. `null` = pakai `@page` bawaan
+ * `print.css` (A4). Peta eksplisit dipakai supaya nilai dari DB tidak pernah
+ * diinterpolasi mentah ke dalam CSS.
+ */
+const PRINT_PAGE_SIZE_CSS: Record<NonNullable<BundlePrintConfig["pageSize"]>, string | null> = {
+  A4: null,
+  Letter: "Letter",
+};
+
 /** Baca label opsi benar dari `answerKey` (bila ada). */
 function correctLabelsOf(item: BundleItemView): string[] {
   return item.question.answerKey?.correct ?? [];
@@ -76,14 +86,16 @@ export function BundlePrintView() {
   const instructions = config.instructions ?? bundle.instructions;
   const durationMinutes = config.durationMinutes ?? bundle.durationMinutes;
   const isTwoColumn = bodyColumns ? bodyColumns === "2" : config.twoColumnLayout !== false;
-  const pageSize = config.pageSize ?? "A4";
+  const pageSizeCss = PRINT_PAGE_SIZE_CSS[config.pageSize ?? "A4"];
 
   return (
     <div className="flex flex-col gap-6">
       {/* pageSize tidak bisa diatur lewat class (`@page` adalah konteks dokumen),
-          jadi ukuran kertas non-A4 disuntik sebagai stylesheet khusus cetak. */}
-      {pageSize !== "A4" && (
-        <style>{`@media print { @page { size: ${pageSize} portrait; margin: 2cm 1.5cm; } }`}</style>
+          jadi ukuran kertas non-A4 disuntik sebagai stylesheet khusus cetak.
+          Margin TIDAK ditulis di sini: `@page` mencascade per-properti, jadi
+          margin tetap milik `print.css` (satu sumber geometri kertas). */}
+      {pageSizeCss && (
+        <style>{`@media print { @page { size: ${pageSizeCss} portrait; } }`}</style>
       )}
       {/* ── Bilah kontrol (tidak ikut tercetak) ─────────────────── */}
       <div className="no-print flex flex-wrap items-end gap-4 rounded-lg border bg-card p-4">

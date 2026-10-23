@@ -275,9 +275,11 @@ describe("BundlePrintView (M8 — halaman cetak)", () => {
     });
     render(<BundlePrintView />);
 
-    const style = document.querySelector("style");
-    expect(style).not.toBeNull();
-    expect(style!.textContent).toContain("size: Letter portrait");
+    const pageStyles = [...document.querySelectorAll("style")]
+      .map((s) => s.textContent ?? "")
+      .filter((s) => s.includes("@page"));
+    expect(pageStyles).toHaveLength(1);
+    expect(pageStyles[0]).toContain("size: Letter portrait");
   });
 
   it("Pilar 4: pageSize A4 tidak menyuntik @page tambahan", () => {
@@ -287,7 +289,12 @@ describe("BundlePrintView (M8 — halaman cetak)", () => {
       isError: false,
     });
     render(<BundlePrintView />);
-    expect(document.querySelector("style")).toBeNull();
+    // Jangan cek keberadaan <style> apa pun: komponen anak boleh menyuntik
+    // stylesheet sendiri. Yang diuji: tidak ada `@page` tambahan.
+    const pageStyles = [...document.querySelectorAll("style")]
+      .map((s) => s.textContent ?? "")
+      .filter((s) => s.includes("@page"));
+    expect(pageStyles).toHaveLength(0);
   });
 
   it("Pilar 4: kolom naskah bisa ditimpa dari bilah kontrol", () => {

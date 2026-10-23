@@ -6,7 +6,7 @@
  *
  * ⚠️ JANGAN impor file ini dari komponen klien (menarik `@/lib/db`).
  */
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { recordAudit } from "./audit";
@@ -107,8 +107,10 @@ export async function updateBundle(
   // PATCH = tambal-sebagian, bukan ganti-total: field yang tidak dikirim
   // mempertahankan nilai tersimpan. Tanpa merge, `{ pageSize }` menghapus
   // institutionName/twoColumnLayout/includeAnswerKey/showQuestionNumber.
+  // Digabung DI DALAM SQL (#36) — bukan `{ ...existing.printConfig }` — agar
+  // dua PATCH bersamaan tidak saling menimpa (baca-lalu-tulis tanpa penjagaan).
   if (patch.printConfig !== undefined)
-    set.printConfig = { ...existing.printConfig, ...patch.printConfig };
+    set.printConfig = sql`${bundles.printConfig} || ${JSON.stringify(patch.printConfig)}::jsonb`;
   if (patch.status !== undefined) set.status = patch.status;
 
   await db.update(bundles).set(set).where(eq(bundles.id, id));
