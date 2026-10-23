@@ -2,7 +2,15 @@ import { describe, it, expect } from "vitest";
 import { m4thlabAdapter } from "./m4thlab";
 import { mathcyberAdapter } from "./mathcyber";
 import { defantriAdapter } from "./defantri";
-import { pickHtmlAdapter, pickJsonAdapter, KNOWN_SOURCES } from "./index";
+import {
+  pickHtmlAdapter,
+  pickJsonAdapter,
+  KNOWN_SOURCES,
+  HTML_SOURCES,
+  JSON_SOURCES,
+  HTML_ADAPTERS,
+  JSON_ADAPTERS,
+} from "./index";
 
 // ── Fixture mini (potongan nyata dari korpus) ─────────────────
 
@@ -331,5 +339,22 @@ describe("pemilih adapter", () => {
   it("adapter JSON dayaserap via pickJsonAdapter", () => {
     expect(pickJsonAdapter({ source: "pusmendik_dayaserap" })).not.toBeNull();
     expect(pickJsonAdapter({ source: "unknown" })).toBeNull();
+  });
+});
+
+describe("registry adapter — satu descriptor per sumber", () => {
+  it("map adapter DITURUNKAN dari daftar sumber (tak bisa lepas sinkron)", () => {
+    expect(Object.keys(HTML_ADAPTERS).sort()).toEqual(HTML_SOURCES.map((s) => s.source).sort());
+    expect(Object.keys(JSON_ADAPTERS).sort()).toEqual(JSON_SOURCES.map((s) => s.source).sort());
+  });
+
+  it("nama sumber unik (tidak ada pendaftaran ganda)", () => {
+    expect(new Set(KNOWN_SOURCES).size).toBe(KNOWN_SOURCES.length);
+  });
+
+  it("setiap sumber HTML menyatakan detektornya secara eksplisit (RegExp atau null)", () => {
+    for (const s of HTML_SOURCES) {
+      expect(s.detect === null || s.detect instanceof RegExp).toBe(true);
+    }
   });
 });
