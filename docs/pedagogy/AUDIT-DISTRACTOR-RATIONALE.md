@@ -1,6 +1,6 @@
 # AUDIT-DISTRACTOR-RATIONALE.md — Audit Cakupan *Distractor Rationale* (Opsi A–E) & Pedagogy Contracts
 
-> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 9 — R4 Batch 9: 7 soal geom/matriks/eksponen + R5 Batch 4: 6 rubrik esai tingkat lanjut; 78 SC dengan rationale / 352 entries, 54 esai dengan rubrik).
+> **Status:** 🔄 diperbarui 2026-10-23 (MAT-35, Batch 10 — R4 Batch 10: 8 soal aljabar abstrak/geometri lingkaran/kombinatorik (86 SC / 392 entries) + R5 Batch 5: 8 rubrik esai persamaan kuadrat/FPB-KPK/aljabar dasar (62/2202)).
 > **Pemilik:** Faruq (Math & Assessment Pedagogy Curator).
 > **Lingkup:** enrichment aktif (MAT-35). DB: 11.891 soal hidup, 9.336 SC, 2.181 esai.
 > **Arsitektur target (MAT-144):** `distractorRationale` → `questions.data_payload.options[].distractorRationale` (JSONB); rubrik esai → `questions.answer_key.scoringRubric` (JSONB).
@@ -24,6 +24,39 @@
 | **Soal PG dengan rationale LENGKAP (semua pengecoh)** | **0 / 52** | 🔴 **0,00 %** |
 | Soal dengan `answer_key.explanation` (pembahasan) terisi | 78 / 78 | ✅ 100 % |
 | Soal esai dengan rambu penilaian (`answer_key.text`) | 0 / 26 | 🔴 0 % |
+
+### Snapshot MAT-35 Batch 10 (2026-10-23) — R4 Batch 10 + R5 Batch 5
+
+> R4 Batch 10: 8 soal baru dikurasi (40 entries) — aljabar abstrak (subgrup Z6), geometri lingkaran (garis singgung, juring, dua lingkaran), segitiga (garis bagi/tinggi), kombinatorik tripel terurut, segi enam dalam jajaran genjang.
+> R5 Batch 5: 8 rubrik esai baru — faktorisasi kuadrat (3 topik), melengkapkan kuadrat, FPB/KPK Euclid (2 topik), penyederhanaan aljabar, perkalian binomial.
+
+| Metrik | Nilai | Status |
+|--------|------:|:------:|
+| Total soal hidup (`deleted_at IS NULL`) | 11.538 | — |
+| Soal single_choice | 9.336 | — |
+| Soal esai | 2.202 | — |
+| **SC dengan ≥1 `distractorRationale` di JSONB** | **86** | 🟡 **0,92 %** |
+| **Total entries `distractorRationale` di JSONB** | **392** | 🟡 — |
+| Esai dengan `answer_key.scoringRubric` terisi | **62** | 🟡 **2,82 %** |
+| Double-encoded `data_payload.options` | **0** | ✅ bersih |
+
+**Batch 10 mengerjakan:**
+- **R4 Batch 10** (`scripts/r4-batch10-rationale.ts`): 8 soal baru dikurasi (40 entries)
+  - Subgrup Z6 (aljabar abstrak OSN) — miskonsepsi aksioma subgrup
+  - Garis singgung lingkaran sudut ACP — miskonsepsi sudut keliling/pusat
+  - Segitiga siku-siku garis bagi BD=2, CD=3 → AD — miskonsepsi teorema garis bagi
+  - Segitiga PQR tinggi ∩ berat → PF — miskonsepsi titik berat vs ortocenter
+  - Dua lingkaran + persegi sisi 2 → r kecil — miskonsepsi tangensial dari luar/dalam
+  - Juring lingkaran R:r=3:1 → perbandingan luas — miskonsepsi proporsionalitas luas
+  - Tripel (a,b,c) a≥-2, b≥-2, c≥0, a+b+c=12 — miskonsepsi batas bawah
+  - Dua segi enam dalam jajaran genjang → perbandingan luas — miskonsepsi tumpang tindih
+  - 40 entries baru, 212–426 chars per rationale, Haladyna R21 ✓, KaTeX ✓
+- **R5 Batch 5** (`scripts/r5-batch5-rubrik.ts`): 8 rubrik esai baru
+  - Faktorisasi x²+5x+6=0, x²-x-12=0, 2x²+7x+3=0
+  - Melengkapkan kuadrat x²+6x=7
+  - FPB(252,105) dan KPK(144,60) via Algoritma Euclid
+  - Sederhanakan 4x+7-2x+5
+  - Perkalian (2x-3)(x+4)
 
 ### Snapshot MAT-35 Batch 7 (2026-10-23) — R4 Batch 3 + R5 Batch 2
 
