@@ -418,17 +418,33 @@ function CellContent({ value }: { value: string }) {
  * Gambar dari shortcode `{{img:<shortId>}}`.
  *
  * Berkas disajikan lewat `/img/{shortId}` (route yang menerjemahkan short_id →
- * berkas). Bila gagal dimuat, teks pengganti ditampilkan agar soal tetap terbaca
+ * berkas). ACT-17: Dimensi width/height & aspectRatio eksplisit mencegah layout shift (CLS=0).
+ * Bila gagal dimuat, teks pengganti ditampilkan agar soal tetap terbaca
  * dan guru tahu ada gambar yang bermasalah — bukan ruang kosong tanpa penjelasan.
  */
-function MediaImage({ shortId }: { shortId: string }) {
+function MediaImage({
+  shortId,
+  width,
+  height,
+  alt,
+}: {
+  shortId: string;
+  width?: number;
+  height?: number;
+  alt?: string;
+}) {
+  const w = width || 400;
+  const h = height || 300;
   return (
     <span className="inline-block align-middle">
       {/* eslint-disable-next-line @next/next/no-img-element -- media dari storage lokal (bukan CDN); next/image butuh loader khusus. */}
       <img
         src={`/img/${shortId}`}
-        alt={`Gambar ${shortId}`}
+        alt={alt || `Gambar ${shortId}`}
+        width={w}
+        height={h}
         loading="lazy"
+        style={{ aspectRatio: `${w} / ${h}` }}
         className="my-2 inline-block max-h-96 max-w-full rounded border border-border"
         onError={(e) => {
           const el = e.currentTarget;

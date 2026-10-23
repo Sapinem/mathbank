@@ -9,7 +9,7 @@
  */
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { bundles } from "@/lib/db/schema/bundle";
+import { bundles, type BundlePrintConfig } from "@/lib/db/schema/bundle";
 import { can, hasRole, assertCan, ForbiddenError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { slugify } from "@/lib/taxonomy/tree";
@@ -30,6 +30,7 @@ export interface BundleRow {
   grade: string | null;
   durationMinutes: number | null;
   instructions: string | null;
+  printConfig: BundlePrintConfig;
   status: "draft" | "review" | "ready" | "archived";
   /** Pembuat paket — dasar penegakan izin `own` (lihat `assertBundleAccess`). */
   createdById: string | null;
@@ -140,6 +141,7 @@ export interface CreateBundleInput {
   grade?: string | null;
   durationMinutes?: number;
   instructions?: string | null;
+  printConfig?: BundlePrintConfig;
 }
 
 export interface UpdateBundleInput {
@@ -152,6 +154,7 @@ export interface UpdateBundleInput {
   grade?: string | null;
   durationMinutes?: number;
   instructions?: string | null;
+  printConfig?: BundlePrintConfig;
   status?: "draft" | "review" | "ready" | "archived";
 }
 
@@ -181,6 +184,7 @@ export function bundleColumns() {
     grade: bundles.grade,
     durationMinutes: bundles.durationMinutes,
     instructions: bundles.instructions,
+    printConfig: bundles.printConfig,
     status: bundles.status,
     createdById: bundles.createdById,
     createdAt: bundles.createdAt,

@@ -33,6 +33,13 @@ function bundle(over: Partial<BundleDetail> = {}): BundleDetail {
     grade: "9 SMP",
     durationMinutes: 120,
     instructions: "Kerjakan dengan jujur.",
+    printConfig: {
+      institutionName: "Math My ID",
+      twoColumnLayout: true,
+      includeAnswerKey: false,
+      showQuestionNumber: true,
+      pageSize: "A4",
+    },
     status: "ready",
     createdById: "u1",
     itemCount: 3,
@@ -224,5 +231,37 @@ describe("BundlePrintView (M8 — halaman cetak)", () => {
       // Tombol berukuran "sm" pakai class min-h-[44px] di className
       expect(cls).toMatch(/min-h-\[44px\]|h-11/);
     });
+  });
+
+  it("Pilar 4: membaca printConfig kustom (lembaga, petunjuk, layout, nomor soal)", () => {
+    const b = bundle({
+      printConfig: {
+        institutionName: "SMA Prestasi Bangsa",
+        tagline: "Unggul dalam Sains dan Matematika",
+        instructions: "Gunakan pensil 2B.",
+        durationMinutes: 90,
+        twoColumnLayout: false,
+        showQuestionNumber: false,
+        includeAnswerKey: true,
+        pageSize: "A4",
+      },
+    });
+    useBundleMock.mockReturnValue({ data: b, isPending: false, isError: false });
+    render(<BundlePrintView />);
+
+    expect(screen.getByText("SMA PRESTASI BANGSA")).toBeInTheDocument();
+    expect(screen.getByText("Unggul dalam Sains dan Matematika")).toBeInTheDocument();
+    expect(screen.getByText("Gunakan pensil 2B.")).toBeInTheDocument();
+    expect(screen.getByText(/90 menit/)).toBeInTheDocument();
+
+    // twoColumnLayout: false -> print-single-column
+    const ol = document.querySelector("ol.print-single-column");
+    expect(ol).not.toBeNull();
+
+    // showQuestionNumber: false -> nomor soal tidak ditampilkan
+    expect(document.querySelector(".print-item-number")).toBeNull();
+
+    // includeAnswerKey: true -> kunci jawaban tampil
+    expect(screen.getByText("Kunci Jawaban")).toBeInTheDocument();
   });
 });

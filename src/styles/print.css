@@ -137,25 +137,47 @@
 }
 
 /* ══════════ BODY: TWO COLUMNS (UX-DR1) ══════════ */
-.columns {
+.columns,
+.print-columns {
   column-count: 2;
   column-gap: 9mm;
-  column-rule: 1px solid var(--paper-rule);
+  column-rule: 1px solid var(--paper-rule, #e5e5e5);
   margin-top: 12px;
 }
 
-.item {
-  break-inside: avoid;
-  page-break-inside: avoid;
-  margin-bottom: 10px;
-  padding-left: 17px;
-  position: relative;
+.print-single-column {
+  column-count: 1;
+  margin-top: 12px;
 }
 
-.num {
+.item,
+.print-item {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  padding-left: 24px;
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.num,
+.print-item-number {
   position: absolute;
   left: 0;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.print-figure,
+.print-options,
+.print-stimulus {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.print-header,
+.print-instruction {
+  break-after: avoid;
+  page-break-after: avoid;
 }
 
 .options {
@@ -182,6 +204,12 @@
 
 /* Hanya berlaku saat mencetak. */
 @media print {
+  /* Ukuran & margin halaman A4 (Publishing Engine V2) */
+  @page {
+    size: A4 portrait;
+    margin: 2cm 1.5cm;
+  }
+
   /* Netralkan tinggi terkurung shell (h-svh/overflow) agar dokumen mengalir penuh. */
   html,
   body {
@@ -192,9 +220,61 @@
 
   /* Sembunyikan shell + kontrol yang tak perlu dicetak. */
   .no-print,
+  nav,
   aside,
-  header {
+  header,
+  button:not(.print-keep) {
     display: none !important;
+  }
+
+  /* Layout 2-kolom seimbang */
+  .print-columns {
+    column-count: 2;
+    column-gap: 9mm;
+    column-rule: 1px solid var(--mb-border-subtle, #e5e5e5);
+  }
+
+  /* Layout 1-kolom (fallback) */
+  .print-single-column {
+    column-count: 1;
+  }
+
+  /* Butir soal — anti-potong + gutter nomor 2-digit */
+  .print-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    padding-left: 24px;
+    position: relative;
+    margin-bottom: 12px;
+  }
+
+  /* Nomor soal absolut (menempel di gutter kiri) */
+  .print-item-number {
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Blok yang tidak boleh terbelah antar-halaman */
+  .print-figure,
+  .print-options,
+  .print-stimulus {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Header & instruksi menempel ke konten di bawahnya */
+  .print-header,
+  .print-instruction {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* KaTeX di cetak: pastikan tidak overflow */
+  .katex-display {
+    overflow-x: visible !important;
+    max-width: 100%;
   }
 
   /* Area konten yang tergulung harus mengalir (bukan terpotong tinggi layar). */

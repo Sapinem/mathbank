@@ -49,12 +49,12 @@ async function mkAsset(opts: {
   return row!.id as string;
 }
 
-function req(shortId: string) {
-  return new Request(`http://localhost:1234/img/${shortId}`);
+function req(shortId: string, headers?: Record<string, string>) {
+  return new Request(`http://localhost:1234/img/${shortId}`, { headers });
 }
 
-async function call(shortId: string) {
-  return GET(req(shortId), { params: Promise.resolve({ shortId }) });
+async function call(shortId: string, headers?: Record<string, string>) {
+  return GET(req(shortId, headers), { params: Promise.resolve({ shortId }) });
 }
 
 beforeEach(async () => {
@@ -138,5 +138,32 @@ describe("GET /img/[shortId]", () => {
     await mkAsset({ shortId: "SERVE006", raster: "/etc/passwd", hash: "servehash-6" });
     const res = await call("SERVE006");
     expect(res.status).toBe(404);
+  });
+
+  it("ACT-17: mengembalikan ETag dan merespons 304 jika If-None-Match cocok", async () => {
+    const rel = "ee/eeee.png";
+    await put(rel, PNG_BYTES);
+    await mkAsset({ shortId: "SERVE007", raster: rel, hash: "servehash-7" });
+
+    // Request 1: tanpa If-None-Match -> 200 + ETag
+    const res1 = await call("SERVE007");
+    expect(res1.status).toBe(200);
+    const etag = res1.headers.get("etag");
+    expect(etag).toBe('"servehash-7"');
+
+    // Request 2: dengan If-None-Match cocok -> 304 Not Modified
+    const res2 = await call("SERVE007", { "if-none-match": etag! });
+    expect(res2.status).toBe(304);
+    expect(res2.headers.get("etag")).toBe(etag);
+  });
+
+  it("ACT-17: mengembalikan 200 jika If-None-Match berbeda", async () => {
+    const rel = "ff/ffff.png";
+    await put(rel, PNG_BYTES);
+    await mkAsset({ shortId: "SERVE008", raster: rel, hash: "servehash-8" });
+
+    const res = await call("SERVE008", { "if-none-match": '"beda-hash"' });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("etag")).toBe('"servehash-8"');
   });
 });

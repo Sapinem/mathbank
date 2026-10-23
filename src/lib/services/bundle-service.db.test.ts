@@ -149,6 +149,61 @@ describe("createBundle / listBundles", () => {
     expect(copy.origin).toBe("ingest");
   });
 
+  it("Pilar 4: createBundle menyimpan default printConfig", async () => {
+    const b = await createBundle(
+      { title: "Paket Default Print", bundleType: "exam" },
+      admin,
+    );
+    expect(b.printConfig).toBeDefined();
+    expect(b.printConfig.institutionName).toBe("Math My ID");
+    expect(b.printConfig.twoColumnLayout).toBe(true);
+    expect(b.printConfig.pageSize).toBe("A4");
+  });
+
+  it("Pilar 4: updateBundle memperbarui printConfig", async () => {
+    const b = await createBundle(
+      { title: "Paket Cetak Kustom", bundleType: "exam" },
+      admin,
+    );
+    const updated = await updateBundle(
+      b.id,
+      {
+        printConfig: {
+          institutionName: "SMA Negeri 1 Jakarta",
+          tagline: "Maju Bersama",
+          twoColumnLayout: false,
+          includeAnswerKey: true,
+          showQuestionNumber: true,
+          pageSize: "Letter",
+        },
+      },
+      admin,
+    );
+    expect(updated.printConfig.institutionName).toBe("SMA Negeri 1 Jakarta");
+    expect(updated.printConfig.tagline).toBe("Maju Bersama");
+    expect(updated.printConfig.twoColumnLayout).toBe(false);
+    expect(updated.printConfig.includeAnswerKey).toBe(true);
+    expect(updated.printConfig.pageSize).toBe("Letter");
+  });
+
+  it("Pilar 4: duplicateBundle menyalin printConfig", async () => {
+    const b = await createBundle(
+      {
+        title: "Paket Cetak Asli",
+        bundleType: "exam",
+        printConfig: {
+          institutionName: "Institut Teknologi",
+          twoColumnLayout: false,
+          pageSize: "A4",
+        },
+      },
+      admin,
+    );
+    const copy = await duplicateBundle(b.id, admin);
+    expect(copy.printConfig.institutionName).toBe("Institut Teknologi");
+    expect(copy.printConfig.twoColumnLayout).toBe(false);
+  });
+
   it("slug unik: judul sama → akhiran -2", async () => {
     await createBundle({ title: "Latihan", bundleType: "exam" }, admin);
     const b2 = await createBundle({ title: "Latihan", bundleType: "exam" }, admin);

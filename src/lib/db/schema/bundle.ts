@@ -6,6 +6,7 @@ import {
   text,
   smallint,
   integer,
+  jsonb,
   timestamp,
   index,
   uniqueIndex,
@@ -15,6 +16,26 @@ import { bundleTypeEnum, bundleOriginEnum, bundleItemRoleEnum, questionStatusEnu
 import { questions } from "./question";
 import { sources } from "./source";
 import { events } from "./event";
+
+/** Konfigurasi pencetakan naskah soal (Pilar 4 · Publishing Engine V2). */
+export interface BundlePrintConfig {
+  institutionName?: string;
+  tagline?: string;
+  instructions?: string;
+  durationMinutes?: number;
+  twoColumnLayout?: boolean;
+  includeAnswerKey?: boolean;
+  showQuestionNumber?: boolean;
+  pageSize?: "A4" | "Letter";
+}
+
+export const DEFAULT_BUNDLE_PRINT_CONFIG: BundlePrintConfig = {
+  institutionName: "Math My ID",
+  twoColumnLayout: true,
+  includeAnswerKey: false,
+  showQuestionNumber: true,
+  pageSize: "A4",
+};
 
 /** bundles — paket/naskah soal. UTS/PAS = bundle_type 'exam' tanpa event. */
 export const bundles = pgTable(
@@ -34,6 +55,16 @@ export const bundles = pgTable(
     grade: varchar("grade", { length: 20 }),
     durationMinutes: integer("duration_minutes").default(90),
     instructions: text("instructions"),
+    printConfig: jsonb("print_config")
+      .$type<BundlePrintConfig>()
+      .default({
+        institutionName: "Math My ID",
+        twoColumnLayout: true,
+        includeAnswerKey: false,
+        showQuestionNumber: true,
+        pageSize: "A4",
+      })
+      .notNull(),
     status: questionStatusEnum("status").default("draft").notNull(),
     createdById: text("created_by_id"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

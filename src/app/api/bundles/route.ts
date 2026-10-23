@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
+import { bundlePrintConfigSchema } from "@/lib/contracts/bundle";
 import { listBundles, createBundle } from "@/lib/services/bundle-service";
 
 const createSchema = z.object({
@@ -12,6 +13,7 @@ const createSchema = z.object({
   grade: z.string().max(20).nullable().optional(),
   durationMinutes: z.number().int().min(1).max(600).optional(),
   instructions: z.string().max(5000).nullable().optional(),
+  printConfig: bundlePrintConfigSchema.optional(),
 });
 
 /**
