@@ -13,7 +13,7 @@ vi.mock("node:dns/promises", () => {
   return { lookup, default: { lookup } };
 });
 
-import { fetchImage, type DnsResolver } from "./fetch";
+import { fetchImage, fetchMedia, validateMediaUrl, type DnsResolver } from "./fetch";
 import { storeImage, relativePath } from "./store";
 import { ingestArticleMedia, collectUrls, type MediaCache } from "./ingest-media";
 
@@ -58,8 +58,23 @@ describe("fetchImage (mock fetch)", () => {
     for (const target of targets) {
       const r = await fetchImage(target, { retries: 0, dnsResolver: dns() });
       expect(r.ok).toBe(false);
-      expect(r.error).toMatch(/diblokir|tidak diizinkan|URL tidak valid/i);
+      expect(r.error).toMatch(/diblokir|terblokir|tidak diizinkan|URL tidak valid/i);
     }
+  });
+
+  it("validateMediaUrl menolak URL metadata cloud (Pilar 2)", async () => {
+    await expect(
+      validateMediaUrl("http://169.254.169.254/latest/meta-data/")
+    ).rejects.toThrow(/terblokir|diblokir/);
+  });
+
+  it("fetchMedia alias untuk fetchImage bekerja identik (Pilar 2)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(PNG, {
+      status: 200, headers: { "content-type": "image/png" },
+    })));
+    const r = await fetchMedia("https://a.com/x.png", { retries: 0, dnsResolver: dns() });
+    expect(r.ok).toBe(true);
+    expect(r.contentType).toBe("image/png");
   });
 
   it("SEC-01: DNS rebinding — domain publik yang resolve ke 127.0.0.1 DIBLOKIR", async () => {

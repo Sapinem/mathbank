@@ -14,7 +14,7 @@
 import type { Actor } from "@/lib/auth/actor";
 import { segmentArticle, segmentJson } from "./parsers/segment";
 import { ingestArticleMedia, applyMedia, type MediaCache } from "./media/ingest-media";
-import { commitItems } from "./commit";
+import { commitItems, type CommitFailure } from "./commit";
 import { markDone, markProcessing, toMediaManifest } from "./queue";
 import { registerMediaAsset } from "@/lib/services/media-service";
 import type { IngestQueueItem } from "@/lib/db/schema/system";
@@ -37,6 +37,12 @@ export interface ProcessResult {
   rejected: number;
   /** Soal yang GAGAL dibuat di `commitItems` (mis. ditolak DB) — jangan hilang senyap. */
   failed: number;
+  /** Jumlah soal tersimpan (created + linked). */
+  storedCount: number;
+  /** Jumlah butir yang gagal/ditolak (failed + rejected). */
+  failedCount: number;
+  /** Rincian kegagalan per-indeks (Pilar 2). */
+  failures: CommitFailure[];
   mediaOk: number;
   mediaFailed: number;
   error?: string;
@@ -106,7 +112,21 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
   // Guard balapan: hanya lanjut bila berhasil menandai `processing`.
   const ok = await markProcessing(item.id);
   if (!ok) {
-    return { id: item.id, status: "skipped", created: 0, linked: 0, skipped: 0, rejected: 0, failed: 0, mediaOk: 0, mediaFailed: 0, error: "sudah diproses" };
+    return {
+      id: item.id,
+      status: "skipped",
+      created: 0,
+      linked: 0,
+      skipped: 0,
+      rejected: 0,
+      failed: 0,
+      storedCount: 0,
+      failedCount: 0,
+      failures: [],
+      mediaOk: 0,
+      mediaFailed: 0,
+      error: "sudah diproses",
+    };
   }
 
   const meta = { source: item.sourceOrigin, url: item.sourceUrl ?? undefined, title: item.title };
@@ -124,7 +144,20 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
         aiNotes: seg.warnings.join("; ") || "Artikel tanpa soal (dilewati)",
         importedQuestionsCount: 0,
       });
-      return { id: item.id, status: "skipped", created: 0, linked: 0, skipped: 0, rejected: 0, failed: 0, mediaOk: 0, mediaFailed: 0 };
+      return {
+        id: item.id,
+        status: "skipped",
+        created: 0,
+        linked: 0,
+        skipped: 0,
+        rejected: 0,
+        failed: 0,
+        storedCount: 0,
+        failedCount: 0,
+        failures: [],
+        mediaOk: 0,
+        mediaFailed: 0,
+      };
     }
 
     // 2. Unduh gambar + DAFTARKAN ke media_assets (gagal tak memblokir).
@@ -168,7 +201,7 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
       aiNotes:
         `${commit.created} soal dibuat, ${commit.linked} soal identik (sumber ditambah), ` +
         `${commit.skipped} dilewati` +
-        (commit.rejected ? `, ${commit.rejected} ditolak validasi Zod` : "") +
+        (commit.rejected ? `, ${commit.rejected} ditolak validasi Zod/KaTeX` : "") +
         (mediaFailed ? `, ${mediaFailed} gambar gagal` : ""),
     });
     return {
@@ -180,6 +213,9 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
       skipped: commit.skipped,
       rejected: commit.rejected,
       failed: commit.failed,
+      storedCount: commit.storedCount,
+      failedCount: commit.failedCount,
+      failures: commit.failures,
       mediaOk,
       mediaFailed,
       ...(commit.errors.length ? { error: commit.errors.slice(0, 3).join("; ") } : {}),
@@ -187,7 +223,21 @@ export async function processQueueItem(item: IngestQueueItem, opts: ProcessOptio
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await markDone(item.id, "failed", { errorMessage: msg.slice(0, 1000) });
-    return { id: item.id, status: "failed", created: 0, linked: 0, skipped: 0, rejected: 0, failed: 0, mediaOk: 0, mediaFailed: 0, error: msg };
+    return {
+      id: item.id,
+      status: "failed",
+      created: 0,
+      linked: 0,
+      skipped: 0,
+      rejected: 0,
+      failed: 0,
+      storedCount: 0,
+      failedCount: 1,
+      failures: [{ index: 0, stemPreview: "", reason: msg }],
+      mediaOk: 0,
+      mediaFailed: 0,
+      error: msg,
+    };
   }
 }
 

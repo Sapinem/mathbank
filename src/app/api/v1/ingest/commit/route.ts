@@ -48,6 +48,9 @@ export const POST = wrapRoute({
       skipped: results.reduce((a, r) => a + r.skipped, 0),
       // Soal yang gagal dibuat (mis. ditolak DB) + artikel yang gagal total.
       failed: results.reduce((a, r) => a + r.failed, 0) + results.filter((r) => r.status === "failed").length,
+      storedCount: results.reduce((a, r) => a + r.storedCount, 0),
+      failedCount: results.reduce((a, r) => a + r.failedCount, 0),
+      failures: results.flatMap((r) => r.failures),
       remaining: Math.max(0, items.length - batch.length),
     };
 

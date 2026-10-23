@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import postgres from "postgres";
 import type { Actor } from "@/lib/auth/actor";
 import { enqueue, listQueue, listPending, markProcessing, markDone, countByStatus, getQueueItem } from "./queue";
-import { commitItems, resolveSourceId, existingItemHashes } from "./commit";
+import { commitItems, commitParsedItems, resolveSourceId, existingItemHashes } from "./commit";
 import { getQuestion } from "@/lib/services/question-read";
 import { articleHash, itemHash, contentHash } from "./hash";
 import type { ParsedItem } from "./parsers/types";
@@ -342,6 +342,27 @@ describe("commit (soal draft)", () => {
 
     const total = await sql`SELECT count(*)::int AS n FROM questions`;
     expect(total[0]!.n).toBe(0); // tak ada baris separuh jadi
+  });
+
+  it("Pilar 2: menyimpan soal valid meski ada soal cacat dalam batch", async () => {
+    const items = [
+      item({ stem: "Soal 1 valid dengan $x=1$." }),
+      item({ stem: "\\(unclosed delimiter tanpa penutup" }), // KaTeX cacat
+      item({ stem: "Soal 3 valid dengan $y=2$." }),
+    ];
+    items[0]!.ref = { index: 0 };
+    items[1]!.ref = { index: 1 };
+    items[2]!.ref = { index: 2 };
+
+    const result = await commitParsedItems(items, { sourceOrigin: "uji-ingest" });
+    expect(result.storedCount).toBe(2);
+    expect(result.failedCount).toBe(1);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]!.index).toBe(1);
+    expect(result.failures[0]!.reason).toContain("KaTeX");
+
+    const total = await sql`SELECT count(*)::int AS n FROM questions`;
+    expect(total[0]!.n).toBe(2);
   });
 
   it("stem kosong dilewati (tak simpan sampah)", async () => {
