@@ -58,7 +58,6 @@ export const listBundlesQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
-export type BundlePrintConfigContract = z.infer<typeof bundlePrintConfigSchema>;
 export type CreateBundleContract = z.infer<typeof createBundleSchema>;
 export type UpdateBundleContract = z.infer<typeof updateBundleSchema>;
 export type ListBundlesQuery = z.infer<typeof listBundlesQuerySchema>;

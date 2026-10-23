@@ -137,47 +137,30 @@
 }
 
 /* ══════════ BODY: TWO COLUMNS (UX-DR1) ══════════ */
-.columns,
-.print-columns {
+/* ⚠️ Kelas `.print-*` SENGAJA hanya didefinisikan di dalam `@media print`
+   (lihat bawah). Berkas ini diimpor TANPA layer, sedangkan utility Tailwind
+   berada di `@layer utilities` — aturan unlayered selalu menang, sehingga
+   `.print-columns { column-count: 2 }` di scope global membatalkan
+   `columns-1` di layar dan memaksa 2 kolom pada ponsel (regresi mobile-first). */
+.columns {
   column-count: 2;
   column-gap: 9mm;
-  column-rule: 1px solid var(--paper-rule, #e5e5e5);
+  column-rule: 1px solid var(--paper-rule);
   margin-top: 12px;
 }
 
-.print-single-column {
-  column-count: 1;
-  margin-top: 12px;
-}
-
-.item,
-.print-item {
+.item {
   break-inside: avoid;
   page-break-inside: avoid;
-  padding-left: 24px;
+  margin-bottom: 10px;
+  padding-left: 17px;
   position: relative;
-  margin-bottom: 12px;
 }
 
-.num,
-.print-item-number {
+.num {
   position: absolute;
   left: 0;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.print-figure,
-.print-options,
-.print-stimulus {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-
-.print-header,
-.print-instruction {
-  break-after: avoid;
-  page-break-after: avoid;
 }
 
 .options {
@@ -232,11 +215,13 @@
     column-count: 2;
     column-gap: 9mm;
     column-rule: 1px solid var(--mb-border-subtle, #e5e5e5);
+    margin-top: 12px;
   }
 
   /* Layout 1-kolom (fallback) */
   .print-single-column {
     column-count: 1;
+    margin-top: 12px;
   }
 
   /* Butir soal — anti-potong + gutter nomor 2-digit */
@@ -257,7 +242,6 @@
   }
 
   /* Blok yang tidak boleh terbelah antar-halaman */
-  .print-figure,
   .print-options,
   .print-stimulus {
     break-inside: avoid;

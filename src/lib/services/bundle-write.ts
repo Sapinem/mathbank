@@ -104,7 +104,11 @@ export async function updateBundle(
   if (patch.durationMinutes !== undefined)
     set.durationMinutes = patch.durationMinutes;
   if (patch.instructions !== undefined) set.instructions = patch.instructions;
-  if (patch.printConfig !== undefined) set.printConfig = patch.printConfig;
+  // PATCH = tambal-sebagian, bukan ganti-total: field yang tidak dikirim
+  // mempertahankan nilai tersimpan. Tanpa merge, `{ pageSize }` menghapus
+  // institutionName/twoColumnLayout/includeAnswerKey/showQuestionNumber.
+  if (patch.printConfig !== undefined)
+    set.printConfig = { ...existing.printConfig, ...patch.printConfig };
   if (patch.status !== undefined) set.status = patch.status;
 
   await db.update(bundles).set(set).where(eq(bundles.id, id));

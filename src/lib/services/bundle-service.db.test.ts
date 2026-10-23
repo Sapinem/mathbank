@@ -186,6 +186,27 @@ describe("createBundle / listBundles", () => {
     expect(updated.printConfig.pageSize).toBe("Letter");
   });
 
+  it("Pilar 4: updateBundle MENGGABUNG printConfig (patch sebagian tidak menghapus field lain)", async () => {
+    const b = await createBundle(
+      {
+        title: "Paket Tambal Cetak",
+        bundleType: "exam",
+        printConfig: {
+          institutionName: "SMA Tambal",
+          twoColumnLayout: false,
+          pageSize: "A4",
+        },
+      },
+      admin,
+    );
+
+    const updated = await updateBundle(b.id, { printConfig: { pageSize: "Letter" } }, admin);
+
+    expect(updated.printConfig.pageSize).toBe("Letter");
+    expect(updated.printConfig.institutionName).toBe("SMA Tambal");
+    expect(updated.printConfig.twoColumnLayout).toBe(false);
+  });
+
   it("Pilar 4: duplicateBundle menyalin printConfig", async () => {
     const b = await createBundle(
       {

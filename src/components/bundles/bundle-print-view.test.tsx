@@ -188,7 +188,9 @@ describe("BundlePrintView (M8 — halaman cetak)", () => {
   it("MAT-40: opsi 2 kolom merender grid 2-kolom untuk opsi jawaban", () => {
     render(<BundlePrintView />);
     // Klik tombol "2 kolom"
-    fireEvent.click(screen.getByRole("button", { name: /2 kolom/i }));
+    // Nama PERSIS: sejak ada kontrol "Kolom Naskah", pola /2 kolom/i juga
+    // cocok dengan "Naskah 2 kolom" (ambigu). Tombol opsi = "2 kolom".
+    fireEvent.click(screen.getByRole("button", { name: "2 kolom" }));
     // Cari list opsi (ul) — harus punya class grid-cols-2 saat mode 2-kolom
     const optionsList = document.querySelector("ul.grid");
     expect(optionsList).not.toBeNull();
@@ -263,5 +265,46 @@ describe("BundlePrintView (M8 — halaman cetak)", () => {
 
     // includeAnswerKey: true -> kunci jawaban tampil
     expect(screen.getByText("Kunci Jawaban")).toBeInTheDocument();
+  });
+
+  it("Pilar 4: pageSize Letter menyuntik @page khusus cetak", () => {
+    useBundleMock.mockReturnValue({
+      data: bundle({ printConfig: { ...bundle().printConfig, pageSize: "Letter" } }),
+      isPending: false,
+      isError: false,
+    });
+    render(<BundlePrintView />);
+
+    const style = document.querySelector("style");
+    expect(style).not.toBeNull();
+    expect(style!.textContent).toContain("size: Letter portrait");
+  });
+
+  it("Pilar 4: pageSize A4 tidak menyuntik @page tambahan", () => {
+    useBundleMock.mockReturnValue({
+      data: bundle({ printConfig: { ...bundle().printConfig, pageSize: "A4" } }),
+      isPending: false,
+      isError: false,
+    });
+    render(<BundlePrintView />);
+    expect(document.querySelector("style")).toBeNull();
+  });
+
+  it("Pilar 4: kolom naskah bisa ditimpa dari bilah kontrol", () => {
+    useBundleMock.mockReturnValue({
+      data: bundle({ printConfig: { ...bundle().printConfig, twoColumnLayout: true } }),
+      isPending: false,
+      isError: false,
+    });
+    render(<BundlePrintView />);
+
+    // Default dari printConfig: 2 kolom.
+    expect(document.querySelector("ol.print-columns")).not.toBeNull();
+
+    fireEvent.click(screen.getByText("Naskah 1 kolom"));
+    expect(document.querySelector("ol.print-single-column")).not.toBeNull();
+
+    fireEvent.click(screen.getByText("Naskah 2 kolom"));
+    expect(document.querySelector("ol.print-columns")).not.toBeNull();
   });
 });

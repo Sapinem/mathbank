@@ -57,13 +57,7 @@ export const bundles = pgTable(
     instructions: text("instructions"),
     printConfig: jsonb("print_config")
       .$type<BundlePrintConfig>()
-      .default({
-        institutionName: "Math My ID",
-        twoColumnLayout: true,
-        includeAnswerKey: false,
-        showQuestionNumber: true,
-        pageSize: "A4",
-      })
+      .default(DEFAULT_BUNDLE_PRINT_CONFIG)
       .notNull(),
     status: questionStatusEnum("status").default("draft").notNull(),
     createdById: text("created_by_id"),

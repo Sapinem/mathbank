@@ -62,18 +62,6 @@ export async function GET(
     const asset = await findAssetByShortId(shortId);
     if (!asset) return errorJson("NOT_FOUND", "Media tidak ditemukan.", 404);
 
-    // ACT-17: Dukungan ETag / If-None-Match → 304 Not Modified
-    const etag = `"${asset.contentHash || shortId}"`;
-    const ifNoneMatch = req.headers.get("if-none-match");
-    if (ifNoneMatch === etag) {
-      return new NextResponse(null, {
-        status: 304,
-        headers: {
-          "ETag": etag,
-          "Cache-Control": CACHE_CONTROL,
-        },
-      });
-    }
 
     // 3) Fallback Tri-Facet: SVG (vektor) → raster asli → thumbnail.
     const candidates: { path: string; mime: string }[] = [];
@@ -99,10 +87,22 @@ export async function GET(
         if (!info.isFile()) continue;
         const bytes = await readFile(abs);
 
+        // ACT-17: ETag dari HASH ISI berkas — hanya bila hash tersedia.
+        // Fallback ke shortId berbahaya: mengganti berkas tidak mengubah ETag,
+        // sehingga klien terus menerima 304 dengan gambar lama.
+        // Pemeriksaan dilakukan SETELAH berkas terbaca, agar aset yang barisnya
+        // ada tapi berkasnya hilang tetap dijawab 404 (bukan 304).
+        const etag = asset.contentHash ? `"${asset.contentHash}"` : null;
+        if (etag && req.headers.get("if-none-match") === etag) {
+          return new NextResponse(null, {
+            status: 304,
+            headers: { ETag: etag, "Cache-Control": CACHE_CONTROL },
+          });
+        }
         const headers: Record<string, string> = {
           "Content-Type": c.mime,
           "Content-Length": String(bytes.length),
-          "ETag": etag,
+          ...(etag ? { ETag: etag } : {}),
           "Cache-Control": CACHE_CONTROL,
           "X-Content-Type-Options": "nosniff",
         };

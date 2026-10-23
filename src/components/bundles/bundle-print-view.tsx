@@ -47,6 +47,8 @@ export function BundlePrintView() {
   const { data: bundle, isPending, isError, error } = useBundle(bundleId);
 
   const [columns, setColumns] = useState<ColumnMode>("1");
+  // Kolom NASKAH (bukan opsi) — default dari printConfig, bisa ditimpa sesi ini.
+  const [bodyColumns, setBodyColumns] = useState<ColumnMode | null>(null);
   const [keyModeOverride, setKeyModeOverride] = useState<KeyMode | null>(null);
   const [includeAnswerSheet, setIncludeAnswerSheet] = useState(true);
   const [includeExplanation, setIncludeExplanation] = useState(false);
@@ -64,23 +66,25 @@ export function BundlePrintView() {
   // Bisa tampilkan pembahasan bila ada minimal satu soal punya explanation.
   const canShowExplanation = items.some((it) => it.question.answerKey?.explanation != null);
 
-  const config: BundlePrintConfig = bundle.printConfig ?? {
-    institutionName: "Math My ID",
-    twoColumnLayout: true,
-    includeAnswerKey: false,
-    showQuestionNumber: true,
-    pageSize: "A4",
-  };
+  // Default TIDAK diduplikasi di sini — setiap field dibaca dengan fallback
+  // masing-masing di bawah (satu sumber: DEFAULT_BUNDLE_PRINT_CONFIG di skema).
+  const config: BundlePrintConfig = bundle.printConfig ?? {};
   const effectiveKeyMode: KeyMode =
     keyModeOverride ?? (config.includeAnswerKey ? "separate" : "hidden");
   const institution = config.institutionName || "MATH MY ID";
   const tagline = config.tagline ?? "Bank Soal & Kurasi Matematika";
   const instructions = config.instructions ?? bundle.instructions;
   const durationMinutes = config.durationMinutes ?? bundle.durationMinutes;
-  const isTwoColumn = config.twoColumnLayout !== false;
+  const isTwoColumn = bodyColumns ? bodyColumns === "2" : config.twoColumnLayout !== false;
+  const pageSize = config.pageSize ?? "A4";
 
   return (
     <div className="flex flex-col gap-6">
+      {/* pageSize tidak bisa diatur lewat class (`@page` adalah konteks dokumen),
+          jadi ukuran kertas non-A4 disuntik sebagai stylesheet khusus cetak. */}
+      {pageSize !== "A4" && (
+        <style>{`@media print { @page { size: ${pageSize} portrait; margin: 2cm 1.5cm; } }`}</style>
+      )}
       {/* ── Bilah kontrol (tidak ikut tercetak) ─────────────────── */}
       <div className="no-print flex flex-wrap items-end gap-4 rounded-lg border bg-card p-4">
         {/* Kolom Opsi */}
@@ -102,6 +106,30 @@ export function BundlePrintView() {
               className="min-h-[44px]"
             >
               2 kolom
+            </Button>
+          </div>
+        </div>
+
+        {/* Kolom Naskah — printConfig hanya bisa diubah lewat API, jadi halaman
+            cetak ini wajib punya kendali lokal agar pengguna tidak terkunci. */}
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">Kolom Naskah</span>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant={!isTwoColumn ? "default" : "outline"}
+              onClick={() => setBodyColumns("1")}
+              className="min-h-[44px]"
+            >
+              Naskah 1 kolom
+            </Button>
+            <Button
+              size="sm"
+              variant={isTwoColumn ? "default" : "outline"}
+              onClick={() => setBodyColumns("2")}
+              className="min-h-[44px]"
+            >
+              Naskah 2 kolom
             </Button>
           </div>
         </div>
@@ -275,7 +303,7 @@ export function BundlePrintView() {
                 {showNumber && (
                   <span className="print-item-number w-6 shrink-0 text-right font-medium tabular-nums">{num}.</span>
                 )}
-                <div className={cn("min-w-0 flex-1", !showNumber && "pl-0")}>
+                <div className="min-w-0 flex-1">
                   <MathContent content={it.question.contentMarkdown} />
                   {isOptionBased(it.question.questionType as never) &&
                     it.question.options.length > 0 && (
