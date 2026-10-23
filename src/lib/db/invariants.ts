@@ -14,11 +14,13 @@ import { db } from "./index";
 /** Harapan minimum skema — selaras `scripts/db-verify.ts`. */
 export const EXPECTED_INVARIANTS = {
   // MAT-39: collections & collection_items dihapus (28 → 26).
-  tables: 26,
+  // ADR-0019: question_embeddings ditambahkan (26 → 27).
+  tables: 27,
   checkConstraints: 2,
   hnswIndexes: 1,
   // MAT-39: collections trigger dihapus (25 → 24).
-  triggers: 24,
+  // ADR-0019: question_embeddings trigger ditambahkan (24 → 25).
+  triggers: 25,
 } as const;
 
 /** Trigger & CHECK kritis yang WAJIB ada (bukan sekadar jumlah). */

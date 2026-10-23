@@ -13,7 +13,7 @@
  */
 import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { questions } from "@/lib/db/schema/question";
+import { questions, questionEmbeddings } from "@/lib/db/schema/question";
 import {
   DEDUP_EXACT,
   DEDUP_NEAR,
@@ -45,14 +45,16 @@ export async function findNearDuplicates(
   const limit = opts.limit ?? 20;
 
   // Ambil vektor + grade + kunci soal sumber.
+  // ADR-0019: vektor dibaca dari `question_embeddings` via LEFT JOIN.
   const [src] = await db
     .select({
       id: questions.id,
       grade: questions.grade,
-      embedding: questions.embedding,
+      embedding: questionEmbeddings.embedding,
       answerKey: questions.answerKey,
     })
     .from(questions)
+    .leftJoin(questionEmbeddings, eq(questionEmbeddings.questionId, questions.id))
     .where(and(eq(questions.id, questionId), isNull(questions.deletedAt)))
     .limit(1);
   if (!src || !src.embedding) return [];
@@ -61,22 +63,23 @@ export async function findNearDuplicates(
   const srcCorrect = (src.answerKey as { correct?: unknown } | null)?.correct;
 
   // Kandidat: jarak kosinus terkecil (HNSW), soal lain, grade sama, punya embedding.
+  // ADR-0019: vektor di tabel `question_embeddings` via INNER JOIN.
   const rows = await db
     .select({
       id: questions.id,
       answerKey: questions.answerKey,
-      distance: sql<number>`(${questions.embedding} <=> ${literal}::vector)`,
+      distance: sql<number>`(${questionEmbeddings.embedding} <=> ${literal}::vector)`,
     })
     .from(questions)
+    .innerJoin(questionEmbeddings, eq(questionEmbeddings.questionId, questions.id))
     .where(
       and(
         isNull(questions.deletedAt),
         ne(questions.id, questionId),
         eq(questions.grade, src.grade),
-        sql`${questions.embedding} IS NOT NULL`,
       ),
     )
-    .orderBy(sql`${questions.embedding} <=> ${literal}::vector`)
+    .orderBy(sql`${questionEmbeddings.embedding} <=> ${literal}::vector`)
     .limit(limit);
 
   const hits: NearDuplicateHit[] = [];

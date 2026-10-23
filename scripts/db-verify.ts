@@ -17,12 +17,14 @@ config({ path: ".env" });
 const EXPECTED = {
   // MAT-39: collections & collection_items dihapus (28 → 26).
   // MAT-146: question_options dihapus (26 → 25) — opsi kini JSONB.
-  tables: 25,
+  // ADR-0019: question_embeddings ditambahkan (25 → 26).
+  tables: 26,
   checkConstraints: 2,
   hnswIndexes: 1,
   // MAT-39: collections trigger dihapus (25 → 24).
   // MAT-146: trg_question_options_updated_at ikut terhapus (24 → 23).
-  triggers: 23, // 18 updated_at + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
+  // ADR-0019: trg_question_embeddings_updated_at ditambahkan (23 → 24).
+  triggers: 24, // 19 updated_at + 1 stimulus + 1 cycle + 2 usage_count + 1 audit-immutable
 } as const;
 
 /**

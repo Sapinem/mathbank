@@ -1,13 +1,16 @@
 /**
  * batch-embed-questions.ts — ACT-07 (Sprint 1).
  *
- * Mengisi `questions.embedding` (pgvector 1024-dim) untuk seluruh soal yang
- * belum punya embedding, memakai service BGE-M3 lokal
+ * ADR-0019 (Pilar 1 v2.0): Vektor disimpan di tabel `question_embeddings`
+ * (1:1 dengan `questions`), bukan lagi inline di `questions.embedding`.
+ *
+ * Mengisi `question_embeddings.embedding` (pgvector 1024-dim) untuk seluruh
+ * soal yang belum punya embedding, memakai service BGE-M3 lokal
  * (`POST {BGE_M3_SERVICE_URL}/v1/embeddings`).
  *
  * Sifat:
- *   - **Resumable**: selalu `WHERE embedding IS NULL` → aman dimatikan/dijalankan
- *     ulang; tidak mengulang vektor yang sudah ada.
+ *   - **Resumable**: LEFT JOIN + WHERE qe.question_id IS NULL → aman
+ *     dimatikan/dijalankan ulang; tidak mengulang vektor yang sudah ada.
  *   - **Idempotent per soal**: `embedding_content_hash` disimpan bersama vektor
  *     sehingga soal yang kontennya berubah bisa di-embed ulang secara selektif.
  *   - **Fail-soft**: satu batch gagal → dipecah & dicoba ulang; satu soal gagal →
@@ -132,24 +135,28 @@ interface Row {
   content_markdown: string;
 }
 
-/** Tulis satu batch vektor ke DB dalam satu round-trip (unnest). */
+/**
+ * Tulis satu batch vektor ke DB dalam satu round-trip (unnest).
+ * ADR-0019: INSERT ke `question_embeddings` dengan ON CONFLICT upsert.
+ */
 async function saveBatch(rows: Row[], vectors: number[][]): Promise<number> {
   const ids = rows.map((r) => r.id);
   const embs = vectors.map((v) => `[${v.join(",")}]`);
   const hashes = rows.map((r) => sha256(r.content_markdown));
   const res = await sql`
-    UPDATE questions q
-       SET embedding = v.emb::vector,
-           embedding_content_hash = v.hash,
-           embedding_model_name = ${MODEL},
-           updated_at = now()
+    INSERT INTO question_embeddings (question_id, embedding, embedding_content_hash, embedding_model_name, created_at, updated_at)
+    SELECT v.id, v.emb::vector, v.hash, ${MODEL}, now(), now()
       FROM (
         SELECT unnest(${ids}::uuid[]) AS id,
                unnest(${embs}::text[]) AS emb,
                unnest(${hashes}::text[]) AS hash
       ) v
-     WHERE q.id = v.id
-    RETURNING q.id
+    ON CONFLICT (question_id) DO UPDATE
+       SET embedding = EXCLUDED.embedding,
+           embedding_content_hash = EXCLUDED.embedding_content_hash,
+           embedding_model_name = EXCLUDED.embedding_model_name,
+           updated_at = now()
+    RETURNING question_id
   `;
   // postgres.js: `Result` adalah array, tapi `count` lebih andal saat
   // RETURNING di-batch (hindari progres dilaporkan 0 padahal baris tersimpan).
@@ -172,13 +179,16 @@ async function main() {
     throw e;
   }
 
+  // ADR-0019: soal tanpa embedding = LEFT JOIN ke question_embeddings, WHERE qe IS NULL.
   const [pending] = await sql<{ n: number }[]>`
-    SELECT count(*)::int AS n FROM questions
-     WHERE embedding IS NULL AND deleted_at IS NULL
+    SELECT count(*)::int AS n FROM questions q
+     LEFT JOIN question_embeddings qe ON qe.question_id = q.id
+     WHERE qe.question_id IS NULL AND q.deleted_at IS NULL
   `;
   const [already] = await sql<{ n: number }[]>`
-    SELECT count(*)::int AS n FROM questions
-     WHERE embedding IS NOT NULL AND deleted_at IS NULL
+    SELECT count(*)::int AS n FROM question_embeddings qe
+     JOIN questions q ON q.id = qe.question_id
+     WHERE q.deleted_at IS NULL
   `;
   const total = pending!.n + already!.n;
   const target = LIMIT > 0 ? Math.min(LIMIT, pending!.n) : pending!.n;
@@ -192,11 +202,12 @@ async function main() {
   while (done + failed < target) {
     const want = Math.min(BATCH, target - done - failed);
     const rows = await sql<Row[]>`
-      SELECT id::text AS id, content_markdown
-        FROM questions
-       WHERE embedding IS NULL
-         AND deleted_at IS NULL
-       ORDER BY id
+      SELECT q.id::text AS id, q.content_markdown
+        FROM questions q
+        LEFT JOIN question_embeddings qe ON qe.question_id = q.id
+       WHERE qe.question_id IS NULL
+         AND q.deleted_at IS NULL
+       ORDER BY q.id
        LIMIT ${want}
     `;
     if (rows.length === 0) {
@@ -245,7 +256,10 @@ async function main() {
       const rate = done / Math.max(elapsed, 1);
       const etaMin = rate > 0 ? Math.round((target - processed) / rate / 60) : 0;
       const [cov] = await sql<{ emb: number; tot: number }[]>`
-        SELECT count(embedding)::int AS emb, count(*)::int AS tot
+        SELECT (SELECT count(*)::int FROM question_embeddings qe
+                  JOIN questions q ON q.id = qe.question_id
+                 WHERE q.deleted_at IS NULL) AS emb,
+               count(*)::int AS tot
           FROM questions WHERE deleted_at IS NULL
       `;
       const pct = ((cov!.emb / cov!.tot) * 100).toFixed(1);
@@ -258,10 +272,14 @@ async function main() {
   }
 
   const [cov] = await sql<{ tot: number; emb: number; pct: number }[]>`
-    SELECT count(*)::int AS tot,
-           count(embedding)::int AS emb,
-           round(count(embedding)::numeric / count(*) * 100, 1)::float AS pct
-      FROM questions WHERE deleted_at IS NULL
+    SELECT (SELECT count(*)::int FROM questions WHERE deleted_at IS NULL) AS tot,
+           (SELECT count(*)::int FROM question_embeddings qe
+              JOIN questions q ON q.id = qe.question_id
+             WHERE q.deleted_at IS NULL) AS emb,
+           round((SELECT count(*)::numeric FROM question_embeddings qe
+                    JOIN questions q ON q.id = qe.question_id
+                   WHERE q.deleted_at IS NULL) /
+                 NULLIF((SELECT count(*) FROM questions WHERE deleted_at IS NULL), 0) * 100, 1)::float AS pct
   `;
   const mins = ((Date.now() - t0) / 60000).toFixed(1);
   log(
