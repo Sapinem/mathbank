@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { m4thlabAdapter } from "./m4thlab";
 import { mathcyberAdapter } from "./mathcyber";
 import { defantriAdapter } from "./defantri";
+import { pusmendikTkaAdapter } from "./pusmendik-tka";
 import {
   pickHtmlAdapter,
   pickJsonAdapter,
@@ -355,5 +356,71 @@ describe("registry adapter — satu descriptor per sumber", () => {
     for (const s of JSON_SOURCES) {
       expect(pickJsonAdapter({ source: s.source })).toBe(s.adapter);
     }
+  });
+});
+
+describe("adapter pusmendik-tka", () => {
+  it("tanpa blok soal-soal -> return warnings", () => {
+    const res = pusmendikTkaAdapter("<div>Bukan soal</div>");
+    expect(res.items).toHaveLength(0);
+    expect(res.warnings).toHaveLength(1);
+  });
+
+  it("soal PG format A (pil='a') diekstrak dan URL gambar di-rewrite", () => {
+    const html = `
+      <div class="soal-soal" id="soal-no-1">
+        <div class="isi-soal">
+          Berapa hasil dari $5 \\times 5$?
+          <img src="/tka/cbt_images/soal1.png">
+          <!-- PG -->
+        </div>
+        <table>
+          <tr>
+            <td><input type="radio" name="pilihan1" pil="a"></td><td>25</td>
+            <td><input type="radio" name="pilihan1" pil="b"></td><td>20</td>
+          </tr>
+        </table>
+      </div>
+    `;
+    const res = pusmendikTkaAdapter(html, { source: "pusmendik_tka", title: "sd-matematika-p1.json" });
+    expect(res.items).toHaveLength(1);
+    const item = res.items[0]!;
+    expect(item.type).toBe("single_choice");
+    expect(item.stem).toContain("corpus://pusmendik_tka/sd-matematika-p1-img-1");
+    expect(item.options).toHaveLength(2);
+    expect(item.options[0]!.label).toBe("A");
+    expect(item.options[0]!.text).toBe("25");
+  });
+
+  it("soal format B (tabel Benar-Salah) -> matrix_grid", () => {
+    const html = `
+      <div class="soal-soal" id="soal-no-2">
+        <div class="isi-soal">
+          Tentukan pernyataan berikut:
+          <!-- PG -->
+        </div>
+        <table>
+          <thead><tr><td>Pernyataan</td><td>Benar</td><td>Salah</td></tr></thead>
+          <tr>
+            <td>A.</td><td>Nilai $2+2=4$</td>
+            <td><input type="radio" id="pilihan_2_1_1" name="pilihan_2_1" value="1"></td>
+            <td><input type="radio" id="pilihan_2_1_2" name="pilihan_2_1" value="2"></td>
+          </tr>
+          <tr>
+            <td>B.</td><td>Nilai $3 \\times 3 = 10$</td>
+            <td><input type="radio" id="pilihan_2_2_1" name="pilihan_2_2" value="1"></td>
+            <td><input type="radio" id="pilihan_2_2_2" name="pilihan_2_2" value="2"></td>
+          </tr>
+        </table>
+      </div>
+    `;
+    const res = pusmendikTkaAdapter(html, { source: "pusmendik_tka", title: "sd-matematika-p1.json" });
+    expect(res.items).toHaveLength(1);
+    const item = res.items[0]!;
+    expect(item.type).toBe("matrix_grid");
+    const payload = item.dataPayload as { labels: string[]; rows: Array<{ text: string }> };
+    expect(payload.labels).toEqual(["Benar", "Salah"]);
+    expect(payload.rows).toHaveLength(2);
+    expect(payload.rows[0]!.text).toContain("2+2=4");
   });
 });

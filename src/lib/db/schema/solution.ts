@@ -7,8 +7,9 @@ import {
   boolean,
   timestamp,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { solutionTypeEnum, authorTypeEnum } from "./_enums";
 import { questions } from "./question";
 
@@ -40,6 +41,10 @@ export const solutions = pgTable(
   (t) => [
     index("idx_solutions_question").on(t.questionId),
     index("idx_solutions_primary").on(t.questionId, t.isPrimary),
+    // Axiom Quick Win: 1 soal maksimal 1 pembahasan primer
+    uniqueIndex("uq_solutions_one_primary")
+      .on(t.questionId)
+      .where(sql`${t.isPrimary} = true`),
   ],
 );
 

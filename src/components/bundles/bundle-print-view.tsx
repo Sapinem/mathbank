@@ -35,6 +35,8 @@ import { cn } from "@/lib/utils";
 type ColumnMode = "1" | "2";
 /** Cara kunci jawaban disajikan. */
 type KeyMode = "hidden" | "inline" | "separate";
+/** Cara pembahasan disajikan (Axiom 3-Way Mode). */
+type ExplanationMode = "none" | "inline" | "end";
 
 /**
  * Nilai `size` CSS untuk tiap `pageSize`. `null` = pakai `@page` bawaan
@@ -48,7 +50,23 @@ const PRINT_PAGE_SIZE_CSS: Record<NonNullable<BundlePrintConfig["pageSize"]>, st
 
 /** Baca label opsi benar dari `answerKey` (bila ada). */
 function correctLabelsOf(item: BundleItemView): string[] {
-  return item.question.answerKey?.correct ?? [];
+  const key = item.question.answerKey;
+  if (!key) return [];
+  const fromCanonical = (key as { correctOptionIds?: unknown }).correctOptionIds;
+  if (Array.isArray(fromCanonical)) return fromCanonical as string[];
+  if (typeof fromCanonical === "string") return [fromCanonical];
+  if (Array.isArray(key.correct)) return key.correct;
+  if (typeof key.correct === "string") return [key.correct];
+  return [];
+}
+
+/** Baca teks pembahasan dari `answerKey` (bila ada). */
+function explanationOf(item: BundleItemView): string | null {
+  const key = item.question.answerKey;
+  if (!key) return null;
+  const exp = key.explanation ?? (key as Record<string, unknown>).explanationMarkdown;
+  if (typeof exp === "string" && exp.trim().length > 0) return exp.trim();
+  return null;
 }
 
 export function BundlePrintView() {
@@ -61,7 +79,7 @@ export function BundlePrintView() {
   const [bodyColumns, setBodyColumns] = useState<ColumnMode | null>(null);
   const [keyModeOverride, setKeyModeOverride] = useState<KeyMode | null>(null);
   const [includeAnswerSheet, setIncludeAnswerSheet] = useState(true);
-  const [includeExplanation, setIncludeExplanation] = useState(false);
+  const [explanationModeOverride, setExplanationModeOverride] = useState<ExplanationMode | null>(null);
 
   if (isPending) return <LoadingState label="Menyiapkan naskah…" />;
   if (isError)
@@ -74,19 +92,22 @@ export function BundlePrintView() {
   // Bisa tampilkan kunci bila API mengirimkan answerKey pada minimal satu soal.
   const canShowKey = items.some((it) => it.question.answerKey != null);
   // Bisa tampilkan pembahasan bila ada minimal satu soal punya explanation.
-  const canShowExplanation = items.some((it) => it.question.answerKey?.explanation != null);
+  const canShowExplanation = items.some((it) => explanationOf(it) != null);
 
   // Default TIDAK diduplikasi di sini — setiap field dibaca dengan fallback
   // masing-masing di bawah (satu sumber: DEFAULT_BUNDLE_PRINT_CONFIG di skema).
   const config: BundlePrintConfig = bundle.printConfig ?? {};
   const effectiveKeyMode: KeyMode =
     keyModeOverride ?? (config.includeAnswerKey ? "separate" : "hidden");
+  const effectiveExplanationMode: ExplanationMode =
+    explanationModeOverride ?? config.explanationPlacement ?? "none";
   const institution = config.institutionName || "MATH MY ID";
   const tagline = config.tagline ?? "Bank Soal & Kurasi Matematika";
   const instructions = config.instructions ?? bundle.instructions;
   const durationMinutes = config.durationMinutes ?? bundle.durationMinutes;
   const isTwoColumn = bodyColumns ? bodyColumns === "2" : config.twoColumnLayout !== false;
   const pageSizeCss = PRINT_PAGE_SIZE_CSS[config.pageSize ?? "A4"];
+  const answerSpaceCm = config.answerSpaceCm ?? 4;
 
   return (
     <div className="flex flex-col gap-6">
@@ -192,18 +213,40 @@ export function BundlePrintView() {
           </Button>
         </div>
 
-        {/* Pembahasan */}
+        {/* Pembahasan (Axiom 3-Way Mode) */}
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-muted-foreground">Pembahasan</span>
-          <Button
-            size="sm"
-            variant={includeExplanation ? "default" : "outline"}
-            disabled={!canShowExplanation}
-            onClick={() => setIncludeExplanation((v) => !v)}
-            className="min-h-[44px]"
-          >
-            {includeExplanation ? "Sertakan pembahasan" : "Tanpa pembahasan"}
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant={effectiveExplanationMode === "none" ? "default" : "outline"}
+              disabled={!canShowExplanation}
+              onClick={() =>
+                setExplanationModeOverride(effectiveExplanationMode === "none" ? "end" : "none")
+              }
+              className="min-h-[44px]"
+            >
+              {effectiveExplanationMode === "none" ? "Tanpa pembahasan" : "Sembunyikan"}
+            </Button>
+            <Button
+              size="sm"
+              variant={effectiveExplanationMode === "inline" ? "default" : "outline"}
+              disabled={!canShowExplanation}
+              onClick={() => setExplanationModeOverride("inline")}
+              className="min-h-[44px]"
+            >
+              Di bawah soal
+            </Button>
+            <Button
+              size="sm"
+              variant={effectiveExplanationMode === "end" ? "default" : "outline"}
+              disabled={!canShowExplanation}
+              onClick={() => setExplanationModeOverride("end")}
+              className="min-h-[44px]"
+            >
+              Lembar akhir
+            </Button>
+          </div>
         </div>
 
         <div className="ml-auto flex gap-2">
@@ -252,7 +295,7 @@ export function BundlePrintView() {
                 )}
               </div>
             </div>
-            <div className="title text-2xl font-extrabold text-[#0b6b3a] tracking-wide text-right">
+            <div className="title print-bundle-title text-2xl font-extrabold text-[#0b6b3a] tracking-wide text-right">
               {bundle.title}
             </div>
           </div>
@@ -318,6 +361,8 @@ export function BundlePrintView() {
                 <div className="min-w-0 flex-1">
                   <MathContent content={it.question.contentMarkdown} />
                   {isOptionBased(it.question.questionType as never) &&
+                    it.question.questionType !== "matrix_grid" &&
+                    it.question.questionType !== "matching" &&
                     it.question.options.length > 0 && (
                       <ul
                         className={cn(
@@ -343,6 +388,111 @@ export function BundlePrintView() {
                         })}
                       </ul>
                     )}
+
+                  {/* Render khusus untuk soal matrix_grid (Tabel Pernyataan) */}
+                  {it.question.questionType === "matrix_grid" && (() => {
+                    const dp = it.question.dataPayload as { labels?: string[]; rows?: { text: string; answer?: string }[] } | null;
+                    const labels = dp?.labels ?? ["Benar", "Salah"];
+                    const rows = dp?.rows ?? [];
+                    if (rows.length === 0) return null;
+                    return (
+                      <div className="mt-2 overflow-x-auto break-inside-avoid">
+                        <table className="w-full border-collapse border border-gray-300 text-xs print:border-black">
+                          <thead>
+                            <tr className="bg-gray-100 print:bg-gray-200">
+                              <th className="border border-gray-300 p-1.5 text-left font-medium print:border-black">Pernyataan</th>
+                              {labels.map((l, li) => (
+                                <th key={li} className="w-16 border border-gray-300 p-1.5 text-center font-medium print:border-black">{l}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map((r, ri) => (
+                              <tr key={ri} className="border-t border-gray-200 print:border-black">
+                                <td className="border border-gray-300 p-1.5 print:border-black">
+                                  <MathContent content={r.text} />
+                                </td>
+                                {labels.map((l, li) => {
+                                  const isSelected = effectiveKeyMode === "inline" && r.answer === l;
+                                  return (
+                                    <td key={li} className="border border-gray-300 p-1.5 text-center font-bold print:border-black">
+                                      {isSelected ? "✓" : "○"}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Render khusus untuk soal matching (Premis & Pilihan Respons) */}
+                  {it.question.questionType === "matching" && (() => {
+                    const dp = it.question.dataPayload as { premises?: { id: string; contentMarkdown: string }[]; responses?: { id: string; contentMarkdown: string }[] } | null;
+                    const premises = dp?.premises ?? [];
+                    const responses = dp?.responses ?? [];
+                    const matchingPairs = (it.question.answerKey as { matchingPairs?: Record<string, string> } | null)?.matchingPairs ?? {};
+                    if (premises.length === 0 && responses.length === 0) return null;
+                    return (
+                      <div className="mt-2 grid grid-cols-2 gap-4 text-xs break-inside-avoid">
+                        <div className="flex flex-col gap-1.5 border-r border-gray-200 pr-2 print:border-black">
+                          <span className="font-semibold text-gray-700 print:text-black">Premis / Pertanyaan:</span>
+                          {premises.map((p, pi) => (
+                            <div key={p.id ?? pi} className="flex gap-1.5 rounded border border-gray-200 bg-gray-50 p-1 print:border-black print:bg-transparent">
+                              <span className="font-bold">{pi + 1}.</span>
+                              <div className="flex-1">
+                                <MathContent content={p.contentMarkdown} />
+                                {effectiveKeyMode === "inline" && matchingPairs[p.id] && (
+                                  <span className="ml-1 text-[10px] font-bold text-green-700 print:text-black">
+                                    → {matchingPairs[p.id]}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-col gap-1.5 pl-2">
+                          <span className="font-semibold text-gray-700 print:text-black">Pilihan Jawaban:</span>
+                          {responses.map((res, ri) => (
+                            <div key={res.id ?? ri} className="flex gap-1.5 rounded border border-gray-200 bg-gray-50 p-1 print:border-black print:bg-transparent">
+                              <span className="font-bold">{String.fromCharCode(65 + ri)}.</span>
+                              <div className="flex-1">
+                                <MathContent content={res.contentMarkdown} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Area ruang jawaban untuk soal isian / esai (Axiom answerSpaceCm) */}
+                  {!isOptionBased(it.question.questionType as never) && (
+                    <div
+                      className="mt-2.5 rounded border border-dashed border-gray-300 break-inside-avoid print:border-gray-400"
+                      style={{ height: `${answerSpaceCm}cm` }}
+                    >
+                      <span className="block p-1 text-[9px] text-gray-400 select-none no-print">
+                        Area Jawaban Siswa ({answerSpaceCm} cm)
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Pembahasan tepat di bawah soal (inline mode) */}
+                  {effectiveExplanationMode === "inline" && (() => {
+                    const exp = explanationOf(it);
+                    if (!exp) return null;
+                    return (
+                      <div className="mt-2.5 rounded border-l-2 border-[#0b6b3a] bg-gray-50 p-2.5 text-xs text-gray-800 break-inside-avoid print:bg-transparent print:border-l print:text-black">
+                        <span className="mb-1 block font-bold text-[#0b6b3a] print:text-black">
+                          Pembahasan:
+                        </span>
+                        <MathContent content={exp} />
+                      </div>
+                    );
+                  })()}
                 </div>
               </li>
             );
@@ -369,13 +519,13 @@ export function BundlePrintView() {
           </section>
         )}
 
-        {/* Lembar pembahasan terpisah (MAT-40) */}
-        {includeExplanation && canShowExplanation && (
+        {/* Lembar pembahasan terpisah di akhir naskah (end mode) */}
+        {effectiveExplanationMode === "end" && canShowExplanation && (
           <section className="print-sheet-explanation mt-8 border-t pt-4">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Pembahasan</h2>
             <ol className="flex flex-col gap-4 text-sm leading-relaxed">
               {questionItems.map((it, i) => {
-                const explanation = it.question.answerKey?.explanation;
+                const explanation = explanationOf(it);
                 if (!explanation) return null;
                 return (
                   <li key={it.item.id} className="print-question flex gap-2 break-inside-avoid">

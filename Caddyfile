@@ -18,6 +18,7 @@
 	reverse_proxy app:3000 {
 		header_up X-Request-ID {http.request.uuid}
 		header_up X-Forwarded-Proto {scheme}
+		header_up X-Real-IP {remote_host}
 	}
 
 	# Log akses terstruktur (JSON) — mudah dikumpulkan.

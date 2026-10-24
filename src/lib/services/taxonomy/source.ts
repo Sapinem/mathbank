@@ -4,22 +4,22 @@
  *
  * ⚠️ JANGAN impor dari komponen klien (menarik `@/lib/db`).
  */
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sources } from "@/lib/db/schema/source";
-import { bundles } from "@/lib/db/schema/bundle";
+import { bundles, bundleItems } from "@/lib/db/schema/bundle";
+import { questions } from "@/lib/db/schema/question";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
 import { recordAudit } from "../audit";
 import type { Actor } from "@/lib/auth/actor";
-import { slugify, type SourceKind, type SourceRow } from "./shared";
+import { type SourceKind, type SourceRow } from "./shared";
 
 /** Kolom sumber yang diproyeksikan (hindari duplikasi `.returning`). */
 const sourceColumns = {
   id: sources.id,
   kind: sources.kind,
   label: sources.label,
-  slug: sources.slug,
   url: sources.url,
   publisher: sources.publisher,
   author: sources.author,
@@ -29,29 +29,32 @@ const sourceColumns = {
 } as const;
 
 export async function listSources(): Promise<SourceRow[]> {
+  // Set-based aggregation subquery menggantikan correlated subquery per-baris (PERF)
+  const countsSubquery = db
+    .select({
+      sourceId: bundles.sourceId,
+      count: sql<number>`count(DISTINCT ${bundleItems.questionId})::int`.as("count"),
+    })
+    .from(bundles)
+    .innerJoin(bundleItems, eq(bundleItems.bundleId, bundles.id))
+    .innerJoin(questions, and(eq(questions.id, bundleItems.questionId), isNull(questions.deletedAt)))
+    .where(and(isNotNull(bundles.sourceId), isNull(bundles.deletedAt)))
+    .groupBy(bundles.sourceId)
+    .as("counts");
+
   const rows = await db
     .select({
       ...sourceColumns,
-      // ADR-0014: soal tak punya source_id — dihitung lewat bundle.
-      // Kualifikasi `"sources"."id"` WAJIB: subquery punya alias b/bi/q yang
-      // juga berkolom `id`, jadi `${sources.id}` (yang jadi `"id"`) ambigu.
-      questionCount: sql<number>`(
-        SELECT count(DISTINCT bi.question_id)::int
-        FROM bundles b
-        JOIN bundle_items bi ON bi.bundle_id = b.id
-        JOIN questions q ON q.id = bi.question_id
-        WHERE b.source_id = "sources"."id" AND q.deleted_at IS NULL
-          AND b.deleted_at IS NULL
-      )`,
+      questionCount: sql<number>`COALESCE(${countsSubquery.count}, 0)::int`,
     })
     .from(sources)
+    .leftJoin(countsSubquery, eq(countsSubquery.sourceId, sources.id))
     .orderBy(asc(sources.kind), asc(sources.label));
 
   return rows.map((r) => ({
     id: r.id,
     kind: r.kind as SourceKind,
     label: r.label,
-    slug: r.slug,
     url: r.url,
     publisher: r.publisher,
     author: r.author,
@@ -82,7 +85,6 @@ export async function createSource(
         .values({
           kind: input.kind,
           label: input.label,
-          slug: slugify(input.label),
           url: input.url ?? null,
           publisher: input.publisher ?? null,
           author: input.author ?? null,
@@ -120,7 +122,6 @@ export async function updateSource(
   if (input.kind !== undefined) patch.kind = input.kind;
   if (input.label !== undefined) {
     patch.label = input.label;
-    patch.slug = slugify(input.label);
   }
   if (input.url !== undefined) patch.url = input.url;
   if (input.publisher !== undefined) patch.publisher = input.publisher;

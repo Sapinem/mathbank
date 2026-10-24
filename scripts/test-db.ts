@@ -36,7 +36,7 @@ if (devUrl && testUrl === devUrl) {
 
 const result = spawnSync(
   "npx",
-  ["vitest", "run", "--config", "vitest.db.config.mts"],
+  ["vitest", "run", "--config", "vitest.db.config.mts", ...process.argv.slice(2)],
   {
     stdio: "inherit",
     env: { ...process.env, DATABASE_URL: testUrl, TEST_DATABASE_URL: testUrl },

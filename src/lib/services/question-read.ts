@@ -12,6 +12,7 @@ import {
   questionColumns,
   projectOptions,
   projectAnswerKey,
+  projectDataPayload,
   canSeeAnswerKey,
   type QuestionOptionView,
 } from "@/lib/db/projections/question";
@@ -74,11 +75,6 @@ export type PublicQuestion = Omit<
 export interface QuestionTopicView {
   id: string;
   name: string;
-  /**
-   * MAT-131A (Tahap A): `slug` **deprecated & nullable** — baris topik baru
-   * menyimpan `NULL`. Konsumen wajib memakai `id` untuk tautan/filter.
-   */
-  slug?: string | null;
   level: number;
   isPrimary: boolean;
 }
@@ -180,7 +176,6 @@ export async function getQuestion(
     .select({
       id: topics.id,
       name: topics.name,
-      slug: topics.slug,
       level: topics.level,
       isPrimary: questionTopics.isPrimary,
     })
@@ -192,7 +187,6 @@ export async function getQuestion(
   const topicViews: QuestionTopicView[] = topicRows.map((t) => ({
     id: t.id,
     name: t.name,
-    slug: t.slug,
     level: Number(t.level),
     isPrimary: t.isPrimary,
   }));
@@ -268,6 +262,7 @@ export async function getQuestion(
 
   return {
     ...row,
+    dataPayload: projectDataPayload(row.dataPayload, { withAnswerKey }),
     // Kunci jawaban: bentuk kanonik + alias legacy (S3 — hanya bila berwenang).
     ...(withAnswerKey
       ? { answerKey: projectAnswerKey("answerKey" in row ? row.answerKey : undefined) as AnswerKey }
@@ -337,7 +332,7 @@ export async function listQuestions(
   let orderBy: SQL[] | undefined;
   let semanticWhere: SQL | undefined;
   if (query.mode === "semantic" && query.q) {
-    const emb = await embedText(query.q.trim());
+    const emb = await embedText(query.q.trim(), { timeoutMs: 3000 });
     if (emb.ok && emb.vector) {
       const literal = `[${emb.vector.join(",")}]`;
       // ADR-0019: vektor pindah ke tabel `question_embeddings` (Pilar 1 v2.0).
@@ -423,6 +418,7 @@ async function attachOptions(
     const answerKey = "answerKey" in r ? (r as { answerKey?: unknown }).answerKey : undefined;
     return {
       ...r,
+      dataPayload: projectDataPayload(r.dataPayload, { withAnswerKey }),
       ...(answerKey !== undefined
         ? { answerKey: projectAnswerKey(answerKey) as AnswerKey }
         : {}),

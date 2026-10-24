@@ -57,7 +57,13 @@ export interface CommitBatchResult {
 
 export async function commitIngestBatch(
   items: IngestQueueItem[],
-  opts: { actor: Actor; limit: number; mediaDelayMs?: number; grade?: string | null },
+  opts: {
+    actor: Actor;
+    limit: number;
+    mediaDelayMs?: number;
+    grade?: string | null;
+    totalRemaining?: number;
+  },
 ): Promise<CommitBatchResult> {
   const batch = items.slice(0, opts.limit);
   const root = mediaStorageRoot();
@@ -83,7 +89,10 @@ export async function commitIngestBatch(
     storedCount: results.reduce((a, r) => a + r.storedCount, 0),
     failedCount: results.reduce((a, r) => a + r.failedCount, 0),
     failures: results.flatMap((r) => r.failures),
-    remaining: Math.max(0, items.length - batch.length),
+    remaining:
+      opts.totalRemaining !== undefined
+        ? Math.max(0, opts.totalRemaining - batch.length)
+        : Math.max(0, items.length - batch.length),
   };
 
   const bundleIds = results.map((r) => r.bundleId).filter((x): x is string => Boolean(x));

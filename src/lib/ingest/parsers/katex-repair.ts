@@ -467,7 +467,7 @@ export const REPAIRS: Repair[] = [
       // dari yang PALING AKHIR: penutup display yang hilang hampir selalu
       // yang terakhir. Mundur dari akhir agar indeks tidak bergeser.
       const posisi: number[] = [];
-      const re = /\$(?!\$)/g;
+      const re = /(?<!\$)\$(?!\$)/g;
       let m: RegExpExecArray | null;
       while ((m = re.exec(t)) !== null) posisi.push(m.index);
       if (posisi.length === 0) return t;
@@ -694,7 +694,7 @@ export const REPAIRS: Repair[] = [
       let out = t;
       for (const p of pos.reverse()) {
         if (sisa <= 0) break;
-        out = out.slice(0, p) + out.slice(p + 3);
+        out = out.slice(0, p) + out.slice(p + 2);
         sisa--;
       }
       return out;
@@ -767,6 +767,11 @@ export function repairAdaptive(text: string): { text: string; applied: string[];
     best = galatTerbaik;
     applied.push(namaTerbaik);
     if (best === 0) break;
+  }
+  // Invarian "No-Guess": jika tidak ada penurunan galat bersih dibanding kondisi awal,
+  // buang seluruh mutasi spekulatif dan kembalikan teks asli utuh.
+  if (best >= before) {
+    return { text, applied: [], before, after: before };
   }
   return { text: cur, applied, before, after: best };
 }

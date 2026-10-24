@@ -22,7 +22,6 @@ async function apiFetch<T>(url: string): Promise<T> {
 export interface TopicRow {
   id: string;
   name: string;
-  slug?: string | null;
   parentId: string | null;
   level: number;
 }
@@ -31,7 +30,6 @@ export interface SourceRow {
   id: string;
   kind: string;
   label: string;
-  slug: string;
 }
 
 export interface EventRow {

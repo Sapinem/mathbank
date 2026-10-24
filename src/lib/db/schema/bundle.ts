@@ -11,7 +11,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations, sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import { bundleTypeEnum, bundleOriginEnum, bundleItemRoleEnum, questionStatusEnum } from "./_enums";
 import { questions } from "./question";
 import { sources } from "./source";
@@ -27,6 +27,8 @@ export interface BundlePrintConfig {
   includeAnswerKey?: boolean;
   showQuestionNumber?: boolean;
   pageSize?: "A4" | "Letter";
+  explanationPlacement?: "none" | "inline" | "end";
+  answerSpaceCm?: number;
 }
 
 export const DEFAULT_BUNDLE_PRINT_CONFIG: BundlePrintConfig = {
@@ -35,6 +37,8 @@ export const DEFAULT_BUNDLE_PRINT_CONFIG: BundlePrintConfig = {
   includeAnswerKey: false,
   showQuestionNumber: true,
   pageSize: "A4",
+  explanationPlacement: "none",
+  answerSpaceCm: 4,
 };
 
 /** bundles — paket/naskah soal. UTS/PAS = bundle_type 'exam' tanpa event. */
@@ -43,7 +47,6 @@ export const bundles = pgTable(
   {
     id: uuidPk(),
     title: varchar("title", { length: 255 }).notNull(),
-    slug: varchar("slug", { length: 255 }).notNull(),
     bundleType: bundleTypeEnum("bundle_type").notNull(),
     /** Asal-usul paket (MAT-39): `ingest` = pipeline naskah; `manual` = guru/admin. */
     origin: bundleOriginEnum("origin").default("manual").notNull(),
@@ -66,10 +69,6 @@ export const bundles = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
-    // T9: slug unik antar yang AKTIF saja (boleh dipakai ulang setelah soft-delete)
-    uniqueIndex("uq_bundles_slug_active")
-      .on(t.slug)
-      .where(sql`${t.deletedAt} IS NULL`),
     index("idx_bundles_type").on(t.bundleType),
     index("idx_bundles_origin").on(t.origin),
     index("idx_bundles_source_id").on(t.sourceId),

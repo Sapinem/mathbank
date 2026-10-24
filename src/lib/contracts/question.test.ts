@@ -222,6 +222,27 @@ describe("enforceQuestionWriteGate — MAT-146", () => {
     expect(r.answerKey.explanation).toBe("Pembahasan");
   });
 
+  it("esai dengan rubric terstruktur otomatis men-generate scoringRubric dan lolos rilis ready", () => {
+    const r = enforceQuestionWriteGate({
+      questionType: "essay",
+      dataPayload: {},
+      answerKey: {
+        explanationMarkdown: "Pembahasan langkah-langkah penyelesaian",
+        rubric: {
+          totalPoints: 10,
+          criteria: [
+            { description: "Menuliskan model persamaan diferensial", points: 4 },
+            { description: "Menyelesaikan integral faktor integrasi", points: 6 },
+          ],
+        },
+      },
+      status: "ready",
+    });
+    expect(r.answerKey.rubric).toBeDefined();
+    expect(r.answerKey.scoringRubric).toContain("Langkah 1 (4 poin)");
+    expect(r.dataPayload.rubricGuidelines).toBeDefined();
+  });
+
   // ── Regresi: mirror legacy tidak boleh memblokir rilis (MAT-146) ──────────
   // `answerKeySchema` bersifat `.strict()`; normalisasi selalu menambah mirror
   // `correct` + `explanation`. Sebelum perbaikan, SETIAP soal gagal dirilis

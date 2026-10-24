@@ -46,3 +46,10 @@ export {
 
 // Galeri.
 export { listMedia, getMediaDetail, updateMediaMeta } from "./media/gallery";
+
+// Shortcode media linking.
+export {
+  syncQuestionShortcodeMediaTx,
+  linkShortcodeMediaTx,
+  findLinkedMediaIds,
+} from "./media/shortcode-link";

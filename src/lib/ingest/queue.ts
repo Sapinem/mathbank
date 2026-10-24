@@ -4,7 +4,7 @@
  * Siklus status: `pending` → `processing` → `done` | `failed` | `skipped`.
  * Idempotensi: artikel dengan `rawContent` sama yang belum `failed` → tak dibuat ulang.
  */
-import { and, eq, inArray, desc, sql } from "drizzle-orm";
+import { and, eq, inArray, desc, sql, count } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { ingestQueue, type IngestQueueItem } from "@/lib/db/schema/system";
 import { articleHash } from "./hash";
@@ -19,7 +19,6 @@ export interface EnqueueInput {
   sourceUrl?: string | null;
   rawContent: string;
   rawFormat?: "html" | "json" | "text";
-  slug?: string | null;
   targetGrade?: string | null;
   targetTopicId?: string | null;
 }
@@ -47,7 +46,6 @@ export async function enqueue(input: EnqueueInput): Promise<EnqueueResult> {
     .insert(ingestQueue)
     .values({
       title: input.title.slice(0, 255),
-      slug: input.slug?.slice(0, 255) ?? null,
       sourceOrigin: input.sourceOrigin.slice(0, 50),
       sourceUrl: input.sourceUrl ?? null,
       rawContent: input.rawContent,
@@ -65,20 +63,22 @@ export async function enqueue(input: EnqueueInput): Promise<EnqueueResult> {
 
 /**
  * Cari baris antrean dengan isi (`rawContent`) yang hash-nya sama.
- * Hash tak disimpan sebagai kolom → ambil kandidat belum-gagal terbaru lalu
- * bandingkan hash pasti (jumlah antrean realistis, biaya wajar).
+ * Menggunakan pencarian SQL langsung dengan `sha256()` untuk menghindari penarikan
+ * ratusan naskah besar ke memori Node.js (PERF).
  */
 async function findByContentHash(contentHash: string): Promise<IngestQueueItem | null> {
-  const candidates = await db
+  const [match] = await db
     .select()
     .from(ingestQueue)
-    .where(inArray(ingestQueue.status, ["pending", "processing", "completed"]))
+    .where(
+      and(
+        inArray(ingestQueue.status, ["pending", "processing", "completed"]),
+        sql`encode(sha256(btrim(${ingestQueue.rawContent}, E' \t\n\r')::bytea), 'hex') = ${contentHash}`,
+      ),
+    )
     .orderBy(desc(ingestQueue.createdAt))
-    .limit(500);
-  for (const c of candidates) {
-    if (articleHash(c.rawContent) === contentHash) return c;
-  }
-  return null;
+    .limit(1);
+  return match ?? null;
 }
 
 /** Ambil daftar antrean (opsional filter status), terbaru dulu. */
@@ -114,7 +114,8 @@ export async function getQueueItem(id: string): Promise<IngestQueueItem | null> 
  */
 export async function listPending(
   ids?: string[],
-): Promise<{ items: IngestQueueItem[]; nonPending: string[] }> {
+  limit?: number,
+): Promise<{ items: IngestQueueItem[]; nonPending: string[]; totalPending?: number }> {
   if (ids && ids.length) {
     const rows = await db
       .select()
@@ -126,12 +127,25 @@ export async function listPending(
     const missing = ids.filter((id) => !found.has(id));
     return { items: rows.filter((r) => r.status === "pending"), nonPending: [...nonPending, ...missing] };
   }
-  const items = await db
+
+  const [totalRow] = await db
+    .select({ n: count() })
+    .from(ingestQueue)
+    .where(eq(ingestQueue.status, "pending"));
+  const totalPending = totalRow?.n ?? 0;
+
+  let query = db
     .select()
     .from(ingestQueue)
     .where(eq(ingestQueue.status, "pending"))
     .orderBy(ingestQueue.createdAt);
-  return { items, nonPending: [] };
+
+  if (typeof limit === "number" && limit > 0) {
+    query = query.limit(limit) as typeof query;
+  }
+
+  const items = await query;
+  return { items, nonPending: [], totalPending };
 }
 
 /** Tandai satu baris sedang diproses (guard balapan). `false` bila sudah bukan pending. */

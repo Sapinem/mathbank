@@ -30,17 +30,14 @@ afterEach(() => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// SEC-05 — Corpus path traversal (".." lolos regex segmen)
+// SEC-05 — Corpus path traversal (".." ditolak)
 // ─────────────────────────────────────────────────────────────────────────
 describe("SEC-05: corpus:// path traversal", () => {
-  it("segmen '..' diterima regex & path keluar dari CORPORA_BASE (CACAT)", async () => {
-    // Path sengaja tak ada → pesan galat memuat `absPath` hasil `join()`.
+  it("segmen '..' ditolak oleh validasi karakter aman (TERPERBAIKI)", async () => {
     const r = await fetchImage("corpus://defantri/../../../../etc/passwd");
     expect(r.ok).toBe(false);
-    // BUKTI: yang dicoba dibuka adalah /etc/passwd, bukan berkas di corpora/.
-    expect(r.error).toContain("/etc/passwd");
-    expect(r.error).not.toContain("/corpora/defantri/images/../../../../etc/passwd");
-    console.log("[SEC-05] error =", r.error);
+    expect(r.error).toMatch(/karakter tidak aman|traversal ditolak/i);
+    expect(r.error).not.toContain("berkas tidak ditemukan");
   });
 });
 
@@ -75,8 +72,8 @@ vi.mock("@/lib/services/media-service", () => ({
   },
 }));
 
-describe("SEC-07: spoofing X-Forwarded-For melewati rate limit /img", () => {
-  it("setiap XFF berbeda → bucket baru → tak pernah 429 (CACAT)", async () => {
+describe("SEC-07: spoofing X-Forwarded-For tidak dapat melewati rate limit /img", () => {
+  it("spoofing XFF di awal rantai dicegah → IP asli di akhir rantai memicu 429 (TERTUTUP)", async () => {
     // Impor statis di sini tidak mungkin karena vi.mock harus terangkat.
     const { GET } = await import("@/app/img/[shortId]/route");
 
@@ -90,9 +87,9 @@ describe("SEC-07: spoofing X-Forwarded-For melewati rate limit /img", () => {
       });
       codes.push(res.status);
     }
-    // IMAGE_POLICY: capacity 300. Tanpa spoofing → 429 setelah 300 permintaan.
-    expect(codes.includes(429)).toBe(false);
-    console.log("[SEC-07] jumlah permintaan =", codes.length, "tanpa 429");
+    // IMAGE_POLICY: capacity 300. Dengan mitigasi → 429 muncul setelah 300 permintaan.
+    expect(codes.includes(429)).toBe(true);
+    console.log("[SEC-07] Berhasil memicu 429 (mitigasi aktif), jumlah 429 =", codes.filter((c) => c === 429).length);
   });
 });
 

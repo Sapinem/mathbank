@@ -74,7 +74,7 @@ async function main() {
     }
     await sql`
       UPDATE questions
-      SET answer_key = jsonb_set(answer_key, '{scoringRubric}', ${JSON.stringify(scoringRubric)}::jsonb),
+      SET answer_key = jsonb_set(answer_key, '{scoringRubric}', ${sql.json(scoringRubric)}),
           updated_at = NOW()
       WHERE id = ${id}::uuid
     `;

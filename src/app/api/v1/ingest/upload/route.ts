@@ -20,7 +20,6 @@ export const POST = wrapRoute({
       sourceUrl: body.url ?? null,
       rawContent: body.rawContent,
       rawFormat: body.format,
-      slug: body.slug ?? null,
       targetGrade: body.targetGrade ?? null,
       targetTopicId: body.targetTopicId ?? null,
     });

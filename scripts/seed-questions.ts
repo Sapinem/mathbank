@@ -15,23 +15,23 @@ const sql = postgres(url, { max: 1 });
 
 // ── Topik ─────────────────────────────────────────────────────
 const TOPICS = [
-  { slug: "bilangan", name: "Bilangan", parent: null },
-  { slug: "aljabar", name: "Aljabar", parent: null },
-  { slug: "geometri", name: "Geometri", parent: null },
-  { slug: "statistika", name: "Statistika & Peluang", parent: null },
-  { slug: "persamaan-kuadrat", name: "Persamaan Kuadrat", parent: "aljabar" },
-  { slug: "fungsi-kuadrat", name: "Fungsi Kuadrat", parent: "aljabar" },
-  { slug: "segitiga", name: "Segitiga", parent: "geometri" },
-  { slug: "lingkaran", name: "Lingkaran", parent: "geometri" },
+  { key: "bilangan", name: "Bilangan", parent: null },
+  { key: "aljabar", name: "Aljabar", parent: null },
+  { key: "geometri", name: "Geometri", parent: null },
+  { key: "statistika", name: "Statistika & Peluang", parent: null },
+  { key: "persamaan-kuadrat", name: "Persamaan Kuadrat", parent: "aljabar" },
+  { key: "fungsi-kuadrat", name: "Fungsi Kuadrat", parent: "aljabar" },
+  { key: "segitiga", name: "Segitiga", parent: "geometri" },
+  { key: "lingkaran", name: "Lingkaran", parent: "geometri" },
 ];
 
 // ── Sumber ────────────────────────────────────────────────────
 const SOURCES = [
-  { kind: "book", label: "Matematika Wajib Kelas X", slug: "mat-wajib-x" },
-  { kind: "book", label: "Buku Paket Matematika Kelas XI", slug: "paket-mat-xi" },
-  { kind: "website", label: "Kumpulan Soal UTBK Online", slug: "utbk-online" },
-  { kind: "competition", label: "OSN Matematika SMA", slug: "osn-mat-sma" },
-  { kind: "school", label: "Ujian Sekolah SMAN 1", slug: "us-sman1" },
+  { kind: "book", label: "Matematika Wajib Kelas X" },
+  { kind: "book", label: "Buku Paket Matematika Kelas XI" },
+  { kind: "website", label: "Kumpulan Soal UTBK Online" },
+  { kind: "competition", label: "OSN Matematika SMA" },
+  { kind: "school", label: "Ujian Sekolah SMAN 1" },
 ];
 
 // ── Soal contoh ───────────────────────────────────────────────
@@ -187,24 +187,24 @@ async function main() {
   const topicId = new Map<string, string>();
   for (const t of TOPICS.filter((t) => t.parent === null)) {
     const rows = await sql<{ id: string }[]>`
-      INSERT INTO topics (slug, name, level, sort_order) VALUES (${t.slug}, ${t.name}, 1, 0)
+      INSERT INTO topics (name, level, sort_order) VALUES (${t.name}, 1, 0)
       RETURNING id`;
-    topicId.set(t.slug, rows[0].id);
+    topicId.set(t.key, rows[0].id);
   }
   for (const t of TOPICS.filter((t) => t.parent !== null)) {
     const parentId = topicId.get(t.parent as string);
     const rows = await sql<{ id: string }[]>`
-      INSERT INTO topics (slug, name, level, parent_id, sort_order)
-      VALUES (${t.slug}, ${t.name}, 2, ${parentId ?? null}, 0) RETURNING id`;
-    topicId.set(t.slug, rows[0].id);
+      INSERT INTO topics (name, level, parent_id, sort_order)
+      VALUES (${t.name}, 2, ${parentId ?? null}, 0) RETURNING id`;
+    topicId.set(t.key, rows[0].id);
   }
 
   // Sumber
   const sourceIds: string[] = [];
   for (const s of SOURCES) {
     const rows = await sql<{ id: string }[]>`
-      INSERT INTO sources (kind, label, slug)
-      VALUES (${s.kind}, ${s.label}, ${s.slug}) RETURNING id`;
+      INSERT INTO sources (kind, label)
+      VALUES (${s.kind}, ${s.label}) RETURNING id`;
     sourceIds.push(rows[0].id);
   }
 

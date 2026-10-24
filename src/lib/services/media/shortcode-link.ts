@@ -134,7 +134,7 @@ export async function syncQuestionShortcodeMediaTx(tx: Tx, questionId: string): 
     .limit(1);
   if (!row) return 0;
 
-  const optionBodies = extractOptionBodies(row.dataPayload);
+  const payloadBodies = extractPayloadBodies(row.dataPayload);
   const answerKey = (row.answerKey ?? {}) as { explanationMarkdown?: unknown; explanation?: unknown };
   const explanation =
     typeof answerKey.explanationMarkdown === "string"
@@ -150,7 +150,7 @@ export async function syncQuestionShortcodeMediaTx(tx: Tx, questionId: string): 
 
   const bodies: ShortcodeBody[] = [
     { text: row.contentMarkdown, role: "content" },
-    ...optionBodies.map((text) => ({ text, role: "option" as const })),
+    ...payloadBodies.map((text) => ({ text, role: "option" as const })),
     { text: explanation, role: "solution" },
     ...solutionRows.map((s) => ({ text: s.contentMarkdown, role: "solution" as const })),
   ];
@@ -158,13 +158,61 @@ export async function syncQuestionShortcodeMediaTx(tx: Tx, questionId: string): 
   return linkShortcodeMediaTx(tx, questionId, bodies);
 }
 
-/** Ambil markdown tiap opsi dari `data_payload.options` (bentuk JSONB kanonik). */
-function extractOptionBodies(dataPayload: unknown): string[] {
-  const options = (dataPayload as { options?: unknown } | null)?.options;
-  if (!Array.isArray(options)) return [];
-  return options
-    .map((o) => (o as { contentMarkdown?: unknown } | null)?.contentMarkdown)
-    .filter((t): t is string => typeof t === "string" && t.length > 0);
+/**
+ * Ambil markdown tiap opsi/baris dari `data_payload` (bentuk JSONB kanonik).
+ * Mendukung:
+ * - Opsi pilihan ganda (`dataPayload.options[].contentMarkdown`)
+ * - Baris matriks (`dataPayload.rows[].text` / `.contentMarkdown` / `dataPayload.statements[].contentMarkdown`)
+ * - Premis & respons matching (`dataPayload.premises[].contentMarkdown`, `dataPayload.responses[].contentMarkdown`)
+ */
+function extractPayloadBodies(dataPayload: unknown): string[] {
+  if (!dataPayload || typeof dataPayload !== "object") return [];
+  const p = dataPayload as Record<string, unknown>;
+  const texts: string[] = [];
+
+  // 1. Opsi standar pilihan ganda
+  if (Array.isArray(p.options)) {
+    for (const o of p.options) {
+      const text = (o as { contentMarkdown?: unknown } | null)?.contentMarkdown;
+      if (typeof text === "string" && text.length > 0) texts.push(text);
+    }
+  }
+
+  // 2. Baris matriks (rows / statements)
+  if (Array.isArray(p.rows)) {
+    for (const r of p.rows) {
+      const t = (r as { text?: unknown; contentMarkdown?: unknown } | null);
+      if (typeof t?.text === "string" && t.text.length > 0) texts.push(t.text);
+      if (typeof t?.contentMarkdown === "string" && t.contentMarkdown.length > 0) texts.push(t.contentMarkdown);
+    }
+  }
+  if (Array.isArray(p.statements)) {
+    for (const s of p.statements) {
+      const t = (s as { contentMarkdown?: unknown } | null)?.contentMarkdown;
+      if (typeof t === "string" && t.length > 0) texts.push(t);
+    }
+  }
+
+  // 3. Matching (premis & respons)
+  if (Array.isArray(p.premises)) {
+    for (const pr of p.premises) {
+      const t = (pr as { contentMarkdown?: unknown } | null)?.contentMarkdown;
+      if (typeof t === "string" && t.length > 0) texts.push(t);
+    }
+  }
+  if (Array.isArray(p.responses)) {
+    for (const res of p.responses) {
+      const t = (res as { contentMarkdown?: unknown } | null)?.contentMarkdown;
+      if (typeof t === "string" && t.length > 0) texts.push(t);
+    }
+  }
+
+  return texts;
+}
+
+/** Alias kompatibilitas mundur untuk extractPayloadBodies. */
+export function extractOptionBodies(dataPayload: unknown): string[] {
+  return extractPayloadBodies(dataPayload);
 }
 
 /** Re-export kecil agar pemanggil bisa memakai predikat yang sama tanpa impor ganda. */

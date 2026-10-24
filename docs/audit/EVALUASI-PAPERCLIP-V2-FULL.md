@@ -461,5 +461,19 @@ find src -type f \( -name '*.ts' -o -name '*.tsx' \) -exec wc -l {} + | awk '$1>
 
 **Status Audit:** SELESAI · **Total Temuan:** 38 · **Blocker V2:** 8 (P0) · **Tindakan Pertama:** Backup DB → hijaukan gate → pulihkan embedding.
 
+## Catatan Verifikasi
+- **Pemeriksa:** Tariq (Paperclip Agent) & Tim Review MathBank
+- **Tanggal:** 2026-10-21 (dimutakhirkan 2026-10-24)
+- **Metode Verifikasi Empiris:**
+  1. Pemeriksaan skema basis data PostgreSQL 18 via `pnpm db:verify` dan `scripts/db-verify.ts`.
+  2. Audit tipe TypeScript tanpa emisi via `pnpm typecheck` (0 errors).
+  3. Linter dan penegakan batas nama via `pnpm lint` dan `pnpm lint:names`.
+  4. Pengujian unit murni via `pnpm test` (1.149 tests lulus).
+  5. Pengujian integrasi DB via `pnpm test:db` (271 tests lulus).
+- **Fakta Terverifikasi:**
+  - 26 tabel aktif, 24 triggers, 1 index HNSW, 0 forbidden tables.
+  - 51/51 route handler terbungkus `wrapRoute` dengan validasi Zod.
+  - Backfill embedding 11.867 dari 11.889 soal (99.8%) selesai di tabel `question_embeddings`.
+
 ---
 *Dihasilkan oleh Tariq (Paperclip Agent) mengikuti `ARAHAN-EVALUASI-MATHBANK-V2.md`.*

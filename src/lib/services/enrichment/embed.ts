@@ -13,6 +13,7 @@ import { embedText, embeddingModel } from "@/lib/embedding/bge-m3";
 import { sha256 } from "@/lib/ingest/hash";
 import { findNearDuplicates } from "@/lib/ingest/dedup";
 import { recordAudit } from "../audit";
+import { log } from "@/lib/telemetry/logger";
 
 /**
  * Hitung + simpan embedding untuk soal (bila konten berubah).
@@ -62,6 +63,13 @@ export async function embedQuestions(
     const r = await embedText(q.contentMarkdown);
     if (!r.ok || !r.vector) {
       results.push({ questionId: q.id, ok: false, error: r.error });
+      if (r.error && /ECONNREFUSED|ENOTFOUND|timeout|abort|HTTP 50[0234]/i.test(r.error)) {
+        const processed = results.length;
+        for (let i = processed; i < rows.length; i++) {
+          results.push({ questionId: rows[i]!.id, ok: false, error: `Service tidak tersedia: ${r.error}` });
+        }
+        break;
+      }
       continue;
     }
     // ADR-0019: vektor disimpan ke tabel terpisah `question_embeddings`.
@@ -102,8 +110,13 @@ export async function embedQuestions(
             .where(eq(questions.id, q.id));
           nearFlagged++;
         }
-      } catch {
-        /* near-dedup gagal tak boleh menggagalkan embedding */
+      } catch (err) {
+        // Near-dedup gagal tidak boleh menggagalkan embedding, tapi rekam ke telemetri
+        log.warn({
+          msg: "near_dedup_failed",
+          questionId: q.id,
+          err,
+        });
       }
     }
 

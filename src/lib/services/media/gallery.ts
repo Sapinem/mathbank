@@ -37,7 +37,7 @@ export async function listMedia(opts: {
     .from(mediaAssets)
     .where(where);
 
-  return { data: rows, total: Number(countRow?.total ?? 0) };
+  return { items: rows, data: rows, total: Number(countRow?.total ?? 0) };
 }
 
 /** Detail satu aset + daftar soal yang memakainya (arah balik junction). */

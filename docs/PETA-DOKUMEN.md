@@ -44,7 +44,26 @@ Seluruh artefak perencanaan dan catatan audit terdahulu telah direlokasi ke dire
 ## 4. Dokumen Pendukung Spesifik Domain
 
 Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spesifik:
+- `docs/sprint1/`: Laporan eksekusi dan progres Sprint 1:
+  - `docs/sprint1/ACT-07-EMBEDDING-REPORT.md`: 🟢 Laporan akhir backfill embedding BGE-M3 (99.8% soal tervektor).
+  - `docs/sprint1/SLUG-TAHAP-A.md`: 🟢 Laporan implementasi Tahap A soft-deprecation kolom slug.
+  - `docs/sprint1/FARUQ-PROGRESS.md`: 🟢 Progres analisis mutu distractor rationale & scoring rubric.
+  - `docs/sprint1/ICHSAN-PROGRESS.md`: 🟢 Progres kurasi taksonomi & distribusi difficulty.
+  - `docs/sprint1/SALMAN-PROGRESS.md`: 🟢 Progres integrasi UI & verifikasi render.
 - `docs/ADR/`: *Architectural Decision Records* (catatan keputusan arsitektural resmi yang masih berlaku).
+  - `docs/ADR/0016-tambah-collections-berdampingan.md`: 📦 (digantikan ADR-0018 & MAT-39)
+  - `docs/ADR/0018-drop-collections-origin-discriminator.md`: ✅ (konsolidasi collections ke bundles)
+  - `docs/ADR/0019-isolasi-vektor-question-embeddings.md`: ✅ (isolasi vektor ke tabel 1:1 question_embeddings)
+  - `docs/ADR/0020-pemisahan-event-makro-dan-provenance-naskah.md`: ✅ (event makro vs provenance naskah)
+  - `docs/ADR/0021-konfigurasi-cetak-print-config-bundles.md`: ✅ (konfigurasi cetak printConfig di bundles)
+  - `docs/ADR/0022-wraproute-pipeline-banned-server-actions.md`: ✅ (wrapRoute pipeline & larangan Server Actions)
+  - `docs/ADR/0023-satu-evaluator-invarian-skema.md`: ✅ (satu evaluator invarian skema)
+- `docs/ARAHAN-4-PILAR-ARSITEKTUR-V2.md`: 📋 **Arahan 4 Pilar Arsitektur V2** — cetak biru integrasi empat pilar utama MathBank V2.
+- `docs/KAMUS-DATA.md`: 📋 **Kamus Data MathBank** — definisi entitas, relasi, format payload JSONB, dan skema kanonik.
+- `docs/STRATEGI-TES.md`: 📋 **Strategi Tes MathBank** — piramida pengujian multi-layer (unit, DB integration, schema invariant).
+- `docs/pedagogy/`: Panduan dan spesifikasi pedagogis:
+  - `docs/pedagogy/AUDIT-DISTRACTOR-RATIONALE.md`: 📋 **Audit Distractor Rationale** — analisis mutu pedagogis rasional pengecoh soal.
+  - `docs/pedagogy/SPESIFIKASI-PAYLOAD-SOAL-DINAMIS.md`: 📋 **Spesifikasi Payload Soal Dinamis** — kontrak skema Zod untuk tiap tipe soal.
 - `docs/PRD.md`: *Product Requirements Document* tingkat tinggi MathBank.
 - `docs/RUNBOOK.md`: Panduan operasional deployment, maintenance, dan disaster recovery server.
 - `docs/BACKUP-RECOVERY.md`: Strategi backup (cron harian 02:00, retensi 7 harian + arsip mingguan 30 hari), RPO/RTO, dan uji restore wajib.
@@ -52,11 +71,13 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
 - `docs/KEAMANAN.md`: Protokol mitigasi kerentanan (anti-SSRF, sanitasi input KaTeX, auth guard).
 - `docs/AXIOM-VS-MATHBANK-COMPARISON.md`: 📋 **Komparasi Arsitektur Axiom vs MathBank** — pembanding skema `questions`/solutions/taxonomy/bundles/media, kapabilitas eksklusif MathBank, dan batas integrasi lintas repo (Axiom ≠ MathBank).
 - `docs/architecture/QUESTION_PAYLOAD_DECISION.md`: 📋 **Keputusan Penyimpanan Soal Dinamis** — single table + hybrid JSONB (`data_payload`/`answer_key`), alasan tidak memakai tabel opsi terpisah.
+- `docs/architecture/RENCANA-ADOPSI-ARSITEKTUR-AXIOM.md`: 🟢 **Cetak Biru Adopsi Arsitektur Axiom ke MathBank V2** — blueprint transisi multi-topik & pembahasan berperingkat (`rank` vs `is_primary`), evaluasi arsitektural "rank terkecil vs rank = 1", denormalisasi `questions.topic_id` (Model X), analisis Two-Tier Dedup (contentHash + BGE-M3), adopsi fitur percetakan CSS Paged Media, serta strategi eliminasi total kolom `slug` (Tahap B / Fase 2) berbasis UUIDv7 kanonik.
 - `MathBankAuditor/reports/`: Laporan audit skill-based (di luar `docs/`; tetap wajib terdaftar — CONSTRAINTS #31).
   - `MathBankAuditor/reports/2026-10-18/audit-react-19-actions-and-optimistic-ui.md`: 🔴 **Audit React 19 Actions & Optimistic UI (skill `react-19-actions-and-optimistic-ui`)** — 20 temuan (R-01..R-20). Temuan HIGH: R-01 anti-double-submit **Idempotency-Key tidak pernah dikirim klien** padahal server sudah mendukung; R-02 drag reorder paket **tanpa** optimistic update (`setQueryData`); R-04 `setState` saat render di `BundleBuilder` (risiko lost update `instructions`); R-10 form login/ganti-sandi tanpa `<form>`/`type="submit"`. Mencatat bahwa §1 skill (React Compiler) **tidak berlaku** (compiler tak terpasang) dan §2/§3 (Server Actions) **dilarang ADR-0022** — sehingga 0 penggunaan `useActionState`/`useOptimistic` dinilai sebagai konflik kontrak yang sah, bukan cacat. `pnpm typecheck` lulus; `pnpm lint` gagal (7 error **di `scripts/dev/**`**, bukan `src/**`). §Catatan Verifikasi ada.
   - `MathBankAuditor/reports/2026-10-17/audit-security-and-hardening.md`: 🔴 **Audit Keamanan v2 (skill `security-and-hardening`)** — 6 HIGH (SEC-01 `question:flag` tanpa `ownerId`; SEC-02 spoof `X-Forwarded-For`; SEC-03 SSRF TLS *relaxed*; SEC-04 traversal `corpus://`; SEC-05 root ekspor GitSync; SEC-06 SSRF `ai.base_url`) + 9 MEDIUM + 7 LOW; §Catatan Verifikasi ada; bukti eksekusi di `src/lib/security/audit-2026-10-17.proof.test.ts`. **Menggantikan** `MathBankAuditor/reports/17.10.2026/audit-security-and-hardening.md`.
   - `MathBankAuditor/reports/17.10.2026/audit-security-and-hardening.md`: ⚠️ **DIGANTIKAN** (17.10.2026) oleh laporan 2026-10-17 — memuat 0 CRITICAL/2 HIGH tanpa bukti eksekusi dan melewatkan 4 temuan HIGH.
 - `docs/audit/`: Catatan audit aktif (wajib §Catatan Verifikasi — CONSTRAINTS #44).
+  - `docs/audit/2026-10-24-audit-code-review-findings.md`: 🟢 **Rekaman Lengkap Temuan Compound Engineering Code Review MathBank V2.0** — inventaris komprehensif 77 temuan dari 10 reviewer spesialis (correctness, security, testing, project-standards, maintainability, performance, api-contract, data-migration, reliability, adversarial-fallback), 14 temuan agent-native MCP, dan deployment verification checklist. Mencatat status verifikasi: 18 temuan kritis/moderat selesai diperbaiki, 2 operasional rilis, 19 temuan advisory terencana, dan 20 temuan pre-existing terverifikasi. §Catatan Verifikasi ada.
   - `docs/audit/2026-10-18-konsistensi-dokumen-adr-vs-kode.md`: ⚠️ **Audit Konsistensi Dokumen & ADR vs Kode** — 24 klaim diperiksa (registrasi #31, ADR vs skema, §Catatan Verifikasi #44, AGENTS §8); 5 area drift (PETA-DOKUMEN ~120 berkas tak terdaftar; AGENTS §8: 28→26 tabel, 0→11.889 soal, 5→11 event, ADR-0016 sudah digantikan; DATABASE.md kolom fiktif; ADR-0020 `bundles.event_id` masih ada; laporan auditor tanpa §Catatan Verifikasi); §Catatan Verifikasi ada.
   - `docs/audit/EVALUASI-PAPERCLIP-V2-FULL.md`: 🔴 **Evaluasi Menyeluruh 7 Pilar MathBank V2** (MAT-114) — skor total **6,2/10 (MODERATE)**; Pilar 1 Data Quality **3,5 CRITICAL**. Temuan P0: 0% embedding (11.889 soal), 0% pemetaan topik (174 topik), 2.617 media orphan, backup stagnan 8 hari. Memuat snapshot metrik DB terverifikasi (26 tabel, 24 trigger, 11.889 soal, 579 bundle, 174 topik, 2.617 media), asesmen **6 lapisan** arsitektur (L1–L6), drift dokumentasi (AGENTS §8, README), dan dashboard kualitas data. Ringkasan: `EVALUASI-PAPERCLIP-V2-EXECUTIVE.md`; rencana aksi: `PAPERCLIP-V2-ACTION-PLAN.md`; data mentah: `AUDIT-DATA-SNAPSHOT-2026-10-19.csv`.
   - `docs/audit/EVALUASI-MATHBANK-V2-PILLAR1-FULL.md`: 🔴 **Pilar 1 — Data Quality (mendalam)** — bukti query per metrik (status, kunci, pembahasan, LaTeX, duplikasi, media, topik) untuk 11.889 soal.

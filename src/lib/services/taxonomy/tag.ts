@@ -17,7 +17,6 @@ import { type TagRow } from "./shared";
 const tagColumns = {
   id: tags.id,
   name: tags.name,
-  slug: tags.slug,
   usageCount: tags.usageCount,
 } as const;
 
@@ -41,8 +40,6 @@ export async function createTag(
     () =>
       db
         .insert(tags)
-        // MAT-131A: `slug` tidak lagi ditulis → NULL. Identitas kanonik = `id`;
-        // kolom slug hanya dipertahankan untuk data legacy (Tahap B: di-drop).
         .values({ name: input.name })
         .returning(tagColumns),
     "Nama label sudah dipakai.",
@@ -67,8 +64,6 @@ export async function updateTag(
     () =>
       db
         .update(tags)
-        // MAT-131A: jangan menulis ulang `slug` — biarkan nilai legacy apa adanya
-        // (NULL untuk baris baru) agar rename tidak membangkitkan konflik unik.
         .set({ name: input.name, updatedAt: new Date() })
         .where(eq(tags.id, id))
         .returning(tagColumns),

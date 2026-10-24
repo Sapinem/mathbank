@@ -17,7 +17,6 @@ export const ingestUploadSchema = z.object({
   rawContent: z.string().min(1),
   /** Format isi mentah. */
   format: z.enum(["html", "json", "text"]).default("html"),
-  slug: z.string().trim().max(255).nullish(),
   targetGrade: z.string().trim().max(20).nullish(),
   targetTopicId: z.string().uuid().nullish(),
 });

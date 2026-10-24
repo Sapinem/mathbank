@@ -8,16 +8,11 @@
  *  - Naskah = `.print-sheet`; hanya ini yang tampil saat mencetak.
  */
 
-@page {
-  size: A4;
-  /* MAT-40: margin 15mm sesuai standar mutu cetak Math My Id. */
-  margin: 15mm;
-}
-
-/* ══════════ PAGE (A4 portrait, UX-DR2) ══════════ */
+/* ══════════ PAGE (A4 portrait, UX-DR2, MAT-40) ══════════ */
 @page {
   size: A4 portrait;
-  margin: 15mm 15mm;
+  /* MAT-40: margin 15mm sesuai standar mutu cetak Math My Id. */
+  margin: 15mm;
 }
 
 .worksheet {
@@ -143,10 +138,33 @@
    `columns-1` di layar dan memaksa 2 kolom pada ponsel (regresi mobile-first). */
 /* Hanya berlaku saat mencetak. */
 @media print {
-  /* Ukuran & margin halaman A4 (Publishing Engine V2) */
+  /* Ukuran & margin halaman A4 (Publishing Engine V2 — W3C CSS Paged Media Level 3) */
   @page {
     size: A4 portrait;
-    margin: 2cm 1.5cm;
+    margin: 20mm 15mm 20mm 15mm;
+
+    /* Running Header: Nama paket naskah (halaman 2+) */
+    @top-right {
+      content: string(bundleTitle);
+      font-size: 8.5pt;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: #555555;
+    }
+
+    /* Running Footer: Nomor halaman otomatis */
+    @bottom-right {
+      content: "Halaman " counter(page) " dari " counter(pages);
+      font-size: 8.5pt;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: #555555;
+    }
+  }
+
+  /* Supresi Kop di Halaman Pertama: Halaman 1 memuat Kop Institusi secara bersih */
+  @page :first {
+    @top-right {
+      content: none;
+    }
   }
 
   /* Netralkan tinggi terkurung shell (h-svh/overflow) agar dokumen mengalir penuh. */
@@ -161,7 +179,7 @@
   .no-print,
   nav,
   aside,
-  header,
+  header:not(.print-header),
   button:not(.print-keep) {
     display: none !important;
   }
@@ -205,7 +223,15 @@
   }
 
   /* Header & instruksi menempel ke konten di bawahnya */
-  .print-header,
+  .print-header {
+    display: block !important;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .print-bundle-title,
+  .title {
+    string-set: bundleTitle content();
+  }
   .print-instruction {
     break-after: avoid;
     page-break-after: avoid;

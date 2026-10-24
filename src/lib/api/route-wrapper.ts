@@ -30,6 +30,7 @@ import type { Actor } from "@/lib/auth/actor";
 import type { Permission } from "@/lib/auth/permissions";
 import { log } from "@/lib/telemetry/logger";
 import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
+import { getClientIp } from "./client-ip";
 
 /**
  * Pembungkus route (L4) — menghapus boilerplate yang di QBank ditulis
@@ -41,8 +42,8 @@ import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
  *   error  → { error: { code, message } }
  */
 
-export interface RouteContext<TQuery, TBody, TParams = Record<string, string>> {
-  actor: Actor;
+export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, TAuth extends boolean = true> {
+  actor: TAuth extends false ? Actor | null : Actor;
   query: TQuery;
   body: TBody;
   req: Request;
@@ -50,12 +51,12 @@ export interface RouteContext<TQuery, TBody, TParams = Record<string, string>> {
   params: TParams;
 }
 
-export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>> {
+export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>, TAuth extends boolean = true> {
   /**
    * Membutuhkan autentikasi aktor (default: true).
    * Bila false, endpoint dapat diakses publik tanpa login.
    */
-  auth?: boolean;
+  auth?: TAuth;
   /** Izin yang dibutuhkan (dari matriks L1). Otomatis mewajibkan autentikasi. */
   permission?: Permission;
   /** Skema query string (Zod). */
@@ -65,7 +66,7 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
   /** Skema parameter rute URL dinamis (Zod), mis. { id: z.string().uuid() }. */
   params?: ZodType<TParams>;
   /** Handler inti. */
-  handler: (ctx: RouteContext<TQuery, TBody, TParams>) => Promise<TResult>;
+  handler: (ctx: RouteContext<TQuery, TBody, TParams, TAuth>) => Promise<TResult>;
   /** Status sukses (default 200). */
   status?: number;
   /**
@@ -90,11 +91,9 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
   idempotent?: boolean;
 }
 
-/** Ambil IP klien dari header proxy (X-Forwarded-For) atau fallback. */
+/** Ambil IP klien dari header proxy (X-Real-IP / X-Forwarded-For). */
 function clientIp(req: Request): string | null {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip");
+  return getClientIp(req);
 }
 
 /** Bangun objek dari URLSearchParams → plain object untuk Zod. */
@@ -119,6 +118,7 @@ type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
 
 /** Ambil kode error stabil (bila ada) untuk field log. */
 function extractCode(err: unknown): string {
+  if (err instanceof ZodError) return "VALIDATION_ERROR";
   if (err && typeof err === "object") {
     const e = err as { code?: unknown; name?: unknown };
     if (typeof e.code === "string") return e.code;
@@ -130,7 +130,6 @@ function extractCode(err: unknown): string {
         .toUpperCase();
     }
   }
-  if (err instanceof ZodError) return "VALIDATION_ERROR";
   return "INTERNAL_ERROR";
 }
 
@@ -237,6 +236,43 @@ function errorResponse(
       ),
     );
   }
+  if (err instanceof RateLimitError) {
+    const retryAfterSec = Math.ceil(err.retryAfterMs / 1000);
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        {
+          status: 429,
+          headers: { "Retry-After": String(retryAfterSec) },
+        },
+      ),
+    );
+  }
+  if (err instanceof InvalidJsonError) {
+    return withRid(
+      NextResponse.json(
+        { error: { code: err.code, message: err.message } },
+        { status: 400 },
+      ),
+    );
+  }
+  if (err instanceof ZodError) {
+    const isCustom = err.name !== "ZodError" && err.message && !err.message.startsWith("[");
+    return withRid(
+      NextResponse.json(
+        {
+          error: {
+            code: (err as { code?: string }).code ?? "VALIDATION_ERROR",
+            message: isCustom ? err.message : "Data tidak valid",
+            details: err.issues,
+          },
+        },
+        {
+          status: (err as { httpStatus?: number }).httpStatus ?? 400,
+        },
+      ),
+    );
+  }
   if (
     err &&
     typeof err === "object" &&
@@ -262,42 +298,6 @@ function errorResponse(
       ),
     );
   }
-  if (err instanceof RateLimitError) {
-    const retryAfterSec = Math.ceil(err.retryAfterMs / 1000);
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        {
-          status: 429,
-          headers: { "Retry-After": String(retryAfterSec) },
-        },
-      ),
-    );
-  }
-  if (err instanceof InvalidJsonError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 400 },
-      ),
-    );
-  }
-  if (err instanceof ZodError) {
-    return withRid(
-      NextResponse.json(
-        {
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Data tidak valid",
-            details: err.issues,
-          },
-        },
-        {
-          status: (err as { httpStatus?: number }).httpStatus ?? 400,
-        },
-      ),
-    );
-  }
   // Galat tak terduga (500) — detail sudah di-log terstruktur oleh errorResponse.
   return withRid(
     NextResponse.json(
@@ -312,8 +312,8 @@ function errorResponse(
  * Pemakaian:
  *   export const GET = wrapRoute({ query: listQuery, handler: async ({query, actor}) => ... });
  */
-export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>>(
-  opts: RouteOptions<TQuery, TBody, TResult, TParams>,
+export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>, TAuth extends boolean = true>(
+  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuth>,
 ) {
   return async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
     // **#6 (enterprise):** ID permintaan untuk traceability. Pakai header dari
@@ -405,7 +405,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       }
 
       const data = await opts.handler({
-        actor: actor as Actor,
+        actor: actor as TAuth extends false ? Actor | null : Actor,
         query,
         body,
         req,

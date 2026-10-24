@@ -170,6 +170,42 @@ export function projectAnswerKey(answerKey: unknown): Record<string, unknown> {
   return out;
 }
 
+/**
+ * Proyeksi aman data_payload (S3).
+ *
+ * Bila `withAnswerKey` = false:
+ * - Bersihkan `distractorRationale` dari opsi.
+ * - Bersihkan `answer` dari baris matrix_grid.
+ */
+export function projectDataPayload(
+  dataPayload: unknown,
+  opts: { withAnswerKey?: boolean } = {},
+): Record<string, unknown> {
+  if (!dataPayload || typeof dataPayload !== "object") return {};
+  const payload = { ...(dataPayload as Record<string, unknown>) };
+
+  if (!opts.withAnswerKey) {
+    if (Array.isArray(payload.options)) {
+      payload.options = payload.options.map((opt) => {
+        if (!opt || typeof opt !== "object") return opt;
+        const copy = { ...(opt as Record<string, unknown>) };
+        delete copy.distractorRationale;
+        return copy;
+      });
+    }
+    if (Array.isArray(payload.rows)) {
+      payload.rows = payload.rows.map((r) => {
+        if (!r || typeof r !== "object") return r;
+        const copy = { ...(r as Record<string, unknown>) };
+        delete copy.answer;
+        return copy;
+      });
+    }
+  }
+
+  return payload;
+}
+
 
 /**
  * Apakah aktor boleh melihat kunci (`answer_key` + `options.isCorrect`)?

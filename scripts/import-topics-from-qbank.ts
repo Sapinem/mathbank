@@ -138,9 +138,9 @@ async function importTopicsFromQbank() {
         const parentId = c.parent_id ? (idMap.get(c.parent_id) ?? null) : null;
         const [row] = await tx<{ id: string }[]>`
           INSERT INTO topics
-            (name, slug, parent_id, level, description, sort_order, is_active)
+            (name, parent_id, level, description, sort_order, is_active)
           VALUES
-            (${c.name}, ${c.slug}, ${parentId}, ${lvl},
+            (${c.name}, ${parentId}, ${lvl},
              ${c.description}, ${c.sort_order}, ${c.is_active})
           RETURNING id`;
         idMap.set(c.id, row!.id);

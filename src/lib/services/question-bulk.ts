@@ -1,4 +1,4 @@
-import { inArray, sql } from "drizzle-orm";
+import { and, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
 import { auditLogs } from "@/lib/db/schema/system";
@@ -127,7 +127,7 @@ export async function bulkQuestionAction(
         authorId: questions.authorId,
       })
       .from(questions)
-      .where(inArray(questions.id, uniqueIds))) as CandidateRow[];
+      .where(and(inArray(questions.id, uniqueIds), isNull(questions.deletedAt)))) as CandidateRow[];
     dbQueries += 1;
 
     const byId = new Map(rows.map((r) => [r.id, r]));
@@ -172,8 +172,8 @@ export async function bulkQuestionAction(
           pending.push({ id, from });
           audits.push({ id, summary: statusSummary(from, target) });
         } else {
-          // flag / unflag — izin tunggal (tanpa kepemilikan), sama seperti setQuestionFlag.
-          assertCan(actor, "question:flag");
+          // flag / unflag — guru hanya boleh menandai soal miliknya sendiri.
+          assertCan(actor, "question:flag", { ownerId: row.authorId });
           pending.push({ id, from: row.status as QuestionStatus });
           audits.push({
             id,

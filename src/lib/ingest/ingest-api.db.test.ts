@@ -38,7 +38,7 @@ async function cleanAll() {
   await sql`UPDATE questions SET parent_id = NULL`;
   await sql`DELETE FROM questions`;
   await sql`DELETE FROM ingest_queue`;
-  await sql`DELETE FROM sources WHERE slug = 'uji-api'`;
+  await sql`DELETE FROM sources WHERE label = 'uji-api'`;
   await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;
   await sql`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_immutable`;
@@ -120,7 +120,7 @@ describe("alur API ingest", () => {
       JOIN bundle_items bi ON bi.question_id = q.id
       JOIN bundles b ON b.id = bi.bundle_id
       JOIN sources s ON s.id = b.source_id
-      WHERE s.slug = 'uji-api'`;
+      WHERE s.label = 'uji-api'`;
     expect(q.every((r) => r.status === "draft")).toBe(true);
     const iq = await sql`SELECT status, imported_questions_count FROM ingest_queue WHERE source_origin='uji-api'`;
     expect(iq[0].status).toBe("completed");

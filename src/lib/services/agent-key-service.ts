@@ -51,16 +51,26 @@ async function ensureAgentUser(): Promise<string> {
       createdAt: new Date(),
       updatedAt: new Date(),
     })
+    .onConflictDoNothing({ target: authUser.email })
     .returning({ id: authUser.id });
 
-  const userId = created.id;
+  let userId = created?.id;
+  if (!userId) {
+    const [fallback] = await db
+      .select({ id: authUser.id })
+      .from(authUser)
+      .where(eq(authUser.email, AGENT_EMAIL))
+      .limit(1);
+    userId = fallback!.id;
+  }
+
   const hasRole = await db
     .select({ userId: userRoles.userId })
     .from(userRoles)
     .where(and(eq(userRoles.userId, userId), eq(userRoles.role, "agent")))
     .limit(1);
   if (hasRole.length === 0) {
-    await db.insert(userRoles).values({ userId, role: "agent" });
+    await db.insert(userRoles).values({ userId, role: "agent" }).onConflictDoNothing();
   }
   return userId;
 }
@@ -116,8 +126,9 @@ export async function createAgentKey(
         : {}),
       // Batasi aksi kunci pada yang dibutuhkan agen (least privilege).
       permissions: {
-        question: ["create", "read"],
+        question: ["create", "read", "edit", "flag"],
         taxonomy: ["read"],
+        enrichment: ["run"],
       },
     },
   })) as unknown as {

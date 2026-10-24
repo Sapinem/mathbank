@@ -53,6 +53,12 @@ describe("fetchImage (mock fetch)", () => {
       "http://169.254.169.254/latest/meta-data",
       "http://10.0.0.1/secret.png",
       "http://192.168.1.1/admin.png",
+      "http://0.0.0.0/test.png",
+      "http://[::]/test.png",
+      "http://[::1]/test.png",
+      "http://[0:0:0:0:0:0:0:0]/test.png",
+      "http://[::ffff:127.0.0.1]/test.png",
+      "http://100.64.0.1/metadata",
       "file:///etc/passwd",
     ];
     for (const target of targets) {

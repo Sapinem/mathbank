@@ -168,13 +168,49 @@ describe("M11 — MCP tools", () => {
       "search_questions",
       "get_question",
       "create_question",
+      "update_question",
+      "flag_question",
       "list_topics",
       "list_sources",
+      "validate_math",
       "enrich_question",
       "embed_questions",
     ]) {
       expect(names).toContain(n);
     }
+  });
+
+  it("update_question pada draf sendiri BERHASIL, soal orang lain DITOLAK (own)", async () => {
+    // 1. Buat soal oleh agen
+    const c = await call(client, "create_question", {
+      questionType: "single_choice",
+      difficulty: 2,
+      cognitiveLevel: "remember",
+      grade: "SMA-10",
+      contentMarkdown: "Soal draf awal.",
+      topicIds: [],
+    });
+    expect(c.isError).toBe(false);
+    const qid = c.parsed.id as string;
+
+    // 2. Agen mengupdate soal miliknya
+    const u = await call(client, "update_question", {
+      id: qid,
+      contentMarkdown: "Soal draf diperbarui oleh agen.",
+    });
+    expect(u.isError).toBe(false);
+
+    // 3. Update soal milik orang lain -> ditolak (own)
+    const rows = await sql`
+      INSERT INTO questions (question_type, difficulty, cognitive_level, grade, content_markdown, author_id, status)
+      VALUES ('single_choice', 2, 'remember', 'SMA-10', 'Soal guru.', 'guru-lain', 'draft')
+      RETURNING id`;
+    const otherId = rows[0].id as string;
+    const uOther = await call(client, "update_question", {
+      id: otherId,
+      contentMarkdown: "Coba ganti soal orang lain.",
+    });
+    expect(uOther.isError).toBe(true);
   });
 
   it("ARC-06: API key menyempit → tool di luar izin TIDAK didaftarkan", async () => {

@@ -15,9 +15,10 @@ import {
   hasRole,
   ForbiddenError,
   NotFoundError,
+  ConflictError,
 } from "@/lib/auth/guards";
+import { isUniqueViolation } from "@/lib/db/errors";
 import {
-  uniqueSlug,
   assertBundleRead,
   assertBundleWrite,
   type BundleRow,
@@ -47,12 +48,10 @@ export async function createBundle(
   ) {
     throw new ForbiddenError("Tidak berwenang membuat paket.");
   }
-  const slug = await uniqueSlug(input.title);
   const [row] = await db
     .insert(bundles)
     .values({
       title: input.title,
-      slug,
       bundleType: input.bundleType,
       origin: input.origin ?? "manual",
       sourceId: input.sourceId ?? null,
@@ -93,7 +92,6 @@ export async function updateBundle(
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (patch.title !== undefined) {
     set.title = patch.title;
-    set.slug = await uniqueSlug(patch.title, id);
   }
   if (patch.bundleType !== undefined) set.bundleType = patch.bundleType;
   if (patch.origin !== undefined) set.origin = patch.origin;
@@ -110,7 +108,7 @@ export async function updateBundle(
   // Digabung DI DALAM SQL (#36) — bukan `{ ...existing.printConfig }` — agar
   // dua PATCH bersamaan tidak saling menimpa (baca-lalu-tulis tanpa penjagaan).
   if (patch.printConfig !== undefined)
-    set.printConfig = sql`${bundles.printConfig} || ${JSON.stringify(patch.printConfig)}::jsonb`;
+    set.printConfig = sql`COALESCE(${bundles.printConfig}, '{}'::jsonb) || ${JSON.stringify(patch.printConfig)}::jsonb`;
   if (patch.status !== undefined) set.status = patch.status;
 
   await db.update(bundles).set(set).where(eq(bundles.id, id));
@@ -159,49 +157,82 @@ export async function duplicateBundle(
   newTitle?: string,
 ): Promise<BundleRow> {
   assertBundleRead(actor);
+  if (
+    !(
+      hasRole(actor, "teacher") ||
+      hasRole(actor, "reviewer") ||
+      hasRole(actor, "admin")
+    )
+  ) {
+    throw new ForbiddenError("Tidak berwenang membuat paket.");
+  }
   const src = await getBundle(id);
   if (!src) throw new NotFoundError("Paket tidak ditemukan.");
   const title = newTitle ?? `${src.title} (salinan)`;
-  const copy = await createBundle(
-    {
-      title,
-      bundleType: src.bundleType,
-      origin: src.origin,
-      sourceId: src.sourceId,
-      eventId: src.eventId,
-      year: src.year,
-      grade: src.grade,
-      durationMinutes: src.durationMinutes ?? 90,
-      instructions: src.instructions,
-      printConfig: src.printConfig,
-    },
-    actor,
-  );
-  const items = await db
-    .select({
-      questionId: bundleItems.questionId,
-      role: bundleItems.role,
-      orderIndex: bundleItems.orderIndex,
-      sectionName: bundleItems.sectionName,
-      itemNumber: bundleItems.itemNumber,
-      notes: bundleItems.notes,
-    })
-    .from(bundleItems)
-    .where(eq(bundleItems.bundleId, id))
-    .orderBy(asc(bundleItems.orderIndex));
 
-  if (items.length > 0) {
-    await db.insert(bundleItems).values(
-      items.map((it) => ({
-        bundleId: copy.id,
-        questionId: it.questionId,
-        role: it.role,
-        orderIndex: it.orderIndex,
-        sectionName: it.sectionName,
-        itemNumber: it.itemNumber,
-        notes: it.notes,
-      })),
-    );
+  let newId: string;
+  try {
+    newId = await db.transaction(async (tx) => {
+      const [copyRow] = await tx
+        .insert(bundles)
+        .values({
+          title,
+          bundleType: src.bundleType,
+          origin: src.origin,
+          sourceId: src.sourceId,
+          eventId: src.eventId,
+          year: src.year,
+          grade: src.grade,
+          durationMinutes: src.durationMinutes ?? 90,
+          instructions: src.instructions,
+          ...(src.printConfig ? { printConfig: src.printConfig } : {}),
+          createdById: actor.id,
+        })
+        .returning({ id: bundles.id });
+
+      const items = await tx
+        .select({
+          questionId: bundleItems.questionId,
+          role: bundleItems.role,
+          orderIndex: bundleItems.orderIndex,
+          sectionName: bundleItems.sectionName,
+          itemNumber: bundleItems.itemNumber,
+          notes: bundleItems.notes,
+        })
+        .from(bundleItems)
+        .where(eq(bundleItems.bundleId, id))
+        .orderBy(asc(bundleItems.orderIndex));
+
+      if (items.length > 0) {
+        await tx.insert(bundleItems).values(
+          items.map((it) => ({
+            bundleId: copyRow!.id,
+            questionId: it.questionId,
+            role: it.role,
+            orderIndex: it.orderIndex,
+            sectionName: it.sectionName,
+            itemNumber: it.itemNumber,
+            notes: it.notes,
+          })),
+        );
+      }
+      return copyRow!.id;
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw new ConflictError(
+        `Gagal menduplikasi paket "${title}": terjadi konflik keunikan.`,
+      );
+    }
+    throw err;
   }
-  return (await getBundle(copy.id))!;
+
+  await recordAudit({
+    entityType: "bundle",
+    entityId: newId,
+    action: "create",
+    actor,
+    changeSummary: `Paket disalin dari ${src.title}: ${title}`,
+  });
+  return (await getBundle(newId))!;
 }

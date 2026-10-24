@@ -7,12 +7,9 @@
  * ⚠️ Modul ini mengimpor `@/lib/db` (untuk `uniqueSlug`) — jangan impor dari
  * komponen klien. Tipe murni (tanpa DB) boleh diimpor aman via `import type`.
  */
-import { and, eq, isNull, sql } from "drizzle-orm";
-import { db } from "@/lib/db";
 import { bundles, type BundlePrintConfig } from "@/lib/db/schema/bundle";
 import { can, hasRole, assertCan, ForbiddenError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
-import { slugify } from "@/lib/taxonomy/tree";
 
 export type BundleType = "source" | "exam";
 export type BundleOrigin = "ingest" | "manual";
@@ -21,7 +18,6 @@ export type BundleItemRole = "question" | "stimulus";
 export interface BundleRow {
   id: string;
   title: string;
-  slug: string;
   bundleType: BundleType;
   origin: BundleOrigin;
   sourceId: string | null;
@@ -175,7 +171,6 @@ export function bundleColumns() {
   return {
     id: bundles.id,
     title: bundles.title,
-    slug: bundles.slug,
     bundleType: bundles.bundleType,
     origin: bundles.origin,
     sourceId: bundles.sourceId,
@@ -190,33 +185,6 @@ export function bundleColumns() {
     createdAt: bundles.createdAt,
     updatedAt: bundles.updatedAt,
   };
-}
-
-/** Buat slug unik di antara paket aktif (tambah akhiran -2, -3, …). */
-export async function uniqueSlug(
-  base: string,
-  exceptId?: string,
-): Promise<string> {
-  const root = slugify(base) || "paket";
-  let candidate = root;
-  let n = 1;
-  // Cari yang belum dipakai paket AKTIF.
-  for (;;) {
-    const rows = await db
-      .select({ id: bundles.id })
-      .from(bundles)
-      .where(
-        and(
-          eq(bundles.slug, candidate),
-          isNull(bundles.deletedAt),
-          exceptId ? sql`${bundles.id} <> ${exceptId}` : undefined,
-        ),
-      )
-      .limit(1);
-    if (rows.length === 0) return candidate;
-    n += 1;
-    candidate = `${root}-${n}`;
-  }
 }
 
 /**

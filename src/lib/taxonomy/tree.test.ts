@@ -16,7 +16,6 @@ import {
 function node(over: Partial<TopicNode> & { id: string }): TopicNode {
   return {
     name: "n",
-    slug: "n",
     parentId: null,
     level: 1,
     description: null,
@@ -151,19 +150,17 @@ describe("buildTree", () => {
     expect(r1.children[0].id).toBe("c1");
   });
 
-  it("mempertahankan properti tambahan (name, slug, description, usageCount)", () => {
+  it("mempertahankan properti tambahan (name, description, usageCount)", () => {
     const flat = [
       node({
         id: "a",
         name: "Aljabar",
-        slug: "aljabar",
         description: "Bidang aljabar",
         usageCount: 42,
       }),
     ];
     const tree = buildTree(flat);
     expect(tree[0].name).toBe("Aljabar");
-    expect(tree[0].slug).toBe("aljabar");
     expect(tree[0].description).toBe("Bidang aljabar");
     expect(tree[0].usageCount).toBe(42);
   });

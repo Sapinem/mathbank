@@ -4,6 +4,7 @@ import { createMcpServer } from "@/lib/mcp/server";
 import { actorFromMcpHeaders } from "@/lib/mcp/actor";
 import type { Actor } from "@/lib/auth/actor";
 import { checkRateLimit, rateLimitKey, type RateLimitPolicy } from "@/lib/api/rate-limit";
+import { getClientIp } from "@/lib/api/client-ip";
 
 /**
  * /api/mcp — transport **Streamable HTTP** (M11).
@@ -41,9 +42,7 @@ function jsonRpcError(httpStatus: number, code: number, message: string): Respon
 
 /** IP klien dari header proxy (pola sama dengan route-wrapper). */
 function clientIp(req: Request): string | null {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip");
+  return getClientIp(req);
 }
 
 async function handleMcp(req: NextRequest): Promise<Response> {
@@ -55,9 +54,10 @@ async function handleMcp(req: NextRequest): Promise<Response> {
     return jsonRpcError(401, -32001, "Unauthorized: API key tidak valid");
   }
 
-  // 2. Rate limit per-aktor (SEC-02). Kunci pakai id aktor; fallback IP.
+  // 2. Rate limit per-kunci API (SEC-02). Kunci pakai apiKeyId bila ada; fallback id aktor / IP.
+  const targetId = actor.apiKeyId ?? actor.id;
   const rl = checkRateLimit(
-    rateLimitKey(actor.id, clientIp(req), "mcp:call"),
+    rateLimitKey(targetId, clientIp(req), "mcp:call"),
     MCP_RATE_POLICY,
   );
   if (!rl.allowed) {

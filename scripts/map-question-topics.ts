@@ -12,6 +12,7 @@
 
 import { config } from "dotenv";
 import postgres from "postgres";
+import { slugify } from "@/lib/taxonomy/tree";
 
 config({ path: ".env" });
 
@@ -307,10 +308,20 @@ async function main() {
   console.log(`Mode: ${DRY_RUN ? "DRY RUN" : "LIVE"}`);
 
   // 1. Load semua topik dari DB
-  const topicsRaw = await sql<{ id: string; slug: string; name: string; level: number }[]>`
-    SELECT id, slug, name, level FROM topics WHERE is_active = true ORDER BY level DESC
+  const topicsRaw = await sql<{ id: string; name: string; parent_id: string | null; level: number }[]>`
+    SELECT id, name, parent_id, level FROM topics WHERE is_active = true ORDER BY level DESC
   `;
-  const topicsBySlug = new Map(topicsRaw.map((t) => [t.slug, t]));
+  const byId = new Map(topicsRaw.map((t) => [t.id, t]));
+  const topicsBySlug = new Map<string, typeof topicsRaw[0]>();
+  for (const t of topicsRaw) {
+    topicsBySlug.set(slugify(t.name), t);
+    if (t.parent_id && byId.has(t.parent_id)) {
+      const p = byId.get(t.parent_id)!;
+      topicsBySlug.set(`${slugify(p.name)}-${slugify(t.name)}`, t);
+    }
+  }
+  const lhopital = topicsRaw.find((t) => t.name.toLowerCase().includes("hopital"));
+  if (lhopital) topicsBySlug.set("turunan-fungsi-dalil-lhopital", lhopital);
   console.log(`Loaded ${topicsRaw.length} topik`);
 
   // 2. Build compiled rules

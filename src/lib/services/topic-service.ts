@@ -32,7 +32,6 @@ export interface TopicInput {
 const COLS = {
   id: topics.id,
   name: topics.name,
-  slug: topics.slug,
   parentId: topics.parentId,
   level: topics.level,
   description: topics.description,
@@ -82,7 +81,6 @@ export async function createTopic(
         .insert(topics)
         .values({
           name: input.name,
-          // MAT-131A: slug sengaja tidak diisi → NULL (kolom nullable).
           parentId: input.parentId ?? null,
           level,
           description: input.description ?? null,
@@ -115,8 +113,6 @@ export async function updateTopic(
   const patch: Partial<typeof topics.$inferInsert> = {};
   if (input.name !== undefined) {
     patch.name = input.name;
-    // MAT-131A: `slug` tidak lagi diturunkan dari nama. Baris legacy yang sudah
-    // punya slug dibiarkan apa adanya (soft deprecation, Tahap B: drop kolom).
   }
   if (input.description !== undefined) patch.description = input.description;
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder;

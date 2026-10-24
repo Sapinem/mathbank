@@ -89,4 +89,12 @@ describe("katex-repair — invariant seluruh perbaikan", () => {
       expect(r.applied).toEqual([]);
     }
   });
+
+  it("invarian no-guess: teks dengan galat yang tak bisa diperbaiki TIDAK dimutasi", () => {
+    const rusak = "Nilai \\(\\unrepairableBrokenMacro{foo}\\) tidak berubah";
+    const r = repairAdaptive(rusak);
+    expect(r.text).toBe(rusak);
+    expect(r.applied).toEqual([]);
+    expect(r.after).toBe(r.before);
+  });
 });

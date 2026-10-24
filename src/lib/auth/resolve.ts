@@ -66,6 +66,7 @@ export async function actorFromApiKey(headers: Headers): Promise<Actor | null> {
       roles: await rolesOf(key.referenceId),
       via: "apikey",
       apiKeyPermissions: key.permissions,
+      apiKeyId: key.id,
     };
   } catch {
     return null;

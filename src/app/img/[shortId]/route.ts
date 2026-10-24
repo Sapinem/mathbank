@@ -20,6 +20,7 @@ import { findAssetByShortId } from "@/lib/services/media-service";
 import { mediaStorageRoot } from "@/lib/ingest/config";
 import { isValidShortId } from "@/lib/media/short-id";
 import { checkRateLimit, rateLimitKey, IMAGE_POLICY } from "@/lib/api/rate-limit";
+import { getClientIp } from "@/lib/api/client-ip";
 import { log } from "@/lib/telemetry/logger";
 
 /** Header khusus SVG — cegah skrip di dalamnya dieksekusi. */
@@ -30,9 +31,7 @@ const CACHE_CONTROL = "public, max-age=86400, stale-while-revalidate=604800";
 
 /** IP klien dari header proxy (pola sama dengan route-wrapper). */
 function clientIp(req: Request): string | null {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip");
+  return getClientIp(req);
 }
 
 function errorJson(code: string, message: string, status: number) {

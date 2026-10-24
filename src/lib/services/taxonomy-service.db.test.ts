@@ -52,16 +52,16 @@ afterAll(async () => {
 });
 
 describe("sumber", () => {
-  it("buat + slug otomatis", async () => {
+  it("buat sumber baru", async () => {
     const s = await createSource({ kind: "book", label: "Buku Matematika X" }, admin);
-    expect(s.slug).toBe("buku-matematika-x");
+    expect(s.label).toBe("Buku Matematika X");
     expect(s.kind).toBe("book");
   });
 
-  it("uang berubah saat label diubah", async () => {
+  it("label berubah saat diperbarui", async () => {
     const s = await createSource({ kind: "website", label: "Situs A" }, admin);
     const u = await updateSource(s.id, { label: "Situs B" }, admin);
-    expect(u.slug).toBe("situs-b");
+    expect(u.label).toBe("Situs B");
   });
 
   it("list menyertakan usageCount", async () => {
@@ -107,10 +107,9 @@ describe("event", () => {
 });
 
 describe("label", () => {
-  it("buat label tanpa slug (MAT-131A: slug deprecated → NULL)", async () => {
+  it("buat label baru", async () => {
     const t = await createTag({ name: "HOTS" }, admin);
     expect(t.name).toBe("HOTS");
-    expect(t.slug ?? null).toBeNull();
   });
 
   it("usageCount dihitung dari DB (0 saat baru)", async () => {

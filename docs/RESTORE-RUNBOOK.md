@@ -136,8 +136,8 @@ UNION ALL SELECT 'questions', count(*)::text FROM questions
 UNION ALL SELECT 'bundles', count(*)::text FROM bundles
 UNION ALL SELECT 'pk_default', COALESCE((SELECT column_default FROM information_schema.columns
  WHERE table_name='questions' AND column_name='id'),'-')
-UNION ALL SELECT 'orphan_options', (SELECT count(*)::text FROM question_options o
- LEFT JOIN questions q ON q.id=o.question_id WHERE q.id IS NULL);"
+UNION ALL SELECT 'orphan_media', (SELECT count(*)::text FROM question_media m
+ LEFT JOIN questions q ON q.id=m.question_id WHERE q.id IS NULL);"
 ```
 
 Ekspektasi (dump 20 Okt 2026):
@@ -152,7 +152,7 @@ Ekspektasi (dump 20 Okt 2026):
 | `questions` | **≥ 11.000** | isi tidak pulih |
 | `bundles` | **≥ 500** | isi tidak pulih |
 | `pk_default` | **uuidv7()** | regresi generator PK |
-| `orphan_options` | **0** | integritas FK rusak |
+| `orphan_media` | **0** | integritas FK rusak |
 
 Opsional, cek drift skema penuh:
 

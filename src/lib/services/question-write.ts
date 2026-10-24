@@ -2,13 +2,16 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
 import { solutions } from "@/lib/db/schema/solution";
+import { bundleItems } from "@/lib/db/schema/bundle";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import { isQuestionUsedInBundles } from "./bundle-service";
 import { contentHash } from "@/lib/ingest/hash";
+import { findQuestionByContentHash } from "@/lib/ingest/dedup";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
+import { syncQuestionShortcodeMediaTx } from "./media/shortcode-link";
 import { enforceQuestionWriteGate } from "@/lib/contracts/question";
 import type {
   CreateQuestionInput,
@@ -47,11 +50,19 @@ export async function createQuestion(
     }
   }
 
+  // Pembahasan utama (multi-solution) → `answer_key.explanationMarkdown`.
+  let baseKey = (input.answerKey ?? {}) as Record<string, unknown>;
+  const primarySolution =
+    input.solutions?.find((s) => s.isPrimary) ?? input.solutions?.[0];
+  if (primarySolution?.contentMarkdown && !baseKey.explanationMarkdown) {
+    baseKey = { ...baseKey, explanationMarkdown: primarySolution.contentMarkdown };
+  }
+
   // ⛔ GERBANG TULIS WAJIB (MAT-146). Melempar 422 bila payload melanggar kontrak.
   const gated = enforceQuestionWriteGate({
     questionType: input.questionType,
     dataPayload: input.dataPayload,
-    answerKey: input.answerKey,
+    answerKey: baseKey,
     options: input.options,
     status: input.status,
   });
@@ -60,62 +71,86 @@ export async function createQuestion(
     ? (gated.dataPayload.options as { contentMarkdown?: unknown }[])
     : [];
 
-  const id = await db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(questions)
-      .values({
-        parentId: input.parentId ?? null,
-        childOrder: input.childOrder,
-        questionType: input.questionType,
-        difficulty: input.difficulty,
-        cognitiveLevel: input.cognitiveLevel,
-        grade: input.grade,
-        contentMarkdown: input.contentMarkdown,
-        // Hash konten (ADR-0012) — dedup lintas-sumber.
-        contentHash: contentHash(
-          input.contentMarkdown,
-          gatedOptions.map((o) => String(o.contentMarkdown ?? "")),
-        ),
-        dataPayload: gated.dataPayload,
-        answerKey: gated.answerKey,
-        status: input.status,
-        eventId: input.eventId ?? null,
-        eventYear: input.eventYear ?? null,
-        eventSubtest: input.eventSubtest ?? null,
-        eventItemNumber: input.eventItemNumber ?? null,
-        eventNotes: input.eventNotes ?? null,
-        // Tanda perlu telaah (jalur ingest membawa peringatan parser ke sini).
-        isFlagged: input.isFlagged ?? false,
-        flagNotes: input.flagNotes ?? null,
-        authorId: actor.id,
-      })
-      .returning({ id: questions.id });
+  const calculatedHash = contentHash(
+    input.contentMarkdown,
+    gatedOptions.map((o) => String(o.contentMarkdown ?? "")),
+  );
 
-    if (input.topicIds.length) {
-      await tx
-        .insert(questionTopics)
-        .values(input.topicIds.map((topicId) => ({ questionId: row.id, topicId })));
-    }
-    if (input.tagIds.length) {
-      await tx
-        .insert(questionTags)
-        .values(input.tagIds.map((tagId) => ({ questionId: row.id, tagId })));
-    }
-    if (input.solutions?.length) {
-      await tx.insert(solutions).values(
-        input.solutions.map((s, idx) => ({
-          questionId: row.id,
-          solutionType: s.solutionType,
-          title: s.title || `Pembahasan ${idx + 1}`,
-          contentMarkdown: s.contentMarkdown,
-          isPrimary: s.isPrimary ?? (idx === 0),
-          authorType: "teacher" as const,
+  const existingDup = await findQuestionByContentHash(calculatedHash);
+  if (existingDup) {
+    throw new ConflictError("Soal dengan naskah dan opsi yang sama persis sudah terdaftar.");
+  }
+
+  let id: string;
+  try {
+    id = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(questions)
+        .values({
+          parentId: input.parentId ?? null,
+          childOrder: input.childOrder,
+          questionType: input.questionType,
+          difficulty: input.difficulty,
+          cognitiveLevel: input.cognitiveLevel,
+          grade: input.grade,
+          contentMarkdown: input.contentMarkdown,
+          // Hash konten (ADR-0012) — dedup lintas-sumber.
+          contentHash: calculatedHash,
+          dataPayload: gated.dataPayload,
+          answerKey: gated.answerKey,
+          status: input.status,
+          eventId: input.eventId ?? null,
+          eventYear: input.eventYear ?? null,
+          eventSubtest: input.eventSubtest ?? null,
+          eventItemNumber: input.eventItemNumber ?? null,
+          eventNotes: input.eventNotes ?? null,
+          // Tanda perlu telaah (jalur ingest membawa peringatan parser ke sini).
+          isFlagged: input.isFlagged ?? false,
+          flagNotes: input.flagNotes ?? null,
           authorId: actor.id,
-        })),
-      );
+        })
+        .returning({ id: questions.id });
+
+      if (input.topicIds.length) {
+        await tx
+          .insert(questionTopics)
+          .values(input.topicIds.map((topicId) => ({ questionId: row.id, topicId })));
+      }
+      if (input.tagIds.length) {
+        await tx
+          .insert(questionTags)
+          .values(input.tagIds.map((tagId) => ({ questionId: row.id, tagId })));
+      }
+      if (input.solutions?.length) {
+        await tx.insert(solutions).values(
+          input.solutions.map((s, idx) => ({
+            questionId: row.id,
+            solutionType: s.solutionType,
+            title: s.title || `Pembahasan ${idx + 1}`,
+            contentMarkdown: s.contentMarkdown,
+            isPrimary: s.isPrimary ?? (idx === 0),
+            authorType: "teacher" as const,
+            authorId: actor.id,
+          })),
+        );
+      }
+
+      // Sinkronkan media shortcode {{img:shortId}} ke tabel question_media
+      await syncQuestionShortcodeMediaTx(tx, row.id);
+
+      return row.id;
+    });
+  } catch (err: unknown) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code: string }).code === "23505"
+    ) {
+      throw new ConflictError("Soal dengan naskah dan opsi yang sama persis sudah terdaftar.");
     }
-    return row.id;
-  });
+    throw err;
+  }
 
   await recordAudit({
     entityType: "question",
@@ -175,59 +210,105 @@ export async function updateQuestion(
     });
   }
 
-  await db.transaction(async (tx) => {
-    const patch: Partial<typeof questions.$inferInsert> = {};
-    if (fields.questionType !== undefined) patch.questionType = fields.questionType;
-    if (fields.difficulty !== undefined) patch.difficulty = fields.difficulty;
-    if (fields.cognitiveLevel !== undefined) patch.cognitiveLevel = fields.cognitiveLevel;
-    if (fields.grade !== undefined) patch.grade = fields.grade;
-    if (fields.contentMarkdown !== undefined) patch.contentMarkdown = fields.contentMarkdown;
-    if (gated) {
-      patch.dataPayload = gated.dataPayload;
-      patch.answerKey = gated.answerKey;
-    }
-    if (fields.eventId !== undefined) patch.eventId = fields.eventId;
-    if (fields.eventYear !== undefined) patch.eventYear = fields.eventYear;
-    if (fields.eventSubtest !== undefined) patch.eventSubtest = fields.eventSubtest;
-    if (fields.eventItemNumber !== undefined) patch.eventItemNumber = fields.eventItemNumber;
-    if (fields.eventNotes !== undefined) patch.eventNotes = fields.eventNotes;
-    if (parentId !== undefined) patch.parentId = parentId;
-    if (fields.childOrder !== undefined) patch.childOrder = fields.childOrder;
+  // Hitung ulang contentHash bila naskah stem atau opsi disentuh (ADR-0012).
+  const stemTouched = fields.contentMarkdown !== undefined;
+  const optionsTouched = options !== undefined || fields.dataPayload !== undefined;
 
-    if (solutionInputs !== undefined) {
-      await tx.delete(solutions).where(eq(solutions.questionId, id));
-      if (solutionInputs.length) {
-        await tx.insert(solutions).values(
-          solutionInputs.map((s, idx) => ({
-            questionId: id,
-            solutionType: s.solutionType,
-            title: s.title || `Pembahasan ${idx + 1}`,
-            contentMarkdown: s.contentMarkdown,
-            isPrimary: s.isPrimary ?? (idx === 0),
-            authorType: "teacher" as const,
-            authorId: actor.id,
-          })),
+  let newContentHash: string | undefined;
+  if (stemTouched || optionsTouched) {
+    const finalStem = fields.contentMarkdown ?? existing.contentMarkdown;
+    const rawOpts = gated
+      ? (Array.isArray(gated.dataPayload.options) ? gated.dataPayload.options : [])
+      : (Array.isArray((existing.dataPayload as Record<string, unknown>)?.options)
+          ? ((existing.dataPayload as Record<string, unknown>).options as Array<{ contentMarkdown?: unknown }>)
+          : []);
+    const finalOptionTexts = rawOpts.map((o) => String(o.contentMarkdown ?? ""));
+    const calculated = contentHash(finalStem, finalOptionTexts);
+
+    if (calculated !== existing.contentHash) {
+      const dup = await findQuestionByContentHash(calculated, id);
+      if (dup) {
+        throw new ConflictError(
+          "Perubahan naskah menghasilkan soal yang identik dengan soal lain yang sudah ada.",
         );
       }
-      // Pembahasan utama sudah masuk `answer_key.explanationMarkdown` lewat gerbang.
+      newContentHash = calculated;
     }
+  }
 
-    if (Object.keys(patch).length) {
-      await tx.update(questions).set(patch).where(eq(questions.id, id));
-    }
-    if (topicIds) {
-      await tx.delete(questionTopics).where(eq(questionTopics.questionId, id));
-      if (topicIds.length) {
-        await tx.insert(questionTopics).values(topicIds.map((topicId) => ({ questionId: id, topicId })));
+  try {
+    await db.transaction(async (tx) => {
+      const patch: Partial<typeof questions.$inferInsert> = {};
+      if (fields.questionType !== undefined) patch.questionType = fields.questionType;
+      if (fields.difficulty !== undefined) patch.difficulty = fields.difficulty;
+      if (fields.cognitiveLevel !== undefined) patch.cognitiveLevel = fields.cognitiveLevel;
+      if (fields.grade !== undefined) patch.grade = fields.grade;
+      if (fields.contentMarkdown !== undefined) patch.contentMarkdown = fields.contentMarkdown;
+      if (gated) {
+        patch.dataPayload = gated.dataPayload;
+        patch.answerKey = gated.answerKey;
       }
-    }
-    if (tagIds) {
-      await tx.delete(questionTags).where(eq(questionTags.questionId, id));
-      if (tagIds.length) {
-        await tx.insert(questionTags).values(tagIds.map((tagId) => ({ questionId: id, tagId })));
+      if (newContentHash !== undefined) {
+        patch.contentHash = newContentHash;
       }
+      if (fields.eventId !== undefined) patch.eventId = fields.eventId;
+      if (fields.eventYear !== undefined) patch.eventYear = fields.eventYear;
+      if (fields.eventSubtest !== undefined) patch.eventSubtest = fields.eventSubtest;
+      if (fields.eventItemNumber !== undefined) patch.eventItemNumber = fields.eventItemNumber;
+      if (fields.eventNotes !== undefined) patch.eventNotes = fields.eventNotes;
+      if (parentId !== undefined) patch.parentId = parentId;
+      if (fields.childOrder !== undefined) patch.childOrder = fields.childOrder;
+
+      if (solutionInputs !== undefined) {
+        await tx.delete(solutions).where(eq(solutions.questionId, id));
+        if (solutionInputs.length) {
+          await tx.insert(solutions).values(
+            solutionInputs.map((s, idx) => ({
+              questionId: id,
+              solutionType: s.solutionType,
+              title: s.title || `Pembahasan ${idx + 1}`,
+              contentMarkdown: s.contentMarkdown,
+              isPrimary: s.isPrimary ?? (idx === 0),
+              authorType: "teacher" as const,
+              authorId: actor.id,
+            })),
+          );
+        }
+        // Pembahasan utama sudah masuk `answer_key.explanationMarkdown` lewat gerbang.
+      }
+
+      if (Object.keys(patch).length) {
+        await tx.update(questions).set(patch).where(eq(questions.id, id));
+      }
+      if (topicIds) {
+        await tx.delete(questionTopics).where(eq(questionTopics.questionId, id));
+        if (topicIds.length) {
+          await tx.insert(questionTopics).values(topicIds.map((topicId) => ({ questionId: id, topicId })));
+        }
+      }
+      if (tagIds) {
+        await tx.delete(questionTags).where(eq(questionTags.questionId, id));
+        if (tagIds.length) {
+          await tx.insert(questionTags).values(tagIds.map((tagId) => ({ questionId: id, tagId })));
+        }
+      }
+
+      // Sinkronkan media shortcode {{img:shortId}} ke tabel question_media
+      await syncQuestionShortcodeMediaTx(tx, id);
+    });
+  } catch (err: unknown) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code: string }).code === "23505"
+    ) {
+      throw new ConflictError(
+        "Perubahan naskah menghasilkan soal yang identik dengan soal lain yang sudah ada.",
+      );
     }
-  });
+    throw err;
+  }
 
   await recordAudit({
     entityType: "question",
@@ -251,7 +332,7 @@ export async function setQuestionFlag(
 ): Promise<PublicQuestion> {
   const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
-  assertCan(actor, "question:flag");
+  assertCan(actor, "question:flag", { ownerId: existing.authorId });
 
   await db
     .update(questions)
@@ -325,15 +406,31 @@ export async function hardDeleteQuestion(id: string, actor: Actor): Promise<void
     );
   }
 
-  // T-M7-3: hanya paket AKTIF yang memblokir hapus permanen.
-  // MAT-39: koleksi dihapus — `bundles` kini satu-satunya wadah.
-  if (await isQuestionUsedInBundles(id)) {
+  // T-M7-3: cegah pelanggaran FK restrict pada relasi anak & paket soal.
+  const [child] = await db
+    .select({ id: questions.id })
+    .from(questions)
+    .where(eq(questions.parentId, id))
+    .limit(1);
+  if (child) {
     throw new ConflictError(
-      "Soal ini dipakai di paket soal — keluarkan dari paket dulu.",
+      "Soal ini memiliki butir turunan (stimulus beranak) — hapus soal turunan lebih dulu.",
     );
   }
 
-  await db.delete(questions).where(eq(questions.id, id));
+  // RESTRICT: soal yang dipakai paket AKTIF tak boleh dihapus (Constraint #46).
+  if (await isQuestionUsedInBundles(id)) {
+    throw new ConflictError(
+      "Soal ini dipakai di paket soal aktif — keluarkan dari paket dulu.",
+    );
+  }
+
+  // Atomik: bersihkan referensi item dari paket yang sudah terarsip agar foreign key RESTRICT tidak gagal,
+  // lalu hapus soal secara permanen.
+  await db.transaction(async (tx) => {
+    await tx.delete(bundleItems).where(eq(bundleItems.questionId, id));
+    await tx.delete(questions).where(eq(questions.id, id));
+  });
 
   await recordAudit({
     entityType: "question",

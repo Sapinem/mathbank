@@ -17,7 +17,6 @@ import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions } from "@/lib/db/schema/question";
 import { ingestQueue } from "@/lib/db/schema/system";
 import { createQuestion } from "@/lib/services/question-service";
-import { slugify } from "@/lib/taxonomy/tree";
 import { ConflictError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import type { AnswerKey } from "@/lib/contracts/question";
@@ -86,19 +85,26 @@ const DEFAULT_COGNITIVE = "understand" as const;
  * — di sini cukup idempoten & aman untuk pipeline.
  */
 export async function resolveSourceId(sourceOrigin: string, sourceUrl?: string | null): Promise<string> {
-  const slug = slugify(sourceOrigin, 255);
-  const [existing] = await db.select({ id: sources.id }).from(sources).where(eq(sources.slug, slug)).limit(1);
+  const [existing] = await db
+    .select({ id: sources.id })
+    .from(sources)
+    .where(eq(sources.label, sourceOrigin))
+    .limit(1);
   if (existing) return existing.id;
 
   try {
     const [row] = await db
       .insert(sources)
-      .values({ kind: "website", label: sourceOrigin, slug, url: sourceUrl ?? null })
+      .values({ kind: "website", label: sourceOrigin, url: sourceUrl ?? null })
       .returning({ id: sources.id });
     return row!.id;
   } catch {
     // Balapan: baris dibuat proses lain → ambil ulang.
-    const [again] = await db.select({ id: sources.id }).from(sources).where(eq(sources.slug, slug)).limit(1);
+    const [again] = await db
+      .select({ id: sources.id })
+      .from(sources)
+      .where(eq(sources.label, sourceOrigin))
+      .limit(1);
     if (again) return again.id;
     throw new ConflictError("Gagal membuat/mengambil sumber ingest.");
   }
@@ -166,11 +172,6 @@ export async function resolveBundleId(input: {
     .insert(bundles)
     .values({
       title: input.title.slice(0, 255),
-      // Slug wajib unik antar-bundle aktif (uq_bundles_slug_active). Judul
-      // artikel bisa sama antar-naskah, jadi tambahkan penanda unik dari
-      // URL-nya (atau judulnya bila tanpa URL) — bukan dari sourceId, karena
-      // satu sumber bisa punya banyak artikel berjudul sama.
-      slug: slugify(`${input.title}-${itemHash(input.url ?? input.title, "")}`, 255),
       bundleType: "source", // naskah dari sumber — bukan ujian (exam)
       origin: "ingest",     // ADR-0014: pipeline ingest, bukan input manual
       sourceId: input.sourceId,

@@ -207,10 +207,10 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
 
   it("opsi Topik & Sumber berasal dari hook referensi", () => {
     useTopicsMock.mockReturnValue({
-      data: [{ id: "t1", name: "Aljabar", slug: "aljabar", parentId: null, level: 1 }],
+      data: [{ id: "t1", name: "Aljabar", parentId: null, level: 1 }],
     });
     useSourcesMock.mockReturnValue({
-      data: [{ id: "s1", kind: "book", label: "Buku A", slug: "buku-a" }],
+      data: [{ id: "s1", kind: "book", label: "Buku A" }],
     });
     render(<QuestionBankView defaultFiltersOpen />);
     expect(screen.getByText("Aljabar")).toBeInTheDocument();
@@ -220,8 +220,8 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
   it("pemilih topik punya pencarian mikro (filter daftar topik)", () => {
     useTopicsMock.mockReturnValue({
       data: [
-        { id: "t1", name: "Aljabar", slug: "aljabar", parentId: null, level: 1 },
-        { id: "t2", name: "Geometri", slug: "geometri", parentId: null, level: 1 },
+        { id: "t1", name: "Aljabar", parentId: null, level: 1 },
+        { id: "t2", name: "Geometri", parentId: null, level: 1 },
       ],
     });
     render(<QuestionBankView defaultFiltersOpen />);

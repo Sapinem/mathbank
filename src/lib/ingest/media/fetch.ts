@@ -20,7 +20,7 @@ import { request as httpsRequest } from "node:https";
 import { request as httpRequest } from "node:http";
 import { lookup as dnsLookup } from "node:dns/promises";
 import { readFile } from "node:fs/promises";
-import { join, extname } from "node:path";
+import { join, extname, resolve, sep } from "node:path";
 
 /**
  * Root direktori korpus gambar (baca saja — tidak pernah ditulis).
@@ -33,7 +33,17 @@ import { join, extname } from "node:path";
  *   - `corpus://defantri/<slug>/<file>`            → `<…>/defantri/images/<slug>/<file>`
  *   - `corpus://pusmendik_dayaserap/<file>`        → `<…>/pusmendik_dayaserap/images/<file>`
  */
-const CORPORA_BASE = "/home/hari/projects/qbank/data/corpora";
+/**
+ * Root direktori korpus gambar (baca saja — tidak pernah ditulis).
+ * Dapat dikonfigurasi melalui environment variable `CORPORA_BASE` atau `CORPUS_IMAGE_BASE`.
+ */
+export function getCorporaBase(): string {
+  return (
+    process.env.CORPORA_BASE?.trim() ||
+    process.env.CORPUS_IMAGE_BASE?.trim() ||
+    "/home/hari/projects/qbank/data/corpora"
+  );
+}
 
 /** Domain yang sertifikat SSL-nya rusak di sumber (temuan: pusmendik kemdikdasmen). */
 const TLS_RELAXED_HOSTS = ["pusmendik.kemendikdasmen.go.id"];
@@ -110,37 +120,51 @@ function isTlsRelaxed(url: string, hosts: string[]): boolean {
  */
 export function isPrivateOrBlockedHost(hostname: string): boolean {
   const host = hostname.toLowerCase().trim();
-  if (host === "localhost" || host === "0.0.0.0") return true;
-
-  // IPv4 regex check
-  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (ipv4) {
-    const a = Number(ipv4[1]);
-    const b = Number(ipv4[2]);
-    if (a === 127) return true; // loopback
-    if (a === 10) return true; // 10.0.0.0/8
-    if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
-    if (a === 192 && b === 168) return true; // 192.168.0.0/16
-    if (a === 169 && b === 254) return true; // 169.254.0.0/16 (link-local AWS metadata)
-    if (a === 0) return true;
-  }
+  const cleanHost = host.startsWith("[") && host.endsWith("]") ? host.slice(1, -1) : host;
+  if (cleanHost === "localhost" || cleanHost === "0.0.0.0" || cleanHost === "0") return true;
 
   // IPv6 check
-  if (host === "::1" || host === "[::1]") return true;
-  if (host.startsWith("fe80:") || host.startsWith("[fe80:")) return true;
   if (
-    host.startsWith("fc") ||
-    host.startsWith("fd") ||
-    host.startsWith("[fc") ||
-    host.startsWith("[fd")
+    cleanHost === "::" ||
+    cleanHost === "::1" ||
+    cleanHost === "0:0:0:0:0:0:0:0" ||
+    cleanHost === "0:0:0:0:0:0:0:1" ||
+    cleanHost.startsWith("fe80:") ||
+    cleanHost.startsWith("fc") ||
+    cleanHost.startsWith("fd")
   ) {
     return true;
   }
 
-  // IPv4-mapped IPv6 check (::ffff:127.0.0.1 dll)
-  if (host.includes("::ffff:")) {
-    const mapped = host.replace(/^\[?::ffff:/i, "").replace(/\]$/, "");
+  // IPv4-mapped IPv6 check (::ffff:127.0.0.1, ::ffff:7f00:1 dll)
+  if (cleanHost.includes("::ffff:")) {
+    const mapped = cleanHost.replace(/^::ffff:/i, "");
     if (isPrivateOrBlockedHost(mapped)) return true;
+    const hexMatch = mapped.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+    if (hexMatch) {
+      const p1 = parseInt(hexMatch[1]!, 16);
+      const p2 = parseInt(hexMatch[2]!, 16);
+      const ip = `${(p1 >> 8) & 0xff}.${p1 & 0xff}.${(p2 >> 8) & 0xff}.${p2 & 0xff}`;
+      if (isPrivateOrBlockedHost(ip)) return true;
+    }
+  }
+
+  // IPv4 check
+  const ipv4 = cleanHost.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const a = Number(ipv4[1]);
+    const b = Number(ipv4[2]);
+    const c = Number(ipv4[3]);
+    const d = Number(ipv4[4]);
+    if (a > 255 || b > 255 || c > 255 || d > 255) return true; // octet di luar jangkauan
+    if (a === 0) return true; // 0.0.0.0/8
+    if (a === 127) return true; // 127.0.0.0/8 loopback
+    if (a === 10) return true; // 10.0.0.0/8 private
+    if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12 private
+    if (a === 192 && b === 168) return true; // 192.168.0.0/16 private
+    if (a === 169 && b === 254) return true; // 169.254.0.0/16 link-local AWS metadata
+    if (a === 100 && b >= 64 && b <= 127) return true; // 100.64.0.0/10 CGNAT / cloud metadata
+    if (a >= 224) return true; // multicast / reserved
   }
 
   return false;
@@ -172,7 +196,7 @@ async function assertPublicTarget(
   if (u.protocol !== "http:" && u.protocol !== "https:") {
     throw new Error("Protokol tidak diizinkan (hanya http/https)");
   }
-  if (isTlsRelaxed(rawUrl, relaxedHosts)) return; // host di-pin, disengaja
+  if (isTlsRelaxed(rawUrl, relaxedHosts)) return; // host di-pin (misal pusmendik atau test mock server)
   if (isPrivateOrBlockedHost(u.hostname)) {
     throw new Error("Akses ke jaringan lokal/privat diblokir / terblokir (anti-SSRF)");
   }
@@ -212,7 +236,7 @@ function headerString(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
 }
 
-function concat(chunks: Uint8Array[]): Uint8Array {
+function concat(chunks: (Uint8Array | Uint8Array<ArrayBufferLike>)[]): Uint8Array<ArrayBuffer> {
   const total = chunks.reduce((a, c) => a + c.length, 0);
   const out = new Uint8Array(total);
   let off = 0;
@@ -231,6 +255,7 @@ function concat(chunks: Uint8Array[]): Uint8Array {
 function downloadRelaxed(
   url: string,
   timeoutMs: number,
+  maxBytes: number,
   userAgent: string,
   relaxedHosts: string[],
   redirects = MAX_REDIRECTS,
@@ -256,6 +281,10 @@ function downloadRelaxed(
         timeout: timeoutMs,
       },
       (res) => {
+        res.on("error", (err) => {
+          req.destroy();
+          reject(err);
+        });
         const code = res.statusCode ?? 0;
         // Redirect.
         if (code >= 300 && code < 400 && res.headers.location && redirects > 0) {
@@ -275,11 +304,23 @@ function downloadRelaxed(
             reject(new Error("Redirect ke host privat diblokir (anti-SSRF)"));
             return;
           }
-          resolve(downloadRelaxed(next, timeoutMs, userAgent, relaxedHosts, redirects - 1));
+          if (!isTlsRelaxed(next, relaxedHosts)) {
+            reject(new Error(`Redirect ke host non-relaxed (${new URL(next).hostname}) tidak diizinkan di jalur TLS relaxed`));
+            return;
+          }
+          resolve(downloadRelaxed(next, timeoutMs, maxBytes, userAgent, relaxedHosts, redirects - 1));
           return;
         }
         const chunks: Uint8Array[] = [];
-        res.on("data", (c: Buffer) => chunks.push(new Uint8Array(c)));
+        let totalBytes = 0;
+        res.on("data", (c: Buffer) => {
+          totalBytes += c.length;
+          if (totalBytes > maxBytes) {
+            req.destroy(new Error(`terlalu besar: ukuran stream melebihi batas (${maxBytes} B)`));
+            return;
+          }
+          chunks.push(new Uint8Array(c));
+        });
         res.on("end", () =>
           resolve({
             status: code,
@@ -300,6 +341,7 @@ function downloadRelaxed(
 async function fetchHop(
   url: string,
   timeoutMs: number,
+  maxBytes: number,
   userAgent: string,
   relaxedHosts: string[],
   resolve: DnsResolver,
@@ -308,7 +350,7 @@ async function fetchHop(
   await assertPublicTarget(url, relaxedHosts, resolve);
 
   if (isTlsRelaxed(url, relaxedHosts)) {
-    return downloadRelaxed(url, timeoutMs, userAgent, relaxedHosts);
+    return downloadRelaxed(url, timeoutMs, maxBytes, userAgent, relaxedHosts);
   }
 
   const ctrl = new AbortController();
@@ -320,7 +362,45 @@ async function fetchHop(
       redirect: "manual",
       headers: { "User-Agent": userAgent, Accept: "image/*,*/*;q=0.8" },
     });
-    const body = res.ok ? new Uint8Array(await res.arrayBuffer()) : new Uint8Array();
+
+    let body = new Uint8Array(0);
+    if (res.ok) {
+      const contentLength = res.headers.get("content-length");
+      if (contentLength && Number(contentLength) > maxBytes) {
+        if (res.body) await res.body.cancel().catch(() => {});
+        throw new Error(`terlalu besar: ukuran stream melebihi batas (${maxBytes} B)`);
+      }
+
+      if (res.body) {
+        const reader = res.body.getReader();
+        const chunks: (Uint8Array | Uint8Array<ArrayBufferLike>)[] = [];
+        let totalBytes = 0;
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              totalBytes += value.byteLength;
+              if (totalBytes > maxBytes) {
+                await reader.cancel().catch(() => {});
+                throw new Error(`terlalu besar: ukuran stream melebihi batas (${maxBytes} B)`);
+              }
+              chunks.push(value);
+            }
+          }
+          body = concat(chunks);
+        } catch (err) {
+          await reader.cancel().catch(() => {});
+          throw err;
+        }
+      } else {
+        body = new Uint8Array(await res.arrayBuffer());
+      }
+    } else if (res.body) {
+      // Bebaskan socket/stream pada status non-2xx
+      await res.body.cancel().catch(() => {});
+    }
+
     return {
       status: res.status,
       contentType: res.headers.get("content-type") ?? "",
@@ -339,13 +419,19 @@ async function fetchHop(
 async function fetchFollowingRedirects(
   startUrl: string,
   timeoutMs: number,
+  maxBytes: number,
   userAgent: string,
   relaxedHosts: string[],
   resolve: DnsResolver,
 ): Promise<RawResponse> {
   let current = startUrl;
+  const deadline = Date.now() + timeoutMs;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const r = await fetchHop(current, timeoutMs, userAgent, relaxedHosts, resolve);
+    const remainingTime = Math.max(1000, deadline - Date.now());
+    if (Date.now() >= deadline) {
+      throw new Error("timeout");
+    }
+    const r = await fetchHop(current, remainingTime, maxBytes, userAgent, relaxedHosts, resolve);
     if (r.status >= 300 && r.status < 400 && r.location) {
       if (hop === MAX_REDIRECTS) throw new Error("terlalu banyak redirect");
       current = new URL(r.location, current).toString();
@@ -375,7 +461,7 @@ async function fetchCorpusImage(url: string, maxBytes: number): Promise<FetchRes
   }
   // Validasi: tolak traversal / karakter berbahaya
   const safe = /^[A-Za-z0-9._\-]+$/;
-  if (!parts.every((p) => safe.test(p))) {
+  if (parts.some((p) => p === ".." || p === "." || !safe.test(p))) {
     return { ok: false, error: `corpus:// path mengandung karakter tidak aman: ${url}` };
   }
   // Resolusi path: segmen pertama = nama SUMBER korpus, sisanya relatif
@@ -383,7 +469,11 @@ async function fetchCorpusImage(url: string, maxBytes: number): Promise<FetchRes
   //   corpus://defantri/<slug>/<file>       → corpora/defantri/images/<slug>/<file>
   //   corpus://pusmendik_dayaserap/<file>   → corpora/pusmendik_dayaserap/images/<file>
   const [sumber, ...sisa] = parts;
-  const absPath = join(CORPORA_BASE, sumber!, "images", ...sisa);
+  const baseDir = resolve(join(getCorporaBase(), sumber!, "images"));
+  const absPath = resolve(join(baseDir, ...sisa));
+  if (absPath !== baseDir && !absPath.startsWith(baseDir + sep)) {
+    return { ok: false, error: `corpus:// path traversal ditolak: ${url}` };
+  }
 
   let bytes: Uint8Array;
   try {
@@ -445,10 +535,16 @@ export async function fetchImage(url: string, opts: FetchOptions = {}): Promise<
 
   let lastErr = "gagal";
   for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      const baseDelay = Math.min(500 * Math.pow(2, attempt - 1), 3000);
+      const jitter = Math.floor(Math.random() * 200);
+      await new Promise((r) => setTimeout(r, baseDelay + jitter));
+    }
     try {
       const { status, contentType, body: buf } = await fetchFollowingRedirects(
         url,
         timeoutMs,
+        maxBytes,
         userAgent,
         relaxedHosts,
         resolve,
@@ -471,6 +567,13 @@ export async function fetchImage(url: string, opts: FetchOptions = {}): Promise<
       return { ok: true, bytes: buf, contentType: mime, contentHash: hashBytes(buf) };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
+      if (
+        /anti-SSRF|diblokir|terblokir|Protokol tidak diizinkan|URL tidak valid|melebihi batas|Redirect tak sah/i.test(
+          lastErr,
+        )
+      ) {
+        break;
+      }
     }
   }
   return { ok: false, error: lastErr };

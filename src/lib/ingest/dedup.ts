@@ -31,6 +31,30 @@ export interface NearDuplicateHit {
 }
 
 /**
+ * Cari soal aktif dengan `content_hash` sama (dedup exact, ADR-0012).
+ * @param hash SHA-256 konten soal
+ * @param excludeId Abaikan soal dengan ID ini (dipakai saat updateQuestion)
+ */
+export async function findQuestionByContentHash(
+  hash: string,
+  excludeId?: string,
+): Promise<{ id: string; status: string } | null> {
+  const conditions = [
+    eq(questions.contentHash, hash),
+    isNull(questions.deletedAt),
+  ];
+  if (excludeId) {
+    conditions.push(ne(questions.id, excludeId));
+  }
+  const [row] = await db
+    .select({ id: questions.id, status: questions.status })
+    .from(questions)
+    .where(and(...conditions))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
  * Cari soal "mirip" (near) untuk satu soal memakai **embedding** (HNSW, `<=>`).
  *
  * Dipanggil di jalur **enrichment** (embedding sudah/akan tersedia). Soal tanpa

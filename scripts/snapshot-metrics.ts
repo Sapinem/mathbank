@@ -70,7 +70,7 @@ const SQL_ENRICHMENT = `SELECT
       CASE WHEN jsonb_typeof(data_payload->'options')='array'
            THEN data_payload->'options' ELSE '[]'::jsonb END) o
       WHERE o ? 'distractorRationale') > 0) AS ber_distraktor,
-  count(*) FILTER (WHERE answer_key ? 'rubric') AS ber_rubrik
+  count(*) FILTER (WHERE answer_key ? 'scoringRubric' OR answer_key ? 'rubric') AS ber_rubrik
  FROM questions WHERE deleted_at IS NULL`;
 
 const SQL_RELATIONS = `SELECT

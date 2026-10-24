@@ -20,6 +20,7 @@ import {
   questionColumns,
   projectOptions,
   projectAnswerKey,
+  projectDataPayload,
   canSeeAnswerKey,
 } from "@/lib/db/projections/question";
 import { assertBundleRead, bundleColumns } from "./bundle-shared";
@@ -270,6 +271,7 @@ export async function listBundleItems(
     ...r,
     question: {
       ...r.question,
+      dataPayload: projectDataPayload(r.question.dataPayload, { withAnswerKey }),
       ...(r.question.answerKey !== undefined
         ? { answerKey: projectAnswerKey(r.question.answerKey) as AnswerKey }
         : {}),

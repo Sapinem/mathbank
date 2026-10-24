@@ -16,12 +16,11 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { topics, tags } from "@/lib/db/schema/taxonomy";
-import { slugify } from "./shared";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
- * Cari topik: (1) nama case-insensitive, (2) fallback slug legacy.
+ * Cari topik berbasis nama (case-insensitive).
  * Mengembalikan `undefined` bila tidak ada.
  */
 async function findTopicTx(tx: Tx, name: string): Promise<string | undefined> {
@@ -30,17 +29,7 @@ async function findTopicTx(tx: Tx, name: string): Promise<string | undefined> {
     .from(topics)
     .where(sql`lower(${topics.name}) = lower(${name})`)
     .limit(1);
-  if (byName) return byName.id;
-
-  // Fallback legacy: baris lama mungkin bernama lain tapi slug-nya sama.
-  // `slug IS NOT NULL` menjaga query tetap selektif setelah kolom nullable.
-  const legacySlug = slugify(name);
-  const [byLegacySlug] = await tx
-    .select({ id: topics.id })
-    .from(topics)
-    .where(sql`${topics.slug} IS NOT NULL AND ${topics.slug} = ${legacySlug}`)
-    .limit(1);
-  return byLegacySlug?.id;
+  return byName?.id;
 }
 
 /** Cari/buat topik berdasarkan nama (case-insensitive), dalam transaksi. */
@@ -48,7 +37,6 @@ export async function findOrCreateTopicTx(tx: Tx, name: string): Promise<string>
   const existing = await findTopicTx(tx, name);
   if (existing) return existing;
 
-  // Tanpa `slug` → NULL (aman terhadap unique index & tanpa potong NFKD).
   const [row] = await tx
     .insert(topics)
     .values({ name, level: 1 })
@@ -57,13 +45,12 @@ export async function findOrCreateTopicTx(tx: Tx, name: string): Promise<string>
   if (row) return row.id;
 
   const again = await findTopicTx(tx, name);
-  // Tanpa non-null assertion: lebih baik galat jelas daripada `TypeError`.
   if (!again) throw new Error(`Gagal membuat/menemukan topik: ${name}`);
   return again;
 }
 
 /**
- * Cari tag: (1) nama case-insensitive, (2) fallback slug legacy.
+ * Cari tag berbasis nama (case-insensitive).
  * Mengembalikan `undefined` bila tidak ada.
  */
 async function findTagTx(tx: Tx, name: string): Promise<string | undefined> {
@@ -72,16 +59,7 @@ async function findTagTx(tx: Tx, name: string): Promise<string | undefined> {
     .from(tags)
     .where(sql`lower(${tags.name}) = lower(${name})`)
     .limit(1);
-  if (byName) return byName.id;
-
-  // Fallback legacy (lihat catatan pada `findTopicTx`).
-  const legacySlug = slugify(name, 100);
-  const [byLegacySlug] = await tx
-    .select({ id: tags.id })
-    .from(tags)
-    .where(sql`${tags.slug} IS NOT NULL AND ${tags.slug} = ${legacySlug}`)
-    .limit(1);
-  return byLegacySlug?.id;
+  return byName?.id;
 }
 
 /** Cari/buat tag berdasarkan nama, dalam transaksi. */

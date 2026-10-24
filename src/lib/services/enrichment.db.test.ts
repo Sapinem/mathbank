@@ -39,11 +39,11 @@ const noone: Actor = { id: "noone", name: "X", roles: [], via: "session" };
 async function cleanAll() {
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
+  await sql`DELETE FROM bundle_items`;
+  await sql`DELETE FROM bundles`;
   await sql`DELETE FROM questions`;
-  // MAT-131A: baris baru tidak punya slug → bersihkan berdasarkan nama uji.
-  // Tetap hapus sisa slug legacy (data lama) agar tidak mengganggu.
-  await sql`DELETE FROM tags WHERE lower(name) IN ('a b', 'a-b', 'kalkulus', 'turunan') OR slug IN ('a-b','kalkulus','turunan') OR length(slug) >= 90`;
-  await sql`DELETE FROM topics WHERE lower(name) IN ('aljabar', 'bilangan') OR slug IN ('a-b','aljabar','bilangan') OR length(slug) >= 90`;
+  await sql`DELETE FROM tags WHERE lower(name) IN ('a b', 'a-b', 'kalkulus', 'turunan')`;
+  await sql`DELETE FROM topics WHERE lower(name) IN ('aljabar', 'bilangan')`;
   await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;
   await sql`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_immutable`;
@@ -277,17 +277,15 @@ describe("enrichment — kontrak pedagogi (MAT-41)", () => {
     expect(r.pedagogy?.ok).toBe(false);
   });
 
-  it("MAT-131A: nama panjang/ligatur disimpan utuh & slug NULL (tak ada batas varchar slug)", async () => {
+  it("MAT-131B: nama panjang/ligatur disimpan utuh (kolom slug sudah dihapus)", async () => {
     const id = await makeQuestion();
-    // Dulu: nama 50 char → slug NFKD 150 char → error varchar(100). Kini slug
-    // tidak ditulis (NULL), jadi nama apa pun aman dan tersimpan utuh.
     const ligatureName = "ﬃ".repeat(50);
     mockChatJson.mockResolvedValue({ ok: true, data: { tags: [ligatureName] } });
     const r = await enrichQuestion(id, guru, ["tags"]);
     expect(r.ok).toBe(true);
-    const [t] = await sql`SELECT name, slug FROM tags WHERE name = ${ligatureName}`;
+    const [t] = await sql`SELECT name FROM tags WHERE name = ${ligatureName}`;
     expect(t).toBeTruthy();
-    expect(t.slug).toBeNull();
+    expect(t.name).toBe(ligatureName);
   });
 
   it("MAT-131A: lookup tag berbasis nama — dua nama mirip-slug tetap dua baris", async () => {

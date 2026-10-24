@@ -38,13 +38,15 @@ async function makeQuestion(label: string): Promise<string> {
 }
 
 async function cleanup() {
+  const hash1 = createHash("sha256").update(PNG).digest("hex");
+  const hash2 = createHash("sha256").update(PNG2).digest("hex");
   await sql`DELETE FROM question_media WHERE media_id IN (
-    SELECT id FROM media_assets WHERE title LIKE 'uji-%'
+    SELECT id FROM media_assets WHERE title LIKE 'uji-%' OR content_hash IN (${hash1}, ${hash2})
   )`;
   await sql`DELETE FROM question_media WHERE question_id IN (
     SELECT id FROM questions WHERE content_markdown LIKE 'uji-%'
   )`;
-  await sql`DELETE FROM media_assets WHERE title LIKE 'uji-%'`;
+  await sql`DELETE FROM media_assets WHERE title LIKE 'uji-%' OR content_hash IN (${hash1}, ${hash2})`;
   await sql`DELETE FROM questions WHERE content_markdown LIKE 'uji-%'`;
 }
 

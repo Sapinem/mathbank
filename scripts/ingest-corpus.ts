@@ -65,7 +65,6 @@ async function ingestCorpus() {
       sourceUrl: data.url,
       rawContent: data.rawHtml,
       rawFormat: "html",
-      slug: data.slug,
       targetGrade: null,
       targetTopicId: null,
     });

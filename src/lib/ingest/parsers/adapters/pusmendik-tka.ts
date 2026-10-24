@@ -22,9 +22,22 @@
  * terhadap `meta.url` bila ada (dilakukan lapisan media).
  */
 import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { cleanHtml } from "../clean";
 import { finalizeItem } from "../items";
 import type { ArticleAdapter, ParsedItem, SegmentResult } from "../types";
+
+/**
+ * Root folder gambar korpus TKA.
+ * Dapat dikonfigurasi melalui environment variable `CORPORA_BASE` atau `CORPUS_IMAGE_BASE`.
+ */
+function getTkaImagesDir(): string {
+  const base =
+    process.env.CORPORA_BASE?.trim() ||
+    process.env.CORPUS_IMAGE_BASE?.trim() ||
+    "/home/hari/projects/qbank/data/corpora";
+  return join(base, "pusmendik_tka", "images");
+}
 
 /**
  * Ganti URL gambar REMOTE/RELATIF → `corpus://` LOKAL.
@@ -73,7 +86,7 @@ function ekstensiGambarLokal(slug: string, n: number): string {
     peta = new Map();
     try {
       // Baca folder gambar korpus TKA (sinkron, sekali per slug).
-      for (const b of readdirSync(CORPUS_TKA_IMAGES)) {
+      for (const b of readdirSync(getTkaImagesDir())) {
         const m = new RegExp(`^${slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-img-(\\d+)(\\.\\w+)$`).exec(b);
         if (m) peta.set(Number(m[1]), m[2]!.toLowerCase());
       }
@@ -84,9 +97,6 @@ function ekstensiGambarLokal(slug: string, n: number): string {
   }
   return peta.get(n) ?? ".png";
 }
-
-/** Lokasi folder gambar korpus TKA. */
-const CORPUS_TKA_IMAGES = "/home/hari/projects/qbank/data/corpora/pusmendik_tka/images";
 
 export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResult => {
   const items: ParsedItem[] = [];
@@ -147,10 +157,10 @@ export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResul
       continue;
     }
 
-    // OPSI: tiap radio (pil="a") → isi `<td …>` berikutnya.
+    // OPSI: tiap radio (pil="a") → isi `<td …>` berikutnya (atribut bisa sembarang urutan).
     const opts: { label?: string; text: string }[] = [];
     const optRe = new RegExp(
-      `<input\\b[^>]*\\bpil="([a-z])"[^>]*\\bname="${escapeRe(name)}"[^>]*>([\\s\\S]*?)(?=<input\\b[^>]*\\bpil=|<\\/table>|$)`,
+      `<input\\b(?=[^>]*\\bpil="([a-z])")(?=[^>]*\\bname="${escapeRe(name)}")[^>]*>([\\s\\S]*?)(?=<input\\b[^>]*\\bpil=|<\\/table>|$)`,
       "gi",
     );
     let lm: RegExpExecArray | null;

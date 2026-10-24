@@ -22,7 +22,7 @@ export interface EventResolveResult {
 }
 
 /** Peta label(lowercase) → event id, dari nama + shortname + alias. */
-async function eventIndex(db: Database): Promise<Map<string, string>> {
+export async function eventIndex(db: Database): Promise<Map<string, string>> {
   const rows = await db.select().from(events);
   const m = new Map<string, string>();
   for (const e of rows) {
@@ -35,7 +35,7 @@ async function eventIndex(db: Database): Promise<Map<string, string>> {
 }
 
 /** Cari event UTAMA untuk sebuah judul (label pertama yang dikenal katalog). */
-function mainEventFor(title: string, idx: Map<string, string>): string | null {
+export function mainEventFor(title: string, idx: Map<string, string>): string | null {
   for (const label of detectEvent(title).events) {
     const id = idx.get(label.toLowerCase());
     if (id) return id;
@@ -81,13 +81,13 @@ export async function resolveEventsForBundles(
         .set({ eventId, updatedAt: new Date() })
         .where(and(eq(bundles.id, b.id), isNull(bundles.eventId)))
         .returning({ id: bundles.id });
-      if (bundleUpd.length === 0) return { bundle: false, questions: 0 };
+      const bundleUpdated = bundleUpd.length > 0;
 
       const qs = await tx
         .select({ qid: bundleItems.questionId })
         .from(bundleItems)
         .where(eq(bundleItems.bundleId, b.id));
-      if (qs.length === 0) return { bundle: true, questions: 0 };
+      if (qs.length === 0) return { bundle: bundleUpdated, questions: 0 };
 
       const upd = await tx
         .update(questions)
@@ -108,7 +108,7 @@ export async function resolveEventsForBundles(
           ),
         )
         .returning({ id: questions.id });
-      return { bundle: true, questions: upd.length };
+      return { bundle: bundleUpdated, questions: upd.length };
     });
 
     if (tagged.bundle) res.bundlesTagged++;

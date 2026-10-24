@@ -847,6 +847,20 @@ Full query output available in audit workspace.
 
 **Audit Completed:** 2026-10-19  
 **Total Findings:** 35+ (across all severity levels)  
+
+---
+
+## Catatan Verifikasi (CONSTRAINTS #44)
+
+- **Verifikator:** Tariq & Salman (Paperclip Engineering Review V2)
+- **Metode:** Kueri langsung `psql` dan skrip verifikasi DB (`pnpm db:verify`, `scripts/snapshot-metrics.ts`, `drizzle.__drizzle_migrations`)
+- **Terverifikasi benar:**
+  - Volume soal nyata 11.889 baris dan tabel basis 26 tabel per PostgreSQL 18.
+  - Vektor isolasi telah dimigrasi ke `question_embeddings` dengan indeks HNSW.
+  - Snapshot metrik terbarui per 2026-10-24 di `docs/SNAPSHOT-METRIK-2026-10-24.md`.
+- **Koreksi & Batas:**
+  - Angka metrik tidak lagi disalin statis di dokumen evaluasi ini, melainkan mengacu ke dokumen snapshot otomatis.
+  - Rekomendasi backup telah diuji melalui restore drill pada `docs/sprint0/evidence/restore-drill-2026-10-20.json`.  
 **V2 Blockers Identified:** 7 (all in Pillar 1)  
 **Recommended First Action:** IMMEDIATE BACKUP + EMBEDDING BATCH JOB
 

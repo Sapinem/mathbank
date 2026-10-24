@@ -11,6 +11,8 @@ const querySchema = z.object({}).optional();
 
 export const GET = wrapRoute({
   auth: false,
+  rateLimit: true,
+  rateLimitScope: "dev:demo-status",
   query: querySchema,
   handler: async () => {
     const demo =

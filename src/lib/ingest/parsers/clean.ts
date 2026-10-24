@@ -406,7 +406,7 @@ export function stripTags(html: string): string {
   //  2) WAJIB setelah hide-math: kasus sah `$0<a<1$` (math memuat `<a`) tampak
   //     seperti tag `<a>` bila diproses lebih dulu → math rusak. Setelah hide,
   //     `<a>` semacam itu ada di dalam placeholder dan tak tersentuh.
-  s = s.replace(/<[\s>][^>]*>([\s\S]*?)<\/a>/gi, "$1");
+  s = s.replace(/<a[\s>][^>]*>([\s\S]*?)<\/a>/gi, "$1");
   s = s.replace(/<\/?a\b[^>]*>/gi, "");
 
   // Kini aman: buang semua tag.

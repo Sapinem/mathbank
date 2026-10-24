@@ -206,7 +206,6 @@ async function ingestDefantriExperiment() {
         sourceUrl: article.url,
         rawContent: article.rawHtml,
         rawFormat: "html",
-        slug: article.slug ?? undefined,
         targetGrade: target.grade,
         targetTopicId: null,
       });

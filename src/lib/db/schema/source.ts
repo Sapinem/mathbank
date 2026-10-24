@@ -7,7 +7,6 @@ import {
   boolean,
   timestamp,
   index,
-  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sourceKindEnum } from "./_enums";
 
@@ -30,7 +29,6 @@ export const sources = pgTable(
     id: uuidPk(),
     kind: sourceKindEnum("kind").notNull(),
     label: varchar("label", { length: 255 }).notNull(),
-    slug: varchar("slug", { length: 255 }).notNull(),
     url: text("url"), // khusus kind='website'
     // ── Khusus kind='book' (dulu tabel `books`) ──
     publisher: varchar("publisher", { length: 255 }),
@@ -47,7 +45,6 @@ export const sources = pgTable(
       .notNull(),
   },
   (t) => [
-    uniqueIndex("uq_sources_slug").on(t.slug),
     index("idx_sources_kind").on(t.kind),
     index("idx_sources_is_active").on(t.isActive),
     index("idx_sources_city").on(t.city),

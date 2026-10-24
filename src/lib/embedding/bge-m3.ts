@@ -96,7 +96,13 @@ export async function embedTexts(texts: string[], opts: EmbedOptions = {}): Prom
   const timeoutMs = opts.timeoutMs ?? embeddingTimeoutMs();
 
   const ctrl = new AbortController();
-  if (opts.signal) opts.signal.addEventListener("abort", () => ctrl.abort(), { once: true });
+  if (opts.signal) {
+    if (opts.signal.aborted) {
+      ctrl.abort();
+    } else {
+      opts.signal.addEventListener("abort", () => ctrl.abort(), { once: true });
+    }
+  }
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
@@ -160,11 +166,12 @@ export async function embeddingHealth(
     }
     // Service tanpa /health → probe fungsional di bawah.
     if (![404, 405, 501].includes(res.status)) return { ok: false, error: `HTTP ${res.status}` };
-  } catch {
-    // Jaringan mati / timeout → probe fungsional masih bisa menentukan status.
+  } catch (err) {
+    // Jaringan mati / koneksi ditolak / timeout → langsung gagal tanpa probe fungsional.
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
   } finally {
     clearTimeout(timer);
   }
-  const r = await embedText("ping", { timeoutMs: 30000, ...opts });
+  const r = await embedText("ping", { timeoutMs: 5000, ...opts });
   return { ok: r.ok, error: r.error };
 }

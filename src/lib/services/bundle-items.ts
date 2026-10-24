@@ -125,6 +125,7 @@ export async function reorderItems(
       "Daftar urutan harus memuat SELURUH item paket (tidak boleh sebagian).",
     );
   }
+  if (itemIds.length === 0) return;
   // Transaksi: perbarui seluruh urutan secara atomik (gagal parsial → rollback).
   // **PERF-06:** satu pernyataan SQL `CASE` untuk seluruh item (batch), bukan
   // N `UPDATE` berurutan → menghilangkan latensi pulang-pergi per item.

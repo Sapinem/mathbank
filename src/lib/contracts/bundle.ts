@@ -17,6 +17,8 @@ export const bundlePrintConfigSchema = z.object({
   includeAnswerKey: z.boolean().optional(),
   showQuestionNumber: z.boolean().optional(),
   pageSize: z.enum(["A4", "Letter"]).optional(),
+  explanationPlacement: z.enum(["none", "inline", "end"]).optional(),
+  answerSpaceCm: z.number().min(0).max(20).optional(),
 });
 
 /** Field yang boleh diisi saat buat paket. */
@@ -53,6 +55,8 @@ export const updateBundleSchema = z.object({
 export const listBundlesQuerySchema = z.object({
   bundleType: z.enum(["source", "exam"]).optional(),
   origin: z.enum(["ingest", "manual"]).optional(),
+  status: z.enum(["active", "draft", "review", "ready", "archived"]).optional(),
+  q: z.string().trim().max(120).optional(),
   /** API-05: paginasi — `limit` default 20 (max 100), `offset` default 0. */
   limit: z.coerce.number().int().min(1).max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),

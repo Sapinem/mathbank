@@ -101,6 +101,8 @@ function releasableInput(over: Record<string, unknown> = {}) {
 async function cleanAll() {
   await sql`DELETE FROM question_topics`;
   await sql`DELETE FROM question_tags`;
+  await sql`DELETE FROM bundle_items`;
+  await sql`DELETE FROM bundles`;
   await sql`UPDATE questions SET parent_id = NULL`;
   await sql`DELETE FROM questions`;
   await sql`UPDATE topics SET parent_id = NULL`;
@@ -212,6 +214,12 @@ describe("createQuestion", () => {
     expect(dp.left).toEqual(["sin 30°"]);
     expect(dp.right).toEqual(["1/2"]);
   });
+
+  it("menolak pembuatan soal duplikat persis dengan ConflictError", async () => {
+    const input = baseInput({ contentMarkdown: `Soal Duplikat Unik ${Date.now()}` });
+    await createQuestion(input, teacher);
+    await expect(createQuestion(input, teacher)).rejects.toThrow(ConflictError);
+  });
 });
 
 describe("getQuestion & listQuestions", () => {
@@ -262,6 +270,102 @@ describe("updateQuestion", () => {
       teacher,
     );
     expect(upd.options).toHaveLength(2);
+  });
+
+  it("memperbarui contentHash saat contentMarkdown diubah", async () => {
+    const q = await createQuestion(
+      baseInput({ contentMarkdown: `Naskah Awal ${Date.now()}` }),
+      teacher,
+    );
+    const initialInternal = await getQuestionInternal(q.id);
+    expect(initialInternal?.contentHash).toBeDefined();
+
+    await updateQuestion(
+      q.id,
+      { contentMarkdown: `Naskah Baru Diubah ${Date.now()}` },
+      teacher,
+    );
+    const updatedInternal = await getQuestionInternal(q.id);
+    expect(updatedInternal?.contentHash).not.toBe(initialInternal?.contentHash);
+  });
+
+  it("memperbarui contentHash saat options diubah", async () => {
+    const q = await createQuestion(
+      baseInput({
+        contentMarkdown: `Soal Opsi ${Date.now()}`,
+        options: [
+          { label: "A", contentMarkdown: "Opsi 1", isCorrect: true, orderIndex: 0 },
+          { label: "B", contentMarkdown: "Opsi 2", isCorrect: false, orderIndex: 1 },
+        ],
+      }),
+      teacher,
+    );
+    const initialInternal = await getQuestionInternal(q.id);
+
+    await updateQuestion(
+      q.id,
+      {
+        options: [
+          { label: "A", contentMarkdown: "Opsi 1 Terganti", isCorrect: true, orderIndex: 0 },
+          { label: "B", contentMarkdown: "Opsi 2", isCorrect: false, orderIndex: 1 },
+        ],
+      },
+      teacher,
+    );
+    const updatedInternal = await getQuestionInternal(q.id);
+    expect(updatedInternal?.contentHash).not.toBe(initialInternal?.contentHash);
+  });
+
+  it("menolak update yang menghasilkan duplikat dengan ConflictError", async () => {
+    const stemA = `Soal Asli A ${Date.now()}`;
+    const stemB = `Soal Asli B ${Date.now()}`;
+    await createQuestion(baseInput({ contentMarkdown: stemA }), teacher);
+    const qB = await createQuestion(baseInput({ contentMarkdown: stemB }), teacher);
+
+    // Update qB agar naskahnya persis sama dengan qA -> harus ditolak
+    await expect(
+      updateQuestion(qB.id, { contentMarkdown: stemA }, teacher),
+    ).rejects.toThrow(ConflictError);
+  });
+
+  it("MAT-146 / Axiom: update naskah atau opsi otomatis menghitung ulang contentHash", async () => {
+    const stem = `Soal Hash Test ${Date.now()}`;
+    const q = await createQuestion(
+      baseInput({
+        contentMarkdown: stem,
+        options: [
+          { label: "A", contentMarkdown: "1", orderIndex: 0 },
+          { label: "B", contentMarkdown: "2", orderIndex: 1 },
+        ],
+      }),
+      teacher,
+    );
+
+    const [rowBefore] = await sql`SELECT content_hash FROM questions WHERE id = ${q.id}`;
+    const hashBefore = rowBefore.content_hash;
+
+    // 1. Update opsi (naskah stem tidak diubah)
+    await updateQuestion(
+      q.id,
+      {
+        options: [
+          { label: "A", contentMarkdown: "10", orderIndex: 0, isCorrect: true },
+          { label: "B", contentMarkdown: "20", orderIndex: 1, isCorrect: false },
+        ],
+      },
+      teacher,
+    );
+    const [rowAfterOptions] = await sql`SELECT content_hash FROM questions WHERE id = ${q.id}`;
+    expect(rowAfterOptions.content_hash).not.toBe(hashBefore);
+
+    // 2. Update stem (opsi tidak diubah)
+    await updateQuestion(
+      q.id,
+      { contentMarkdown: `${stem} diperbarui` },
+      teacher,
+    );
+    const [rowAfterStem] = await sql`SELECT content_hash FROM questions WHERE id = ${q.id}`;
+    expect(rowAfterStem.content_hash).not.toBe(rowAfterOptions.content_hash);
   });
 
   it("NotFoundError untuk id tak ada", async () => {
@@ -345,10 +449,22 @@ describe("setQuestionFlag & deleteQuestion", () => {
     expect(upd.flagNotes).toBe("perlu cek");
   });
 
-  it("teacher TAK boleh menandai (izin flag = kurasi)", async () => {
+  it("teacher boleh menandai soal MILIKNYA (SEC-01 / Constraint #35)", async () => {
     const q = await createQuestion(baseInput(), teacher);
+    const upd = await setQuestionFlag(q.id, true, "x", teacher);
+    expect(upd.isFlagged).toBe(true);
+  });
+
+  it("teacher TAK boleh menandai soal ORANG LAIN", async () => {
+    const q = await createQuestion(baseInput(), teacher);
+    const otherTeacher: Actor = {
+      id: "test-teacher-other",
+      name: "Guru Lain",
+      roles: ["teacher"],
+      via: "session",
+    };
     await expect(
-      setQuestionFlag(q.id, true, "x", teacher),
+      setQuestionFlag(q.id, true, "x", otherTeacher),
     ).rejects.toThrow();
   });
 
@@ -427,10 +543,10 @@ describe("M6 — filter & pencarian", () => {
 
   it("PERF-01: filter tag memakai semi-join EXISTS (ditemukan & terisolasi)", async () => {
     const [tag] = await sql`
-      INSERT INTO tags (name, slug) VALUES (${`perf1-${Date.now()}`}, ${`perf1-${Date.now()}`})
+      INSERT INTO tags (name) VALUES (${`perf1-${Date.now()}`})
       RETURNING id`;
     const [other] = await sql`
-      INSERT INTO tags (name, slug) VALUES (${`perf1b-${Date.now()}`}, ${`perf1b-${Date.now()}`})
+      INSERT INTO tags (name) VALUES (${`perf1b-${Date.now()}`})
       RETURNING id`;
 
     const withTag = await createQuestion(
@@ -536,6 +652,32 @@ describe("M4 — perbaikan audit (T-M4-3/4/5)", () => {
     // Soft-delete dulu.
     await deleteQuestion(q.id, admin);
     // Baru boleh permanen.
+    await hardDeleteQuestion(q.id, admin);
+    expect(await getQuestionInternal(q.id, { includeDeleted: true })).toBeNull();
+  });
+
+  it("T-M4-4 & Constraint #46: hard delete diizinkan jika bundel induk sudah terarsip", async () => {
+    const q = await createQuestion(baseInput({ contentMarkdown: `Soal Bundel Terarsip ${Date.now()}` }), admin);
+    const [b] = await sql<{ id: string }[]>`
+      INSERT INTO bundles (title, bundle_type, origin)
+      VALUES (${`Paket Uji ${Date.now()}`}, 'exam', 'manual')
+      RETURNING id
+    `;
+    await sql`
+      INSERT INTO bundle_items (bundle_id, question_id, order_index)
+      VALUES (${b!.id}, ${q.id}, 1)
+    `;
+
+    // 1. Selama bundel masih AKTIF, soft-delete ditolak (Constraint #46)
+    await expect(deleteQuestion(q.id, admin)).rejects.toThrow(ConflictError);
+
+    // 2. Arsipkan (soft-delete) bundel
+    await sql`UPDATE bundles SET deleted_at = NOW() WHERE id = ${b!.id}`;
+
+    // 3. Setelah bundel terarsip, soft-delete soal diizinkan
+    await deleteQuestion(q.id, admin);
+
+    // 4. Sekarang hard-delete diperbolehkan dan membersihkan item tanpa melanggar FK restrict
     await hardDeleteQuestion(q.id, admin);
     expect(await getQuestionInternal(q.id, { includeDeleted: true })).toBeNull();
   });

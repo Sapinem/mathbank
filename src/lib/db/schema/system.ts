@@ -53,7 +53,6 @@ export const ingestQueue = pgTable(
   {
     id: uuidPk(),
     title: varchar("title", { length: 255 }).notNull(),
-    slug: varchar("slug", { length: 255 }),
     sourceOrigin: varchar("source_origin", { length: 50 }).notNull(),
     sourceUrl: text("source_url"),
     rawContent: text("raw_content").notNull(),

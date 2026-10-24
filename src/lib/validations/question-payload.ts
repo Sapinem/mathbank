@@ -317,6 +317,26 @@ export const answerKeySchema = z
      * diagnosis kesalahan per langkah.
      */
     scoringRubric: z.string().optional(),
+
+    /**
+     * MAT-41 — Objek rubrik terstruktur (kriteria bertingkat + poin).
+     */
+    rubric: z
+      .object({
+        totalPoints: z.number().positive().max(1000).optional(),
+        criteria: z
+          .array(
+            z.object({
+              id: z.string().max(50).optional(),
+              description: z.string().min(10).max(500),
+              points: z.number().positive().max(100),
+            })
+          )
+          .min(1)
+          .max(20),
+      })
+      .nullable()
+      .optional(),
   })
   .strict();
 
@@ -384,15 +404,22 @@ export const releasedQuestionGuardSchema = z
 
     // Aturan 2: Rubrik esai wajib untuk soal essay siap rilis
     if (dataPayload.type === "essay") {
-      if (
-        !answerKey.scoringRubric ||
-        answerKey.scoringRubric.trim().length < 20
-      ) {
+      const hasStringRubric =
+        typeof answerKey.scoringRubric === "string" &&
+        answerKey.scoringRubric.trim().length >= 20;
+      const hasObjectRubric = Boolean(
+        answerKey.rubric &&
+          typeof answerKey.rubric === "object" &&
+          Array.isArray((answerKey.rubric as { criteria?: unknown[] }).criteria) &&
+          (answerKey.rubric as { criteria: unknown[] }).criteria.length >= 1,
+      );
+
+      if (!hasStringRubric && !hasObjectRubric) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["answerKey", "scoringRubric"],
           message:
-            "Soal esai wajib memiliki scoringRubric (min 20 karakter) sebelum dirilis — tulis rubrik poin per langkah matematis.",
+            "Soal esai wajib memiliki scoringRubric (min 20 karakter) atau rubric terstruktur sebelum dirilis — tulis rubrik poin per langkah matematis.",
         });
       }
     }

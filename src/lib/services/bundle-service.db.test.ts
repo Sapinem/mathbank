@@ -15,7 +15,7 @@ import {
   duplicateBundle,
 } from "./bundle-service";
 import { createQuestion, deleteQuestion, getQuestionInternal } from "./question-service";
-import { ConflictError, NotFoundError } from "@/lib/auth/guards";
+import { ConflictError, NotFoundError, ForbiddenError } from "@/lib/auth/guards";
 
 /**
  * Tes INTEGRASI paket soal (M7) — DB uji nyata.
@@ -77,12 +77,12 @@ afterAll(async () => {
 });
 
 describe("createBundle / listBundles", () => {
-  it("membuat paket dengan slug dari judul", async () => {
+  it("membuat paket baru", async () => {
     const b = await createBundle(
       { title: "UTS Matematika Kelas X", bundleType: "exam" },
       admin,
     );
-    expect(b.slug).toBe("uts-matematika-kelas-x");
+    expect(b.title).toBe("UTS Matematika Kelas X");
     expect(b.status).toBe("draft");
     expect(b.itemCount).toBe(0);
   });
@@ -223,12 +223,6 @@ describe("createBundle / listBundles", () => {
     const copy = await duplicateBundle(b.id, admin);
     expect(copy.printConfig.institutionName).toBe("Institut Teknologi");
     expect(copy.printConfig.twoColumnLayout).toBe(false);
-  });
-
-  it("slug unik: judul sama → akhiran -2", async () => {
-    await createBundle({ title: "Latihan", bundleType: "exam" }, admin);
-    const b2 = await createBundle({ title: "Latihan", bundleType: "exam" }, admin);
-    expect(b2.slug).toBe("latihan-2");
   });
 
   it("paket diarsip tak muncul di daftar", async () => {
@@ -431,12 +425,24 @@ describe("duplikasi paket", () => {
 
     const copy = await duplicateBundle(b.id, admin);
     expect(copy.title).toBe("Paket Asli (salinan)");
-    expect(copy.slug).toBe("paket-asli-salinan");
     expect(copy.durationMinutes).toBe(120);
     expect(copy.itemCount).toBe(2);
     // soal berbeda objeknya tapi menunjuk soal yang sama
     const items = await listBundleItems(copy.id);
     expect(items.map((i) => i.item.questionId)).toEqual([q1.id, q2.id]);
+  });
+
+  it("menolak duplikasi oleh aktor tanpa wewenang (ForbiddenError)", async () => {
+    const b = await createBundle({ title: "Paket Privat", bundleType: "exam" }, admin);
+    const unauthorizedActor: Actor = {
+      id: "b-unauth",
+      name: "Siswa",
+      roles: [],
+      via: "session",
+    };
+    await expect(duplicateBundle(b.id, unauthorizedActor)).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
   });
 });
 

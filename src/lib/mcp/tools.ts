@@ -3,12 +3,13 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Actor } from "@/lib/auth/actor";
 import { assertMcp, canMcp, MCP_CAPABILITIES, type McpCapability } from "@/lib/mcp/policy";
-import { listQuestions, getQuestion, createQuestion } from "@/lib/services/question-service";
+import { listQuestions, getQuestion, createQuestion, updateQuestion, setQuestionFlag } from "@/lib/services/question-service";
 import { listTopics } from "@/lib/services/topic-service";
 import { listSources } from "@/lib/services/taxonomy-service";
 import { enrichQuestion, embedQuestions } from "@/lib/services/enrichment-service";
 import { createQuestionSchema, listQuestionsQuerySchema } from "@/lib/contracts/question";
 import { enrichFieldSchema } from "@/lib/contracts/ai";
+import { lintKatex } from "@/lib/math/katex-lint";
 
 /**
  * Tool MCP (M11, L9) — tipis: validasi input → panggil SERVICE yang sudah ada.
@@ -35,12 +36,20 @@ async function guard(fn: () => Promise<unknown>): Promise<CallToolResult> {
   try {
     return ok(await fn());
   } catch (e) {
-    const err = e as Error & { code?: string };
+    const err = e as Error & { code?: string; details?: unknown; issues?: unknown };
     return {
       content: [
         {
           type: "text" as const,
-          text: JSON.stringify({ error: err.message, code: err.code ?? "ERROR" }, null, 2),
+          text: JSON.stringify(
+            {
+              error: err.message,
+              code: err.code ?? "ERROR",
+              ...(err.details || err.issues ? { details: err.details ?? err.issues } : {}),
+            },
+            null,
+            2,
+          ),
         },
       ],
       isError: true,
@@ -67,6 +76,10 @@ export function registerTools(server: McpServer, actor: Actor): void {
           q: z.string().optional().describe("Kata kunci / pertanyaan alami"),
           mode: z.enum(["text", "semantic"]).default("text"),
           status: z.string().optional().describe("Filter status (draft/review/ready)"),
+          grade: z.string().optional().describe("Filter jenjang/tingkat (mis. '10', '11', '12')"),
+          difficulty: z.number().int().min(1).max(5).optional().describe("Filter tingkat kesulitan (1-5)"),
+          questionType: z.string().optional().describe("Filter tipe soal (single_choice/multiple_choice/essay/matrix_grid/stimulus)"),
+          topicId: z.string().uuid().optional().describe("Filter ID topik"),
           limit: z.number().int().min(1).max(100).default(20),
           offset: z.number().int().min(0).default(0),
         },
@@ -74,7 +87,14 @@ export function registerTools(server: McpServer, actor: Actor): void {
       async (args) =>
         guard(async () => {
           assertMcp(actor, "question.read");
-          const query = listQuestionsQuerySchema.parse({ ...args });
+          const parsed = {
+            ...args,
+            grade: args.grade ? [args.grade] : undefined,
+            difficulty: args.difficulty !== undefined ? [args.difficulty] : undefined,
+            questionType: args.questionType ? [args.questionType] : undefined,
+            topicId: args.topicId ? [args.topicId] : undefined,
+          };
+          const query = listQuestionsQuerySchema.parse(parsed);
           const res = await listQuestions(query, actor);
           return { items: res.items, total: res.total };
         }),
@@ -132,6 +152,56 @@ export function registerTools(server: McpServer, actor: Actor): void {
     );
   }
 
+  // ── Perbarui draf soal milik sendiri ─────────────────────────
+  if (allowed("question.edit")) {
+    server.registerTool(
+      "update_question",
+      {
+        title: "Perbarui draf soal",
+        description: "Perbarui draf soal yang dibuat oleh agen ini sendiri (hanya draf milik sendiri).",
+        inputSchema: {
+          id: z.string().uuid(),
+          contentMarkdown: z.string().min(1).optional(),
+          difficulty: z.number().int().min(1).max(5).optional(),
+          cognitiveLevel: z.enum(["remember", "understand", "apply", "analyze", "evaluate", "create"]).optional(),
+          grade: z.string().max(20).optional(),
+          topicIds: z.array(z.string().uuid()).optional(),
+          tagIds: z.array(z.string().uuid()).optional(),
+          options: createQuestionSchema.shape.options.optional(),
+          dataPayload: z.record(z.string(), z.unknown()).optional(),
+          answerKey: z.record(z.string(), z.unknown()).optional(),
+        },
+      },
+      async ({ id, ...patch }) =>
+        guard(async () => {
+          assertMcp(actor, "question.edit");
+          const q = await updateQuestion(id, patch, actor);
+          return { id: q.id, status: q.status };
+        }),
+    );
+  }
+
+  // ── Flagging masalah kualitas soal (kurasi agen) ─────────────
+  if (allowed("question.flag")) {
+    server.registerTool(
+      "flag_question",
+      {
+        title: "Tandai masalah kualitas soal",
+        description: "Tandai soal yang memiliki masalah kualitas (KaTeX rusak, kunci salah, dsb) untuk ditinjau guru.",
+        inputSchema: {
+          id: z.string().uuid(),
+          flagged: z.boolean().default(true),
+          notes: z.string().max(1000).optional(),
+        },
+      },
+      async ({ id, flagged, notes }) =>
+        guard(async () => {
+          assertMcp(actor, "question.flag");
+          return await setQuestionFlag(id, flagged, notes ?? null, actor);
+        }),
+    );
+  }
+
   // ── Daftar topik & sumber (taksonomi baca) ───────────────────
   if (allowed("taxonomy.read")) {
     server.registerTool(
@@ -159,6 +229,25 @@ export function registerTools(server: McpServer, actor: Actor): void {
         guard(async () => {
           assertMcp(actor, "taxonomy.read");
           return await listSources();
+        }),
+    );
+
+    server.registerTool(
+      "validate_math",
+      {
+        title: "Validasi KaTeX matematika",
+        description: "Periksa keabsahan sintaksis KaTeX/LaTeX pada teks tanpa menyentuh basis data.",
+        inputSchema: {
+          text: z.string().min(1).max(50000),
+        },
+      },
+      async ({ text }) =>
+        guard(async () => {
+          const issues = lintKatex(text);
+          return {
+            valid: issues.length === 0,
+            issues,
+          };
         }),
     );
   }
@@ -220,8 +309,11 @@ export const MCP_TOOL_CAPABILITIES: Record<string, keyof typeof MCP_CAPABILITIES
   search_questions: "question.read",
   get_question: "question.read",
   create_question: "question.create",
+  update_question: "question.edit",
+  flag_question: "question.flag",
   list_topics: "taxonomy.read",
   list_sources: "taxonomy.read",
+  validate_math: "taxonomy.read",
   enrich_question: "enrichment.run",
   embed_questions: "enrichment.run",
 };

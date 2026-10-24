@@ -411,4 +411,28 @@ describe("Pilar 3 v2.0 — params validation & public auth: false", () => {
     const body = await res.json();
     expect(body.data.public).toBe(true);
   });
+
+  it("QuestionPayloadValidationError → 422 dengan pesan custom dan array details (Zod issues)", async () => {
+    const { QuestionPayloadValidationError } = await import("@/lib/contracts/question");
+    const issues = [
+      {
+        code: z.ZodIssueCode.custom,
+        path: ["options"],
+        message: "Minimal 2 opsi",
+      },
+    ];
+    const handler = wrapRoute({
+      handler: async () => {
+        throw new QuestionPayloadValidationError("Payload soal tidak valid", issues as z.ZodIssue[]);
+      },
+    });
+    const res = await handler(req());
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.message).toBe("Payload soal tidak valid");
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details).toHaveLength(1);
+    expect(body.error.details[0].message).toBe("Minimal 2 opsi");
+  });
 });

@@ -48,10 +48,10 @@ async function seedBundle(
   ownerId: string | null,
   bundleType: "source" | "exam",
 ): Promise<string> {
-  const slug = `bauthz-${Math.random().toString(36).slice(2, 10)}`;
+  const token = `bauthz-${Math.random().toString(36).slice(2, 10)}`;
   const [row] = await sql`
-    INSERT INTO bundles (title, slug, bundle_type, created_by_id)
-    VALUES (${`Uji ${slug}`}, ${slug}, ${bundleType}, ${ownerId})
+    INSERT INTO bundles (title, bundle_type, created_by_id)
+    VALUES (${`Uji ${token}`}, ${bundleType}, ${ownerId})
     RETURNING id`;
   return row.id as string;
 }
@@ -60,10 +60,10 @@ beforeAll(async () => {
   await sql`SELECT 1`;
 });
 beforeEach(async () => {
-  await sql`DELETE FROM bundles WHERE slug LIKE 'bauthz-%'`;
+  await sql`DELETE FROM bundles WHERE title LIKE 'Uji bauthz-%'`;
 });
 afterAll(async () => {
-  await sql`DELETE FROM bundles WHERE slug LIKE 'bauthz-%'`;
+  await sql`DELETE FROM bundles WHERE title LIKE 'Uji bauthz-%'`;
   await sql.end();
 });
 

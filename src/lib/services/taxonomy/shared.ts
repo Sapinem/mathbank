@@ -16,7 +16,6 @@ export interface SourceRow {
   id: string;
   kind: SourceKind;
   label: string;
-  slug: string;
   url: string | null;
   /** Khusus `kind='book'`. */
   publisher: string | null;
@@ -41,13 +40,6 @@ export interface EventRow {
 export interface TagRow {
   id: string;
   name: string;
-  /**
-   * MAT-131A (Tahap A): `slug` **deprecated & nullable**.
-   * Baris baru menyimpan `NULL`; nilai legacy dipertahankan sampai Tahap B.
-   * Identitas kanonik label adalah `id` — jangan menambah logika baru
-   * yang bergantung pada `slug`.
-   */
-  slug: string | null;
   usageCount: number;
 }
 

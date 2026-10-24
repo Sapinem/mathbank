@@ -111,7 +111,6 @@ async function ingestMathcyber() {
       sourceUrl: f.data.url,
       rawContent: f.data.rawHtml,
       rawFormat: "html",
-      slug: f.data.slug,
       targetGrade: null,
       targetTopicId: null,
     });

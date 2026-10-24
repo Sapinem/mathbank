@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import postgres from "postgres";
 import { checkDbInvariants } from "./invariants";
 
@@ -17,6 +17,10 @@ const sql = postgres(url, { max: 2 });
 
 const PROBE = "zz_probe_invarian_backup";
 
+beforeAll(async () => {
+  await sql`DROP TABLE IF EXISTS ${sql(PROBE)}`;
+});
+
 afterAll(async () => {
   await sql`DROP TABLE IF EXISTS ${sql(PROBE)}`;
   await sql.end();
@@ -32,6 +36,7 @@ describe("checkDbInvariants terhadap DB nyata", () => {
   });
 
   it("tabel sisa migrasi dilaporkan, dan TIDAK menambah hitungan tabel", async () => {
+    await sql`DROP TABLE IF EXISTS ${sql(PROBE)}`;
     const before = await checkDbInvariants();
 
     await sql`CREATE TABLE ${sql(PROBE)} (id int)`;

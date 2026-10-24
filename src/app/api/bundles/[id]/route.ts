@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
-import { bundlePrintConfigSchema } from "@/lib/contracts/bundle";
+import { updateBundleSchema } from "@/lib/contracts/bundle";
 import {
   getBundle,
   updateBundle,
@@ -11,20 +11,6 @@ import { NotFoundError } from "@/lib/auth/guards";
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 const emptyQuerySchema = z.object({}).optional();
-
-const patchSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  bundleType: z.enum(["source", "exam"]).optional(),
-  origin: z.enum(["ingest", "manual"]).optional(),
-  sourceId: z.string().uuid().nullable().optional(),
-  eventId: z.string().uuid().nullable().optional(),
-  year: z.number().int().min(1900).max(2100).nullable().optional(),
-  grade: z.string().max(20).nullable().optional(),
-  durationMinutes: z.number().int().min(1).max(600).optional(),
-  instructions: z.string().max(5000).nullable().optional(),
-  printConfig: bundlePrintConfigSchema.optional(),
-  status: z.enum(["draft", "review", "ready", "archived"]).optional(),
-});
 
 /** GET /api/bundles/[id] — detail paket + item berurutan. */
 export const GET = wrapRoute({
@@ -51,7 +37,7 @@ export const GET = wrapRoute({
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
   params: paramsSchema,
-  body: patchSchema,
+  body: updateBundleSchema,
   handler: async ({ params, body, actor }) => updateBundle(params.id, body, actor),
 });
 

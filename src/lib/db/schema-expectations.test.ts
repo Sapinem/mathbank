@@ -25,7 +25,11 @@ const sehat: InvariantCounts = {
 
 const presence = (over: Partial<InvariantPresence> = {}): InvariantPresence => ({
   tables: new Set(["questions", "bundles", "topics"]),
-  checks: new Set(["chk_questions_difficulty", "chk_topics_level"]),
+  checks: new Set([
+    "chk_questions_difficulty",
+    "chk_topics_level",
+    "chk_media_assets_short_id",
+  ]),
   triggers: new Set([
     "trg_questions_updated_at",
     "trg_questions_stimulus_depth",

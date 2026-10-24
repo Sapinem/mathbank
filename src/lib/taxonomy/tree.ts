@@ -23,13 +23,6 @@
 export interface TopicNode {
   id: string;
   name: string;
-  /**
-   * MAT-131A (Tahap A): `slug` **deprecated & opsional**.
-   * Identitas kanonik node adalah `id`; nilai ini hanya dipertahankan untuk
-   * kompatibilitas data legacy (baris lama masih punya slug, baris baru `null`).
-   * Jangan menambah logika baru yang bergantung pada `slug`.
-   */
-  slug?: string | null;
   parentId: string | null;
   level: number;
   description: string | null;

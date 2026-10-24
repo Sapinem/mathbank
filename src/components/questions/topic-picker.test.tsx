@@ -9,13 +9,13 @@ import type { TopicNode } from "@/lib/taxonomy/tree";
  */
 
 const TOPICS: TopicNode[] = [
-  { id: "t-alj", name: "Aljabar & Persamaan", slug: "aljabar-persamaan", parentId: null, level: 1, sortOrder: 0 },
-  { id: "t-pk", name: "Persamaan Kuadrat", slug: "persamaan-kuadrat", parentId: "t-alj", level: 2, sortOrder: 0 },
-  { id: "t-akar", name: "Bentuk Akar", slug: "bentuk-akar", parentId: "t-alj", level: 2, sortOrder: 1 },
-  { id: "t-geo", name: "Geometri & Trigonometri", slug: "geometri-trigonometri", parentId: null, level: 1, sortOrder: 1 },
-  { id: "t-trig", name: "Trigonometri", slug: "trigonometri", parentId: "t-geo", level: 2, sortOrder: 0 },
-  { id: "t-sinus", name: "Aturan Sinus & Cosinus", slug: "aturan-sinus", parentId: "t-trig", level: 3, sortOrder: 0 },
-] as unknown as TopicNode[];
+  { id: "t-alj", name: "Aljabar & Persamaan", parentId: null, level: 1, sortOrder: 0, description: null, usageCount: 0, isActive: true },
+  { id: "t-pk", name: "Persamaan Kuadrat", parentId: "t-alj", level: 2, sortOrder: 0, description: null, usageCount: 0, isActive: true },
+  { id: "t-akar", name: "Bentuk Akar", parentId: "t-alj", level: 2, sortOrder: 1, description: null, usageCount: 0, isActive: true },
+  { id: "t-geo", name: "Geometri & Trigonometri", parentId: null, level: 1, sortOrder: 1, description: null, usageCount: 0, isActive: true },
+  { id: "t-trig", name: "Trigonometri", parentId: "t-geo", level: 2, sortOrder: 0, description: null, usageCount: 0, isActive: true },
+  { id: "t-sinus", name: "Aturan Sinus & Cosinus", parentId: "t-trig", level: 3, sortOrder: 0, description: null, usageCount: 0, isActive: true },
+];
 
 const mockUseTopicList = vi.fn();
 vi.mock("@/lib/hooks/use-taxonomy", () => ({

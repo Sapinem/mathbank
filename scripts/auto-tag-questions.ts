@@ -227,28 +227,31 @@ async function main() {
     // Upsert semua tag definitions
     for (const tagDef of TAG_DEFS) {
       const existing = await sql<{ id: string }[]>`
-        SELECT id FROM tags WHERE slug = ${tagDef.slug}
+        SELECT id FROM tags WHERE name = ${tagDef.name}
       `;
       if (existing.length > 0) {
         tagIdMap.set(tagDef.slug, existing[0].id);
       } else {
         const inserted = await sql<{ id: string }[]>`
-          INSERT INTO tags (name, slug, description)
-          VALUES (${tagDef.name}, ${tagDef.slug}, ${tagDef.description})
+          INSERT INTO tags (name, description)
+          VALUES (${tagDef.name}, ${tagDef.description})
           RETURNING id
         `;
         tagIdMap.set(tagDef.slug, inserted[0].id);
-        console.log(`  + Tag dibuat: ${tagDef.slug}`);
+        console.log(`  + Tag dibuat: ${tagDef.name}`);
       }
     }
     console.log(`Tags siap: ${tagIdMap.size} tag`);
   } else {
     // DRY RUN: load existing or fake IDs
-    const existingTags = await sql<{ id: string; slug: string }[]>`SELECT id, slug FROM tags`;
-    for (const t of existingTags) tagIdMap.set(t.slug, t.id);
-    // Add placeholders for missing
+    const existingTags = await sql<{ id: string; name: string }[]>`SELECT id, name FROM tags`;
+    const nameToId = new Map(existingTags.map((t) => [t.name, t.id]));
     for (const tagDef of TAG_DEFS) {
-      if (!tagIdMap.has(tagDef.slug)) tagIdMap.set(tagDef.slug, `dry-run-${tagDef.slug}`);
+      if (nameToId.has(tagDef.name)) {
+        tagIdMap.set(tagDef.slug, nameToId.get(tagDef.name)!);
+      } else {
+        tagIdMap.set(tagDef.slug, `dry-run-${tagDef.slug}`);
+      }
     }
     console.log(`[DRY RUN] Tags akan dibuat: ${TAG_DEFS.length}`);
   }
@@ -405,20 +408,17 @@ async function main() {
     `;
 
     console.log(`\n\nVerifikasi:`);
+    const tagNames = TAG_DEFS.map((t) => t.name);
     const verif = await sql`
-      SELECT t.slug, t.name, COUNT(qt.question_id) as cnt
+      SELECT t.name, COUNT(qt.question_id) as cnt
       FROM tags t
       LEFT JOIN question_tags qt ON t.id = qt.tag_id
-      WHERE t.slug IN (
-        'pilihan_ganda', 'essay', 'matrix_grid', 'lainnya', 'pilihan_ganda_kompleks',
-        'kognitif_C1_ingatan', 'kognitif_C2_pemahaman', 'kognitif_C3_aplikasi',
-        'kognitif_C4_analisis', 'kognitif_C5_evaluasi', 'kognitif_C6_kreasi'
-      )
-      GROUP BY t.slug, t.name
+      WHERE t.name IN ${sql(tagNames)}
+      GROUP BY t.name
       ORDER BY cnt DESC
     `;
     for (const row of verif) {
-      console.log(`  ${String(row.cnt).padStart(6)}  ${row.slug}`);
+      console.log(`  ${String(row.cnt).padStart(6)}  ${row.name}`);
     }
   } else {
     console.log("\n[DRY RUN] Tidak ada perubahan ke DB.");

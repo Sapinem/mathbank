@@ -20,7 +20,7 @@ export const EXPECTED_INVARIANTS = {
   // MAT-146: question_options dihapus (26 → 25) — opsi kini JSONB.
   // ADR-0019: question_embeddings ditambahkan (25 → 26).
   tables: 26,
-  checkConstraints: 2,
+  checkConstraints: 3,
   hnswIndexes: 1,
   // MAT-39: collections trigger dihapus (25 → 24).
   // MAT-146: trg_question_options_updated_at ikut terhapus (24 → 23).
@@ -39,16 +39,28 @@ export const REQUIRED_TRIGGERS = [
 ] as const;
 
 /** Nama CHECK kritis yang WAJIB ada. */
-export const REQUIRED_CHECKS = ["chk_questions_difficulty", "chk_topics_level"] as const;
+export const REQUIRED_CHECKS = [
+  "chk_questions_difficulty",
+  "chk_topics_level",
+  "chk_media_assets_short_id",
+] as const;
 
 /**
  * Tabel yang WAJIB sudah TIDAK ada (invarian negatif).
  *
  * MAT-144/MAT-146: `question_options` sudah di-drop, datanya pindah ke
- * `questions.data_payload.options` (JSONB). Bila tabel ini muncul lagi berarti
- * ada migrasi/dump lama yang ter-apply ulang.
+ * `questions.data_payload.options` (JSONB).
+ * ADR-0015: `books` dan `institutions` digabung ke `sources`.
+ * MAT-39: `collections` dan `collection_items` dikonsolidasi ke `bundles`.
+ * Bila tabel-tabel ini muncul lagi berarti ada dump/migrasi lama yang ter-apply ulang.
  */
-export const FORBIDDEN_TABLES = ["question_options"] as const;
+export const FORBIDDEN_TABLES = [
+  "question_options",
+  "collections",
+  "collection_items",
+  "books",
+  "institutions",
+] as const;
 
 /**
  * Pola tabel sisa migrasi. Tabel seperti `question_options_mat146_backup`

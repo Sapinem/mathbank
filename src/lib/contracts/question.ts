@@ -156,10 +156,12 @@ const OPTION_PAYLOAD_TYPES = new Set(["multiple_choice", "complex_multiple_choic
 export class QuestionPayloadValidationError extends ZodError {
   readonly code = "VALIDATION_ERROR";
   readonly httpStatus = 422;
+  readonly details: z.ZodIssue[];
   constructor(message: string, issues: z.ZodIssue[] = []) {
     super(issues);
     this.name = "QuestionPayloadValidationError";
     this.message = message;
+    this.details = issues;
   }
 }
 
@@ -283,6 +285,30 @@ export function normalizeQuestionWritePayload(
     if (typeof first === "string") answerKey.text = first;
   }
 
+  // 3) Sinkronkan rubrik analitik (MAT-41) ⇄ scoringRubric teks (MAT-145).
+  if (
+    answerKey.rubric &&
+    typeof answerKey.rubric === "object" &&
+    Array.isArray((answerKey.rubric as { criteria?: unknown[] }).criteria) &&
+    (!answerKey.scoringRubric || typeof answerKey.scoringRubric !== "string" || answerKey.scoringRubric.trim().length === 0)
+  ) {
+    const criteria = (answerKey.rubric as { criteria: Array<{ description?: string; points?: number }> }).criteria;
+    answerKey.scoringRubric = criteria
+      .map((c, i) => `Langkah ${i + 1} (${c.points ?? 0} poin): ${c.description ?? ""}`)
+      .join("\n");
+  }
+
+  const isEssay = dataPayload.type === "essay" || input.questionType === "essay";
+  if (
+    isEssay &&
+    (!dataPayload.rubricGuidelines || typeof dataPayload.rubricGuidelines !== "string" || (dataPayload.rubricGuidelines as string).trim().length === 0)
+  ) {
+    if (typeof answerKey.scoringRubric === "string" && answerKey.scoringRubric.trim().length >= 20) {
+      dataPayload.type ??= "essay";
+      dataPayload.rubricGuidelines = answerKey.scoringRubric.trim();
+    }
+  }
+
   return { dataPayload, answerKey };
 }
 
@@ -308,6 +334,7 @@ const CANONICAL_ANSWER_KEY_KEYS = [
   "acceptedAnswers",
   "explanationMarkdown",
   "scoringRubric",
+  "rubric",
 ] as const;
 
 /** Buang mirror legacy dari `answer_key` sebelum validasi kontrak rilis. */

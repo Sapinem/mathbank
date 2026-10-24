@@ -304,7 +304,7 @@ async function main() {
       // Write back
       await sql`
         UPDATE questions
-        SET data_payload = data_payload || jsonb_build_object('options', ${JSON.stringify(opts)}::jsonb),
+        SET data_payload = data_payload || jsonb_build_object('options', ${sql.json(opts)}),
             updated_at = NOW()
         WHERE id = ${item.questionId}
       `;

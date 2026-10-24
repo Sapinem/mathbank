@@ -29,6 +29,7 @@ const teacher: Actor = {
 };
 
 async function cleanTopics() {
+  await sql`DELETE FROM question_topics`;
   await sql`UPDATE topics SET parent_id = NULL`;
   await sql`DELETE FROM topics`;
 }
@@ -47,8 +48,6 @@ describe("createTopic — level diturunkan dari induk", () => {
     const t = await createTopic({ name: "Aljabar" }, admin);
     expect(t.level).toBe(1);
     expect(t.parentId).toBeNull();
-    // MAT-131A: slug tidak lagi digenerate — identitas kanonik = id.
-    expect(t.slug ?? null).toBeNull();
   });
 
   it("dengan induk → level induk + 1", async () => {

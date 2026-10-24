@@ -1,4 +1,4 @@
-import { can, assertCan, ForbiddenError } from "@/lib/auth/guards";
+import { can, effectiveAccess, apiKeyAllows, ForbiddenError } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 
 /**
@@ -30,14 +30,21 @@ export type McpCapability = keyof typeof MCP_CAPABILITIES;
 
 /**
  * Apakah aktor boleh melakukan kapabilitas MCP?
- * `ownerId` wajib untuk kapabilitas ber-`own` (mis. `question.edit`).
+ * `ownerId` wajib untuk kapabilitas ber-`own` saat memeriksa objek konkret.
+ * Untuk registrasi tool (opts undefined), izin bernilai true jika peran tidak 'no'
+ * dan API key mengizinkan aksi terkait.
  */
 export function canMcp(
   actor: Actor,
   capability: McpCapability,
   opts?: { ownerId?: string | null },
 ): boolean {
-  return can(actor, MCP_CAPABILITIES[capability], opts);
+  const perm = MCP_CAPABILITIES[capability];
+  if (opts === undefined) {
+    if (effectiveAccess(actor, perm) === "no") return false;
+    return apiKeyAllows(actor, perm);
+  }
+  return can(actor, perm, opts);
 }
 
 /** Tegaskan kapabilitas — lempar `ForbiddenError` bila tak boleh. */
@@ -46,10 +53,11 @@ export function assertMcp(
   capability: McpCapability,
   opts?: { ownerId?: string | null; message?: string },
 ): void {
-  assertCan(actor, MCP_CAPABILITIES[capability], {
-    ownerId: opts?.ownerId,
-    message: opts?.message ?? `Agen tidak punya kapabilitas: ${capability}`,
-  });
+  if (!canMcp(actor, capability, opts)) {
+    throw new ForbiddenError(
+      opts?.message ?? `Agen tidak punya kapabilitas: ${capability}`,
+    );
+  }
 }
 
 /**

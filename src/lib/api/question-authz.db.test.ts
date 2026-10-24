@@ -25,6 +25,7 @@ let mockActor: Actor = { id: "authz-teacher", name: "Guru", roles: ["teacher"], 
 vi.mock("@/lib/auth/resolve", () => ({ resolveActor: async () => mockActor }));
 
 const { PATCH, DELETE, GET } = await import("@/app/api/questions/[id]/route");
+const { PATCH: PATCH_FLAG } = await import("@/app/api/questions/[id]/flag/route");
 
 const TEACHER = "authz-teacher";
 const OTHER = "authz-teacher-lain";
@@ -125,5 +126,28 @@ describe("Otorisasi route soal (#35/#37)", () => {
     mockActor = teacher;
     const res = await GET(req("GET", `/api/questions/${id}`), ctx(id));
     expect([200, 404]).toContain(res.status);
+  });
+
+  it("guru PATCH flag soal MILIKNYA → 200 (Constraint #35)", async () => {
+    const id = await seedQuestion(TEACHER);
+    mockActor = teacher;
+    const res = await PATCH_FLAG(
+      req("PATCH", `/api/questions/${id}/flag`, { flagged: true, notes: "perlu revisi" }),
+      ctx(id),
+    );
+    expect(res.status).toBe(200);
+    const [row] = await sql`SELECT is_flagged, flag_notes FROM questions WHERE id = ${id}`;
+    expect(row.is_flagged).toBe(true);
+    expect(row.flag_notes).toBe("perlu revisi");
+  });
+
+  it("guru PATCH flag soal ORANG LAIN → 403", async () => {
+    const id = await seedQuestion(OTHER);
+    mockActor = teacher;
+    const res = await PATCH_FLAG(
+      req("PATCH", `/api/questions/${id}/flag`, { flagged: true, notes: "coba flag" }),
+      ctx(id),
+    );
+    expect(res.status).toBe(403);
   });
 });

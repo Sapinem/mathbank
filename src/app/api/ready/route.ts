@@ -19,7 +19,12 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const startedAt = Date.now();
   try {
-    const report = await checkDbInvariants();
+    const report = await Promise.race([
+      checkDbInvariants(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Readiness check DB timeout (3000ms)")), 3000),
+      ),
+    ]);
     return NextResponse.json(
       {
         data: {

@@ -3,6 +3,7 @@ import {
   questionColumns,
   projectOptions,
   projectAnswerKey,
+  projectDataPayload,
   correctLabelsOf,
   canSeeAnswerKey,
 } from "./question";
@@ -120,5 +121,49 @@ describe("projectAnswerKey — kanonik + mirror legacy (MAT-146)", () => {
     expect(correctLabelsOf({ correctOptionIds: "a" })).toEqual(["A"]);
     expect(correctLabelsOf({ correct: ["b", "d"] })).toEqual(["B", "D"]);
     expect(correctLabelsOf(undefined)).toEqual([]);
+  });
+});
+
+describe("projectDataPayload — sanitasi aman data_payload (S3)", () => {
+  it("membersihkan distractorRationale dan answer bila withAnswerKey false", () => {
+    const raw = {
+      options: [
+        { id: "A", contentMarkdown: "1", distractorRationale: "Rasional rahasia" },
+        { id: "B", contentMarkdown: "2" },
+      ],
+      rows: [
+        { id: "r1", text: "Baris 1", answer: "Benar" },
+        { id: "r2", text: "Baris 2", answer: "Salah" },
+      ],
+    };
+    const projected = projectDataPayload(raw, { withAnswerKey: false });
+    const opts = projected.options as Array<{ distractorRationale?: string; contentMarkdown: string }>;
+    const rows = projected.rows as Array<{ answer?: string; text: string }>;
+    expect(opts[0]!.distractorRationale).toBeUndefined();
+    expect(opts[0]!.contentMarkdown).toBe("1");
+    expect(rows[0]!.answer).toBeUndefined();
+    expect(rows[0]!.text).toBe("Baris 1");
+  });
+
+  it("mempertahankan distractorRationale dan answer bila withAnswerKey true", () => {
+    const raw = {
+      options: [
+        { id: "A", contentMarkdown: "1", distractorRationale: "Rasional rahasia" },
+      ],
+      rows: [
+        { id: "r1", text: "Baris 1", answer: "Benar" },
+      ],
+    };
+    const projected = projectDataPayload(raw, { withAnswerKey: true });
+    const opts = projected.options as Array<{ distractorRationale?: string }>;
+    const rows = projected.rows as Array<{ answer?: string }>;
+    expect(opts[0]!.distractorRationale).toBe("Rasional rahasia");
+    expect(rows[0]!.answer).toBe("Benar");
+  });
+
+  it("input null atau bukan objek mengembalikan objek kosong", () => {
+    expect(projectDataPayload(null)).toEqual({});
+    expect(projectDataPayload(undefined)).toEqual({});
+    expect(projectDataPayload("string")).toEqual({});
   });
 });

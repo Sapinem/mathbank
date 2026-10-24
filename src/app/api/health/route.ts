@@ -39,7 +39,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    const report = await checkDbInvariants();
+    const report = await Promise.race([
+      checkDbInvariants(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Health check DB timeout (3000ms)")), 3000),
+      ),
+    ]);
     const body = {
       data: {
         status: report.ok ? "ok" : "degraded",

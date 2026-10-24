@@ -1,1 +1,1 @@
-ALTER TABLE "bundles" ADD COLUMN "print_config" jsonb DEFAULT '{"institutionName":"Math My ID","twoColumnLayout":true,"includeAnswerKey":false,"showQuestionNumber":true,"pageSize":"A4"}'::jsonb NOT NULL;
+ALTER TABLE "bundles" ADD COLUMN IF NOT EXISTS "print_config" jsonb DEFAULT '{"institutionName":"Math My ID","twoColumnLayout":true,"includeAnswerKey":false,"showQuestionNumber":true,"pageSize":"A4"}'::jsonb NOT NULL;

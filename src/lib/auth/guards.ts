@@ -60,7 +60,7 @@ const API_KEY_ACTION_ALIAS: Record<string, string> = {
  * Batasan API key: bila `apiKeyPermissions` diisi, izin dibatasi padanya.
  * Bila tak diisi (undefined) → tak membatasi (perilaku lama, kompatibel).
  */
-function apiKeyAllows(actor: Actor, permission: Permission): boolean {
+export function apiKeyAllows(actor: Actor, permission: Permission): boolean {
   const perms = actor.apiKeyPermissions;
   if (!perms) return true; // tak dibatasi
 

@@ -12,7 +12,6 @@ const flagSchema = z.object({
 /** PATCH /api/questions/[id]/flag — tandai/lepas tanda masalah. */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "question:flag",
   params: paramsSchema,
   body: flagSchema,
   handler: async ({ params, body, actor }) =>

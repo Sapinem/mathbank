@@ -1,5 +1,6 @@
 -- ADR-0019 Pilar 1 v2.0: Backfill vektor dari `questions` ke `question_embeddings`.
--- Jalankan SETELAH migrasi 0018 dan SEBELUM migrasi 0019.
+-- CATATAN: Migrasi 0020 sudah mengeksekusi backfill otomatis secara failsafe di dalam migrasi DDL.
+-- Berkas manual ini dipertahankan sebagai artefak idempoten jika ingin dijalankan sebelum migrasi 0020.
 --
 -- Idempotent: lewati jika kolom embedding sudah di-drop dari questions.
 -- Estimasi: ~11,867 baris × 4 KB vektor ≈ 47 MB — selesai < 30 detik.

@@ -28,7 +28,7 @@ async function cleanAll() {
   await sql`UPDATE questions SET parent_id = NULL`;
   await sql`DELETE FROM questions`;
   await sql`DELETE FROM ingest_queue`;
-  await sql`DELETE FROM sources WHERE slug = 'uji-ingest' OR label = 'uji-ingest' OR slug = 'uji-ingest-2' OR label = 'uji-ingest-2'`;
+  await sql`DELETE FROM sources WHERE label IN ('uji-ingest', 'uji-ingest-2')`;
   // `audit_logs` append-only (trigger immutable) → matikan sementara utk bersih-bersih.
   await sql`ALTER TABLE audit_logs DISABLE TRIGGER trg_audit_logs_immutable`;
   await sql`DELETE FROM audit_logs`;

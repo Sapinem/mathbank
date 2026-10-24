@@ -200,7 +200,7 @@ async function main() {
         SET answer_key = jsonb_set(
           answer_key,
           '{scoringRubric}',
-          ${JSON.stringify(rubric)}::jsonb
+          ${sql.json(rubric)}
         )
         WHERE id = ${id}::uuid
           AND (answer_key->>'scoringRubric' IS NULL OR trim(answer_key->>'scoringRubric') = '')
@@ -241,7 +241,7 @@ async function main() {
         SET answer_key = jsonb_set(
           answer_key,
           '{scoringRubric}',
-          ${JSON.stringify(scoringRubric)}::jsonb
+          ${sql.json(scoringRubric)}
         )
         WHERE id = ${id}::uuid
       `;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { count, desc, eq, isNull, and, sql } from "drizzle-orm";
+import { count, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
 import { topics, questionTopics } from "@/lib/db/schema/taxonomy";
@@ -19,10 +19,7 @@ export const GET = wrapRoute({
   query: emptyQuerySchema,
   handler: async () => {
     const [
-      [total],
-      [ready],
-      [review],
-      [flagged],
+      [questionStats],
       [bundleCount],
       [sourceCount],
       byDifficulty,
@@ -30,16 +27,15 @@ export const GET = wrapRoute({
       topTopics,
       recent,
     ] = await Promise.all([
-      db.select({ n: count() }).from(questions).where(isNull(questions.deletedAt)),
       db
-        .select({ n: count() })
+        .select({
+          total: count(),
+          ready: sql<number>`count(*) FILTER (WHERE ${questions.status} = 'ready')::int`,
+          review: sql<number>`count(*) FILTER (WHERE ${questions.status} = 'review')::int`,
+          flagged: sql<number>`count(*) FILTER (WHERE ${questions.isFlagged} = true)::int`,
+        })
         .from(questions)
-        .where(and(isNull(questions.deletedAt), eq(questions.status, "ready"))),
-      db
-        .select({ n: count() })
-        .from(questions)
-        .where(and(isNull(questions.deletedAt), eq(questions.status, "review"))),
-      db.select({ n: count() }).from(questions).where(eq(questions.isFlagged, true)),
+        .where(isNull(questions.deletedAt)),
       db.select({ n: count() }).from(bundles).where(isNull(bundles.deletedAt)),
       db.select({ n: count() }).from(sources),
       db
@@ -74,10 +70,10 @@ export const GET = wrapRoute({
 
     return {
       stats: {
-        total: total.n,
-        ready: ready.n,
-        review: review.n,
-        flagged: flagged.n,
+        total: questionStats.total,
+        ready: questionStats.ready,
+        review: questionStats.review,
+        flagged: questionStats.flagged,
         bundles: bundleCount.n,
         sources: sourceCount.n,
       },

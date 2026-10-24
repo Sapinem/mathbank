@@ -60,7 +60,7 @@ export interface ProcessOptions {
   grade?: string | null;
 }
 
-/** Terapkan URL lokal ke seluruh bagian soal (stem, opsi, pembahasan, rows matrix_grid). */
+/** Terapkan URL lokal ke seluruh bagian soal (stem, opsi, pembahasan, rows matrix_grid, matching). */
 function applyMediaToItems(items: ParsedItem[], cache: MediaCache): ParsedItem[] {
   return items.map((it) => {
     const base = {
@@ -69,16 +69,28 @@ function applyMediaToItems(items: ParsedItem[], cache: MediaCache): ParsedItem[]
       options: it.options.map((o) => ({ ...o, text: applyMedia(o.text, cache) })),
       ...(it.explanation ? { explanation: applyMedia(it.explanation, cache) } : {}),
     };
-    // `matrix_grid` menyimpan pernyataan di `dataPayload.rows[].text` — gambar di
-    // sana juga harus diproses (temuan: pernyataan BS bisa berupa gambar).
-    if (it.dataPayload && Array.isArray((it.dataPayload as { rows?: unknown }).rows)) {
-      const dp = it.dataPayload as { rows: { text?: string }[] };
-      base.dataPayload = {
-        ...dp,
-        rows: dp.rows.map((r) =>
+    if (it.dataPayload && typeof it.dataPayload === "object") {
+      const dp = { ...(it.dataPayload as Record<string, unknown>) };
+      if (Array.isArray(dp.rows)) {
+        dp.rows = (dp.rows as { text?: string }[]).map((r) =>
           r && typeof r.text === "string" ? { ...r, text: applyMedia(r.text, cache) } : r,
-        ),
-      };
+        );
+      }
+      if (Array.isArray(dp.premises)) {
+        dp.premises = (dp.premises as { contentMarkdown?: string }[]).map((p) =>
+          p && typeof p.contentMarkdown === "string"
+            ? { ...p, contentMarkdown: applyMedia(p.contentMarkdown, cache) }
+            : p,
+        );
+      }
+      if (Array.isArray(dp.responses)) {
+        dp.responses = (dp.responses as { contentMarkdown?: string }[]).map((res) =>
+          res && typeof res.contentMarkdown === "string"
+            ? { ...res, contentMarkdown: applyMedia(res.contentMarkdown, cache) }
+            : res,
+        );
+      }
+      base.dataPayload = dp;
     }
     return base;
   });
@@ -91,12 +103,26 @@ function mediaTexts(items: ParsedItem[]) {
     texts.push({ text: it.stem, role: "content" });
     for (const o of it.options) texts.push({ text: o.text, role: "option" });
     if (it.explanation) texts.push({ text: it.explanation, role: "solution" });
-    // Pernyataan `matrix_grid` juga bisa memuat gambar.
-    if (it.dataPayload && Array.isArray((it.dataPayload as { rows?: unknown }).rows)) {
-      const dp = it.dataPayload as { rows: { text?: string }[] };
-      for (const r of dp.rows) {
-        if (r && typeof r.text === "string" && r.text) {
-          texts.push({ text: r.text, role: "content" });
+    // Pernyataan `matrix_grid` dan matching juga bisa memuat gambar.
+    if (it.dataPayload && typeof it.dataPayload === "object") {
+      const dp = it.dataPayload as Record<string, unknown>;
+      if (Array.isArray(dp.rows)) {
+        for (const r of dp.rows as { text?: string }[]) {
+          if (r && typeof r.text === "string" && r.text) {
+            texts.push({ text: r.text, role: "content" });
+          }
+        }
+      }
+      if (Array.isArray(dp.premises)) {
+        for (const pr of dp.premises as { text?: string; contentMarkdown?: string }[]) {
+          const t = pr?.contentMarkdown || pr?.text;
+          if (t) texts.push({ text: t, role: "option" });
+        }
+      }
+      if (Array.isArray(dp.responses)) {
+        for (const res of dp.responses as { text?: string; contentMarkdown?: string }[]) {
+          const t = res?.contentMarkdown || res?.text;
+          if (t) texts.push({ text: t, role: "option" });
         }
       }
     }

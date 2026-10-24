@@ -13,6 +13,8 @@ export interface Actor {
   mustChangePassword?: boolean;
   /** Izin dari API key (untuk agen/mesin), bila via apikey. */
   apiKeyPermissions?: Partial<Record<string, string[]>>;
+  /** ID spesifik API key (untuk isolasi rate limit antar-kunci). */
+  apiKeyId?: string;
 }
 
 /** Tipe penulis audit (sinkron enum `author_type` DB). */

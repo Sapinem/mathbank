@@ -24,7 +24,10 @@ export const POST = wrapRoute({
   body: ingestCommitSchema,
   idempotent: true,
   handler: async ({ body, actor }) => {
-    const { items, nonPending } = await listPending(body.ids);
+    const { items, nonPending, totalPending } = await listPending(
+      body.ids,
+      body.ids && body.ids.length ? undefined : body.limit,
+    );
     if (body.ids && body.ids.length && nonPending.length) {
       throw new ConflictError(
         `Sebagian id bukan 'pending': ${nonPending.slice(0, 5).join(", ")}${nonPending.length > 5 ? "…" : ""}`,
@@ -36,6 +39,7 @@ export const POST = wrapRoute({
       limit: body.limit,
       mediaDelayMs: body.mediaDelayMs,
       grade: body.grade ?? null,
+      totalRemaining: totalPending,
     });
   },
 });

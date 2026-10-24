@@ -24,7 +24,6 @@ function bundle(over: Partial<BundleDetail> = {}): BundleDetail {
   return {
     id: "b1",
     title: "Pemantapan ASTS I",
-    slug: "pemantapan-asts-i",
     bundleType: "exam",
     origin: "manual",
     sourceId: null,
@@ -220,6 +219,25 @@ describe("BundlePrintView (M8 — halaman cetak)", () => {
     const explSection = document.querySelector(".print-sheet-explanation");
     expect(explSection).not.toBeNull();
     expect(explSection?.textContent).toContain("Karena 2+2=4.");
+  });
+
+  it("Axiom 3-Way: mode pembahasan inline menampilkan pembahasan tepat di bawah soal", () => {
+    const b = bundle();
+    const q1 = b.items.find((it) => it.item.id === "i1")!;
+    q1.question.answerKey = {
+      ...q1.question.answerKey!,
+      explanation: "Pembahasan inline 2+2=4.",
+    };
+    useBundleMock.mockReturnValue({ data: b, isPending: false, isError: false });
+    render(<BundlePrintView />);
+    fireEvent.click(screen.getByRole("button", { name: /Di bawah soal/i }));
+    expect(document.querySelector(".print-sheet-explanation")).toBeNull();
+    expect(screen.getByText("Pembahasan inline 2+2=4.")).toBeInTheDocument();
+  });
+
+  it("Axiom Print: soal isian merender ruang jawaban siswa sesuai answerSpaceCm", () => {
+    render(<BundlePrintView />);
+    expect(screen.getByText(/Area Jawaban Siswa/i)).toBeInTheDocument();
   });
 
   it("MAT-40: semua tombol aksi kontrol memenuhi touch target 44px (min-h-[44px])", () => {

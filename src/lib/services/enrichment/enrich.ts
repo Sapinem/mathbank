@@ -53,6 +53,7 @@ export async function enrichQuestion(
   questionId: string,
   actor: Actor,
   fields: EnrichField[] = ALL_FIELDS,
+  preloadedCtx?: { topicNames: string[]; tagNames: string[] },
 ): Promise<EnrichOutcome> {
   const [q] = await db
     .select({
@@ -89,7 +90,9 @@ export async function enrichQuestion(
     isCorrect: o.isCorrect,
   }));
 
-  const [topicNames, tagNames] = await Promise.all([listTopicNames(), listTagNames()]);
+  const [topicNames, tagNames] = preloadedCtx
+    ? [preloadedCtx.topicNames, preloadedCtx.tagNames]
+    : await Promise.all([listTopicNames(), listTagNames()]);
   const prompt = buildUserPrompt({
     content: q.contentMarkdown,
     ctx: { topics: topicNames, tags: tagNames },
@@ -232,9 +235,11 @@ export async function enrichQuestions(
 ): Promise<{ results: EnrichOutcome[]; ok: number; failed: number }> {
   // Izin dicek **per-soal** di `enrichQuestion` (termasuk aturan `own`).
   const results: EnrichOutcome[] = [];
+  const [topicNames, tagNames] = await Promise.all([listTopicNames(), listTagNames()]);
+  const preloadedCtx = { topicNames, tagNames };
   for (const id of questionIds) {
     try {
-      results.push(await enrichQuestion(id, actor, fields));
+      results.push(await enrichQuestion(id, actor, fields, preloadedCtx));
     } catch (e) {
       results.push({ questionId: id, ok: false, error: e instanceof Error ? e.message : String(e) });
     }

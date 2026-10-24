@@ -84,9 +84,61 @@ async function main() {
     }
   }
 
+  // ── FIX 2: double-encoded answer_key (string → proper JSONB object) ──
+  console.log("\nFix: double-encoded answer_key (string → JSONB object)\n");
+  const affectedKeys = (await sql`
+    SELECT id, answer_key as key_val
+    FROM questions
+    WHERE deleted_at IS NULL
+      AND jsonb_typeof(answer_key) = 'string'
+    ORDER BY id
+  `) as Array<{ id: string; key_val: unknown }>;
+
+  console.log(`Found ${affectedKeys.length} questions with double-encoded answer_key\n`);
+  let fixedKeys = 0;
+  let failedKeys = 0;
+
+  for (const row of affectedKeys) {
+    const id = row.id;
+    let parsed: unknown;
+    try {
+      parsed = typeof row.key_val === "string" ? JSON.parse(row.key_val) : row.key_val;
+    } catch {
+      console.log(`  [FAIL] ${id.substring(0, 8)}: cannot parse answer_key string`);
+      failedKeys++;
+      continue;
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      console.log(`  [FAIL] ${id.substring(0, 8)}: parsed answer_key is not an object`);
+      failedKeys++;
+      continue;
+    }
+
+    console.log(`  [${DRY_RUN ? "DRY" : "FIX"}] ${id.substring(0, 8)}: keys=${Object.keys(parsed).join(",")}`);
+
+    if (!DRY_RUN) {
+      const updated = await sql`
+        UPDATE questions
+        SET answer_key = ${sql.json(parsed as postgres.JSONValue)}
+        WHERE id = ${id}::uuid
+          AND jsonb_typeof(answer_key) = 'string'
+        RETURNING jsonb_typeof(answer_key) AS t
+      `;
+      if (updated[0]?.t === "object") {
+        fixedKeys++;
+      } else {
+        console.log(`  [FAIL] ${id.substring(0, 8)}: tipe setelah update masih ${String(updated[0]?.t ?? "tidak tersentuh")}`);
+        failedKeys++;
+      }
+    } else {
+      fixedKeys++;
+    }
+  }
+
   console.log(`\n=== SUMMARY ===`);
-  console.log(`Fixed: ${fixed}`);
-  console.log(`Failed: ${failed}`);
+  console.log(`Options Fixed: ${fixed}, Failed: ${failed}`);
+  console.log(`Answer Keys Fixed: ${fixedKeys}, Failed: ${failedKeys}`);
   console.log(`Mode: ${DRY_RUN ? "DRY RUN — no changes" : "LIVE — JSONB updated"}`);
 
   await sql.end();

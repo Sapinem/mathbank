@@ -27,7 +27,6 @@ function makeTag(over: Partial<TagRow> = {}): TagRow {
   return {
     id: "tag-1",
     name: "HOTS",
-    slug: null,
     usageCount: 5,
     ...over,
   };
@@ -87,12 +86,11 @@ describe("LabelsView — header tabel", () => {
     expect(screen.queryByText(/^Slug$/i)).not.toBeInTheDocument();
   });
 
-  it("tidak merender badge <Badge>{slug}</Badge> atau teks slug di baris", () => {
-    const tag = makeTag({ slug: "hots-legacy-slug" });
+  it("merender baris label dengan benar", () => {
+    const tag = makeTag();
     setupHooks([tag]);
     renderLabels();
-    // slug value tidak boleh muncul di DOM
-    expect(screen.queryByText("hots-legacy-slug")).not.toBeInTheDocument();
+    expect(screen.getAllByText("HOTS").length).toBeGreaterThan(0);
   });
 });
 
@@ -226,14 +224,9 @@ describe("LabelsView — dialog Label Baru", () => {
 });
 
 describe("LabelsView — tidak ada slug di DOM sama sekali", () => {
-  it("tidak ada teks atau atribut slug di output render", () => {
-    setupHooks([
-      makeTag({ id: "t1", name: "Foo", slug: "foo-slug-value" }),
-    ]);
-    const { container } = renderLabels();
-    // slug value tidak boleh muncul
-    expect(container.innerHTML).not.toContain("foo-slug-value");
-    // Tidak ada elemen dengan teks persis 'Slug'
+  it("tidak ada elemen header atau kolom Slug di output render", () => {
+    setupHooks([makeTag({ id: "t1", name: "Foo" })]);
+    renderLabels();
     expect(screen.queryByText(/^Slug$/i)).not.toBeInTheDocument();
   });
 });
