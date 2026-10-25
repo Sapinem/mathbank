@@ -73,11 +73,17 @@ export function renderMath(value: string, display: boolean): string {
 
   let html: string;
   try {
+    // Fase 4: `htmlAndMathml` (bukan `html` saja) — keluaran visual sama,
+    // ditambah elemen `<math>` MathML dengan anotasi `application/x-tex`.
+    // CSS KaTeX sendiri menyembunyikan `.katex-mathml` secara visual
+    // (clip 1px) tapi tetap membacanya untuk screen reader, jadi rumus
+    // kini punya alternatif teks tanpa mengubah tampilan. `trust` tetap
+    // tidak diaktifkan, dan fallback galat di bawah tetap meng-escape.
     html = katex.renderToString(value, {
       displayMode: display,
       throwOnError: false,
       strict: false,
-      output: "html",
+      output: "htmlAndMathml",
     });
   } catch {
     // KaTeX gagal (langka karena `throwOnError:false`, tapi mungkin pada galat

@@ -7,6 +7,14 @@ import { ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { MathContent } from "@/components/math/math-content";
+import { readMatchingPayload } from "@/components/questions/matching-view";
+import {
+  matchingKeySummary,
+  matchingResponseLabel,
+  premiseLabel,
+  responseLabel,
+} from "@/components/questions/matching-labels";
+import { readMatrixGridPayload } from "@/components/questions/matrix-grid-view";
 import { isOptionBased, correctLabelsOf } from "@/lib/contracts/question";
 import { useBundle } from "@/lib/hooks/use-bundles";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
@@ -30,6 +38,16 @@ import { cn } from "@/lib/utils";
  *
  * Catatan akses: kunci hanya muncul bila API mengirimkannya (aktor berhak —
  * `canSeeAnswerKey`). Bila tak ada, opsi "Tampilkan kunci" dinonaktifkan.
+ *
+ * Fase 4 — penyatuan dengan detail: matriks/matching cetak memakai reader
+ * payload dan helper label yang SAMA dengan komponen detail
+ * (`readMatrixGridPayload`, `readMatchingPayload`, `matching-labels.ts`),
+ * sehingga penomoran baris, label premis/respons, dan pemetaan kunci tidak
+ * bisa lagi berbeda antara layar dan kertas. DOM-nya sengaja tetap berbeda
+ * (tabel di kertas vs daftar di layar): tabel lebih hemat tempat di kolom
+ * cetak sempit, sementara daftar detail lebih mudah dibaca di layar.
+ * Kunci matching cetak kini menampilkan LABEL respons (mis. "2"), bukan
+ * ID respons mentah (mis. "r1").
  */
 
 type ColumnMode = "1" | "2";
@@ -382,17 +400,19 @@ export function BundlePrintView() {
                       </ul>
                     )}
 
-                  {/* Render khusus untuk soal matrix_grid (Tabel Pernyataan) */}
+                  {/* Render khusus untuk soal matrix_grid (Tabel Pernyataan).
+                      Fase 4: payload dibaca lewat reader yang sama dengan
+                      detail (`readMatrixGridPayload`), dan baris diberi nomor
+                      1-based yang sama dengan penomoran detail. */}
                   {it.question.questionType === "matrix_grid" && (() => {
-                    const dp = it.question.dataPayload as { labels?: string[]; rows?: { text: string; answer?: string }[] } | null;
-                    const labels = dp?.labels ?? ["Benar", "Salah"];
-                    const rows = dp?.rows ?? [];
+                    const { labels, rows } = readMatrixGridPayload(it.question.dataPayload);
                     if (rows.length === 0) return null;
                     return (
                       <div className="mt-2 overflow-x-auto break-inside-avoid">
                         <table className="w-full border-collapse border border-gray-300 text-xs print:border-black">
                           <thead>
                             <tr className="bg-gray-100 print:bg-gray-200">
+                              <th className="w-8 border border-gray-300 p-1.5 text-center font-medium print:border-black">No.</th>
                               <th className="border border-gray-300 p-1.5 text-left font-medium print:border-black">Pernyataan</th>
                               {labels.map((l, li) => (
                                 <th key={li} className="w-16 border border-gray-300 p-1.5 text-center font-medium print:border-black">{l}</th>
@@ -402,6 +422,9 @@ export function BundlePrintView() {
                           <tbody>
                             {rows.map((r, ri) => (
                               <tr key={ri} className="border-t border-gray-200 print:border-black">
+                                <td className="border border-gray-300 p-1.5 text-center print:border-black">
+                                  {ri + 1}.
+                                </td>
                                 <td className="border border-gray-300 p-1.5 print:border-black">
                                   <MathContent content={r.text} />
                                 </td>
@@ -421,36 +444,40 @@ export function BundlePrintView() {
                     );
                   })()}
 
-                  {/* Render khusus untuk soal matching (Premis & Pilihan Respons) */}
+                  {/* Render khusus untuk soal matching (Premis & Pilihan Respons).
+                      Fase 4: payload, label, dan kunci memakai logika yang
+                      sama dengan detail — premis A, B, … / respons 1, 2, …
+                      dan kunci menampilkan LABEL respons, bukan ID mentah. */}
                   {it.question.questionType === "matching" && (() => {
-                    const dp = it.question.dataPayload as { premises?: { id: string; contentMarkdown: string }[]; responses?: { id: string; contentMarkdown: string }[] } | null;
-                    const premises = dp?.premises ?? [];
-                    const responses = dp?.responses ?? [];
+                    const { premises, responses } = readMatchingPayload(it.question.dataPayload);
                     const matchingPairs = (it.question.answerKey as { matchingPairs?: Record<string, string> } | null)?.matchingPairs ?? {};
                     if (premises.length === 0 && responses.length === 0) return null;
                     return (
                       <div className="mt-2 grid grid-cols-2 gap-4 text-xs break-inside-avoid">
                         <div className="flex flex-col gap-1.5 border-r border-gray-200 pr-2 print:border-black">
                           <span className="font-semibold text-gray-700 print:text-black">Premis / Pertanyaan:</span>
-                          {premises.map((p, pi) => (
+                          {premises.map((p, pi) => {
+                            const keyLabel = matchingResponseLabel(matchingPairs, p.id, responses);
+                            return (
                             <div key={p.id ?? pi} className="flex gap-1.5 rounded border border-gray-200 bg-gray-50 p-1 print:border-black print:bg-transparent">
-                              <span className="font-bold">{pi + 1}.</span>
+                              <span className="font-bold">{premiseLabel(pi)}.</span>
                               <div className="flex-1">
                                 <MathContent content={p.contentMarkdown} />
-                                {effectiveKeyMode === "inline" && matchingPairs[p.id] && (
+                                {effectiveKeyMode === "inline" && keyLabel && (
                                   <span className="ml-1 text-[10px] font-bold text-green-700 print:text-black">
-                                    → {matchingPairs[p.id]}
+                                    → {keyLabel}
                                   </span>
                                 )}
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         <div className="flex flex-col gap-1.5 pl-2">
                           <span className="font-semibold text-gray-700 print:text-black">Pilihan Jawaban:</span>
                           {responses.map((res, ri) => (
                             <div key={res.id ?? ri} className="flex gap-1.5 rounded border border-gray-200 bg-gray-50 p-1 print:border-black print:bg-transparent">
-                              <span className="font-bold">{String.fromCharCode(65 + ri)}.</span>
+                              <span className="font-bold">{responseLabel(ri)}.</span>
                               <div className="flex-1">
                                 <MathContent content={res.contentMarkdown} />
                               </div>
@@ -500,7 +527,24 @@ export function BundlePrintView() {
               {questionItems.map((it, i) => {
                 const correct = itemCorrectLabels(it);
                 const text = it.question.answerKey?.text ?? null;
-                const shown = correct.length > 0 ? correct.join(", ") : (text ?? "—");
+                // Fase 4: kunci matching di lembar terpisah memakai label,
+                // bukan ID mentah (mis. "A→2, B→1").
+                const matchingPayload =
+                  it.question.questionType === "matching"
+                    ? readMatchingPayload(it.question.dataPayload)
+                    : null;
+                const matchingShown = matchingPayload
+                  ? matchingKeySummary(
+                      (it.question.answerKey as { matchingPairs?: Record<string, string> } | null)?.matchingPairs,
+                      matchingPayload.premises,
+                      matchingPayload.responses,
+                    )
+                  : "";
+                const shown = matchingShown
+                  ? matchingShown
+                  : correct.length > 0
+                    ? correct.join(", ")
+                    : (text ?? "—");
                 return (
                   <li key={it.item.id} className="flex gap-2 tabular-nums">
                     <span className="w-6 text-right font-medium">{i + 1}.</span>
