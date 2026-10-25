@@ -154,7 +154,9 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
   it("klik Reset → kembali ke /questions polos", () => {
     currentSearch = "status=ready";
     render(<QuestionBankView />);
-    fireEvent.click(screen.getByText(/Reset/));
+    // Spesifik ke tombol reset bar filter ("Reset (1)") — sejak perbaikan desain,
+    // state kosong juga punya tombol "Reset filter" sendiri, jadi /Reset/ saja ambigu.
+    fireEvent.click(screen.getByText(/Reset \(1\)/));
     expect(replace).toHaveBeenCalledWith("/questions");
   });
 

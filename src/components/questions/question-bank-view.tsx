@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/page-header";
 import { QuestionCard } from "@/components/questions/question-card";
 import { modeClass, type ViewMode } from "@/components/questions/view-mode-toggle";
 import { QuestionFilterDrawer } from "@/components/questions/question-filter-drawer";
@@ -207,8 +208,30 @@ export function QuestionBankView({
     setParam("q", search.trim() || null);
   }
 
+  /** Hapus pencarian dan langsung kirim pencarian kosong (kembali ke daftar penuh). */
+  function clearSearch() {
+    setSearch("");
+    setParam("q", null);
+  }
+
+  /** Reset semua filter + pencarian — dipakai tombol reset di state kosong. */
+  function resetAllFilters() {
+    setSearch("");
+    router.replace("/questions");
+  }
+
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  /** Ada filter/pencarian aktif — menentukan deskripsi & tombol reset state kosong. */
+  const hasActiveFilter =
+    topicId.length > 0 ||
+    grade.length > 0 ||
+    difficulty.length > 0 ||
+    questionType.length > 0 ||
+    Boolean(status) ||
+    Boolean(sourceId) ||
+    Boolean(q);
 
   const filterValues = {
     topicId,
@@ -221,12 +244,20 @@ export function QuestionBankView({
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
+      {/* 0. Judul halaman — satu-satunya h1 halaman ini (halaman daftar tidak
+          memakai PageHeader sebelumnya; label "Bank Soal" hanya breadcrumb layout). */}
+      <PageHeader
+        title="Bank Soal"
+        description="Cari, saring, dan kelola soal."
+      />
+
       {/* 1. Horizontal Compound Filter Bar */}
       <QuestionFilterBar
         onOpenDrawer={() => setFiltersOpen(true)}
         search={search}
         onSearchChange={setSearch}
         onSearchSubmit={submitSearch}
+        onClearSearch={clearSearch}
         filters={filterValues}
         topics={topics ?? []}
         grades={grades ?? []}
@@ -239,6 +270,7 @@ export function QuestionBankView({
         onClearSource={() => setParam("sourceId", null)}
         onResetAll={() => router.replace("/questions")}
         totalFiltered={total}
+        isLoading={isLoading}
         viewMode={mode}
         onViewModeChange={(m) => setParam("mode", m)}
       />
@@ -262,6 +294,7 @@ export function QuestionBankView({
           setFiltersOpen(false);
         }}
         totalFiltered={total}
+        isLoading={isLoading}
       />
 
       {/* 3. Daftar Kartu Soal (100% Lebar Penuh) */}
@@ -274,25 +307,25 @@ export function QuestionBankView({
           <EmptyState
             title="Tidak ada soal"
             description={
-              topicId.length > 0 ||
-              grade.length > 0 ||
-              difficulty.length > 0 ||
-              questionType.length > 0 ||
-              status ||
-              sourceId ||
-              q
+              hasActiveFilter
                 ? "Tidak ada soal yang cocok dengan filter. Coba reset filter."
                 : "Belum ada soal. Mulai dengan membuat soal pertama."
             }
             action={
-              <Button
-                render={<Link href="/questions/new" />}
-                nativeButton={false}
-                size="sm"
-                className="mt-2"
-              >
-                <Plus data-icon="inline-start" /> Buat Soal
-              </Button>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                {hasActiveFilter && (
+                  <Button variant="outline" size="sm" onClick={resetAllFilters}>
+                    Reset filter
+                  </Button>
+                )}
+                <Button
+                  render={<Link href="/questions/new" />}
+                  nativeButton={false}
+                  size="sm"
+                >
+                  <Plus data-icon="inline-start" /> Buat Soal
+                </Button>
+              </div>
             }
           />
         ) : (

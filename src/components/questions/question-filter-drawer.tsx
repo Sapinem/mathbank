@@ -61,6 +61,8 @@ interface QuestionFilterDrawerProps {
   onSelectSource: (sourceId: string | null) => void;
   onReset: () => void;
   totalFiltered: number;
+  /** Daftar masih memuat — jumlah tidak boleh ditampilkan sebagai 0. */
+  isLoading?: boolean;
 }
 
 export function QuestionFilterDrawer({
@@ -79,6 +81,7 @@ export function QuestionFilterDrawer({
   onSelectSource,
   onReset,
   totalFiltered,
+  isLoading = false,
 }: QuestionFilterDrawerProps) {
   const [topicSearch, setTopicSearch] = useState("");
   const [showSD, setShowSD] = useState(false);
@@ -133,7 +136,7 @@ export function QuestionFilterDrawer({
                   Saring
                 </SheetTitle>
                 <SheetDescription className="text-xs text-muted-foreground">
-                  {totalFiltered} soal ditemukan
+                  {isLoading ? "Memuat jumlah soal…" : `${totalFiltered} soal ditemukan`}
                 </SheetDescription>
               </div>
             </div>

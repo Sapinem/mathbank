@@ -178,6 +178,12 @@ export function StatusIndicator({
   compact?: boolean;
 }) {
   const label = STATUS_LABELS[status] ?? status;
+  // Label ringkas untuk mode compact: "Perlu Telaah" (12 karakter) dipersingkat
+  // jadi "Telaah" agar status tetap terbaca di layar sempit tanpa hanya mengandalkan
+  // warna titik. Trade-off: chip ringkas ini ~25–30px lebih lebar daripada titik saja,
+  // sehingga ruang batang di layar 360px berkurang sebesar itu — harga yang dibayar
+  // agar makna status tidak hanya dari warna (WCAG 1.4.1). aria-label tetap label penuh.
+  const shortLabel = STATUS_SHORT_LABELS[status] ?? label;
   let dotColor = "bg-muted-foreground";
   if (status === "ready") dotColor = "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
   else if (status === "draft") dotColor = "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]";
@@ -196,9 +202,38 @@ export function StatusIndicator({
       aria-label={compact ? label : undefined}
     >
       <span className={cn("size-1.5 rounded-full", dotColor)} />
-      <span className={compact ? "hidden md:inline" : undefined}>{label}</span>
+      <span>{compact ? shortLabel : label}</span>
     </span>
   );
+}
+
+/** Label status ringkas untuk mode compact (lihat komentar di StatusIndicator). */
+const STATUS_SHORT_LABELS: Record<string, string> = {
+  draft: "Draf",
+  review: "Telaah",
+  ready: "Siap",
+  archived: "Arsip",
+};
+
+/**
+ * Kutipan batang singkat untuk nama aksesibel — hanya batang soal
+ * (contentMarkdown), bukan opsi/kunci jawaban. Bila batang kosong, pemanggil
+ * memakai fallback tanpa kutipan.
+ */
+function shortStem(question: PublicQuestion): string {
+  return excerpt(flattenMathForList(question.contentMarkdown), 60).trim();
+}
+
+/** Nama aksesibel checkbox seleksi — berkonteks soal, bukan "Pilih soal" generik. */
+function selectLabel(question: PublicQuestion): string {
+  const stem = shortStem(question);
+  return stem ? `Pilih soal: ${stem}` : "Pilih soal";
+}
+
+/** Nama aksesibel tautan "Buka" di kartu grid/masonry — berkonteks soal. */
+function openLabel(question: PublicQuestion): string {
+  const stem = shortStem(question);
+  return stem ? `Buka soal: ${stem}` : "Buka soal";
 }
 
 /** Komponen kartu butir soal adaptif (List, Grid, Masonry). */
@@ -234,7 +269,7 @@ function QuestionCardInner({
               type="checkbox"
               checked={selected}
               onChange={() => onToggleSelect(q.id)}
-              aria-label="Pilih soal"
+              aria-label={selectLabel(q)}
               className="size-4 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
             />
           </label>
@@ -340,7 +375,7 @@ function QuestionCardInner({
                   type="checkbox"
                   checked={selected}
                   onChange={() => onToggleSelect(q.id)}
-                  aria-label="Pilih soal"
+                  aria-label={selectLabel(q)}
                   className="size-4 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
                 />
               </label>
@@ -469,6 +504,7 @@ function QuestionCardInner({
         </span>
         <Link
           href={href}
+          aria-label={openLabel(q)}
           className="inline-flex min-h-[44px] items-center gap-1 hover:text-foreground shrink-0"
         >
           Buka <ArrowUpRight className="size-3.5" />
