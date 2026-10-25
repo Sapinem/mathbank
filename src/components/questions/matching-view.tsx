@@ -2,6 +2,7 @@
 
 import { MathContent } from "@/components/math/math-content";
 import { cn } from "@/lib/utils";
+import { premiseLabel, responseLabel } from "./matching-labels";
 
 /**
  * Bentuk `data_payload` untuk soal `matching` (menjodohkan) — bentuk kanonik
@@ -43,8 +44,9 @@ export function readMatchingPayload(dp: unknown): MatchingPayload {
  *
  * Dua kolom berdampingan di layar lebar dan **bertumpuk** di 360px
  * (`flex-col sm:flex-row`) supaya tidak ada overflow horizontal. Penanda
- * premis memakai huruf (A, B, …), respons memakai angka (1, 2, …) — konvensi
- * yang sama dengan lembar jawaban cetak.
+ * premis memakai huruf (A, B, …), respons memakai angka (1, 2, …) — dari
+ * `matching-labels.ts`, modul yang sama dipakai tampilan cetak (Fase 4),
+ * sehingga label detail dan cetak tidak bisa lagi berbeda.
  */
 export function MatchingView({
   payload,
@@ -72,7 +74,7 @@ export function MatchingView({
                 className="flex min-w-0 items-start gap-2.5 rounded-lg border border-border/50 px-3 py-2"
               >
                 <span className="shrink-0 font-mono text-sm font-semibold text-foreground/70">
-                  {String.fromCharCode(65 + i)}.
+                  {premiseLabel(i)}.
                 </span>
                 <div className="min-w-0 flex-1 text-sm leading-relaxed">
                   <MathContent content={p.contentMarkdown} noScroll />
@@ -91,7 +93,7 @@ export function MatchingView({
                 className="flex min-w-0 items-start gap-2.5 rounded-lg border border-border/50 px-3 py-2"
               >
                 <span className="shrink-0 font-mono text-sm font-semibold text-foreground/70">
-                  {i + 1}.
+                  {responseLabel(i)}.
                 </span>
                 <div className="min-w-0 flex-1 text-sm leading-relaxed">
                   <MathContent content={r.contentMarkdown} noScroll />

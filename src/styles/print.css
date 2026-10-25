@@ -237,10 +237,47 @@
     page-break-after: avoid;
   }
 
-  /* KaTeX di cetak: pastikan tidak overflow */
+  /* Fase 4 — KaTeX di cetak: JANGAN `overflow-x: visible` lagi. Di kertas
+     tidak ada gulir horizontal, jadi rumus yang meluber akan menimpa kolom
+     sebelah (2 kolom ≈ 85 mm) atau keluar halaman A4. Rumus kini dikurung
+     di dalam kolomnya (`hidden` + `overflow-wrap`): konten yang benar-benar
+     lebih lebar dari kolom terpotong di tepi kolom, bukan meluber — dengan
+     catatan jujur bahwa KaTeX sendiri tidak me-reflow rumus panjang menjadi
+     beberapa baris, jadi rumus display yang sangat panjang tetap berisiko
+     terpotong dan perlu diperiksa pada PDF nyata (lihat laporan Fase 4). */
   .katex-display {
-    overflow-x: visible !important;
+    overflow-x: hidden !important;
+    overflow-wrap: anywhere;
     max-width: 100%;
+  }
+
+  .katex-display .katex {
+    max-width: 100%;
+  }
+
+  /* Fase 4 — KaTeX inline di cetak juga dikurung (sebelumnya `auto`,
+     yang sama-sama tidak ada gunanya di kertas). */
+  .katex-inline {
+    overflow-x: hidden !important;
+  }
+
+  /* Fase 4 — gambar cetak diskalakan ke lebar kolom/halaman (sebelumnya
+     tidak ada aturan img khusus cetak; `max-h-96` layar tetap berlaku
+     lewat class, tapi lebar kini dijamin tidak meluber). */
+  .print-sheet img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Fase 4 — sel tabel cetak (termasuk tabel matriks) boleh memecah kata
+     panjang supaya tabel tidak mendorong kolom keluar halaman. */
+  .print-sheet table {
+    max-width: 100%;
+  }
+
+  .print-sheet th,
+  .print-sheet td {
+    overflow-wrap: anywhere;
   }
 
   /* Area konten yang tergulung harus mengalir (bukan terpotong tinggi layar). */
@@ -271,11 +308,13 @@
     page-break-inside: avoid;
   }
 
-  /* MAT-40: KaTeX inline terisolasi — tidak meluap di kertas A4. */
+  /* MAT-40: KaTeX inline terisolasi — tidak meluap di kertas A4.
+     Fase 4: `hidden`, bukan `auto` — di kertas tidak ada gulir, jadi
+     `auto` sama dengan membiarkan luapan; lihat aturan Fase 4 di atas. */
   .katex-inline {
     display: inline-block;
     max-width: 100%;
-    overflow-x: auto;
+    overflow-x: hidden;
     vertical-align: middle;
     scrollbar-width: thin;
   }
