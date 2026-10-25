@@ -93,7 +93,7 @@ export function articleHash(rawContent: string): string {
  * Gunakan `contentHash(stem, options)` untuk dedup lintas-sumber.
  */
 export function itemHash(source: string, stem: string): string {
-  return sha256(`${source}\u0000${stem.replace(/\s+/g, " ").trim()}`);
+  return sha256(`${source}\u0000${normalizeText(stem)}`);
 }
 
 /**

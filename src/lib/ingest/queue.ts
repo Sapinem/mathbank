@@ -86,19 +86,13 @@ export async function listQueue(
   opts: { status?: IngestStatus; limit?: number } = {},
 ): Promise<IngestQueueItem[]> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
-  const rows = opts.status
-    ? await db
-        .select()
-        .from(ingestQueue)
-        .where(eq(ingestQueue.status, opts.status))
-        .orderBy(desc(ingestQueue.createdAt))
-        .limit(limit)
-    : await db
-        .select()
-        .from(ingestQueue)
-        .orderBy(desc(ingestQueue.createdAt))
-        .limit(limit);
-  return rows;
+  const where = opts.status ? eq(ingestQueue.status, opts.status) : undefined;
+  return db
+    .select()
+    .from(ingestQueue)
+    .where(where)
+    .orderBy(desc(ingestQueue.createdAt))
+    .limit(limit);
 }
 
 /** Ambil satu baris antrean. */

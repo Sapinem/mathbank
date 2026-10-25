@@ -22,6 +22,7 @@ import type { Actor } from "@/lib/auth/actor";
 import type { AnswerKey } from "@/lib/contracts/question";
 import { answerKeySchema, questionDataPayloadSchema } from "@/lib/validations/question-payload";
 import { validateKatexContract } from "@/lib/ai/enrich";
+import { findQuestionByContentHash } from "./dedup";
 import { contentHash, itemHash } from "./hash";
 import { buildQuestionPayload, type BuiltQuestionPayload } from "./parsers/types";
 import type { ParsedItem } from "./parsers/types";
@@ -127,23 +128,8 @@ export async function existingItemHashes(sourceId: string): Promise<Set<string>>
   return set;
 }
 
-/**
- * Cari soal dengan `content_hash` sama (dedup lintas-sumber, ADR-0012).
- *
- * Dulu tinggal di `question-source-service`; berkas itu dihapus oleh ADR-0014,
- * jadi fungsi ini pindah ke sini — dedup tetap berlaku, kini diwujudkan lewat
- * keanggotaan bundle alih-alih baris provenance.
- */
-export async function findQuestionByContentHash(
-  hash: string,
-): Promise<{ id: string } | null> {
-  const [row] = await db
-    .select({ id: questions.id })
-    .from(questions)
-    .where(and(eq(questions.contentHash, hash), isNull(questions.deletedAt)))
-    .limit(1);
-  return row ?? null;
-}
+// Re-export untuk kompatibilitas pemanggil lama; implementasi kanonik ada di `./dedup.ts`.
+export { findQuestionByContentHash };
 
 /**
  * Cari/buat bundle untuk satu naskah (ADR-0014 #7).
@@ -266,6 +252,14 @@ function gatePayload(built: BuiltQuestionPayload): PayloadGate {
   };
 }
 
+function assertKatexValid(text: string, location: string): void {
+  const check = validateKatexContract(text);
+  if (!check.ok) {
+    const issues = check.issues.map((i) => i.message).join("; ");
+    throw new Error(`Validasi KaTeX gagal pada ${location}: ${issues}`);
+  }
+}
+
 /**
  * Validasi per-butir sebelum menyentuh DB (Pilar 2 v2.0).
  * Memeriksa stem tidak kosong dan sintaks KaTeX berpasangan (CONSTRAINT #29).
@@ -276,28 +270,16 @@ export function validateParsedItem(item: ParsedItem): void {
     throw new Error("Stem/teks soal tidak boleh kosong");
   }
 
-  const stemCheck = validateKatexContract(item.stem);
-  if (!stemCheck.ok) {
-    const issues = stemCheck.issues.map((i) => i.message).join("; ");
-    throw new Error(`Validasi KaTeX gagal pada stem: ${issues}`);
-  }
+  assertKatexValid(item.stem, "stem");
 
   for (const opt of item.options ?? []) {
     if (opt.text) {
-      const optCheck = validateKatexContract(opt.text);
-      if (!optCheck.ok) {
-        const issues = optCheck.issues.map((i) => i.message).join("; ");
-        throw new Error(`Validasi KaTeX gagal pada opsi ${opt.label || ""}: ${issues}`);
-      }
+      assertKatexValid(opt.text, `opsi ${opt.label || ""}`);
     }
   }
 
   if (item.explanation) {
-    const expCheck = validateKatexContract(item.explanation);
-    if (!expCheck.ok) {
-      const issues = expCheck.issues.map((i) => i.message).join("; ");
-      throw new Error(`Validasi KaTeX gagal pada pembahasan: ${issues}`);
-    }
+    assertKatexValid(item.explanation, "pembahasan");
   }
 
   if (item.dataPayload && typeof item.dataPayload === "object") {
@@ -306,11 +288,7 @@ export function validateParsedItem(item: ParsedItem): void {
     for (const r of rows) {
       const text = typeof r?.text === "string" ? r.text : typeof r?.contentMarkdown === "string" ? r.contentMarkdown : "";
       if (text) {
-        const rowCheck = validateKatexContract(text);
-        if (!rowCheck.ok) {
-          const issues = rowCheck.issues.map((i) => i.message).join("; ");
-          throw new Error(`Validasi KaTeX gagal pada baris pernyataan: ${issues}`);
-        }
+        assertKatexValid(text, "baris pernyataan");
       }
     }
   }

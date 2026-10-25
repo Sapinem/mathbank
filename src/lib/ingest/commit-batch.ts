@@ -79,16 +79,33 @@ export async function commitIngestBatch(
     );
   }
 
+  let created = 0;
+  let linked = 0;
+  let skipped = 0;
+  let failed = 0;
+  let storedCount = 0;
+  let failedCount = 0;
+  const failures: CommitFailure[] = [];
+
+  for (const r of results) {
+    created += r.created;
+    linked += r.linked;
+    skipped += r.skipped;
+    failed += r.failed + (r.status === "failed" ? 1 : 0);
+    storedCount += r.storedCount;
+    failedCount += r.failedCount;
+    if (r.failures.length) failures.push(...r.failures);
+  }
+
   const summary: CommitBatchSummary = {
     processed: results.length,
-    created: results.reduce((a, r) => a + r.created, 0),
-    linked: results.reduce((a, r) => a + r.linked, 0),
-    skipped: results.reduce((a, r) => a + r.skipped, 0),
-    failed:
-      results.reduce((a, r) => a + r.failed, 0) + results.filter((r) => r.status === "failed").length,
-    storedCount: results.reduce((a, r) => a + r.storedCount, 0),
-    failedCount: results.reduce((a, r) => a + r.failedCount, 0),
-    failures: results.flatMap((r) => r.failures),
+    created,
+    linked,
+    skipped,
+    failed,
+    storedCount,
+    failedCount,
+    failures,
     remaining:
       opts.totalRemaining !== undefined
         ? Math.max(0, opts.totalRemaining - batch.length)
