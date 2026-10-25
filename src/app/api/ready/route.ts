@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { checkDbInvariants } from "@/lib/db/invariants";
 import { toInvariantsDto } from "@/lib/db/schema-expectations";
 import { PUBLIC_DB_DOWN_MESSAGE } from "@/lib/api/public-messages";
+import { checkRateLimit, rateLimitKey, HEALTH_POLICY } from "@/lib/api/rate-limit";
+import { getClientIp } from "@/lib/api/client-ip";
 import { log } from "@/lib/telemetry/logger";
 
 /**
@@ -16,8 +18,29 @@ import { log } from "@/lib/telemetry/logger";
  */
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   const startedAt = Date.now();
+  // Fase 3: sama seperti /api/health — di-rate-limit per IP (publik) karena
+  // jalur ini menjalankan checkDbInvariants(). Tidak lewat wrapRoute karena
+  // status sukses dinamis 200/503 (lihat komentar di health/route.ts).
+  const rl = checkRateLimit(
+    rateLimitKey(null, getClientIp(req), "api:ready"),
+    HEALTH_POLICY,
+  );
+  if (!rl.allowed) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "RATE_LIMITED",
+          message: "Terlalu banyak permintaan. Coba lagi nanti.",
+        },
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
+  }
   try {
     const report = await Promise.race([
       checkDbInvariants(),

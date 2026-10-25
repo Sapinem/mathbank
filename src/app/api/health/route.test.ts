@@ -12,6 +12,7 @@ vi.mock("@/lib/db/invariants", () => ({
 }));
 
 import { checkDbInvariants } from "@/lib/db/invariants";
+import { setStore, MemoryStore, HEALTH_POLICY } from "@/lib/api/rate-limit";
 import { GET } from "./route";
 
 const mockCheck = vi.mocked(checkDbInvariants);
@@ -31,6 +32,9 @@ const healthy = {
 
 beforeEach(() => {
   mockCheck.mockReset();
+  // Bucket rate-limit global harus segar: tanpa ini, tes 429 di bawah akan
+  // menghabiskan bucket untuk tes lain di berkas ini.
+  setStore(new MemoryStore());
 });
 
 describe("GET /api/health", () => {
@@ -80,6 +84,28 @@ describe("GET /api/health", () => {
     const body = await res.json();
     expect(body.data.status).toBe("down");
     expect(body.data.db).toBe("down");
+  });
+
+  it("Fase 3: 429 + Retry-After setelah burst HEALTH_POLICY terlampaui, DB tak lagi dipanggil", async () => {
+    mockCheck.mockResolvedValue(healthy);
+    let last: Response | null = null;
+    for (let i = 0; i < HEALTH_POLICY.capacity + 1; i++) {
+      last = await GET(req());
+    }
+    expect(last?.status).toBe(429);
+    expect(last?.headers.get("Retry-After")).toBeTruthy();
+    const body = await last!.json();
+    expect(body.error.code).toBe("RATE_LIMITED");
+    // Hanya sejumlah kapasitas yang menyentuh DB; permintaan kelebihannya ditolak di depan.
+    expect(mockCheck).toHaveBeenCalledTimes(HEALTH_POLICY.capacity);
+  });
+
+  it("Fase 3: ?probe=liveness TIDAK di-rate-limit (probe orkestrator tak boleh 429)", async () => {
+    for (let i = 0; i < HEALTH_POLICY.capacity + 5; i++) {
+      const res = await GET(req("http://localhost/api/health?probe=liveness"));
+      expect(res.status).toBe(200);
+    }
+    expect(mockCheck).not.toHaveBeenCalled();
   });
 
   it("?probe=liveness → 200 cepat TANPA menyentuh DB", async () => {
