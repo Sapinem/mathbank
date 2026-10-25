@@ -5,7 +5,9 @@
  * tetapi TIDAK ada di file migrasi → DB bersih kehilangan invarian.
  * Skrip ini memeriksa jumlah objek kunci dan GAGAL bila tak sesuai harapan.
  *
- * Jalankan: `pnpm db:verify` (dipanggil dari `pnpm check`).
+ * Jalankan: `pnpm db:verify` (dipanggil dari CI setelah `pnpm check`,
+ * bukan dari `pnpm check` itu sendiri — `pnpm check` hanya menjalankan
+ * theme:check, lint:names, typecheck, lint, test:coverage, dan build).
  * Butuh DATABASE_URL (dibaca dari .env).
  *
  * Aturan lulus/gagal TIDAK ditulis di sini: semuanya lewat

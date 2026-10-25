@@ -129,7 +129,7 @@ dibangkitkan generator dan dedup lewat `content_hash` tetap berlaku.
 
 Lihat prosedur lengkap di **`docs/MIGRASI-ZERO-DOWNTIME.md`**. Ringkas:
 
-- **Selalu** `pnpm db:migrate` + `pnpm db:verify`; **jangan** `db:push` di produksi.
+- **Selalu** `pnpm db:migrate` + `pnpm db:verify`; **jangan** `db:push` di produksi (skrip `db:push` kini diblokir di production/staging oleh `scripts/db-push-gate.mjs` dan dirantai gate → ekstensi → push → safety → verify; push tetap bukan migrasi — tangkap perubahannya dengan `pnpm db:generate`).
 - Pola **expand → migrate → contract** agar versi lama & baru bisa hidup bersama.
 - **Backup dulu** sebelum migrasi (§4). Migrasi = forward-only; rollback = pulihkan backup.
 
