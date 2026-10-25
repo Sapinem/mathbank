@@ -86,13 +86,34 @@ describe("QuestionCard", () => {
   it("checkbox seleksi hanya muncul bila onToggleSelect diberi", () => {
     const onToggle = vi.fn();
     const { rerender } = render(<QuestionCard question={q()} href="/x" />);
-    expect(screen.queryByLabelText("Pilih soal")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Pilih soal/)).not.toBeInTheDocument();
     rerender(<QuestionCard question={q()} href="/x" onToggleSelect={onToggle} />);
-    const cb = screen.getByLabelText("Pilih soal");
+    const cb = screen.getByLabelText(/Pilih soal: Berapa/);
     expect(cb).toBeInTheDocument();
     // klik → memanggil callback dengan id soal
     cb.click();
     expect(onToggle).toHaveBeenCalledWith("q1");
+  });
+
+  it("nama aksesibel checkbox dan tautan Buka berkonteks soal (bukan generik)", () => {
+    const onToggle = vi.fn();
+    render(
+      <QuestionCard question={q()} href="/x" onToggleSelect={onToggle} mode="grid" />,
+    );
+    expect(screen.getByLabelText(/Pilih soal: Berapa/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Buka soal: Berapa/)).toBeInTheDocument();
+    // Kunci jawaban tidak boleh bocor ke nama aksesibel (batang saja, bukan opsi).
+    expect(screen.queryByLabelText(/isCorrect|jawaban benar/i)).not.toBeInTheDocument();
+  });
+
+  it("status compact menampilkan label ringkas, bukan hanya titik warna", () => {
+    const { container } = render(
+      <QuestionCard question={q({ status: "review" })} href="/x" />,
+    );
+    // Mode list memakai StatusIndicator compact: "Telaah" terlihat (bukan hanya dot),
+    // sedangkan label penuh "Perlu Telaah" tetap ada sebagai aria-label.
+    expect(container.textContent).toContain("Telaah");
+    expect(container.textContent).not.toContain("Perlu Telaah");
   });
 
   it("kartu terpilih diberi latar brand", () => {

@@ -42,7 +42,11 @@ interface QuestionFilterBarProps {
   onClearStatus: () => void;
   onClearSource: () => void;
   onResetAll: () => void;
+  /** Hapus pencarian dan langsung kirim pencarian kosong (bukan sekadar kosongkan kotak). */
+  onClearSearch: () => void;
   totalFiltered: number;
+  /** Daftar masih memuat — jumlah tidak boleh ditampilkan sebagai 0. */
+  isLoading?: boolean;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 }
@@ -64,7 +68,9 @@ export function QuestionFilterBar({
   onClearStatus,
   onClearSource,
   onResetAll,
+  onClearSearch,
   totalFiltered,
+  isLoading = false,
   viewMode,
   onViewModeChange,
 }: QuestionFilterBarProps) {
@@ -117,7 +123,7 @@ export function QuestionFilterBar({
           {search && (
             <button
               type="button"
-              onClick={() => onSearchChange("")}
+              onClick={onClearSearch}
               aria-label="Hapus pencarian"
               className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
             >
@@ -126,17 +132,21 @@ export function QuestionFilterBar({
           )}
         </form>
 
-        {/* Counter Total Soal (Desktop) */}
-        <span className="hidden shrink-0 text-xs font-mono text-muted-foreground sm:inline">
-          {totalFiltered} soal
+        {/* Counter Total Soal (Desktop) — saat memuat, jangan tampilkan 0 yang menyesatkan. */}
+        <span
+          className="hidden shrink-0 text-xs font-mono text-muted-foreground sm:inline"
+          aria-live="polite"
+        >
+          {isLoading ? "Memuat…" : `${totalFiltered} soal`}
         </span>
 
         {/* Toggle Mode Tampilan (List / Grid / Masonry) */}
         <ViewModeToggle value={viewMode} onChange={onViewModeChange} />
 
-        {/* Tombol Buat Soal */}
+        {/* Tombol Buat Soal — aria-label eksplisit: di layar sempit label teks
+            disembunyikan (hidden sm:inline) sehingga tanpa ini nama aksesibelnya kosong. */}
         <Button
-          render={<Link href="/questions/new" />}
+          render={<Link href="/questions/new" aria-label="Buat Soal" />}
           nativeButton={false}
           size="sm"
           className="shrink-0 gap-1.5"

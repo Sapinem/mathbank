@@ -52,7 +52,7 @@ describe("QuestionBankView — bulk action bar (G3.1)", () => {
     // belum ada bar
     expect(screen.queryByText(/terpilih/)).not.toBeInTheDocument();
     // centang dua kotak
-    const boxes = screen.getAllByLabelText("Pilih soal");
+    const boxes = screen.getAllByLabelText(/Pilih soal/);
     fireEvent.click(boxes[0]);
     fireEvent.click(boxes[1]);
     expect(screen.getByText("2 terpilih")).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe("QuestionBankView — bulk action bar (G3.1)", () => {
 
   it("Batal membersihkan seleksi", () => {
     render(<QuestionBankView />);
-    fireEvent.click(screen.getAllByLabelText("Pilih soal")[0]);
+    fireEvent.click(screen.getAllByLabelText(/Pilih soal/)[0]);
     expect(screen.getByText("1 terpilih")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Batal/ }));
     expect(screen.queryByText(/terpilih/)).not.toBeInTheDocument();
@@ -74,7 +74,7 @@ describe("QuestionBankView — bulk action bar (G3.1)", () => {
 
   it("Arsipkan membuka dialog konfirmasi dan memanggil aksi setelah konfirmasi", () => {
     render(<QuestionBankView />);
-    const boxes = screen.getAllByLabelText("Pilih soal");
+    const boxes = screen.getAllByLabelText(/Pilih soal/);
     fireEvent.click(boxes[0]);
     fireEvent.click(boxes[1]);
     expect(screen.getByText("2 terpilih")).toBeInTheDocument();
