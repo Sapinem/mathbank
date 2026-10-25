@@ -1,5 +1,8 @@
 import { questions } from "@/lib/db/schema/question";
 import type { Actor } from "@/lib/auth/actor";
+import { correctLabelsOf } from "@/lib/contracts/question";
+
+export { correctLabelsOf };
 
 /**
  * Proyeksi kolom (S3 — cegah kebocoran).
@@ -81,18 +84,6 @@ export function rawOptionsOf(dataPayload: unknown): RawOptionItem[] {
   if (!dataPayload || typeof dataPayload !== "object") return [];
   const opts = (dataPayload as { options?: unknown }).options;
   return Array.isArray(opts) ? (opts as RawOptionItem[]) : [];
-}
-
-/** Label opsi benar dari `answer_key` (kanonik `correctOptionIds` → mirror `correct`). */
-export function correctLabelsOf(answerKey: unknown): string[] {
-  if (!answerKey || typeof answerKey !== "object") return [];
-  const key = answerKey as { correctOptionIds?: unknown; correct?: unknown };
-  const raw = key.correctOptionIds ?? key.correct;
-  const list = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
-  return list
-    .filter((v): v is string => typeof v === "string")
-    .map((v) => v.trim().toUpperCase())
-    .filter(Boolean);
 }
 
 /**

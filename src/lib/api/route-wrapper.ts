@@ -91,11 +91,6 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
   idempotent?: boolean;
 }
 
-/** Ambil IP klien dari header proxy (X-Real-IP / X-Forwarded-For). */
-function clientIp(req: Request): string | null {
-  return getClientIp(req);
-}
-
 /** Bangun objek dari URLSearchParams → plain object untuk Zod. */
 function searchParamsToObject(url: string): Record<string, string | string[]> {
   const params = new URLSearchParams(new URL(url).searchParams);
@@ -155,106 +150,51 @@ function errorResponse(
     });
     return res;
   };
+
+  const jsonError = (
+    status: number,
+    code: string,
+    message: string,
+    headers?: HeadersInit,
+  ) => withRid(NextResponse.json({ error: { code, message } }, { status, headers }));
+
   if (err instanceof UnauthorizedError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 401 },
-      ),
-    );
+    return jsonError(401, err.code, err.message);
   }
   if (err instanceof PasswordChangeRequiredError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 403 },
-      ),
-    );
+    return jsonError(403, err.code, err.message);
   }
   if (err instanceof ForbiddenError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 403 },
-      ),
-    );
+    return jsonError(403, err.code, err.message);
   }
   // API-04: semantik HTTP yang benar untuk muatan tak valid / tak didukung / terlalu besar.
   if (err instanceof BadRequestError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 400 },
-      ),
-    );
+    return jsonError(400, err.code, err.message);
   }
   if (err instanceof PayloadTooLargeError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 413 },
-      ),
-    );
+    return jsonError(413, err.code, err.message);
   }
   if (err instanceof UnsupportedMediaTypeError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 415 },
-      ),
-    );
+    return jsonError(415, err.code, err.message);
   }
   if (err instanceof NotFoundError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 404 },
-      ),
-    );
+    return jsonError(404, err.code, err.message);
   }
   if (err instanceof ConflictError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 409 },
-      ),
-    );
+    return jsonError(409, err.code, err.message);
   }
   if (err instanceof InvalidTransitionError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: "INVALID_TRANSITION", message: err.message } },
-        { status: 409 },
-      ),
-    );
+    return jsonError(409, "INVALID_TRANSITION", err.message);
   }
   if (err instanceof NotReadyError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 422 },
-      ),
-    );
+    return jsonError(422, err.code, err.message);
   }
   if (err instanceof RateLimitError) {
     const retryAfterSec = Math.ceil(err.retryAfterMs / 1000);
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        {
-          status: 429,
-          headers: { "Retry-After": String(retryAfterSec) },
-        },
-      ),
-    );
+    return jsonError(429, err.code, err.message, { "Retry-After": String(retryAfterSec) });
   }
   if (err instanceof InvalidJsonError) {
-    return withRid(
-      NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 400 },
-      ),
-    );
+    return jsonError(400, err.code, err.message);
   }
   if (err instanceof ZodError) {
     const isCustom = err.name !== "ZodError" && err.message && !err.message.startsWith("[");
@@ -356,7 +296,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
           opts.rateLimit === true ? DEFAULT_POLICY : opts.rateLimit;
         const key = rateLimitKey(
           actor?.id ?? null,
-          clientIp(req),
+          getClientIp(req),
           opts.rateLimitScope ?? opts.permission ?? "default",
         );
         const result = checkRateLimit(key, policy);
@@ -381,7 +321,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         ? req.headers.get("idempotency-key")?.slice(0, 128)
         : null;
       if (idemKey) {
-        const actorKey = actor?.id ?? clientIp(req) ?? "anon";
+        const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
         const state = checkIdempotency(`${actorKey}:${idemKey}`);
         if (state.kind === "replay") {
           const replay = NextResponse.json(state.body, { status: state.status });
@@ -414,7 +354,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       const res = NextResponse.json({ data }, { status: opts.status ?? 200 });
       res.headers.set("X-Request-ID", requestId);
       if (idemKey) {
-        const actorKey = actor?.id ?? clientIp(req) ?? "anon";
+        const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
         rememberResponse(
           `${actorKey}:${idemKey}`,
           opts.status ?? 200,
@@ -428,7 +368,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       // (key sama) tidak terjebak 409 — kesalahan bukan hasil yang di-cache.
       if (opts.idempotent) {
         const k = req.headers.get("idempotency-key")?.slice(0, 128);
-        const actorKey = actorIdForCleanup ?? clientIp(req) ?? "anon";
+        const actorKey = actorIdForCleanup ?? getClientIp(req) ?? "anon";
         if (k) getIdempotencyStore().forget(`${actorKey}:${k}`);
       }
       return finish(

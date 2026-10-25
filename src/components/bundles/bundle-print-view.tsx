@@ -7,7 +7,7 @@ import { ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { MathContent } from "@/components/math/math-content";
-import { isOptionBased } from "@/lib/contracts/question";
+import { isOptionBased, correctLabelsOf } from "@/lib/contracts/question";
 import { useBundle } from "@/lib/hooks/use-bundles";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
@@ -49,15 +49,8 @@ const PRINT_PAGE_SIZE_CSS: Record<NonNullable<BundlePrintConfig["pageSize"]>, st
 };
 
 /** Baca label opsi benar dari `answerKey` (bila ada). */
-function correctLabelsOf(item: BundleItemView): string[] {
-  const key = item.question.answerKey;
-  if (!key) return [];
-  const fromCanonical = (key as { correctOptionIds?: unknown }).correctOptionIds;
-  if (Array.isArray(fromCanonical)) return fromCanonical as string[];
-  if (typeof fromCanonical === "string") return [fromCanonical];
-  if (Array.isArray(key.correct)) return key.correct;
-  if (typeof key.correct === "string") return [key.correct];
-  return [];
+function itemCorrectLabels(item: BundleItemView): string[] {
+  return correctLabelsOf(item.question.answerKey);
 }
 
 /** Baca teks pembahasan dari `answerKey` (bila ada). */
@@ -351,7 +344,7 @@ export function BundlePrintView() {
             }
             // Nomor urut soal (1..n)
             const num = questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
-            const correct = correctLabelsOf(it);
+            const correct = itemCorrectLabels(it);
             const showNumber = config.showQuestionNumber !== false;
             return (
               <li key={it.item.id} className="print-question print-item flex gap-2">
@@ -505,7 +498,7 @@ export function BundlePrintView() {
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Kunci Jawaban</h2>
             <ol className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:grid-cols-3">
               {questionItems.map((it, i) => {
-                const correct = correctLabelsOf(it);
+                const correct = itemCorrectLabels(it);
                 const text = it.question.answerKey?.text ?? null;
                 const shown = correct.length > 0 ? correct.join(", ") : (text ?? "—");
                 return (

@@ -189,6 +189,18 @@ export interface NormalizedQuestionWrite {
   answerKey: Record<string, unknown>;
 }
 
+/** Label kunci dari `answer_key` (kanonik `correctOptionIds` → mirror `correct`). */
+export function correctLabelsOf(answerKey: unknown): string[] {
+  if (!answerKey || typeof answerKey !== "object") return [];
+  const key = answerKey as { correctOptionIds?: unknown; correct?: unknown };
+  const raw = key.correctOptionIds ?? key.correct;
+  const list = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
+  return list
+    .filter((v): v is string => typeof v === "string")
+    .map((v) => v.trim().toUpperCase())
+    .filter(Boolean);
+}
+
 /** Normalisasi `string | string[] | undefined` → `string[] | undefined`. */
 function toLabelArray(value: unknown): string[] | undefined {
   if (typeof value === "string") return value.trim() ? [value.trim()] : undefined;

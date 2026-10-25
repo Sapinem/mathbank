@@ -1,4 +1,7 @@
 import type { PublicQuestion } from "@/lib/services/question-service";
+import { correctLabelsOf } from "@/lib/contracts/question";
+
+export { correctLabelsOf };
 
 export interface OptionDraft {
   label: string;
@@ -16,17 +19,6 @@ export function emptyOptions(): OptionDraft[] {
     isCorrect: false,
     distractorRationale: "",
   }));
-}
-
-/** Label kunci dari `answer_key` (kanonik `correctOptionIds` → mirror `correct`). */
-export function correctLabelsOf(answerKey: unknown): string[] {
-  const key = (answerKey ?? {}) as Record<string, unknown>;
-  const raw = key.correctOptionIds ?? key.correct;
-  const list = Array.isArray(raw) ? raw : typeof raw === "string" ? [raw] : [];
-  return list
-    .filter((v): v is string => typeof v === "string")
-    .map((v) => v.trim().toUpperCase())
-    .filter(Boolean);
 }
 
 /** Item opsi mentah di `data_payload.options` (bentuk kanonik MAT-145). */
