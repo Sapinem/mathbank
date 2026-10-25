@@ -31,7 +31,27 @@ const presence = (over: Partial<InvariantPresence> = {}): InvariantPresence => (
     "chk_media_assets_short_id",
   ]),
   triggers: new Set([
+    // Fase 5: fixture ini harus berisi KE-24 trigger yang dipasang
+    // drizzle/manual/db_safety.sql, karena REQUIRED_TRIGGERS kini penuh.
+    "trg_account_updated_at",
+    "trg_apikey_updated_at",
+    "trg_app_settings_updated_at",
+    "trg_bundles_updated_at",
+    "trg_cognitive_levels_updated_at",
+    "trg_difficulty_levels_updated_at",
+    "trg_events_updated_at",
+    "trg_grades_updated_at",
+    "trg_ingest_queue_updated_at",
+    "trg_media_assets_updated_at",
+    "trg_question_embeddings_updated_at",
     "trg_questions_updated_at",
+    "trg_session_updated_at",
+    "trg_solutions_updated_at",
+    "trg_sources_updated_at",
+    "trg_tags_updated_at",
+    "trg_topics_updated_at",
+    "trg_user_updated_at",
+    "trg_verification_updated_at",
     "trg_questions_stimulus_depth",
     "trg_topics_cycle",
     "trg_question_topics_usage",
@@ -60,6 +80,15 @@ describe("evaluateInvariants", () => {
     const v = evaluateInvariants({ ...sehat, triggers: sehat.triggers + 5 }, presence({ triggers }));
     expect(v.ok).toBe(false);
     expect(v.problems).toContain("TRIGGER hilang: trg_topics_cycle");
+  });
+
+  it("gagal saat satu trigger updated_at hilang walau jumlahnya masih cukup", () => {
+    const triggers = new Set(
+      [...presence().triggers].filter((t) => t !== "trg_bundles_updated_at"),
+    );
+    const v = evaluateInvariants({ ...sehat, triggers: sehat.triggers + 5 }, presence({ triggers }));
+    expect(v.ok).toBe(false);
+    expect(v.problems).toContain("TRIGGER hilang: trg_bundles_updated_at");
   });
 
   it("gagal saat CHECK kritis hilang", () => {

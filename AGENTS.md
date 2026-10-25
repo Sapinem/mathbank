@@ -134,7 +134,7 @@ Invarian skema tetap dijaga `pnpm db:verify` (angka minimum: `src/lib/db/schema-
 | Lapis | Isi | Modul acuan | Status 2026-10-21 |
 |---|---|---|---|
 | **L1 Auth/Role** | Better Auth, peran, `can`/`assertCan`/`hasRole` | `src/lib/auth/` | ✅ siap |
-| **L2 API** | `wrapRoute`, rate limit, Zod di boundary | `src/lib/api/`, `src/app/api/` | ⚠️ Zod baru 17/51 route |
+| **L2 API** | `wrapRoute`, rate limit, Zod di boundary | `src/lib/api/`, `src/app/api/` | ✅ 73/73 handler wrapRoute berskema Zod, 64/73 ber-rate-limit (hitung ulang HEAD ba4b10e; 9 tanpa rate-limit = stub collections mati, dihapus PR Fase 3 yang belum merge) |
 | **L3 Service** | orkestrasi domain, transaksi | `src/lib/services/`, `src/lib/ingest/` | ⚠️ beberapa fungsi > 300 baris |
 | **L4 Engine** | fungsi murni: KaTeX lint/repair, export, cetak | `src/lib/math/`, `src/lib/export/` | ✅ siap |
 | **L5 Data Access** | Drizzle, 26 tabel, 84 index, HNSW | `src/lib/db/` | ✅ siap |

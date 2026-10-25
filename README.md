@@ -173,7 +173,7 @@ psql "$DATABASE_URL" -c "select count(*) from questions;"   # ulangi per baris t
 | `db:verify` | ✅ 0 drift — DB utama **dan** DB uji |
 | Backup terjadwal | ✅ cron harian 02:00 (`scripts/backup-db.mjs`, retensi 7 dump harian + arsip mingguan 30 hari) |
 | Uji restore | ✅ `restore:check` + drill terakhir 2026-10-20 (`backups/restore-drill-*.json`) |
-| Cakupan Zod route API | ⚠️ 17/51 route |
+| Cakupan Zod route API | ✅ 73/73 handler wrapRoute berskema Zod (hitung ulang di HEAD ba4b10e: 51 file route, 82 endpoint, 73 via wrapRoute, 64/73 ber-rate-limit; 9 tanpa rate-limit adalah stub collections mati yang dihapus PR Fase 3 yang belum merge) |
 
 ---
 

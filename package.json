@@ -19,7 +19,7 @@
     "db:migrate": "tsx scripts/db-ensure-extensions.ts && drizzle-kit migrate && pnpm db:safety",
     "db:extensions": "tsx scripts/db-ensure-extensions.ts",
     "db:safety": "tsx scripts/db-apply-safety.ts",
-    "db:push": "drizzle-kit push",
+    "db:push": "node scripts/db-push-gate.mjs && tsx scripts/db-ensure-extensions.ts && drizzle-kit push && pnpm db:safety && pnpm db:verify",
     "db:studio": "drizzle-kit studio",
     "db:verify": "tsx scripts/db-verify.ts",
     "metrics:snapshot": "tsx scripts/snapshot-metrics.ts",

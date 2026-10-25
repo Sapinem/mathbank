@@ -28,9 +28,44 @@ export const EXPECTED_INVARIANTS = {
   triggers: 24,
 } as const;
 
-/** Nama trigger kritis yang WAJIB ada (bukan sekadar jumlah). */
+/**
+ * Nama trigger kritis yang WAJIB ada (bukan sekadar jumlah).
+ *
+ * Fase 5: daftar ini kini PENUH — 24 nama, sama dengan
+ * `EXPECTED_INVARIANTS.triggers`. Derivasinya dari
+ * `drizzle/manual/db_safety.sql`, satu-satunya sumber trigger:
+ * 19 trigger `updated_at` yang dipasang loop DO atas daftar tabel di sana
+ * (account, apikey, app_settings, bundles, cognitive_levels,
+ * difficulty_levels, events, grades, ingest_queue, media_assets,
+ * question_embeddings, questions, session, solutions, sources, tags,
+ * topics, user, verification) + 5 trigger invarian bernama di bawahnya.
+ * Ini aman dari false positive untuk DB yang dibangun lewat `db:safety`
+ * (yang memasang ke-19 trigger itu tanpa syarat): gerbang jumlah sudah
+ * menuntut ≥24, jadi pemeriksaan nama hanya menambah presisi — DB dengan
+ * 24 trigger tapi nama berbeda adalah drift yang sesungguhnya, bukan
+ * alarm palsu. DB yang dibangun lewat push mentah tanpa `db:safety`
+ * memang dimaksudkan gagal di sini.
+ */
 export const REQUIRED_TRIGGERS = [
+  "trg_account_updated_at",
+  "trg_apikey_updated_at",
+  "trg_app_settings_updated_at",
+  "trg_bundles_updated_at",
+  "trg_cognitive_levels_updated_at",
+  "trg_difficulty_levels_updated_at",
+  "trg_events_updated_at",
+  "trg_grades_updated_at",
+  "trg_ingest_queue_updated_at",
+  "trg_media_assets_updated_at",
+  "trg_question_embeddings_updated_at",
   "trg_questions_updated_at",
+  "trg_session_updated_at",
+  "trg_solutions_updated_at",
+  "trg_sources_updated_at",
+  "trg_tags_updated_at",
+  "trg_topics_updated_at",
+  "trg_user_updated_at",
+  "trg_verification_updated_at",
   "trg_questions_stimulus_depth",
   "trg_topics_cycle",
   "trg_question_topics_usage",

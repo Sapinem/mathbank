@@ -503,6 +503,13 @@ sudo -u postgres psql -p 5433 -d <db> -f drizzle/manual/00-extensions.sql
 
 # 2) Selalu lewat pnpm db:migrate (bukan drizzle-kit migrate langsung):
 pnpm db:migrate     # = db-ensure-extensions → drizzle-kit migrate → db:safety
+
+# 2b) `pnpm db:push` kini BUKAN lagi jalur mentah (Fase 5): skripnya dirantai
+# gate → db-ensure-extensions → drizzle-kit push → db:safety → db:verify,
+# dan diblokir di production/staging (di sana hanya db:migrate yang sah).
+# Push tetap BUKAN migrasi: setelah push, jalankan `pnpm db:generate`
+# untuk menangkap perubahan skema sebagai file migrasi sebelum commit.
+# Memanggil `drizzle-kit push` mentah tetap melanggar CONSTRAINTS #26.
 ```
 
 **Mengapa:** migrasi `0000_*.sql` memakai tipe `vector` & `gin_trgm_ops` tetapi
