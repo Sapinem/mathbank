@@ -3,7 +3,13 @@ import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
 import { auditLogs } from "@/lib/db/schema/system";
 import { authorTypeOf, type Actor } from "@/lib/auth/actor";
-import { assertCan, ConflictError, NotFoundError } from "@/lib/auth/guards";
+import {
+  assertCan,
+  hasRole,
+  ForbiddenError,
+  ConflictError,
+  NotFoundError,
+} from "@/lib/auth/guards";
 import {
   transition,
   assertReady,
@@ -156,6 +162,18 @@ export async function bulkQuestionAction(
           transition(from, target);
           if (target === "ready") {
             assertCan(actor, "question:setReady");
+            // Fase 1 — larangan self-approve, sama dengan jalur satuan:
+            // per butir masuk `failed`, bukan menggagalkan seluruh batch.
+            // Pengecualian hanya `admin` (hasRole).
+            if (
+              !hasRole(actor, "admin") &&
+              row.authorId &&
+              row.authorId === actor.id
+            ) {
+              throw new ForbiddenError(
+                "Penelaah tidak dapat menyetujui soal buatannya sendiri; minta penelaah lain.",
+              );
+            }
             assertReady({ questionType: row.questionType, answerKey: row.answerKey });
             // MAT-150 — gerbang pedagogis yang sama dengan jalur satuan;
             // tanpa ini aksi massal `set_ready` jadi jalan pintas rilis.

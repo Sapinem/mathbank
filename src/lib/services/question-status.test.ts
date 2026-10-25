@@ -25,7 +25,7 @@ vi.mock("./question-read", () => ({
 import { changeQuestionStatus } from "./question-status";
 import { getQuestionInternal } from "./question-read";
 import { QuestionPayloadValidationError } from "@/lib/contracts/question";
-import { ConflictError } from "@/lib/auth/guards";
+import { ConflictError, ForbiddenError } from "@/lib/auth/guards";
 import { InvalidTransitionError } from "@/lib/fsm/question-fsm";
 import type { Actor } from "@/lib/auth/actor";
 
@@ -60,6 +60,7 @@ function draftRow(
   dataPayload: Record<string, unknown>,
   answerKey: Record<string, unknown>,
   status: "draft" | "review" = "review",
+  authorId = "u-admin",
 ) {
   return {
     id: "q-1",
@@ -67,7 +68,7 @@ function draftRow(
     questionType: "single_choice",
     dataPayload,
     answerKey,
-    authorId: "u-admin",
+    authorId,
     lastReviewedAt: null,
     options: [],
   } as unknown as Awaited<ReturnType<typeof getQuestionInternal>>;
@@ -167,6 +168,52 @@ describe("changeQuestionStatus — gerbang rilis MAT-150", () => {
 
     await changeQuestionStatus("q-1", "draft", admin);
 
+    expect(db.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("Fase 1 — self-approve ditolak: teacher+reviewer tidak boleh menyetujui soal sendiri", async () => {
+    const reviewer: Actor = {
+      id: "u-reviewer",
+      name: "Penelaah",
+      roles: ["teacher", "reviewer"],
+      via: "session",
+    };
+    mockedInternal.mockResolvedValue(
+      draftRow(mcPayload(true), baseAnswerKey, "review", "u-reviewer"),
+    );
+
+    const err = await changeQuestionStatus("q-1", "ready", reviewer).catch((e) => e);
+
+    expect(err).toBeInstanceOf(ForbiddenError);
+    expect(String(err.message)).toMatch(/buatannya sendiri/i);
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it("Fase 1 — penelaah boleh menyetujui soal orang lain", async () => {
+    const reviewer: Actor = {
+      id: "u-reviewer",
+      name: "Penelaah",
+      roles: ["teacher", "reviewer"],
+      via: "session",
+    };
+    mockedInternal.mockResolvedValue(
+      draftRow(mcPayload(true), baseAnswerKey, "review", "u-teacher-lain"),
+    );
+
+    const updated = await changeQuestionStatus("q-1", "ready", reviewer);
+
+    expect(updated).toMatchObject({ id: "q-1" });
+    expect(db.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("Fase 1 — admin dikecualikan dari larangan self-approve", async () => {
+    mockedInternal.mockResolvedValue(
+      draftRow(mcPayload(true), baseAnswerKey, "review", "u-admin"),
+    );
+
+    const updated = await changeQuestionStatus("q-1", "ready", admin);
+
+    expect(updated).toMatchObject({ id: "q-1" });
     expect(db.update).toHaveBeenCalledTimes(1);
   });
 
