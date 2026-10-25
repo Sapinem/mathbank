@@ -226,6 +226,22 @@ export function assertBundleWrite(bundle: BundleRow, actor: Actor): void {
 }
 
 /**
+ * Otorisasi BUAT paket: hanya guru, penelaah, dan admin yang boleh membuat paket.
+ * Agen / mesin / siswa tidak diizinkan.
+ */
+export function assertBundleCreate(actor: Actor): void {
+  if (
+    !(
+      hasRole(actor, "teacher") ||
+      hasRole(actor, "reviewer") ||
+      hasRole(actor, "admin")
+    )
+  ) {
+    throw new ForbiddenError("Tidak berwenang membuat paket.");
+  }
+}
+
+/**
  * Otorisasi BACA paket: semua pemegang `question:view` boleh melihat paket —
  * **termasuk** latihan guru lain (keputusan pemilik produk: "boleh MELIHAT,
  * tak boleh mengubah").

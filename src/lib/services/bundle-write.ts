@@ -12,13 +12,12 @@ import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { recordAudit } from "./audit";
 import type { Actor } from "@/lib/auth/actor";
 import {
-  hasRole,
-  ForbiddenError,
   NotFoundError,
   ConflictError,
 } from "@/lib/auth/guards";
 import { isUniqueViolation } from "@/lib/db/errors";
 import {
+  assertBundleCreate,
   assertBundleRead,
   assertBundleWrite,
   type BundleRow,
@@ -39,15 +38,7 @@ export async function createBundle(
   input: CreateBundleInput,
   actor: Actor,
 ): Promise<BundleRow> {
-  if (
-    !(
-      hasRole(actor, "teacher") ||
-      hasRole(actor, "reviewer") ||
-      hasRole(actor, "admin")
-    )
-  ) {
-    throw new ForbiddenError("Tidak berwenang membuat paket.");
-  }
+  assertBundleCreate(actor);
   const [row] = await db
     .insert(bundles)
     .values({
@@ -157,15 +148,7 @@ export async function duplicateBundle(
   newTitle?: string,
 ): Promise<BundleRow> {
   assertBundleRead(actor);
-  if (
-    !(
-      hasRole(actor, "teacher") ||
-      hasRole(actor, "reviewer") ||
-      hasRole(actor, "admin")
-    )
-  ) {
-    throw new ForbiddenError("Tidak berwenang membuat paket.");
-  }
+  assertBundleCreate(actor);
   const src = await getBundle(id);
   if (!src) throw new NotFoundError("Paket tidak ditemukan.");
   const title = newTitle ?? `${src.title} (salinan)`;

@@ -50,4 +50,8 @@ export {
 export { addItem, removeItem, reorderItems } from "./bundle-items";
 
 // Otorisasi per-paket (dipakai `moodle-export-service` & lintas modul).
-export { assertBundleWrite, assertBundleRead } from "./bundle-shared";
+export {
+  assertBundleCreate,
+  assertBundleWrite,
+  assertBundleRead,
+} from "./bundle-shared";

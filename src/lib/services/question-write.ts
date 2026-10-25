@@ -8,6 +8,7 @@ import { isQuestionUsedInBundles } from "./bundle-service";
 import { contentHash } from "@/lib/ingest/hash";
 import { findQuestionByContentHash } from "@/lib/ingest/dedup";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
+import { isUniqueViolation } from "@/lib/db/errors";
 import type { Actor } from "@/lib/auth/actor";
 import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
@@ -141,12 +142,7 @@ export async function createQuestion(
       return row.id;
     });
   } catch (err: unknown) {
-    if (
-      err &&
-      typeof err === "object" &&
-      "code" in err &&
-      (err as { code: string }).code === "23505"
-    ) {
+    if (isUniqueViolation(err)) {
       throw new ConflictError("Soal dengan naskah dan opsi yang sama persis sudah terdaftar.");
     }
     throw err;
@@ -297,12 +293,7 @@ export async function updateQuestion(
       await syncQuestionShortcodeMediaTx(tx, id);
     });
   } catch (err: unknown) {
-    if (
-      err &&
-      typeof err === "object" &&
-      "code" in err &&
-      (err as { code: string }).code === "23505"
-    ) {
+    if (isUniqueViolation(err)) {
       throw new ConflictError(
         "Perubahan naskah menghasilkan soal yang identik dengan soal lain yang sudah ada.",
       );

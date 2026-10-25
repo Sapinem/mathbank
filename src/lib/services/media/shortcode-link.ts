@@ -25,7 +25,7 @@
  *  - Shortcode yang asetnya belum terdaftar diabaikan (bukan error) — ingest
  *    yang bertanggung jawab menyediakan berkasnya.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { mediaAssets, questionMedia } from "@/lib/db/schema/media";
 import { questions } from "@/lib/db/schema/question";
@@ -223,6 +223,6 @@ export async function findLinkedMediaIds(questionId: string): Promise<string[]> 
   const rows = await db
     .select({ mediaId: questionMedia.mediaId })
     .from(questionMedia)
-    .where(and(eq(questionMedia.questionId, questionId)));
+    .where(eq(questionMedia.questionId, questionId));
   return rows.map((r) => r.mediaId);
 }

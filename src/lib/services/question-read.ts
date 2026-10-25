@@ -148,41 +148,80 @@ export async function getQuestion(
 
   // ADR-0014: sumber TIDAK lagi per-butir — ia menempel pada BUNDLE.
   // Jadi "asal soal" = daftar naskah yang memuatnya (via bundle_items).
-  const originBundles = await db
-    .select({
-      id: bundles.id,
-      title: bundles.title,
-      bundleType: bundles.bundleType,
-      url: bundles.url,
-      year: bundles.year,
-      grade: bundles.grade,
-      sourceId: bundles.sourceId,
-      sourceLabel: sources.label,
-      sourceKind: sources.kind,
-      itemNumber: bundleItems.itemNumber,
-      status: bundles.status,
-    })
-    .from(bundleItems)
-    .innerJoin(bundles, eq(bundleItems.bundleId, bundles.id))
-    .leftJoin(sources, eq(bundles.sourceId, sources.id))
-    .where(and(eq(bundleItems.questionId, id), isNull(bundles.deletedAt)))
-    .orderBy(asc(bundles.createdAt));
+  //
+  // Kueri sekunder dijalankan paralel (Promise.all) agar detail soal tidak
+  // melakukan 5 roundtrip sekuensial ke DB.
+  const [originBundles, parent, topicRows, mediaRows, rawSolutions] = await Promise.all([
+    db
+      .select({
+        id: bundles.id,
+        title: bundles.title,
+        bundleType: bundles.bundleType,
+        url: bundles.url,
+        year: bundles.year,
+        grade: bundles.grade,
+        sourceId: bundles.sourceId,
+        sourceLabel: sources.label,
+        sourceKind: sources.kind,
+        itemNumber: bundleItems.itemNumber,
+        status: bundles.status,
+      })
+      .from(bundleItems)
+      .innerJoin(bundles, eq(bundleItems.bundleId, bundles.id))
+      .leftJoin(sources, eq(bundles.sourceId, sources.id))
+      .where(and(eq(bundleItems.questionId, id), isNull(bundles.deletedAt)))
+      .orderBy(asc(bundles.createdAt)),
 
-  const parent = row.parentId ? await getParentStimulus(row.parentId) : null;
+    row.parentId ? getParentStimulus(row.parentId) : Promise.resolve(null),
+
+    db
+      .select({
+        id: topics.id,
+        name: topics.name,
+        level: topics.level,
+        isPrimary: questionTopics.isPrimary,
+      })
+      .from(questionTopics)
+      .innerJoin(topics, eq(questionTopics.topicId, topics.id))
+      .where(eq(questionTopics.questionId, id))
+      .orderBy(asc(topics.level), asc(topics.name)),
+
+    db
+      .select({
+        id: mediaAssets.id,
+        shortId: mediaAssets.shortId,
+        role: questionMedia.role,
+        orderIndex: questionMedia.orderIndex,
+        altText: mediaAssets.altText,
+        caption: mediaAssets.caption,
+        width: mediaAssets.width,
+        height: mediaAssets.height,
+        mimeType: mediaAssets.mimeType,
+      })
+      .from(questionMedia)
+      .innerJoin(mediaAssets, eq(questionMedia.mediaId, mediaAssets.id))
+      .where(eq(questionMedia.questionId, id))
+      .orderBy(asc(questionMedia.orderIndex), asc(mediaAssets.shortId)),
+
+    withAnswerKey
+      ? db
+          .select({
+            id: solutions.id,
+            solutionType: solutions.solutionType,
+            title: solutions.title,
+            contentMarkdown: solutions.contentMarkdown,
+            isPrimary: solutions.isPrimary,
+            authorType: solutions.authorType,
+            createdAt: solutions.createdAt,
+          })
+          .from(solutions)
+          .where(eq(solutions.questionId, id))
+          .orderBy(desc(solutions.isPrimary), asc(solutions.createdAt))
+      : Promise.resolve([]),
+  ]);
 
   // Taksonomi: id topik terpilih (untuk pemilih topik di editor) + detail
   // topik (nama/slug/level) untuk tag topik di halaman detail (ACT-09).
-  const topicRows = await db
-    .select({
-      id: topics.id,
-      name: topics.name,
-      level: topics.level,
-      isPrimary: questionTopics.isPrimary,
-    })
-    .from(questionTopics)
-    .innerJoin(topics, eq(questionTopics.topicId, topics.id))
-    .where(eq(questionTopics.questionId, id))
-    .orderBy(asc(topics.level), asc(topics.name));
   const topicIds = topicRows.map((t) => t.id);
   const topicViews: QuestionTopicView[] = topicRows.map((t) => ({
     id: t.id,
@@ -192,22 +231,6 @@ export async function getQuestion(
   }));
 
   // Media tertaut (ACT-08). Urut peran lalu order_index agar galeri stabil.
-  const mediaRows = await db
-    .select({
-      id: mediaAssets.id,
-      shortId: mediaAssets.shortId,
-      role: questionMedia.role,
-      orderIndex: questionMedia.orderIndex,
-      altText: mediaAssets.altText,
-      caption: mediaAssets.caption,
-      width: mediaAssets.width,
-      height: mediaAssets.height,
-      mimeType: mediaAssets.mimeType,
-    })
-    .from(questionMedia)
-    .innerJoin(mediaAssets, eq(questionMedia.mediaId, mediaAssets.id))
-    .where(eq(questionMedia.questionId, id))
-    .orderBy(asc(questionMedia.orderIndex), asc(mediaAssets.shortId));
   const mediaViews: QuestionMediaView[] = mediaRows.map((m) => ({
     id: m.id,
     shortId: m.shortId,
@@ -220,38 +243,25 @@ export async function getQuestion(
     mimeType: m.mimeType,
   }));
 
+  // MAT-146 — `answer_key` diproyeksikan sekali: bentuk kanonik + alias legacy
+  // (`explanation`), sehingga fallback solusi virtual & properti kembalian selaras.
+  const projectedAnswerKey = withAnswerKey
+    ? (projectAnswerKey("answerKey" in row ? row.answerKey : undefined) as AnswerKey)
+    : undefined;
+
   // Ambil daftar solusi bila viewer berwenang melihat kunci/pembahasan
   let solutionList: QuestionSolutionView[] = [];
   if (withAnswerKey) {
-    const rawSolutions = await db
-      .select({
-        id: solutions.id,
-        solutionType: solutions.solutionType,
-        title: solutions.title,
-        contentMarkdown: solutions.contentMarkdown,
-        isPrimary: solutions.isPrimary,
-        authorType: solutions.authorType,
-        createdAt: solutions.createdAt,
-      })
-      .from(solutions)
-      .where(eq(solutions.questionId, id))
-      .orderBy(desc(solutions.isPrimary), asc(solutions.createdAt));
-
     solutionList = rawSolutions as QuestionSolutionView[];
-    // MAT-146 — `answer_key` diproyeksikan: bentuk kanonik + alias legacy
-    // (`explanation`), sehingga fallback solusi virtual tetap bekerja.
-    const answerKey = withAnswerKey
-      ? (projectAnswerKey("answerKey" in row ? row.answerKey : undefined) as AnswerKey)
-      : undefined;
 
     // Fallback: Jika tabel solutions kosong tapi answerKey.explanation ada, buat solusi virtual
-    if (solutionList.length === 0 && answerKey?.explanation) {
+    if (solutionList.length === 0 && projectedAnswerKey?.explanation) {
       solutionList = [
         {
           id: `virtual-${row.id}`,
           solutionType: "conceptual",
           title: "Pembahasan Utuh",
-          contentMarkdown: answerKey.explanation,
+          contentMarkdown: projectedAnswerKey.explanation,
           isPrimary: true,
           authorType: "teacher",
           createdAt: row.createdAt,
@@ -264,9 +274,7 @@ export async function getQuestion(
     ...row,
     dataPayload: projectDataPayload(row.dataPayload, { withAnswerKey }),
     // Kunci jawaban: bentuk kanonik + alias legacy (S3 — hanya bila berwenang).
-    ...(withAnswerKey
-      ? { answerKey: projectAnswerKey("answerKey" in row ? row.answerKey : undefined) as AnswerKey }
-      : {}),
+    ...(projectedAnswerKey ? { answerKey: projectedAnswerKey } : {}),
     options,
     bundles: originBundles,
     solutions: solutionList,
