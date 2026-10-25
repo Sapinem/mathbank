@@ -156,6 +156,9 @@ function TokenView({ token }: { token: Token }) {
   if (token.kind === "img") {
     return <MediaImage shortId={token.shortId} />;
   }
+  if (token.kind === "unavailableImage") {
+    return <UnavailableImage alt={token.alt} />;
+  }
   if (token.kind === "table") {
     return <MarkdownTable token={token} />;
   }
@@ -235,6 +238,34 @@ function CellContent({ value }: { value: string }) {
         <TokenView key={i} token={t} />
       ))}
     </>
+  );
+}
+
+/**
+ * Placeholder untuk markdown gambar `corpus://` yang lolos dari ingest.
+ *
+ * Token `unavailableImage` TIDAK membawa URL sama sekali (hanya alt), jadi
+ * komponen ini secara konstruksi tidak bisa menampilkan `corpus://` atau
+ * menebak URL gambar. Alt ditampilkan sebagai teks biasa (bukan dirender
+ * sebagai KaTeX): alt tanpa delimiter rumus bukan token rumus, dan
+ * menebaknya sebagai rumus akan mengarang makna — mis. alt `\frac{3}{20}`
+ * tetap tampil sebagai teks alt itu, bukan pecahan yang dirender. Alt
+ * generik dari ingest (`""` atau `"Gambar"`, default `extractImages` bila
+ * tag `<img>` tanpa alt) tidak memberi info apa pun, jadi hanya tampil
+ * keterangan generik. Gaya mengikuti fallback `MediaImage` (kotak muted)
+ * agar pengguna paham ada gambar yang hilang, bukan ruang kosong.
+ */
+function UnavailableImage({ alt }: { alt: string }) {
+  const text = alt.trim();
+  const generic = text === "" || text.toLowerCase() === "gambar";
+  return (
+    <span
+      role="img"
+      aria-label={generic ? "Gambar tidak tersedia" : `Gambar tidak tersedia: ${text}`}
+      className="my-2 inline-block rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+    >
+      {generic ? "[gambar tidak tersedia]" : `[gambar tidak tersedia: ${text}]`}
+    </span>
   );
 }
 
