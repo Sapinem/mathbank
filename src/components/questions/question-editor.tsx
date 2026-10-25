@@ -19,6 +19,7 @@ import {
 } from "@/components/questions/type-specific-fields";
 import {
   isOptionBased,
+  OPTION_BASED_TYPES,
   type CreateQuestionInput,
 } from "@/lib/contracts/question";
 import type { PublicQuestion } from "@/lib/services/question-service";
@@ -33,17 +34,6 @@ import { QuestionEditorOptions } from "./editor/question-editor-options";
 import { QuestionEditorRubrics } from "./editor/question-editor-rubrics";
 import { QuestionEditorSolutions } from "./editor/question-editor-solutions";
 import { QuestionEditorMetadata } from "./editor/question-editor-metadata";
-
-const OPTION_TYPES = [
-  "single_choice",
-  "assertion_reason",
-  "combination_1234",
-  "quantitative_pq",
-  "data_sufficiency",
-  "multiple_choice_checkbox",
-  "matrix_grid",
-  "matching",
-] as const;
 
 const TEXT_TYPES = ["short_answer", "essay"] as const;
 
@@ -609,7 +599,7 @@ export function QuestionEditor({
             parentId={parentId}
             setParentId={setParentId}
             stimulusParents={stimulusParents}
-            optionTypes={OPTION_TYPES}
+            optionTypes={OPTION_BASED_TYPES}
             textTypes={TEXT_TYPES}
           />
 
