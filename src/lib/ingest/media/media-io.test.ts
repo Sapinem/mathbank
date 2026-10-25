@@ -13,7 +13,16 @@ vi.mock("node:dns/promises", () => {
   return { lookup, default: { lookup } };
 });
 
-import { fetchImage, fetchMedia, validateMediaUrl, type DnsResolver } from "./fetch";
+import {
+  fetchImage,
+  fetchMedia,
+  validateMediaUrl,
+  requestPinned,
+  resolvePinnedTarget,
+  type DnsResolver,
+  type FetchTransport,
+  type PinnedTarget,
+} from "./fetch";
 import { storeImage, relativePath } from "./store";
 import { ingestArticleMedia, collectUrls, type MediaCache } from "./ingest-media";
 
@@ -35,12 +44,26 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("fetchImage (mock fetch)", () => {
+describe("fetchImage (transport ter-pin, bukan mock fetch global)", () => {
+  // Setelah Fase 2, fetchImage TIDAK LAGI memakai global fetch (fetch akan
+  // me-resolve ulang hostname = TOCTOU). Tes hermetik memakai transport
+  // suntikan yang menerima PinnedTarget — persis seperti dnsResolver yang
+  // sudah disuntikkan sejak awal di file ini.
+  function pngTransport(): FetchTransport {
+    return async () => ({
+      status: 200,
+      contentType: "image/png",
+      body: PNG,
+      location: null,
+    });
+  }
+
   it("berhasil → bytes, mime, hash", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(PNG, {
-      status: 200, headers: { "content-type": "image/png" },
-    })));
-    const r = await fetchImage("https://a.com/x.png", { retries: 0, dnsResolver: dns() });
+    const r = await fetchImage("https://a.com/x.png", {
+      retries: 0,
+      dnsResolver: dns(),
+      transport: pngTransport(),
+    });
     expect(r.ok).toBe(true);
     expect(r.contentType).toBe("image/png");
     expect(r.contentHash).toHaveLength(64);
@@ -62,7 +85,7 @@ describe("fetchImage (mock fetch)", () => {
       "file:///etc/passwd",
     ];
     for (const target of targets) {
-      const r = await fetchImage(target, { retries: 0, dnsResolver: dns() });
+      const r = await fetchImage(target, { retries: 0, dnsResolver: dns(), transport: pngTransport() });
       expect(r.ok).toBe(false);
       expect(r.error).toMatch(/diblokir|terblokir|tidak diizinkan|URL tidak valid/i);
     }
@@ -75,82 +98,98 @@ describe("fetchImage (mock fetch)", () => {
   });
 
   it("fetchMedia alias untuk fetchImage bekerja identik (Pilar 2)", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(PNG, {
-      status: 200, headers: { "content-type": "image/png" },
-    })));
-    const r = await fetchMedia("https://a.com/x.png", { retries: 0, dnsResolver: dns() });
+    const r = await fetchMedia("https://a.com/x.png", {
+      retries: 0,
+      dnsResolver: dns(),
+      transport: pngTransport(),
+    });
     expect(r.ok).toBe(true);
     expect(r.contentType).toBe("image/png");
   });
 
   it("SEC-01: DNS rebinding — domain publik yang resolve ke 127.0.0.1 DIBLOKIR", async () => {
-    const spy = vi.fn(async () => new Response(PNG, {
-      status: 200, headers: { "content-type": "image/png" },
-    }));
-    vi.stubGlobal("fetch", spy);
-    // `evil.example` tampak publik, tapi DNS-nya menunjuk loopback.
+    let transportCalls = 0;
+    const transport: FetchTransport = async () => {
+      transportCalls++;
+      return { status: 200, contentType: "image/png", body: PNG, location: null };
+    };
     const r = await fetchImage("https://evil.example/x.png", {
       retries: 0,
       dnsResolver: dns(["127.0.0.1"]),
+      transport,
     });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/diblokir|anti-SSRF/i);
-    expect(spy).not.toHaveBeenCalled(); // tak pernah menyentuh jaringan
+    expect(transportCalls).toBe(0); // tak pernah menyentuh jaringan
   });
 
   it("SEC-01: metadata AWS via DNS (169.254.169.254) DIBLOKIR sebelum koneksi", async () => {
-    const spy = vi.fn(async () => new Response(PNG, {
-      status: 200, headers: { "content-type": "image/png" },
-    }));
-    vi.stubGlobal("fetch", spy);
+    let transportCalls = 0;
+    const transport: FetchTransport = async () => {
+      transportCalls++;
+      return { status: 200, contentType: "image/png", body: PNG, location: null };
+    };
     const r = await fetchImage("https://metadata.example/latest/meta-data", {
       retries: 0,
       dnsResolver: dns(["169.254.169.254"]),
+      transport,
     });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/anti-SSRF/i);
-    expect(spy).not.toHaveBeenCalled();
+    expect(transportCalls).toBe(0);
   });
 
   it("SEC-01: redirect (manual) ke host privat DIBLOKIR", async () => {
-    // Hop 1: 302 → http://127.0.0.1/secret. Hop privat harus ditolak.
-    const spy = vi.fn(async () =>
-      new Response(null, { status: 302, headers: { location: "http://127.0.0.1/secret.png" } }),
-    );
-    vi.stubGlobal("fetch", spy);
-    const r = await fetchImage("https://a.com/redir.png", { retries: 0, dnsResolver: dns() });
+    let n = 0;
+    const transport: FetchTransport = async () => {
+      n++;
+      return {
+        status: 302,
+        contentType: "",
+        body: new Uint8Array(0),
+        location: "http://127.0.0.1/secret.png",
+      };
+    };
+    const r = await fetchImage("https://a.com/redir.png", { retries: 0, dnsResolver: dns(), transport });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/diblokir|anti-SSRF|redirect/i);
+    expect(n).toBe(1); // hop privat tidak pernah dieksekusi
   });
 
   it("SEC-01: redirect manual diikuti untuk host publik (tiap hop divalidasi)", async () => {
     let n = 0;
-    vi.stubGlobal("fetch", vi.fn(async () => {
+    const transport: FetchTransport = async () => {
       n++;
       if (n === 1) {
-        return new Response(null, { status: 301, headers: { location: "/final.png" } });
+        return { status: 301, contentType: "", body: new Uint8Array(0), location: "/final.png" };
       }
-      return new Response(PNG, { status: 200, headers: { "content-type": "image/png" } });
-    }));
-    const r = await fetchImage("https://a.com/start.png", { retries: 0, dnsResolver: dns() });
+      return { status: 200, contentType: "image/png", body: PNG, location: null };
+    };
+    const r = await fetchImage("https://a.com/start.png", { retries: 0, dnsResolver: dns(), transport });
     expect(r.ok).toBe(true);
     expect(n).toBe(2);
   });
 
   it("404 → gagal, tanpa retry", async () => {
-    const spy = vi.fn(async () => new Response("no", { status: 404 }));
-    vi.stubGlobal("fetch", spy);
-    const r = await fetchImage("https://a.com/x.png", { retries: 2, dnsResolver: dns() });
+    let n = 0;
+    const transport: FetchTransport = async () => {
+      n++;
+      return { status: 404, contentType: "text/plain", body: new TextEncoder().encode("no"), location: null };
+    };
+    const r = await fetchImage("https://a.com/x.png", { retries: 2, dnsResolver: dns(), transport });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("404");
-    expect(spy).toHaveBeenCalledTimes(1); // 4xx tak di-retry
+    expect(n).toBe(1); // 4xx tak di-retry
   });
 
   it("bukan gambar (mime salah) → gagal", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("<!DOCTYPE html>x", {
-      status: 200, headers: { "content-type": "text/html" },
-    })));
-    const r = await fetchImage("https://a.com/x", { retries: 0, dnsResolver: dns() });
+    const transport: FetchTransport = async () => ({
+      status: 200,
+      contentType: "text/html",
+      body: new TextEncoder().encode("<!DOCTYPE html>x"),
+      location: null,
+    });
+    const r = await fetchImage("https://a.com/x", { retries: 0, dnsResolver: dns(), transport });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("bukan gambar");
   });
@@ -158,24 +197,144 @@ describe("fetchImage (mock fetch)", () => {
   it("terlalu besar → gagal", async () => {
     const big = new Uint8Array(200);
     big.set(PNG);
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(big, {
-      status: 200, headers: { "content-type": "image/png" },
-    })));
-    const r = await fetchImage("https://a.com/x", { retries: 0, maxBytes: 50, dnsResolver: dns() });
+    const transport: FetchTransport = async () => ({
+      status: 200,
+      contentType: "image/png",
+      body: big,
+      location: null,
+    });
+    const r = await fetchImage("https://a.com/x", { retries: 0, maxBytes: 50, dnsResolver: dns(), transport });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("besar");
   });
 
   it("retry lalu berhasil", async () => {
     let n = 0;
-    vi.stubGlobal("fetch", vi.fn(async () => {
+    const transport: FetchTransport = async () => {
       n++;
       if (n === 1) throw new Error("jaringan");
-      return new Response(PNG, { status: 200, headers: { "content-type": "image/png" } });
-    }));
-    const r = await fetchImage("https://a.com/x", { retries: 2, dnsResolver: dns() });
+      return { status: 200, contentType: "image/png", body: PNG, location: null };
+    };
+    const r = await fetchImage("https://a.com/x", { retries: 2, dnsResolver: dns(), transport });
     expect(r.ok).toBe(true);
     expect(n).toBe(2);
+  });
+});
+
+describe("fetchImage — pinning IP (Fase 2, TOCTOU)", () => {
+  it("resolver yang menjawab publik lalu privat: koneksi tetap ke IP publik tervalidasi, resolver hanya dipanggil sekali", async () => {
+    let calls = 0;
+    const resolver: DnsResolver = async () => {
+      calls++;
+      // Jawaban kedua adalah rebinding klasik: bila kode masih me-resolve
+      // ulang di transport, koneksi akan mengarah ke metadata cloud.
+      return calls === 1 ? [PUBLIC_IP] : ["169.254.169.254"];
+    };
+    let seen: PinnedTarget | undefined;
+    const transport: FetchTransport = async (target) => {
+      seen = target;
+      return { status: 200, contentType: "image/png", body: PNG, location: null };
+    };
+    const r = await fetchImage("https://evil.example/x.png", {
+      retries: 0,
+      dnsResolver: resolver,
+      transport,
+    });
+    expect(r.ok).toBe(true);
+    expect(seen?.ip).toBe(PUBLIC_IP);
+    expect(seen?.hostname).toBe("evil.example");
+    expect(calls).toBe(1); // tidak ada resolve kedua di transport
+  });
+
+  it("resolvePinnedTarget mengembalikan IP pertama yang tervalidasi, bukan hostname", async () => {
+    const target = await resolvePinnedTarget("https://a.com/x.png", [], dns());
+    expect(target.ip).toBe(PUBLIC_IP);
+    expect(target.hostname).toBe("a.com");
+    expect(target.tlsRelaxed).toBe(false);
+  });
+
+  it("requestPinned memakai lookup ter-pin ke server lokal (socket nyata)", async () => {
+    const { createServer } = await import("node:http");
+    const server = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "image/png" });
+      res.end(Buffer.from(PNG));
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    const addr = server.address();
+    const port = typeof addr === "object" && addr ? addr.port : 0;
+    try {
+      // Transport layer saja (tanpa gerbang SSRF): hostname a.com di-pin
+      // ke 127.0.0.1, dan server lokal benar-benar menerima request itu.
+      const target: PinnedTarget = {
+        url: new URL(`http://a.com:${port}/x.png`),
+        hostname: "a.com",
+        ip: "127.0.0.1",
+        family: 4,
+        tlsRelaxed: false,
+      };
+      const r = await requestPinned(target, 5000, 10 * 1024 * 1024, "test");
+      expect(r.status).toBe(200);
+      expect(r.contentType).toBe("image/png");
+      expect(Buffer.from(r.body).equals(Buffer.from(PNG))).toBe(true);
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+    }
+  });
+});
+
+describe("fetchImage — TLS relaxed HANYA melonggarkan TLS, bukan SSRF (Fase 2)", () => {
+  it("host relaxed yang DNS-nya menunjuk privat DIBLOKIR (dulu lolos via early-return)", async () => {
+    let transportCalls = 0;
+    const transport: FetchTransport = async () => {
+      transportCalls++;
+      return { status: 200, contentType: "image/png", body: PNG, location: null };
+    };
+    const r = await fetchImage("https://pusmendik.kemendikdasmen.go.id/x.png", {
+      retries: 0,
+      dnsResolver: dns(["169.254.169.254"]),
+      transport,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/diblokir|anti-SSRF/i);
+    expect(transportCalls).toBe(0);
+  });
+
+  it("host relaxed yang DNS-nya publik tetap berhasil (relaksasi hanya TLS)", async () => {
+    const r = await fetchImage("https://pusmendik.kemendikdasmen.go.id/x.png", {
+      retries: 0,
+      dnsResolver: dns(),
+      transport: async () => ({ status: 200, contentType: "image/png", body: PNG, location: null }),
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("host relaxed yang redirect ke host privat tetap DIBLOKIR", async () => {
+    let n = 0;
+    const transport: FetchTransport = async () => {
+      n++;
+      if (n === 1) {
+        return { status: 302, contentType: "", body: new Uint8Array(0), location: "http://169.254.169.254/latest/meta-data" };
+      }
+      return { status: 200, contentType: "image/png", body: PNG, location: null };
+    };
+    const r = await fetchImage("https://pusmendik.kemendikdasmen.go.id/evil", {
+      retries: 0,
+      dnsResolver: dns(),
+      transport,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/diblokir|anti-SSRF/i);
+    expect(n).toBe(1);
+  });
+
+  it("resolvePinnedTarget menandai host relaxed tanpa melewati validasi", async () => {
+    const target = await resolvePinnedTarget(
+      "https://pusmendik.kemendikdasmen.go.id/x.png",
+      ["pusmendik.kemendikdasmen.go.id"],
+      dns(),
+    );
+    expect(target.tlsRelaxed).toBe(true);
+    expect(target.ip).toBe(PUBLIC_IP);
   });
 });
 
@@ -203,21 +362,27 @@ describe("storeImage (dir tmp nyata)", () => {
   });
 });
 
-describe("ingestArticleMedia (orkestrasi, mock fetch)", () => {
-  it("unduh → simpan → cache; yang gagal ditandai", async () => {
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (String(url).includes("ok")) {
-        return new Response(PNG, { status: 200, headers: { "content-type": "image/png" } });
+describe("ingestArticleMedia (orkestrasi, transport suntikan)", () => {
+  function transportFor(okUrls: string[]): FetchTransport {
+    return async (target) => {
+      const url = target.url.toString();
+      if (okUrls.some((u) => url.includes(u))) {
+        return { status: 200, contentType: "image/png", body: PNG, location: null };
       }
-      return new Response("no", { status: 404 });
-    }));
+      return { status: 404, contentType: "text/plain", body: new TextEncoder().encode("no"), location: null };
+    };
+  }
+
+  it("unduh → simpan → cache; yang gagal ditandai", async () => {
     const dir = await mkdtemp(join(tmpdir(), "mb-ing-"));
     try {
-      // Tanpa `register` = uji murni unduh+simpan (tanpa DB); pendaftaran
-      // short_id diuji terpisah lewat callback yang disuntikkan.
       const cache = await ingestArticleMedia(
         [{ text: "![a](https://a.com/ok.png) ![b](https://a.com/bad.png)", role: "content" }],
-        { rootDir: dir, articleUrl: "https://a.com/a/" },
+        {
+          rootDir: dir,
+          articleUrl: "https://a.com/a/",
+          fetchOptions: { dnsResolver: dns(), transport: transportFor(["ok.png"]) },
+        },
       );
       expect(cache.get("https://a.com/ok.png")?.ok).toBe(true);
       expect(cache.get("https://a.com/ok.png")?.contentHash).toBeTruthy();
@@ -228,15 +393,26 @@ describe("ingestArticleMedia (orkestrasi, mock fetch)", () => {
   });
 
   it("cache dipakai ulang (tak unduh dua kali)", async () => {
-    const spy = vi.fn(async () => new Response(PNG, { status: 200, headers: { "content-type": "image/png" } }));
-    vi.stubGlobal("fetch", spy);
+    let n = 0;
+    const transport: FetchTransport = async () => {
+      n++;
+      return { status: 200, contentType: "image/png", body: PNG, location: null };
+    };
     const dir = await mkdtemp(join(tmpdir(), "mb-ing2-"));
     try {
       const cache: MediaCache = new Map();
       const t = [{ text: "![a](https://a.com/same.png)", role: "content" as const }];
-      await ingestArticleMedia(t, { rootDir: dir, cache });
-      await ingestArticleMedia(t, { rootDir: dir, cache });
-      expect(spy).toHaveBeenCalledTimes(1);
+      await ingestArticleMedia(t, {
+        rootDir: dir,
+        cache,
+        fetchOptions: { dnsResolver: dns(), transport },
+      });
+      await ingestArticleMedia(t, {
+        rootDir: dir,
+        cache,
+        fetchOptions: { dnsResolver: dns(), transport },
+      });
+      expect(n).toBe(1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -248,83 +424,3 @@ describe("ingestArticleMedia (orkestrasi, mock fetch)", () => {
   });
 });
 
-describe("fetchImage — jalur TLS dilonggarkan (server lokal)", () => {
-  // Host yang di-pin relaxed = 127.0.0.1 → memakai modul https/http Node,
-  // bukan fetch global. Diuji dengan server HTTP lokal nyata.
-  async function withServer(
-    handler: (res: import("node:http").ServerResponse) => void,
-    fn: (port: number) => Promise<void>,
-  ) {
-    const { createServer } = await import("node:http");
-    const server = createServer((_req, res) => handler(res));
-    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
-    const addr = server.address();
-    const port = typeof addr === "object" && addr ? addr.port : 0;
-    try {
-      await fn(port);
-    } finally {
-      await new Promise<void>((r) => server.close(() => r()));
-    }
-  }
-
-  it("berhasil lewat modul http + host relaxed", async () => {
-    await withServer(
-      (res) => {
-        res.writeHead(200, { "content-type": "image/png" });
-        res.end(Buffer.from(PNG));
-      },
-      async (port) => {
-        const r = await fetchImage(`http://127.0.0.1:${port}/x.png`, {
-          retries: 0,
-          tlsRelaxedHosts: ["127.0.0.1"],
-        });
-        expect(r.ok).toBe(true);
-        expect(r.contentType).toBe("image/png");
-      },
-    );
-  });
-
-  it("mengikuti redirect lalu gagal 404 (tanpa retry)", async () => {
-    await withServer(
-      (res) => {
-        if (res.req.url === "/redirect") {
-          res.writeHead(302, { location: "/missing" });
-          res.end();
-        } else {
-          res.writeHead(404);
-          res.end("no");
-        }
-      },
-      async (port) => {
-        const r = await fetchImage(`http://127.0.0.1:${port}/redirect`, {
-          retries: 2,
-          tlsRelaxedHosts: ["127.0.0.1"],
-        });
-        expect(r.ok).toBe(false);
-        expect(r.error).toContain("404");
-      },
-    );
-  });
-
-  it("SEC-01: host relaxed yang redirect ke host privat tetap DIBLOKIR", async () => {
-    await withServer(
-      (res) => {
-        if (res.req.url === "/evil") {
-          res.writeHead(302, { location: "http://169.254.169.254/latest/meta-data" });
-          res.end();
-        } else {
-          res.writeHead(200, { "content-type": "image/png" });
-          res.end(Buffer.from(PNG));
-        }
-      },
-      async (port) => {
-        const r = await fetchImage(`http://127.0.0.1:${port}/evil`, {
-          retries: 0,
-          tlsRelaxedHosts: ["127.0.0.1"],
-        });
-        expect(r.ok).toBe(false);
-        expect(r.error).toMatch(/diblokir|anti-SSRF/i);
-      },
-    );
-  });
-});

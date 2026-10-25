@@ -5,9 +5,11 @@
  *  - `scripts/seed-users.ts` (membuat akun + peran di DB)
  *  - `/api/dev/quick-login` (menandatangani session untuk akun demo)
  *
- * ⚠️ PAGAR: route quick-login hanya hidup bila `DEMO_LOGIN=enabled` DAN
- * (NODE_ENV≠production ATAU demo disengaja). JANGAN set `DEMO_LOGIN=enabled`
- * di produksi sungguhan — kredensial demo ini publik (lihat `DEMO_PASSWORD`).
+ * ⚠️ PAGAR (Fase 2, lihat `demo-login.ts` untuk matriks lengkap):
+ * di lingkungan production-like, quick-login hanya hidup bila BOTH
+ * `DEMO_LOGIN=enabled` DAN `DEMO_LOGIN_PUBLIC=true` (server demo publik
+ * saja). JANGAN set `DEMO_LOGIN_PUBLIC=true` di produksi sungguhan —
+ * kredensial demo ini publik (lihat `DEMO_PASSWORD`).
  * Lihat `docs/EVALUASI-MENYELURUH.md` (temuan S3).
  */
 import type { Role } from "./roles";

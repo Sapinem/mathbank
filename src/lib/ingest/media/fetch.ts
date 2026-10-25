@@ -6,9 +6,13 @@
  *   - **batas ukuran** (tolak berkas terlalu besar).
  *   - **mime whitelist** (hanya gambar).
  *   - **1 permintaan** per gambar + retry terbatas.
- *   - **anti-SSRF (SEC-01)**: resolusi DNS pra-koneksi + redirect `manual` yang
- *     divalidasi ULANG tiap hop, sehingga loopback/RFC1918/link-local
- *     (`169.254.169.254`) tetap diblokir walau lewat DNS rebinding atau 30x.
+ *   - **anti-SSRF (SEC-01)**: resolusi DNS pra-koneksi + **pinning IP** +
+ *     redirect yang divalidasi ULANG tiap hop, sehingga loopback/RFC1918/
+ *     link-local (`169.254.169.254`) tetap diblokir walau lewat DNS rebinding.
+ *     Koneksi TIDAK PERNAH me-resolve ulang hostname: socket dibuka lewat
+ *     lookup kustom yang hanya mengembalikan IP tervalidasi (lihat
+ *     `resolvePinnedTarget` / `requestPinned`). Host di `TLS_RELAXED_HOSTS`
+ *     HANYA dilonggarkan verifikasi TLS-nya — validasi SSRF tetap penuh.
  *
  * Protokol tambahan:
  *   - **corpus://**: berkas gambar lokal dari korpus ingest (tidak menyentuh
@@ -16,9 +20,10 @@
  *     dibaca dari `CORPUS_IMAGE_BASE/<slug>/<filename>`.
  */
 import { createHash } from "node:crypto";
-import { request as httpsRequest } from "node:https";
-import { request as httpRequest } from "node:http";
+import { request as httpsRequest, Agent as HttpsAgent } from "node:https";
+import { request as httpRequest, Agent as HttpAgent } from "node:http";
 import { lookup as dnsLookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { readFile } from "node:fs/promises";
 import { join, extname, resolve, sep } from "node:path";
 
@@ -63,6 +68,51 @@ const defaultDnsResolver: DnsResolver = async (hostname) => {
   return addrs.map((a) => a.address);
 };
 
+/**
+ * Target koneksi yang sudah ter-pin (Fase 2).
+ *
+ * `ip` adalah SATU-SATUNYA alamat yang boleh dipakai socket. Transport
+ * (`requestPinned`) tidak boleh me-resolve `hostname` lagi — ia memakai
+ * lookup kustom yang mengembalikan `ip` ini. Dengan begitu jawaban DNS
+ * kedua (rebinding, TTL 0) tidak pernah sampai ke koneksi.
+ *
+ * `tlsRelaxed` HANYA berarti "verifikasi TLS dilonggarkan" untuk host ini.
+ * Ia TIDAK berarti "validasi SSRF dilewati" — target relaxed tetap lewat
+ * `resolvePinnedTarget` penuh (literal, DNS, redirect per-hop).
+ */
+export interface PinnedTarget {
+  /** URL asli (hostname asli, bukan IP). */
+  url: URL;
+  /** Hostname asli — dipakai untuk Host header, SNI, dan verifikasi TLS. */
+  hostname: string;
+  /** IP tervalidasi yang harus dipakai koneksi. */
+  ip: string;
+  family: 4 | 6;
+  /** Host ini ada di `TLS_RELAXED_HOSTS`. */
+  tlsRelaxed: boolean;
+}
+
+/** Respons mentah satu hop (termasuk lokasi redirect bila ada). */
+export interface RawResponse {
+  status: number;
+  contentType: string;
+  body: Uint8Array;
+  location: string | null;
+}
+
+/**
+ * Transport satu hop untuk `PinnedTarget`.
+ *
+ * Jalur tes saja: produksi tidak pernah mengisi opsi ini (lihat
+ * `FetchOptions.transport`). Transport tes menerima target yang sudah
+ * ter-pin, sehingga tes TOCTOU bisa membuktikan bahwa transport hanya
+ * melihat IP tervalidasi, bukan hostname yang di-resolve ulang.
+ */
+export type FetchTransport = (
+  target: PinnedTarget,
+  opts: { timeoutMs: number; maxBytes: number; userAgent: string },
+) => Promise<RawResponse>;
+
 /** Hasil unduhan. */
 export interface FetchResult {
   ok: boolean;
@@ -83,6 +133,11 @@ export interface FetchOptions {
   tlsRelaxedHosts?: string[];
   /** Resolver DNS pra-koneksi (default: `dns.lookup`). Disuntik di tes. */
   dnsResolver?: DnsResolver;
+  /**
+   * Transport satu hop (jalur tes saja — lihat `FetchTransport`).
+   * Produksi tidak mengisi ini; transport bawaan adalah `requestPinned`.
+   */
+  transport?: FetchTransport;
 }
 
 const DEFAULT_UA = "MathBank-Ingest/0.1 (+https://b.iyo.my.id)";
@@ -174,19 +229,33 @@ export function isPrivateOrBlockedHost(hostname: string): boolean {
 export const isBlockedIp = isPrivateOrBlockedHost;
 
 /**
- * Gerbang anti-SSRF (SEC-01): tolak bila protokol bukan http(s), host LITERAL
- * privat, atau **hasil resolusi DNS**-nya menunjuk IP privat/loopback/metadata.
+ * Gerbang anti-SSRF (SEC-01) + pinning IP (Fase 2).
  *
- * KENAPA resolusi pra-koneksi: `isPrivateOrBlockedHost(hostname)` saja bisa
- * dilewati domain yang DNS-nya menunjuk `127.0.0.1` (DNS rebinding). Karena itu
- * kita me-resolve dulu, lalu memvalidasi SETIAP alamat. Host yang di-pin
- * (sertifikat rusak) sengaja dilewati — daftarnya tertutup & diaudit.
+ * Tolak bila protokol bukan http(s), host LITERAL privat, atau **hasil
+ * resolusi DNS**-nya menunjuk IP privat/loopback/metadata. Bila lolos,
+ * kembalikan `PinnedTarget` dengan IP pertama yang tervalidasi — transport
+ * HARUS memakai IP itu, bukan me-resolve hostname lagi.
+ *
+ * KENAPA pinning, bukan sekadar validasi pra-koneksi: validasi saja masih
+ * membiarkan TOCTOU — `fetch()` me-resolve ulang hostname dan jawaban
+ * kedua (TTL 0 / bergantian) bisa privat. Pinning menutup jendela itu:
+ * resolver hanya dipanggil di sini, sekali per hop, dan socket dibuka
+ * lewat lookup kustom yang mengembalikan IP ini saja.
+ *
+ * Host di `TLS_RELAXED_HOSTS` TIDAK lagi dilewati di sini. Dulu
+ * `isTlsRelaxed()` menyebabkan early-return yang menghapus SEMUA cek SSRF
+ * untuk host itu. Sekarang relaxed hanya memengaruhi `tlsRelaxed` di
+ * target — yaitu verifikasi TLS di `requestPinned` — bukan validasi target.
+ *
+ * Host literal IP publik tidak di-resolve ulang: IP itu sendiri yang di-pin
+ * (resolver nyata untuk IP literal mengembalikan IP yang sama; melewatkan
+ * resolver menghindari jawaban mock/berbeda yang tidak masuk akal).
  */
-async function assertPublicTarget(
+export async function resolvePinnedTarget(
   rawUrl: string,
   relaxedHosts: string[],
   resolve: DnsResolver,
-): Promise<void> {
+): Promise<PinnedTarget> {
   let u: URL;
   try {
     u = new URL(rawUrl);
@@ -196,14 +265,21 @@ async function assertPublicTarget(
   if (u.protocol !== "http:" && u.protocol !== "https:") {
     throw new Error("Protokol tidak diizinkan (hanya http/https)");
   }
-  if (isTlsRelaxed(rawUrl, relaxedHosts)) return; // host di-pin (misal pusmendik atau test mock server)
   if (isPrivateOrBlockedHost(u.hostname)) {
     throw new Error("Akses ke jaringan lokal/privat diblokir / terblokir (anti-SSRF)");
   }
+  const tlsRelaxed = isTlsRelaxed(rawUrl, relaxedHosts);
   let ips: string[];
-  try {
-    ips = await resolve(u.hostname);
-  } catch {
+  if (isIP(u.hostname) !== 0) {
+    ips = [u.hostname];
+  } else {
+    try {
+      ips = await resolve(u.hostname);
+    } catch {
+      throw new Error(`Gagal resolusi DNS: ${u.hostname}`);
+    }
+  }
+  if (ips.length === 0) {
     throw new Error(`Gagal resolusi DNS: ${u.hostname}`);
   }
   for (const ip of ips) {
@@ -211,6 +287,21 @@ async function assertPublicTarget(
       throw new Error(`DNS ${u.hostname} → ${ip} diblokir / terblokir (anti-SSRF)`);
     }
   }
+  const ip = ips[0]!;
+  const family = isIP(ip);
+  if (family !== 4 && family !== 6) {
+    throw new Error(`DNS ${u.hostname} → ${ip} bukan alamat IP valid`);
+  }
+  return { url: u, hostname: u.hostname, ip, family, tlsRelaxed };
+}
+
+/** Gerbang lama (kompatibilitas internal): validasi saja, buang target. */
+async function assertPublicTarget(
+  rawUrl: string,
+  relaxedHosts: string[],
+  resolve: DnsResolver,
+): Promise<void> {
+  await resolvePinnedTarget(rawUrl, relaxedHosts, resolve);
 }
 
 /** Validasi URL sebelum fetch (anti-SSRF): hanya http/https, resolve DNS, tolak IP terblokir/privat. */
@@ -221,14 +312,6 @@ export async function validateMediaUrl(
   const relaxed = opts?.tlsRelaxedHosts ?? TLS_RELAXED_HOSTS;
   const resolver = opts?.dnsResolver ?? defaultDnsResolver;
   await assertPublicTarget(urlStr, relaxed, resolver);
-}
-
-/** Respons mentah satu hop (termasuk lokasi redirect bila ada). */
-interface RawResponse {
-  status: number;
-  contentType: string;
-  body: Uint8Array;
-  location: string | null;
 }
 
 /** Normalisasi header (string | string[] | undefined) → string. */
@@ -248,96 +331,126 @@ function concat(chunks: (Uint8Array | Uint8Array<ArrayBufferLike>)[]): Uint8Arra
 }
 
 /**
- * Unduh lewat modul `https`/`http` Node dengan `rejectUnauthorized: false`
- * **hanya** untuk host di `TLS_RELAXED_HOSTS` (sertifikat rusak di sumber).
- * Mengikuti redirect (maks 5) — tiap hop tetap dijaga anti-SSRF.
+ * Satu hop unduh dengan koneksi TER-PIN (Fase 2).
+ *
+ * Ini lapisan transport, BUKAN gerbang SSRF: pemanggil (`fetchHop`) WAJIB
+ * sudah memvalidasi target lewat `resolvePinnedTarget` sebelum memanggil ini.
+ * Memanggil fungsi ini langsung dengan IP privat tidak diblokir di sini —
+ * pemblokiran terjadi di lapisan validasi, bukan di sini — supaya transport
+ * bisa diuji dengan server lokal tanpa melewati gerbang SSRF.
+ *
+ * Cara pinning: `Agent` HTTP(S) dengan `lookup` kustom yang mengabaikan
+ * hostname dan hanya mengembalikan `target.ip` (dengan family yang sesuai,
+ * menangani `all: true` yang dipakai Node). Socket Node kemudian terhubung
+ * ke IP itu, sementara:
+ *   - Host header / URL path tetap memakai hostname asli (virtual host),
+ *   - SNI TLS (`servername`) tetap hostname asli, sehingga verifikasi
+ *     sertifikat HTTPS tetap terhadap hostname asli, bukan terhadap IP.
+ *
+ * `fetch()` global TIDAK dipakai lagi untuk jalur ini, karena ia tidak
+ * mendukung lookup kustom dan akan me-resolve ulang hostname (TOCTOU).
+ * `rejectUnauthorized: false` hanya bila `target.tlsRelaxed` — yaitu host
+ * di `TLS_RELAXED_HOSTS` yang sertifikatnya rusak. Untuk host lain,
+ * verifikasi TLS tetap penuh.
  */
-function downloadRelaxed(
-  url: string,
+export async function requestPinned(
+  target: PinnedTarget,
   timeoutMs: number,
   maxBytes: number,
   userAgent: string,
-  relaxedHosts: string[],
-  redirects = MAX_REDIRECTS,
 ): Promise<RawResponse> {
   return new Promise((resolve, reject) => {
-    let u: URL;
-    try {
-      u = new URL(url);
-    } catch {
-      reject(new Error("URL tidak valid"));
-      return;
-    }
-    const mod = u.protocol === "http:" ? httpRequest : httpsRequest;
+    const u = target.url;
+    const isHttps = u.protocol === "https:";
+    const mod = isHttps ? httpsRequest : httpRequest;
+    // PINNING lewat Agent, BUKAN lewat opsi `lookup` di request: Node
+    // mengabaikan `lookup` di level request dan memanggil lookup Agent
+    // dengan `all: true`, sehingga callback harus menangani kedua bentuk
+    // itu (array bila `all`, tunggal bila tidak). Agent dibuat per hop
+    // (tanpa keep-alive) dan dihancurkan setelah respons, karena setiap
+    // hop punya target ter-pin yang berbeda.
+    type LookupCallback =
+      | ((err: Error | null, address: string, family: number) => void)
+      | ((err: Error | null, addresses: { address: string; family: number }[]) => void);
+    const pinnedLookup = (
+      _hostname: string,
+      options: { all?: boolean },
+      callback: LookupCallback,
+    ) => {
+      if (options?.all) {
+        (callback as (err: Error | null, addresses: { address: string; family: number }[]) => void)(
+          null,
+          [{ address: target.ip, family: target.family }],
+        );
+      } else {
+        (callback as (err: Error | null, address: string, family: number) => void)(
+          null,
+          target.ip,
+          target.family,
+        );
+      }
+    };
+    const agent = isHttps
+      ? new HttpsAgent({ lookup: pinnedLookup })
+      : new HttpAgent({ lookup: pinnedLookup });
     const req = mod(
       {
-        hostname: u.hostname,
-        port: u.port || (u.protocol === "http:" ? 80 : 443),
+        hostname: target.hostname,
+        port: u.port || (isHttps ? 443 : 80),
         path: u.pathname + u.search,
         method: "GET",
         headers: { "User-Agent": userAgent, Accept: "image/*,*/*;q=0.8" },
-        // Hanya longgarkan untuk host yang dikenal (pin domain).
-        rejectUnauthorized: false,
+        agent,
+        ...(isHttps
+          ? {
+              servername: target.hostname,
+              rejectUnauthorized: !target.tlsRelaxed,
+            }
+          : {}),
         timeout: timeoutMs,
       },
       (res) => {
         res.on("error", (err) => {
           req.destroy();
+          agent.destroy();
           reject(err);
         });
         const code = res.statusCode ?? 0;
-        // Redirect.
-        if (code >= 300 && code < 400 && res.headers.location && redirects > 0) {
-          res.resume();
-          let next: string;
-          try {
-            next = new URL(res.headers.location, url).toString();
-          } catch {
-            reject(new Error("Redirect tak sah"));
-            return;
-          }
-          // SEC-01: hop ke host privat ditolak walau berasal dari host di-pin.
-          if (
-            isPrivateOrBlockedHost(new URL(next).hostname) &&
-            !isTlsRelaxed(next, relaxedHosts)
-          ) {
-            reject(new Error("Redirect ke host privat diblokir (anti-SSRF)"));
-            return;
-          }
-          if (!isTlsRelaxed(next, relaxedHosts)) {
-            reject(new Error(`Redirect ke host non-relaxed (${new URL(next).hostname}) tidak diizinkan di jalur TLS relaxed`));
-            return;
-          }
-          resolve(downloadRelaxed(next, timeoutMs, maxBytes, userAgent, relaxedHosts, redirects - 1));
-          return;
-        }
         const chunks: Uint8Array[] = [];
         let totalBytes = 0;
         res.on("data", (c: Buffer) => {
           totalBytes += c.length;
           if (totalBytes > maxBytes) {
             req.destroy(new Error(`terlalu besar: ukuran stream melebihi batas (${maxBytes} B)`));
+            agent.destroy();
             return;
           }
           chunks.push(new Uint8Array(c));
         });
-        res.on("end", () =>
+        res.on("end", () => {
+          agent.destroy();
           resolve({
             status: code,
             contentType: headerString(res.headers["content-type"]),
             body: concat(chunks),
             location: headerString(res.headers.location) || null,
-          }),
-        );
+          });
+        });
       },
     );
-    req.on("timeout", () => req.destroy(new Error("timeout")));
-    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy(new Error("timeout"));
+      agent.destroy();
+    });
+    req.on("error", (err) => {
+      agent.destroy();
+      reject(err);
+    });
     req.end();
   });
 }
 
-/** Satu hop unduh (relaxed → modul node; selain itu → `fetch` mode manual). */
+/** Satu hop unduh: validasi + pinning, lalu transport (nyata atau tes). */
 async function fetchHop(
   url: string,
   timeoutMs: number,
@@ -345,71 +458,15 @@ async function fetchHop(
   userAgent: string,
   relaxedHosts: string[],
   resolve: DnsResolver,
+  transport?: FetchTransport,
 ): Promise<RawResponse> {
-  // Validasi anti-SSRF SEBELUM menyentuh jaringan.
-  await assertPublicTarget(url, relaxedHosts, resolve);
-
-  if (isTlsRelaxed(url, relaxedHosts)) {
-    return downloadRelaxed(url, timeoutMs, maxBytes, userAgent, relaxedHosts);
+  // Validasi anti-SSRF + pinning SEBELUM menyentuh jaringan. Resolver
+  // hanya dipanggil di sini, sekali per hop — transport tidak me-resolve lagi.
+  const target = await resolvePinnedTarget(url, relaxedHosts, resolve);
+  if (transport) {
+    return transport(target, { timeoutMs, maxBytes, userAgent });
   }
-
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      // SEC-01: manual — redirect kita ikuti sendiri agar tiap hop divalidasi.
-      redirect: "manual",
-      headers: { "User-Agent": userAgent, Accept: "image/*,*/*;q=0.8" },
-    });
-
-    let body = new Uint8Array(0);
-    if (res.ok) {
-      const contentLength = res.headers.get("content-length");
-      if (contentLength && Number(contentLength) > maxBytes) {
-        if (res.body) await res.body.cancel().catch(() => {});
-        throw new Error(`terlalu besar: ukuran stream melebihi batas (${maxBytes} B)`);
-      }
-
-      if (res.body) {
-        const reader = res.body.getReader();
-        const chunks: (Uint8Array | Uint8Array<ArrayBufferLike>)[] = [];
-        let totalBytes = 0;
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value) {
-              totalBytes += value.byteLength;
-              if (totalBytes > maxBytes) {
-                await reader.cancel().catch(() => {});
-                throw new Error(`terlalu besar: ukuran stream melebihi batas (${maxBytes} B)`);
-              }
-              chunks.push(value);
-            }
-          }
-          body = concat(chunks);
-        } catch (err) {
-          await reader.cancel().catch(() => {});
-          throw err;
-        }
-      } else {
-        body = new Uint8Array(await res.arrayBuffer());
-      }
-    } else if (res.body) {
-      // Bebaskan socket/stream pada status non-2xx
-      await res.body.cancel().catch(() => {});
-    }
-
-    return {
-      status: res.status,
-      contentType: res.headers.get("content-type") ?? "",
-      body,
-      location: res.headers.get("location"),
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+  return requestPinned(target, timeoutMs, maxBytes, userAgent);
 }
 
 /**
@@ -423,6 +480,7 @@ async function fetchFollowingRedirects(
   userAgent: string,
   relaxedHosts: string[],
   resolve: DnsResolver,
+  transport?: FetchTransport,
 ): Promise<RawResponse> {
   let current = startUrl;
   const deadline = Date.now() + timeoutMs;
@@ -431,7 +489,7 @@ async function fetchFollowingRedirects(
     if (Date.now() >= deadline) {
       throw new Error("timeout");
     }
-    const r = await fetchHop(current, remainingTime, maxBytes, userAgent, relaxedHosts, resolve);
+    const r = await fetchHop(current, remainingTime, maxBytes, userAgent, relaxedHosts, resolve, transport);
     if (r.status >= 300 && r.status < 400 && r.location) {
       if (hop === MAX_REDIRECTS) throw new Error("terlalu banyak redirect");
       current = new URL(r.location, current).toString();
@@ -548,6 +606,7 @@ export async function fetchImage(url: string, opts: FetchOptions = {}): Promise<
         userAgent,
         relaxedHosts,
         resolve,
+        opts.transport,
       );
 
       if (status < 200 || status >= 300) {
