@@ -38,6 +38,23 @@ export async function createQuestion(
 ): Promise<PublicQuestion> {
   assertCan(actor, "question:create");
 
+  // Fase 1 — tutup bypass create-ready: membuat soal langsung `ready`
+  // (atau `archived`) tanpa izin tujuan yang sesuai adalah melewati gerbang
+  // telaah/status. Jalur MCP sudah memaksa `draft`; jalur HTTP di sini
+  // sebelumnya tidak. `draft`/`review` tetap boleh dibuat siapa pun yang
+  // punya `question:create` — `review` hanya antrean telaah, bukan rilis.
+  // Izin ditegakkan di service (CONSTRAINTS #35), bukan di route.
+  if (input.status === "ready") {
+    assertCan(actor, "question:setReady", {
+      message: "Membuat soal langsung berstatus ready membutuhkan izin question:setReady.",
+    });
+  }
+  if (input.status === "archived") {
+    assertCan(actor, "question:archive", {
+      message: "Membuat soal langsung berstatus archived membutuhkan izin question:archive.",
+    });
+  }
+
   // Stimulus tidak boleh punya parent (parent hanya untuk anak stimulus)
   if (input.questionType === "stimulus" && input.parentId) {
     throw new ConflictError("Soal bertipe stimulus tidak boleh punya parentId.");
@@ -172,6 +189,17 @@ export async function updateQuestion(
 
   // Izin: reviewer/admin boleh semua; teacher hanya miliknya sendiri
   assertCan(actor, "question:edit", { ownerId: existing.authorId });
+
+  // Fase 1 — status lock: isi/kunci soal `ready`/`archived` tidak boleh
+  // diubah diam-diam tanpa penelaahan ulang. Ditolak (bukan auto-downgrade)
+  // supaya perubahan persetujuan tidak terjadi tanpa sadar: alur yang benar
+  // adalah kembalikan dulu ke `review`/`draft` lewat transisi status
+  // (changeQuestionStatus), ubah, lalu minta persetujuan ulang.
+  if (existing.status === "ready" || existing.status === "archived") {
+    throw new ConflictError(
+      "Soal berstatus ready/archived tidak dapat diubah; kembalikan dulu ke review/draft lewat transisi status, lalu ubah dan minta persetujuan ulang.",
+    );
+  }
 
   const { options, solutions: solutionInputs, topicIds, tagIds, parentId, ...fields } = input;
 

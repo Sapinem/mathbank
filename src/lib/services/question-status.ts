@@ -1,7 +1,13 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
-import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
+import {
+  assertCan,
+  hasRole,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+} from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
 import { transition, assertReady, type QuestionStatus } from "@/lib/fsm/question-fsm";
 import { recordAudit } from "./audit";
@@ -67,6 +73,20 @@ export async function changeQuestionStatus(
   // Izin per tujuan transisi (L1)
   if (to === "ready") {
     assertCan(actor, "question:setReady");
+    // Fase 1 — larangan self-approve: penelaah tidak boleh menyetujui
+    // soal buatannya sendiri. Pengecualian hanya `admin` (peran, lewat
+    // hasRole — bukan tebakan string di luar matriks peran). Aktor
+    // `teacher + reviewer` mendapat `setReady: yes` dari peran reviewer,
+    // jadi tanpa cek ini ia lolos persetujuan atas soalnya sendiri.
+    if (
+      !hasRole(actor, "admin") &&
+      existing.authorId &&
+      existing.authorId === actor.id
+    ) {
+      throw new ForbiddenError(
+        "Penelaah tidak dapat menyetujui soal buatannya sendiri; minta penelaah lain.",
+      );
+    }
     // Batasan: soal boleh ada tanpa answer_key, TAPI tak boleh jadi `ready`
     // sebelum jawabannya diisi (kecuali stimulus). Lihat question-fsm.ts.
     assertReady({
