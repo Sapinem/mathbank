@@ -19,9 +19,11 @@ export const GET = wrapRoute({
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ params, actor }) => {
-    const b = await getBundle(params.id);
+    const [b, items] = await Promise.all([
+      getBundle(params.id),
+      listBundleItems(params.id, actor),
+    ]);
     if (!b) throw new NotFoundError("Paket tidak ditemukan.");
-    const items = await listBundleItems(params.id, actor);
     return { ...b, items };
   },
 });

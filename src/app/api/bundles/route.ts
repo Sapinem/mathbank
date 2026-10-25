@@ -12,15 +12,7 @@ export const GET = wrapRoute({
   rateLimit: true,
   permission: "question:view",
   query: listBundlesQuerySchema,
-  handler: async ({ actor, query }) =>
-    listBundles(actor, {
-      bundleType: query?.bundleType,
-      origin: query?.origin,
-      status: query?.status,
-      q: query?.q || undefined,
-      limit: query?.limit,
-      offset: query?.offset,
-    }),
+  handler: async ({ actor, query }) => listBundles(actor, query),
 });
 
 /**

@@ -89,6 +89,7 @@ const eslintConfig = defineConfig([
     ".next-*/**",
     // Scratch & skrip sekali-pakai yang memang gitignored (bukan kode produk).
     // Tanpa ini, `pnpm lint` merah karena file yang tak pernah di-commit.
+    ".codebuddy/**",
     ".scratch-*/**",
     "scripts/dev/**",
   ]),

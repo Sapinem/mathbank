@@ -77,15 +77,10 @@ export const GET = wrapRoute({
         bundles: bundleCount.n,
         sources: sourceCount.n,
       },
-      byDifficulty: byDifficulty.map((r) => ({ key: r.key, n: r.n })),
-      byGrade: byGrade.map((r) => ({ key: r.key, n: r.n })),
-      topTopics: topTopics.map((r) => ({ id: r.id, name: r.name, n: r.n })),
-      recent: recent.map((r) => ({
-        id: r.id,
-        content: r.content,
-        status: r.status,
-        createdAt: r.createdAt,
-      })),
+      byDifficulty,
+      byGrade,
+      topTopics,
+      recent,
     };
   },
 });

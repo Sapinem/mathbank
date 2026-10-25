@@ -29,11 +29,6 @@ const SVG_CSP = "default-src 'none'; style-src 'unsafe-inline';";
 /** Cache panjang: isi berkas ditentukan oleh hash, jadi aman di-cache lama. */
 const CACHE_CONTROL = "public, max-age=86400, stale-while-revalidate=604800";
 
-/** IP klien dari header proxy (pola sama dengan route-wrapper). */
-function clientIp(req: Request): string | null {
-  return getClientIp(req);
-}
-
 function errorJson(code: string, message: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status });
 }
@@ -47,7 +42,7 @@ export async function GET(
   // 1) Rate limit (CONSTRAINTS #33) — route publik, key per IP.
   //    PERF-03: pakai IMAGE_POLICY (burst 300) agar memuat paket 40–50 soal
   //    (puluhan gambar sekaligus) tak memicu HTTP 429 palsu.
-  const rl = checkRateLimit(rateLimitKey(null, clientIp(req), "media:serve"), IMAGE_POLICY);
+  const rl = checkRateLimit(rateLimitKey(null, getClientIp(req), "media:serve"), IMAGE_POLICY);
   if (!rl.allowed) {
     return errorJson("RATE_LIMITED", "Terlalu banyak permintaan.", 429);
   }
