@@ -15,7 +15,7 @@
  * Idempoten: URL yang sudah terunduh di sesi ini (atau hash sudah ada) tak
  * diunduh ulang.
  */
-import { fetchImage } from "./fetch";
+import { fetchImage, type FetchOptions } from "./fetch";
 import { storeImage, relativePath } from "./store";
 import { absolutize } from "./resolve-url";
 import { bestImageSrc } from "../parsers/clean";
@@ -70,6 +70,12 @@ export interface IngestMediaOptions {
    * Bila tidak, markdown tetap memakai URL sumber (mode uji murni).
    */
   register?: MediaRegistrar;
+  /**
+   * Opsi fetch yang diteruskan ke `fetchImage` (jalur tes saja di
+   * produksi tidak diisi — pemanggil produksi tidak mengisi ini).
+   * Dipakai tes untuk menyuntikkan resolver/transport tanpa jaringan.
+   */
+  fetchOptions?: FetchOptions;
 }
 
 const IMG_MD = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
@@ -134,7 +140,7 @@ export async function ingestArticleMedia(
 
   for (let i = 0; i < queue.length; i++) {
     const { url, role, orderIndex } = queue[i]!;
-    const res = await fetchImage(url);
+    const res = await fetchImage(url, opts.fetchOptions);
     if (res.ok && res.bytes && res.contentHash && res.contentType) {
       await storeImage(opts.rootDir, res.contentHash, res.contentType, res.bytes);
 

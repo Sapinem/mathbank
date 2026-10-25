@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { wrapRoute } from "@/lib/api/route-wrapper";
+import { demoLoginAllowed } from "@/lib/auth/demo-login";
 
 /**
  * GET /api/dev/demo-status — apakah login demo tersedia di lingkungan ini.
@@ -15,9 +16,9 @@ export const GET = wrapRoute({
   rateLimitScope: "dev:demo-status",
   query: querySchema,
   handler: async () => {
-    const demo =
-      process.env.DEMO_LOGIN === "enabled" ||
-      process.env.NODE_ENV !== "production";
-    return { demo };
+    // Satu-satunya sumber kebenaran pagar demo (Fase 2) — sama dengan
+    // quick-login, supaya tombol demo di halaman login tidak pernah
+    // tampil di lingkungan tempat quick-login mati.
+    return { demo: demoLoginAllowed() };
   },
 });

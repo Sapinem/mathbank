@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/server";
 import { demoUserByKey, DEMO_PASSWORD } from "@/lib/auth/demo-users";
+import { demoLoginAllowed } from "@/lib/auth/demo-login";
+import { checkRateLimit, rateLimitKey } from "@/lib/api/rate-limit";
+import { getClientIp } from "@/lib/api/client-ip";
 
 /**
  * POST /api/dev/quick-login — login cepat untuk DEMO.
@@ -9,28 +12,52 @@ import { demoUserByKey, DEMO_PASSWORD } from "@/lib/auth/demo-users";
  * Menandatangani session better-auth untuk akun demo terpilih, lalu meneruskan
  * cookie sesi ke klien.
  *
- * **Pagar:** aktif di dev. Di produksi MATI (404) kecuali `DEMO_LOGIN=enabled`
- * diset eksplisit — jadi tak pernah jadi pintu belakang tanpa sengaja.
- * ⚠️ **Keputusan pemilik (2026-09-30):** server ini (b.iyo.my.id) **sengaja**
- * menjalankan `DEMO_LOGIN=enabled` sebagai demo publik. Untuk produksi sungguhan,
- * **JANGAN** set `DEMO_LOGIN`. Lindung lain: rate-limit Better Auth + `detail`
- * tak dibocorkan (NEW2).
+ * **Pagar ganda (Fase 2, lihat `src/lib/auth/demo-login.ts` untuk matriks
+ * lengkap):** di lingkungan production-like (`NODE_ENV=production` atau
+ * `APP_ENV=production/staging`) route ini MATI (404) KECUALI BOTH
+ * `DEMO_LOGIN=enabled` DAN `DEMO_LOGIN_PUBLIC=true` diset — yaitu deployment
+ * yang memang server demo publik, bukan produksi sungguhan.
+ * ⚠️ **Keputusan pemilik (2026-09-30):** server demo publik **sengaja**
+ * menjalankan demo — deployment itu harus menyetel KEDUA flag di atas.
+ * Untuk produksi sungguhan, **JANGAN** set `DEMO_LOGIN_PUBLIC`.
+ *
+ * **Rate-limit (Fase 2):** route ini tidak lewat `wrapRoute` agar kontrak
+ * responsnya (404/400/500/`{ data: { ok, key, name } }` + set-cookie)
+ * tidak berubah, tetapi pemeriksaan rate-limit yang sama dipakai manual di
+ * sini: 10 burst, isi ulang 0,2/detik (≈12/menit), di-key per IP (route ini
+ * belum terautentikasi). Melebihi batas → 429 `RATE_LIMITED` + `Retry-After`.
+ * Rate-limit diperiksa SETELAH pagar lingkungan, supaya permintaan ke
+ * lingkungan yang mati tidak menghabiskan bucket.
  *
  * Body: { key: "admin" | "guru" | "penelaah" }
  */
 const bodySchema = z.object({ key: z.string().min(1) });
 
-/** Apakah login demo diizinkan di lingkungan ini? */
-function demoLoginAllowed(): boolean {
-  if (process.env.DEMO_LOGIN === "enabled") return true;
-  return process.env.NODE_ENV !== "production";
-}
+/** Kebijakan rate-limit khusus quick-login (lebih ketat dari default). */
+const QUICK_LOGIN_RATE_POLICY = { capacity: 10, refillPerSec: 0.2 };
 
 export async function POST(req: Request) {
   if (!demoLoginAllowed()) {
     return NextResponse.json(
       { error: { code: "NOT_FOUND", message: "Tidak ditemukan." } },
       { status: 404 },
+    );
+  }
+
+  const rateKey = rateLimitKey(null, getClientIp(req), "dev:quick-login");
+  const rate = checkRateLimit(rateKey, QUICK_LOGIN_RATE_POLICY);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "RATE_LIMITED",
+          message: "Terlalu banyak permintaan. Coba lagi nanti.",
+        },
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rate.retryAfterMs / 1000)) },
+      },
     );
   }
 

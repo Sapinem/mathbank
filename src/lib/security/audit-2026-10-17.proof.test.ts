@@ -57,8 +57,9 @@ describe("SEC-03: rejectUnauthorized=false saat TLS_RELAXED", () => {
       timeoutMs: 1500,
     });
     expect(r.ok).toBe(false);
-    // BUKTI: jalur `downloadRelaxed` dipakai → `fetch` (yang memverifikasi TLS)
-    // TIDAK dipanggil; koneksi memakai `https.request({ rejectUnauthorized: false })`.
+    // BUKTI: jalur `requestPinned` dipakai → `fetch` (yang memverifikasi TLS)
+    // TIDAK dipanggil; koneksi memakai `https.request({ rejectUnauthorized: false })`
+    // untuk host relaxed (Fase 2: relaksasi hanya TLS, validasi SSRF tetap penuh).
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
