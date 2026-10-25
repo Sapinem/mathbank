@@ -14,6 +14,7 @@ vi.mock("@/lib/db/invariants", () => ({
 }));
 
 import { checkDbInvariants } from "@/lib/db/invariants";
+import { setStore, MemoryStore, HEALTH_POLICY } from "@/lib/api/rate-limit";
 import { GET } from "./route";
 
 const mockCheck = vi.mocked(checkDbInvariants);
@@ -30,12 +31,15 @@ const sehat = {
 
 beforeEach(() => {
   mockCheck.mockReset();
+  setStore(new MemoryStore());
 });
+
+const req = () => new Request("http://localhost/api/ready");
 
 describe("GET /api/ready", () => {
   it("200 & status ready bila invarian utuh", async () => {
     mockCheck.mockResolvedValue(sehat);
-    const res = await GET();
+    const res = await GET(req());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.status).toBe("ready");
@@ -49,18 +53,31 @@ describe("GET /api/ready", () => {
       forbiddenTablesPresent: ["question_options"],
       problems: ["Tabel terlarang masih ada: question_options"],
     });
-    const res = await GET();
+    const res = await GET(req());
     expect(res.status).toBe(503);
     const body = await res.json();
     expect(body.data.status).toBe("degraded");
     expect(body.data.invariants.forbiddenTablesPresent).toEqual(["question_options"]);
   });
 
+  it("Fase 3: 429 + Retry-After setelah burst HEALTH_POLICY terlampaui, DB tak lagi dipanggil", async () => {
+    mockCheck.mockResolvedValue(sehat);
+    let last: Response | null = null;
+    for (let i = 0; i < HEALTH_POLICY.capacity + 1; i++) {
+      last = await GET(req());
+    }
+    expect(last?.status).toBe(429);
+    expect(last?.headers.get("Retry-After")).toBeTruthy();
+    const body = await last!.json();
+    expect(body.error.code).toBe("RATE_LIMITED");
+    expect(mockCheck).toHaveBeenCalledTimes(HEALTH_POLICY.capacity);
+  });
+
   it("tidak membocorkan pesan driver saat DB tak terjangkau", async () => {
     mockCheck.mockRejectedValue(
       new Error("connect ECONNREFUSED 127.0.0.1:5433 user=mathbank database=mathbank"),
     );
-    const res = await GET();
+    const res = await GET(req());
     expect(res.status).toBe(503);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     const raw = await res.text();

@@ -138,6 +138,21 @@ export const IMAGE_POLICY: RateLimitPolicy = {
 };
 
 /**
+ * **Fase 3:** kebijakan khusus probe kesehatan (`/api/health`, `/api/ready`).
+ *
+ * Probe ini publik & murah, tapi jalur DB-nya menjalankan
+ * `checkDbInvariants()` — tanpa batas, satu klien bisa membanjiri DB dengan
+ * probe. Burst 120 + isi 2/detik (≈120/menit) jauh di atas kadens monitoring
+ * normal (beberapa monitor × tiap 10–60 detik) namun tetap membatasi banjir.
+ * Cabang liveness murni (`?probe=liveness`, tanpa DB) sengaja TIDAK
+ * dibatasi — probe orkestrator tak boleh gagal tertutup oleh rate limit.
+ */
+export const HEALTH_POLICY: RateLimitPolicy = {
+  capacity: 120,
+  refillPerSec: 2,
+};
+
+/**
  * Cek & pakai token untuk `key`. Murni terhadap store terpasang.
  * @param now injeksi waktu (tes deterministik); default `Date.now()`.
  */

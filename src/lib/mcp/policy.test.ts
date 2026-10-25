@@ -29,6 +29,28 @@ describe("MCP policy (L1)", () => {
     expect(canMcp(a, "taxonomy.manage", { ownerId: "x" })).toBe(false);
   });
 
+  it("Fase 3: question.flag — teacher own, agent/reviewer yes (L1, tidak diubah)", () => {
+    // Teacher hanya soal sendiri; agent & reviewer boleh menandai soal siapa
+    // pun (kurasi). assertMcpForQuestion di tools.ts meneruskan ownerId agar
+    // lapisan MCP menegakkan semantik yang sama dengan service.
+    const teacher = actor(["teacher"], "guru-1");
+    expect(canMcp(teacher, "question.flag", { ownerId: "guru-1" })).toBe(true);
+    expect(canMcp(teacher, "question.flag", { ownerId: "orang-lain" })).toBe(false);
+    expect(canMcp(teacher, "question.flag", { ownerId: null })).toBe(false);
+    const agent = actor(["agent"], "agent-1");
+    expect(canMcp(agent, "question.flag", { ownerId: "orang-lain" })).toBe(true);
+    expect(canMcp(actor(["reviewer"], "rev-1"), "question.flag", { ownerId: "orang-lain" })).toBe(true);
+  });
+
+  it("Fase 3: assertMcp tanpa ownerId TIDAK menegakkan own (alasan helper baru)", () => {
+    // Cabang opts === undefined di canMcp hanya memeriksa peran tidak `no`.
+    // Inilah celah yang ditutup tools.ts: handler per-objek wajib memuat
+    // authorId dulu, bukan memanggil assertMcp tanpa ownerId.
+    const a = actor(["agent"], "agent-1");
+    expect(canMcp(a, "question.edit")).toBe(true);
+    expect(canMcp(a, "question.edit", { ownerId: "orang-lain" })).toBe(false);
+  });
+
   it("machine tak boleh baca soal (hanya ingest)", () => {
     expect(canMcp(actor(["machine"]), "question.read")).toBe(false);
   });

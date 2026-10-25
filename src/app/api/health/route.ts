@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { checkDbInvariants } from "@/lib/db/invariants";
 import { toInvariantsDto } from "@/lib/db/schema-expectations";
 import { PUBLIC_DB_DOWN_MESSAGE } from "@/lib/api/public-messages";
+import { checkRateLimit, rateLimitKey, HEALTH_POLICY } from "@/lib/api/rate-limit";
+import { getClientIp } from "@/lib/api/client-ip";
 import { log } from "@/lib/telemetry/logger";
 
 /**
@@ -31,11 +33,38 @@ export async function GET(req: Request) {
   const startedAt = Date.now();
 
   // Liveness murni — tak menyentuh DB (untuk probe liveness/uptime).
+  // Sengaja TIDAK di-rate-limit: murah (tanpa DB) dan probe orkestrator
+  // tak boleh gagal tertutup oleh 429. Batas hanya untuk jalur DB di bawah.
   const probe = new URL(req.url).searchParams.get("probe");
   if (probe === "liveness") {
     return NextResponse.json({
       data: { status: "ok", uptimeSec: Math.round(process.uptime()) },
     });
+  }
+
+  // Fase 3: jalur DB di-rate-limit per IP (publik, tanpa aktor) supaya satu
+  // klien tak bisa membanjiri DB lewat checkDbInvariants(). Kontrak sukses /
+  // 503 di bawah tidak berubah; yang bertambah hanya 429 saat lewat batas.
+  // (Tidak lewat wrapRoute: status sukses di sini dinamis 200/503, sedangkan
+  // wrapRoute memakai satu status sukses tetap — mengubahnya akan merusak
+  // kontrak monitoring.)
+  const rl = checkRateLimit(
+    rateLimitKey(null, getClientIp(req), "api:health"),
+    HEALTH_POLICY,
+  );
+  if (!rl.allowed) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "RATE_LIMITED",
+          message: "Terlalu banyak permintaan. Coba lagi nanti.",
+        },
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+      },
+    );
   }
 
   try {

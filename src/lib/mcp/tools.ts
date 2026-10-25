@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Actor } from "@/lib/auth/actor";
 import { assertMcp, canMcp, MCP_CAPABILITIES, type McpCapability } from "@/lib/mcp/policy";
-import { listQuestions, getQuestion, createQuestion, updateQuestion, setQuestionFlag } from "@/lib/services/question-service";
+import { listQuestions, getQuestion, getQuestionInternal, createQuestion, updateQuestion, setQuestionFlag } from "@/lib/services/question-service";
 import { listTopics } from "@/lib/services/topic-service";
 import { listSources } from "@/lib/services/taxonomy-service";
 import { enrichQuestion, embedQuestions } from "@/lib/services/enrichment-service";
@@ -55,6 +55,28 @@ async function guard(fn: () => Promise<unknown>): Promise<CallToolResult> {
       isError: true,
     };
   }
+}
+
+/**
+ * Tegaskan kapabilitas MCP untuk SATU soal konkret (Fase 3).
+ *
+ * `assertMcp` tanpa `ownerId` tidak menegakkan izin ber-`own` (cabang
+ * `opts === undefined` di `policy.ts` hanya memeriksa peran tidak `no`) —
+ * jadi tool per-objek WAJIB memuat kepemilikan dulu, lalu meneruskan
+ * `ownerId` penulis soal. Baris internal yang dimuat HANYA dipakai untuk
+ * `authorId` dan tidak pernah dikembalikan ke pemanggil tool.
+ * Soal tak ditemukan → NOT_FOUND, sama seperti perilaku service.
+ */
+async function assertMcpForQuestion(
+  actor: Actor,
+  capability: McpCapability,
+  id: string,
+): Promise<void> {
+  const existing = await getQuestionInternal(id);
+  if (!existing) {
+    throw Object.assign(new Error("Soal tidak ditemukan"), { code: "NOT_FOUND" });
+  }
+  assertMcp(actor, capability, { ownerId: existing.authorId });
 }
 
 /** Daftarkan seluruh tool MCP yang DIIZINKAN ke server. `actor` = pemanggil. */
@@ -174,7 +196,8 @@ export function registerTools(server: McpServer, actor: Actor): void {
       },
       async ({ id, ...patch }) =>
         guard(async () => {
-          assertMcp(actor, "question.edit");
+          // Fase 3: penegakan `own` di lapisan MCP, bukan hanya di service.
+          await assertMcpForQuestion(actor, "question.edit", id);
           const q = await updateQuestion(id, patch, actor);
           return { id: q.id, status: q.status };
         }),
@@ -196,7 +219,13 @@ export function registerTools(server: McpServer, actor: Actor): void {
       },
       async ({ id, flagged, notes }) =>
         guard(async () => {
-          assertMcp(actor, "question.flag");
+          // Fase 3: ownerId diteruskan agar lapisan MCP konsisten dengan
+          // service. Catatan: `question:flag` L1 adalah `yes` untuk agent &
+          // reviewer (kurasi soal siapa pun) dan `own` untuk teacher — jadi
+          // untuk agent/reviewer ini tetap lolos soal siapa pun, sedangkan
+          // teacher hanya soal sendiri. Perilaku flag TIDAK diubah, yang
+          // ditutup adalah ketergantungan pada satu lapisan saja.
+          await assertMcpForQuestion(actor, "question.flag", id);
           return await setQuestionFlag(id, flagged, notes ?? null, actor);
         }),
     );
@@ -243,6 +272,13 @@ export function registerTools(server: McpServer, actor: Actor): void {
       },
       async ({ text }) =>
         guard(async () => {
+          // Fase 3: handler ini sebelumnya tanpa assertMcp sama sekali.
+          // Kapabilitasnya sudah dipetakan ke `taxonomy.read` (= question:view)
+          // di MCP_TOOL_CAPABILITIES dan pendaftarannya sudah digerbang oleh
+          // blok `taxonomy.read` di atas; assert di sini menutup pertahanan
+          // berlapis seperti tool lain. Ini fungsi murni tanpa DB, jadi tidak
+          // ada perubahan perilaku bagi aktor yang memang berhak baca.
+          assertMcp(actor, "taxonomy.read");
           const issues = lintKatex(text);
           return {
             valid: issues.length === 0,

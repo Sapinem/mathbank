@@ -37,6 +37,9 @@ const createQuestion = vi.fn(async (input: { status?: string }) => ({
   id: "q-mock",
   status: input.status ?? "draft",
 }));
+const getQuestionInternal = vi.fn(async (): Promise<{ authorId: string } | null> => ({ authorId: "route-mcp-agent" }));
+const updateQuestion = vi.fn(async (id: string) => ({ id, status: "draft" }));
+const setQuestionFlag = vi.fn(async (id: string) => ({ id, status: "draft" }));
 const listTopics = vi.fn(async () => []);
 const listSources = vi.fn(async () => []);
 const enrichQuestion = vi.fn(async () => ({ ok: true }));
@@ -46,6 +49,9 @@ vi.mock("@/lib/services/question-service", () => ({
   listQuestions: (...a: unknown[]) => listQuestions(...(a as [])),
   getQuestion: (...a: unknown[]) => getQuestion(...(a as [])),
   createQuestion: (...a: unknown[]) => createQuestion(...(a as [{ status?: string }])),
+  getQuestionInternal: (...a: unknown[]) => getQuestionInternal(...(a as [])),
+  updateQuestion: (...a: [string, ...unknown[]]) => updateQuestion(a[0]),
+  setQuestionFlag: (...a: [string, ...unknown[]]) => setQuestionFlag(a[0]),
 }));
 vi.mock("@/lib/services/topic-service", () => ({
   listTopics: (...a: unknown[]) => listTopics(...(a as [])),
@@ -206,5 +212,69 @@ describe("POST /api/mcp — protokol & tool", () => {
     }
     expect(last?.status).toBe(429);
     expect(last?.headers.get("retry-after")).toBeTruthy();
+  });
+});
+
+/** Fase 3: penegakan ownerId di lapisan MCP + assertMcp validate_math. */
+describe("POST /api/mcp — Fase 3 policy per-objek", () => {
+  const QID = "11111111-1111-4111-8111-111111111111";
+  async function callTool(name: string, args: Record<string, unknown>) {
+    const res = await POST(rpc("tools/call", { name, arguments: args }) as never);
+    expect(res.status).toBe(200);
+    const body = await rpcJson(res);
+    const result = body.result as { content: { text: string }[]; isError?: boolean };
+    return { body, payload: JSON.parse(result.content[0]!.text) as Record<string, unknown>, isError: result.isError };
+  }
+
+  it("update_question soal MILIK SENDIRI lolos ke service", async () => {
+    getQuestionInternal.mockResolvedValue({ authorId: "route-mcp-agent" });
+    const { payload, isError } = await callTool("update_question", { id: QID, contentMarkdown: "Baru." });
+    expect(isError).toBeFalsy();
+    expect(payload.status).toBe("draft");
+    expect(updateQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it("update_question soal ORANG LAIN ditolak di lapisan MCP, service tak dipanggil", async () => {
+    getQuestionInternal.mockResolvedValue({ authorId: "orang-lain" });
+    const { payload, isError } = await callTool("update_question", { id: QID, contentMarkdown: "Baru." });
+    expect(isError).toBe(true);
+    expect(payload.code).toBe("FORBIDDEN");
+    expect(updateQuestion).not.toHaveBeenCalled();
+  });
+
+  it("update_question soal TAK ADA → NOT_FOUND, service tak dipanggil", async () => {
+    getQuestionInternal.mockResolvedValue(null);
+    const { payload, isError } = await callTool("update_question", { id: QID, contentMarkdown: "Baru." });
+    expect(isError).toBe(true);
+    expect(payload.code).toBe("NOT_FOUND");
+    expect(updateQuestion).not.toHaveBeenCalled();
+  });
+
+  it("flag_question: agent (flag=yes) boleh menandai soal siapa pun; teacher hanya miliknya", async () => {
+    getQuestionInternal.mockResolvedValue({ authorId: "orang-lain" });
+    const agentCall = await callTool("flag_question", { id: QID, flagged: true });
+    expect(agentCall.isError).toBeFalsy();
+    expect(setQuestionFlag).toHaveBeenCalledTimes(1);
+
+    mockActor = { id: "guru-1", name: "Guru", roles: ["teacher"], via: "apikey" };
+    const teacherCall = await callTool("flag_question", { id: QID, flagged: true });
+    expect(teacherCall.isError).toBe(true);
+    expect(teacherCall.payload.code).toBe("FORBIDDEN");
+    expect(setQuestionFlag).toHaveBeenCalledTimes(1); // tak bertambah
+  });
+
+  it("validate_math kini melewati assertMcp: agent lolos, machine tak terdaftar", async () => {
+    const ok = await callTool("validate_math", { text: "Hitung $2+2$." });
+    expect(ok.isError).toBeFalsy();
+    expect(ok.payload.valid).toBe(true);
+
+    mockActor = { id: "route-machine", name: "Machine", roles: ["machine"], via: "apikey" };
+    const res = await POST(rpc("tools/call", { name: "validate_math", arguments: { text: "$x$" } }) as never);
+    const body = await rpcJson(res);
+    // Tool tak didaftarkan untuk machine (ARC-06) → SDK menjawab result
+    // isError (bukan JSON-RPC error): "Tool validate_math not found".
+    const result = body.result as { content: { text: string }[]; isError?: boolean };
+    expect(result.isError).toBe(true);
+    expect(result.content[0]!.text).toMatch(/not found/i);
   });
 });

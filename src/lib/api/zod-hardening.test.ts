@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 
 /**
- * Uji Verifikasi Pilar 3 — API Hardening (51/51 Route Handlers).
+ * Uji Verifikasi Pilar 3 — API Hardening (48/48 Route Handlers).
+ * (Fase 3: 51 → 48 setelah 3 route stub 410 /api/collections* dihapus.)
  * Menjamin:
  * 1. Setiap route handler di `src/app/api/` (kecuali Better Auth auth/[...all]) memakai wrapRoute atau skema Zod.
  * 2. Seluruh endpoint wrapRoute memiliki `query:` atau `body:` atau `params:` schema.
@@ -55,7 +56,7 @@ vi.mock("@/lib/services/topic-service", () => ({
   deleteTopic: vi.fn(async () => ({ ok: true })),
 }));
 
-describe("Pilar 3: Audit Skema Zod 51 Route", () => {
+describe("Pilar 3: Audit Skema Zod 48 Route", () => {
   function walk(dir: string): string[] {
     let results: string[] = [];
     const list = fs.readdirSync(dir);
@@ -73,7 +74,8 @@ describe("Pilar 3: Audit Skema Zod 51 Route", () => {
 
   it("semua route handler (di luar auth & health/metrics/mcp) terdaftar dan terlindungi Zod", () => {
     const files = walk("src/app/api");
-    expect(files.length).toBe(51);
+    // Fase 3: 51 → 48 (3 route stub 410 /api/collections* dihapus).
+    expect(files.length).toBe(48);
 
     const methods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
     let wrapCount = 0;
