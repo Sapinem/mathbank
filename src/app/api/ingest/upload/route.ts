@@ -8,7 +8,7 @@ import { enqueue } from "@/lib/ingest/queue";
  * Idempoten: artikel dengan isi sama tidak dibuat ulang.
  */
 export const POST = wrapRoute({
-  permission: "question:create", // peran `machine`: ingest → draft
+  authz: { kind: "route", permission: "question:create" }, // peran `machine`: ingest → draft
   rateLimit: { capacity: 60, refillPerSec: 1 },
   body: ingestUploadSchema,
   status: 201,

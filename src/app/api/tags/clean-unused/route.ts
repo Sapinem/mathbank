@@ -13,7 +13,7 @@ const emptyQuerySchema = z.object({}).optional();
  */
 export const POST = wrapRoute({
   rateLimit: { capacity: 5, refillPerSec: 0.1 },
-  permission: "taxonomy:manage",
+  authz: { kind: "route", permission: "taxonomy:manage" },
   body: emptyBodySchema,
   query: emptyQuerySchema,
   handler: async ({ actor }) => {

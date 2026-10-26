@@ -23,7 +23,7 @@ const putSchema = z.object({
 /** GET /api/bundles/[id]/items — daftar item paket. */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ params, actor }) => listBundleItems(params.id, actor),
@@ -32,7 +32,11 @@ export const GET = wrapRoute({
 /** POST /api/bundles/[id]/items — tambah soal ke paket. */
 export const POST = wrapRoute({
   rateLimit: { capacity: 60, refillPerSec: 2 },
-  permission: "question:view", // #35: aturan sebenarnya di service (assertBundleWrite)
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/bundle-shared.ts:assertBundleWrite",
+    routeGate: "question:view",
+  },
   params: paramsSchema,
   body: postSchema,
   handler: async ({ params, body, actor }) =>
@@ -45,7 +49,11 @@ export const POST = wrapRoute({
 /** PUT /api/bundles/[id]/items — susun ulang urutan item. */
 export const PUT = wrapRoute({
   rateLimit: { capacity: 60, refillPerSec: 2 },
-  permission: "question:view", // #35: aturan sebenarnya di service (assertBundleWrite)
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/bundle-shared.ts:assertBundleWrite",
+    routeGate: "question:view",
+  },
   params: paramsSchema,
   body: putSchema,
   handler: async ({ params, body, actor }) => {

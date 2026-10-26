@@ -54,6 +54,7 @@ beforeEach(() => {
 describe("wrapRoute — alur sukses", () => {
   it("mengembalikan {data} dengan status default 200", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       handler: async () => ({ hello: "dunia" }),
     });
     const res = await handler(req());
@@ -61,14 +62,22 @@ describe("wrapRoute — alur sukses", () => {
     expect(await res.json()).toEqual({ data: { hello: "dunia" } });
   });
 
+  it("menyetel Cache-Control: no-store + Vary (anti cache-bersama)", async () => {
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async () => ({ ok: true }) });
+    const res = await handler(req());
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("vary")).toContain("Cookie");
+  });
+
   it("menghormati opts.status (mis. 201)", async () => {
-    const handler = wrapRoute({ status: 201, handler: async () => ({ id: "x" }) });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, status: 201, handler: async () => ({ id: "x" }) });
     const res = await handler(req());
     expect(res.status).toBe(201);
   });
 
   it("mem-parse query string ke objek bertipe", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       query: z.object({ page: z.coerce.number() }),
       handler: async ({ query }) => query,
     });
@@ -78,6 +87,7 @@ describe("wrapRoute — alur sukses", () => {
 
   it("mem-parse body JSON", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       body: z.object({ name: z.string() }),
       handler: async ({ body }) => body,
     });
@@ -92,6 +102,7 @@ describe("wrapRoute — alur sukses", () => {
 
   it("body kosong/invalid JSON → {} (tak melempar)", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       body: z.object({ a: z.number().optional() }),
       handler: async ({ body }) => body,
     });
@@ -101,6 +112,7 @@ describe("wrapRoute — alur sukses", () => {
 
   it("menyelesaikan params rute dinamis (async, Next 15+)", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       handler: async ({ params }) => params,
     });
     const res = await handler(req(), { params: Promise.resolve({ id: "42" }) });
@@ -108,13 +120,13 @@ describe("wrapRoute — alur sukses", () => {
   });
 
   it("params tak diberikan → objek kosong", async () => {
-    const handler = wrapRoute({ handler: async ({ params }) => params });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async ({ params }) => params });
     const res = await handler(req());
     expect((await res.json()).data).toEqual({});
   });
 
   it("meneruskan actor ke handler", async () => {
-    const handler = wrapRoute({ handler: async ({ actor }) => actor.id });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async ({ actor }) => actor.id });
     const res = await handler(req());
     expect((await res.json()).data).toBe("u1");
   });
@@ -136,6 +148,7 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
   for (const [label, err, status] of cases) {
     it(`${label} → ${status} & format {error:{code,message}}`, async () => {
       const handler = wrapRoute({
+        authz: { kind: "authenticated" },
         handler: async () => {
           throw err;
         },
@@ -150,6 +163,7 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
 
   it("400 VALIDATION_ERROR saat query tak valid (dengan details)", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       query: z.object({ page: z.coerce.number().min(1) }),
       handler: async () => ({}),
     });
@@ -162,6 +176,7 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
 
   it("400 saat body tak valid", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       body: z.object({ name: z.string() }),
       handler: async () => ({}),
     });
@@ -176,6 +191,7 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
 
   it("400 INVALID_JSON saat body bukan JSON (bukan diam-diam {}) [D9]", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       body: z.object({ name: z.string() }),
       handler: async () => ({ ok: true }),
     });
@@ -193,6 +209,7 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
 
   it("body kosong → {}(tanpa error) lalu Zod yang menilai", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       body: z.object({ name: z.string().optional() }),
       handler: async ({ body }) => body,
     });
@@ -202,6 +219,7 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
 
   it("500 INTERNAL_ERROR untuk error tak terduga", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       handler: async () => {
         throw new Error("boom");
       },
@@ -215,7 +233,7 @@ describe("wrapRoute — pemetaan error ke HTTP", () => {
 describe("wrapRoute — autentikasi & izin", () => {
   it("resolveActor null → 401", async () => {
     resolveActorMock.mockResolvedValue(null);
-    const handler = wrapRoute({ handler: async () => ({}) });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async () => ({}) });
     expect((await handler(req())).status).toBe(401);
   });
 
@@ -224,7 +242,7 @@ describe("wrapRoute — autentikasi & izin", () => {
       ...adminActor(),
       mustChangePassword: true,
     });
-    const handler = wrapRoute({ handler: async () => ({}) });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async () => ({}) });
     const res = await handler(req());
     expect(res.status).toBe(403);
     expect((await res.json()).error.code).toBe("PASSWORD_CHANGE_REQUIRED");
@@ -236,6 +254,7 @@ describe("wrapRoute — autentikasi & izin", () => {
       mustChangePassword: true,
     });
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       allowPasswordChangePending: true,
       handler: async ({ actor }) => ({
         mustChangePassword: actor.mustChangePassword,
@@ -254,7 +273,7 @@ describe("wrapRoute — autentikasi & izin", () => {
       via: "apikey",
     });
     const handler = wrapRoute({
-      permission: "question:setReady",
+      authz: { kind: "route", permission: "question:setReady" },
       handler: async () => ({ ok: true }),
     });
     expect((await handler(req())).status).toBe(403);
@@ -262,7 +281,7 @@ describe("wrapRoute — autentikasi & izin", () => {
 
   it("izin cukup → sukses", async () => {
     const handler = wrapRoute({
-      permission: "question:view",
+      authz: { kind: "route", permission: "question:view" },
       handler: async () => ({ ok: true }),
     });
     expect((await handler(req())).status).toBe(200);
@@ -273,6 +292,7 @@ describe("wrapRoute — rate limiting", () => {
   it("menolak dengan 429 setelah kapasitas habis (+ header Retry-After)", async () => {
     resolveActorMock.mockResolvedValue(adminActor());
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       rateLimit: { capacity: 2, refillPerSec: 1 },
       handler: async () => ({ ok: true }),
     });
@@ -286,7 +306,7 @@ describe("wrapRoute — rate limiting", () => {
   });
 
   it("tanpa opsi rateLimit → tak dibatasi", async () => {
-    const handler = wrapRoute({ handler: async () => ({ ok: true }) });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async () => ({ ok: true }) });
     for (let i = 0; i < 100; i++) {
       expect((await handler(req())).status).toBe(200);
     }
@@ -294,6 +314,7 @@ describe("wrapRoute — rate limiting", () => {
 
   it("bucket terpisah per aktor (satu kena limit, lain tidak)", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       rateLimit: { capacity: 1, refillPerSec: 1 },
       handler: async () => ({ ok: true }),
     });
@@ -315,13 +336,13 @@ describe("ok() — respons sukses manual", () => {
 
 describe("#6 — X-Request-ID (traceability)", () => {
   it("menyertakan X-Request-ID pada respons sukses", async () => {
-    const handler = wrapRoute({ handler: async () => ({ ok: true }) });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async () => ({ ok: true }) });
     const res = await handler(req());
     expect(res.headers.get("x-request-id")).toBeTruthy();
   });
 
   it("meneruskan X-Request-ID dari header masuk", async () => {
-    const handler = wrapRoute({ handler: async () => ({ ok: true }) });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async () => ({ ok: true }) });
     const res = await handler(
       req("http://localhost/api/x", { headers: { "x-request-id": "trace-abc-123" } }),
     );
@@ -330,7 +351,7 @@ describe("#6 — X-Request-ID (traceability)", () => {
 
   it("menyertakan X-Request-ID pada respons error (401)", async () => {
     resolveActorMock.mockResolvedValue(null);
-    const handler = wrapRoute({ handler: async () => ({}) });
+    const handler = wrapRoute({ authz: { kind: "authenticated" }, handler: async () => ({}) });
     const res = await handler(req());
     expect(res.status).toBe(401);
     expect(res.headers.get("x-request-id")).toBeTruthy();
@@ -341,6 +362,7 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
   it("permintaan kedua dgn key sama → replay (handler TAK jalan 2×)", async () => {
     let calls = 0;
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       idempotent: true,
       handler: async () => ({ n: ++calls }),
     });
@@ -355,6 +377,7 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
   it("key berbeda → handler jalan lagi", async () => {
     let calls = 0;
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       idempotent: true,
       handler: async () => ({ n: ++calls }),
     });
@@ -363,9 +386,48 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
     expect(calls).toBe(2);
   });
 
+  it("key sama + payload berbeda → 422 IDEMPOTENCY_KEY_REUSED (bukan replay senyap)", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      authz: { kind: "authenticated" },
+      idempotent: true,
+      body: z.object({ n: z.number() }),
+      handler: async ({ body }) => ({ n: body.n, calls: ++calls }),
+    });
+    const headers = { "idempotency-key": "k-2", "content-type": "application/json" };
+    const first = await handler(
+      req("http://localhost/api/x", { method: "POST", headers, body: JSON.stringify({ n: 1 }) }),
+    );
+    const second = await handler(
+      req("http://localhost/api/x", { method: "POST", headers, body: JSON.stringify({ n: 2 }) }),
+    );
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(422);
+    expect((await second.json()).error.code).toBe("IDEMPOTENCY_KEY_REUSED");
+    expect(calls).toBe(1); // handler tak dijalankan untuk payload kedua
+  });
+
+  it("key sama + payload sama → tetap replay", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      authz: { kind: "authenticated" },
+      idempotent: true,
+      body: z.object({ n: z.number() }),
+      handler: async ({ body }) => ({ n: body.n, calls: ++calls }),
+    });
+    const headers = { "idempotency-key": "k-3", "content-type": "application/json" };
+    const init = { method: "POST", headers, body: JSON.stringify({ n: 7 }) };
+    const first = await handler(req("http://localhost/api/x", init));
+    const second = await handler(req("http://localhost/api/x", init));
+    expect(second.headers.get("idempotent-replay")).toBe("true");
+    expect(await first.json()).toEqual(await second.json());
+    expect(calls).toBe(1);
+  });
+
   it("tanpa header key → tak ada efek samping idempotensi", async () => {
     let calls = 0;
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       idempotent: true,
       handler: async () => ({ n: ++calls }),
     });
@@ -375,9 +437,10 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
   });
 });
 
-describe("Pilar 3 v2.0 — params validation & public auth: false", () => {
+describe("Pilar 3 v2.0 — params validation & authz public", () => {
   it("mem-parse dan memvalidasi params rute dinamis yang sah", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       params: z.object({ id: z.string().uuid() }),
       handler: async ({ params }) => ({ id: params.id }),
     });
@@ -390,6 +453,7 @@ describe("Pilar 3 v2.0 — params validation & public auth: false", () => {
 
   it("menolak params yang cacat dengan 400 VALIDATION_ERROR", async () => {
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       params: z.object({ id: z.string().uuid() }),
       handler: async ({ params }) => ({ id: params.id }),
     });
@@ -399,9 +463,9 @@ describe("Pilar 3 v2.0 — params validation & public auth: false", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
-  it("auth: false mengizinkan akses anonim tanpa header sesi", async () => {
+  it("authz public mengizinkan akses anonim tanpa header sesi", async () => {
     const handler = wrapRoute({
-      auth: false,
+      authz: { kind: "public", reason: "tes akses anonim" },
       handler: async () => ({ public: true }),
     });
     // Request tanpa auth header
@@ -422,6 +486,7 @@ describe("Pilar 3 v2.0 — params validation & public auth: false", () => {
       },
     ];
     const handler = wrapRoute({
+      authz: { kind: "authenticated" },
       handler: async () => {
         throw new QuestionPayloadValidationError("Payload soal tidak valid", issues as z.ZodIssue[]);
       },

@@ -15,7 +15,7 @@ const emptyQuerySchema = z.object({}).optional();
 /** GET /api/bundles/[id] — detail paket + item berurutan. */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ params, actor }) => {
@@ -31,13 +31,16 @@ export const GET = wrapRoute({
 /**
  * PATCH /api/bundles/[id] — perbarui metadata paket.
  *
- * SENGAJA **tanpa** `permission` di gerbang route (CONSTRAINTS #35): izin
- * `bundle:manage` kini ber-`own` (latihan = milik pembuat), sedang `wrapRoute`
- * memanggil `assertCan(actor, perm)` **tanpa `ownerId`** → akan 403 semua guru.
- * Otorisasi per-paket ditegakkan di `updateBundle` → `assertBundleWrite`.
+ * Izin `bundle:manage` ber-`own` (latihan = milik pembuat), jadi gerbang route
+ * tanpa `ownerId` akan menolak semua guru (CONSTRAINTS #35). Otorisasi
+ * per-paket ditegakkan `assertBundleWrite` di service.
  */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/bundle-shared.ts:assertBundleWrite",
+  },
   params: paramsSchema,
   body: updateBundleSchema,
   handler: async ({ params, body, actor }) => updateBundle(params.id, body, actor),
@@ -50,6 +53,10 @@ export const PATCH = wrapRoute({
  */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/bundle-shared.ts:assertBundleWrite",
+  },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ params, actor }) => {

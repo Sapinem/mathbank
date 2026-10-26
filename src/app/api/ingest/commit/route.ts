@@ -16,7 +16,7 @@ import { ConflictError } from "@/lib/auth/guards";
  * sendiri, sehingga alur domain itu mustahil diuji tanpa HTTP.
  */
 export const POST = wrapRoute({
-  permission: "question:create",
+  authz: { kind: "route", permission: "question:create" },
   // Berat (unduh gambar) — dibatasi agar server tak kelelahan, tapi cukup
   // longgar untuk ingest massal: burst 30, isi ulang 1 token/detik.
   // (Sebelumnya 10 / 0.2 → 1 commit tiap 5 dtk, terlalu lambat untuk korpus besar.)

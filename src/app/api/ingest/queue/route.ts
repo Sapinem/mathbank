@@ -7,7 +7,7 @@ import { listQueue, countByStatus } from "@/lib/ingest/queue";
  * Lihat antrean ingest (terbaru dulu) + ringkasan per status.
  */
 export const GET = wrapRoute({
-  permission: "question:view",
+  authz: { kind: "route", permission: "ingest:queue:read" },
   rateLimit: true,
   query: ingestQueueQuerySchema,
   handler: async ({ query }) => {

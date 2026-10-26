@@ -20,7 +20,7 @@ const patchSchema = z.object({
 /** GET /api/topics/[id] — satu topik. */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ params }) => {
@@ -33,7 +33,7 @@ export const GET = wrapRoute({
 /** PATCH /api/topics/[id] — perbarui (anti-siklus & level). */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "taxonomy:manage",
+  authz: { kind: "route", permission: "taxonomy:manage" },
   params: paramsSchema,
   body: patchSchema,
   handler: async ({ params, body, actor }) => updateTopic(params.id, body, actor),
@@ -42,7 +42,7 @@ export const PATCH = wrapRoute({
 /** DELETE /api/topics/[id] — hapus (tolak bila ada anak / dipakai). */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
-  permission: "taxonomy:manage",
+  authz: { kind: "route", permission: "taxonomy:manage" },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ params, actor }) => {

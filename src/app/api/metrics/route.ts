@@ -39,8 +39,15 @@ export async function GET(req: Request) {
     // 404 agar tak mengungkap keberadaan endpoint saat nonaktif.
     return NextResponse.json(
       { error: { code: "NOT_FOUND", message: "Tidak ditemukan" } },
-      { status: auth.reason === "unauthorized" ? 401 : 404 },
+      {
+        status: auth.reason === "unauthorized" ? 401 : 404,
+        headers: { "Cache-Control": "no-store" },
+      },
     );
   }
-  return NextResponse.json({ data: snapshot() });
+  // Metrik memuat nama route internal — jangan pernah masuk cache bersama.
+  return NextResponse.json(
+    { data: snapshot() },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

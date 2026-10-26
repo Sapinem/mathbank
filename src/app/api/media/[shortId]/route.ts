@@ -10,7 +10,7 @@ const emptyQuerySchema = z.object({}).optional();
 
 /** GET /api/media/[shortId] — detail aset + daftar soal yang memakainya. */
 export const GET = wrapRoute({
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   rateLimit: true,
   params: paramsSchema,
   query: emptyQuerySchema,
@@ -25,7 +25,7 @@ export const GET = wrapRoute({
 
 /** PATCH /api/media/[shortId] — ubah metadata aset (judul/alt/caption/deskripsi). */
 export const PATCH = wrapRoute({
-  permission: "media:manage",
+  authz: { kind: "route", permission: "media:manage" },
   rateLimit: true,
   params: paramsSchema,
   body: updateMediaSchema,
@@ -46,7 +46,7 @@ export const PATCH = wrapRoute({
  * mentah (500) alih-alih pesan yang bisa ditindaklanjuti guru.
  */
 export const DELETE = wrapRoute({
-  permission: "media:manage",
+  authz: { kind: "route", permission: "media:manage" },
   rateLimit: true,
   params: paramsSchema,
   query: emptyQuerySchema,

@@ -28,9 +28,9 @@ function openaiBody(vectors: number[][]) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("embedding/bge-m3 — env", () => {
-  it("default = service FastAPI BGE-M3 (127.0.0.1:3005)", () => {
-    expect(DEFAULT_EMBEDDING_URL).toBe("http://127.0.0.1:3005");
-    expect(embeddingBaseUrl({})).toBe("http://127.0.0.1:3005");
+  it("default = service Ollama BGE-M3 (127.0.0.1:11434)", () => {
+    expect(DEFAULT_EMBEDDING_URL).toBe("http://127.0.0.1:11434");
+    expect(embeddingBaseUrl({})).toBe("http://127.0.0.1:11434");
     expect(embeddingModel({})).toBe("bge-m3");
     expect(isEmbeddingConfigured({})).toBe(true);
   });
@@ -45,9 +45,9 @@ describe("embedding/bge-m3 — env", () => {
     expect(embeddingTimeoutMs({ BGE_M3_TIMEOUT_MS: "-1" })).toBe(120000);
   });
   it("endpoint: base polos / ber-v1 / URL penuh", () => {
-    expect(embeddingEndpoint("http://x:3005")).toBe("http://x:3005/v1/embeddings");
-    expect(embeddingEndpoint("http://x:3005/v1")).toBe("http://x:3005/v1/embeddings");
-    expect(embeddingEndpoint("http://x:3005/v1/embeddings")).toBe("http://x:3005/v1/embeddings");
+    expect(embeddingEndpoint("http://x:11434")).toBe("http://x:11434/v1/embeddings");
+    expect(embeddingEndpoint("http://x:11434/v1")).toBe("http://x:11434/v1/embeddings");
+    expect(embeddingEndpoint("http://x:11434/v1/embeddings")).toBe("http://x:11434/v1/embeddings");
   });
 });
 
@@ -189,26 +189,82 @@ describe("embedding/bge-m3 — embedText & health", () => {
     expect(r.error).toContain("768");
   });
 
-  it("health: tanpa /health (404) → probe fungsional embed", async () => {
+  it("health: tanpa /health (404) tapi ada Ollama /api/version → ok + detail tanpa probe embed", async () => {
     let call = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (u: string) => {
         call += 1;
         if (String(u).endsWith("/health")) return new Response("not found", { status: 404 });
+        if (String(u).endsWith("/api/version")) return jsonResponse({ version: "0.32.11" });
         return jsonResponse(openaiBody([vec()]));
       }),
     );
     const r = await embeddingHealth({ baseUrl: "http://x" });
     expect(r.ok).toBe(true);
+    expect((r.detail as { version?: string })?.version).toBe("0.32.11");
     expect(call).toBe(2);
   });
 
-  it("health: balasan /health bukan JSON → tetap ok", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("ok", { status: 200 })));
+  it("health: tanpa /health dan /api/version (404) → probe fungsional embed", async () => {
+    let call = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        call += 1;
+        if (String(u).endsWith("/health") || String(u).endsWith("/api/version")) {
+          return new Response("not found", { status: 404 });
+        }
+        return jsonResponse(openaiBody([vec()]));
+      }),
+    );
     const r = await embeddingHealth({ baseUrl: "http://x" });
     expect(r.ok).toBe(true);
-    expect(r.detail).toBeUndefined();
+    expect(call).toBe(3);
+  });
+
+  it("health: baseUrl berakhiran /v1 dinormalkan ke root host", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        urls.push(String(u));
+        if (String(u).endsWith("/health")) return new Response("not found", { status: 404 });
+        if (String(u).endsWith("/api/version")) return jsonResponse({ version: "0.32.11" });
+        return jsonResponse(openaiBody([vec()]));
+      }),
+    );
+    const r = await embeddingHealth({ baseUrl: "http://x:11434/v1" });
+    expect(r.ok).toBe(true);
+    expect(urls).toEqual(["http://x:11434/health", "http://x:11434/api/version"]);
+  });
+
+  it("health: /api/version melempar error koneksi → gagal cepat tanpa probe embed", async () => {
+    let call = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        call += 1;
+        if (String(u).endsWith("/health")) return new Response("not found", { status: 404 });
+        if (String(u).endsWith("/api/version")) throw new Error("koneksi terputus saat probe versi");
+        return jsonResponse(openaiBody([vec()]));
+      }),
+    );
+    const r = await embeddingHealth({ baseUrl: "http://x" });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("koneksi terputus saat probe versi");
+    expect(call).toBe(2);
+  });
+
+  it("health: signal yang sudah di-abort sebelum dipanggil → langsung gagal tanpa fetch", async () => {
+    const spy = vi.fn();
+    vi.stubGlobal("fetch", spy);
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const r = await embeddingHealth({ baseUrl: "http://x", signal: ctrl.signal });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("timeout");
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("health: status 500 → ok:false tanpa probe embed", async () => {

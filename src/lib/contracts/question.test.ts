@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   createQuestionSchema,
   listQuestionsQuerySchema,
+  listQuestionsMcpInputShape,
   isOptionBased,
   OPTION_BASED_TYPES,
 } from "./question";
@@ -60,6 +61,50 @@ describe("contracts/question", () => {
     expect(q.limit).toBe(20);
     expect(q.offset).toBe(0);
     expect(q.includeDeleted).toBe(false);
+  });
+
+  it("filter boolean eksplisit: 'false' TIDAK boleh menjadi true", () => {
+    expect(listQuestionsQuerySchema.parse({ includeDeleted: "false" }).includeDeleted).toBe(false);
+    expect(listQuestionsQuerySchema.parse({ includeDeleted: "0" }).includeDeleted).toBe(false);
+    expect(listQuestionsQuerySchema.parse({ flagged: "false" }).flagged).toBe(false);
+    expect(listQuestionsQuerySchema.parse({ flagged: "0" }).flagged).toBe(false);
+  });
+
+  it("filter boolean menerima true/1", () => {
+    expect(listQuestionsQuerySchema.parse({ includeDeleted: "true" }).includeDeleted).toBe(true);
+    expect(listQuestionsQuerySchema.parse({ flagged: "1" }).flagged).toBe(true);
+  });
+
+  it("filter boolean menolak nilai tak dikenal (bukan ditebak)", () => {
+    expect(() => listQuestionsQuerySchema.parse({ includeDeleted: "yes" })).toThrow();
+  });
+
+  it("filter boolean menerima boolean bertipe (jalur MCP/service)", () => {
+    // Tool MCP mengirim boolean asli, bukan string query.
+    expect(listQuestionsQuerySchema.parse({ flagged: true }).flagged).toBe(true);
+    expect(listQuestionsQuerySchema.parse({ flagged: false }).flagged).toBe(false);
+    expect(listQuestionsQuerySchema.parse({ includeDeleted: true }).includeDeleted).toBe(true);
+    // Argumen khas search_questions (mode & paginasi sudah bertipe).
+    const mcpArgs = { flagged: true, mode: "text" as const, limit: 20, offset: 0 };
+    expect(listQuestionsQuerySchema.parse(mcpArgs).flagged).toBe(true);
+  });
+
+  it("bentuk MCP search_questions = kunci REST minus includeDeleted", () => {
+    const rest = Object.keys(listQuestionsQuerySchema.shape).sort();
+    const mcp = Object.keys(listQuestionsMcpInputShape).sort();
+    expect(mcp).toEqual(rest.filter((k) => k !== "includeDeleted"));
+  });
+
+  it("bentuk MCP: nilai tunggal & daftar sama-sama diterima skema REST", () => {
+    const single = listQuestionsQuerySchema.parse({ questionType: "essay", difficulty: 3 });
+    expect(single.questionType).toEqual(["essay"]);
+    expect(single.difficulty).toEqual([3]);
+    const list = listQuestionsQuerySchema.parse({
+      questionType: ["essay", "short_answer"],
+      difficulty: [2, 3],
+    });
+    expect(list.questionType).toEqual(["essay", "short_answer"]);
+    expect(list.difficulty).toEqual([2, 3]);
   });
 
   it("filter: coerce difficulty & flagged dari string", () => {

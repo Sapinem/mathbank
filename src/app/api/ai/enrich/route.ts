@@ -15,7 +15,7 @@ import type { EnrichField } from "@/lib/ai/enrich";
  */
 export const POST = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.2 },
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   body: aiEnrichBodySchema,
   handler: async ({ body, actor }: { body: AiEnrichBody; actor: import("@/lib/auth/actor").Actor }) => {
     if ("questionIds" in body) {

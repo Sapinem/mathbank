@@ -8,6 +8,7 @@ const emptyQuerySchema = z.object({}).optional();
  * QBank salah memanggil /api/auth/change-password).
  */
 export const GET = wrapRoute({
+  authz: { kind: "authenticated" },
   rateLimit: true,
   // Izinkan meski wajib ganti password — UI perlu membaca status ini
   // untuk mengarahkan ke /change-password.

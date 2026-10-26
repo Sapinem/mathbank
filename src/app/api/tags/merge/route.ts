@@ -15,7 +15,7 @@ const mergeSchema = z.object({
  */
 export const POST = wrapRoute({
   rateLimit: { capacity: 10, refillPerSec: 0.2 },
-  permission: "taxonomy:manage",
+  authz: { kind: "route", permission: "taxonomy:manage" },
   body: mergeSchema,
   handler: async ({ body, actor }) => {
     const moved = await mergeTags(body.sourceId, body.targetId, actor);

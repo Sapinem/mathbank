@@ -1,9 +1,10 @@
 /**
  * Embedding BGE-M3 (M10-c) — klien HTTP OpenAI-compatible (`POST /v1/embeddings`).
  *
- * **Keputusan (MAT-115, 2026-10-19):** sumber kebenaran service embedding adalah
- * **FastAPI BGE-M3** di `http://127.0.0.1:3005` (dimensi **1024**, endpoint
- * `/v1/embeddings` + `/health`). Default ENV diarahkan ke sana.
+ * **Keputusan (2026-10-27):** sumber kebenaran service embedding default adalah
+ * **Ollama BGE-M3** di `http://127.0.0.1:11434` (dimensi **1024**, endpoint
+ * `/v1/embeddings` + `/api/version`). Layanan FastAPI BGE-M3 lama di port `:3005`
+ * tetap didukung secara backwards-compatible via ENV `BGE_M3_SERVICE_URL`.
  *
  * Transport memakai kontrak OpenAI (`{ model, input } → { data: [{ embedding }] }`)
  * karena kontrak itu juga yang dipakai Ollama (`/v1/embeddings`), sehingga
@@ -12,7 +13,7 @@
  * tidak memutus pemanggil lama.
  *
  * ENV:
- *   `BGE_M3_SERVICE_URL`  (default `http://127.0.0.1:3005`)
+ *   `BGE_M3_SERVICE_URL`  (default `http://127.0.0.1:11434`)
  *   `BGE_M3_MODEL`        (default `bge-m3`)
  *   `BGE_M3_TIMEOUT_MS`   (default `120000` — cold start model CPU bisa ~60 dtk)
  *
@@ -21,8 +22,8 @@
  */
 export const EMBEDDING_DIM = 1024;
 
-/** Default service embedding aktif (FastAPI BGE-M3, MAT-115). */
-export const DEFAULT_EMBEDDING_URL = "http://127.0.0.1:3005";
+/** Default service embedding aktif (Ollama BGE-M3, 2026-10-27). */
+export const DEFAULT_EMBEDDING_URL = "http://127.0.0.1:11434";
 
 export interface EmbedResult {
   ok: boolean;
@@ -144,18 +145,29 @@ export async function embedText(text: string, opts: EmbedOptions = {}): Promise<
 /**
  * Cek service embedding hidup.
  *
- * Prioritas `GET {base}/health` (murah, tak memuat model). Bila service tak punya
- * endpoint itu (404/405/501), jatuh ke probe fungsional: embed 1 kata.
+ * Prioritas `GET {base}/health` (FastAPI) atau `GET {base}/api/version` (Ollama)
+ * (murah, tak memuat/menginferensi model). Bila service tak punya endpoint itu,
+ * jatuh ke probe fungsional: embed 1 kata.
  */
 export async function embeddingHealth(
   opts: EmbedOptions = {},
 ): Promise<{ ok: boolean; error?: string; detail?: unknown }> {
-  const base = (opts.baseUrl ?? embeddingBaseUrl()).replace(/\/+$/, "");
+  const rawBase = (opts.baseUrl ?? embeddingBaseUrl()).replace(/\/+$/, "");
+  const root = rawBase.replace(/\/(v1(\/embeddings)?)?$/, "");
   const ctrl = new AbortController();
-  if (opts.signal) opts.signal.addEventListener("abort", () => ctrl.abort(), { once: true });
+  if (opts.signal) {
+    if (opts.signal.aborted) {
+      ctrl.abort();
+    } else {
+      opts.signal.addEventListener("abort", () => ctrl.abort(), { once: true });
+    }
+  }
+  if (ctrl.signal.aborted) {
+    return { ok: false, error: "timeout" };
+  }
   const timer = setTimeout(() => ctrl.abort(), 5000);
   try {
-    const res = await fetch(`${base}/health`, { signal: ctrl.signal });
+    const res = await fetch(`${root}/health`, { signal: ctrl.signal });
     if (res.ok) {
       const detail = await res.json().catch(() => undefined);
       const dim = (detail as { dim?: unknown } | undefined)?.dim;
@@ -164,11 +176,20 @@ export async function embeddingHealth(
       }
       return { ok: true, detail };
     }
-    // Service tanpa /health → probe fungsional di bawah.
-    if (![404, 405, 501].includes(res.status)) return { ok: false, error: `HTTP ${res.status}` };
+    // Jika service tanpa /health (mis. Ollama 404), coba probe ringan Ollama /api/version
+    if ([404, 405, 501].includes(res.status)) {
+      const versionRes = await fetch(`${root}/api/version`, { signal: ctrl.signal });
+      if (versionRes.ok) {
+        const detail = await versionRes.json().catch(() => undefined);
+        return { ok: true, detail };
+      }
+    } else {
+      return { ok: false, error: `HTTP ${res.status}` };
+    }
   } catch (err) {
     // Jaringan mati / koneksi ditolak / timeout → langsung gagal tanpa probe fungsional.
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg === "The operation was aborted." ? "timeout" : msg };
   } finally {
     clearTimeout(timer);
   }

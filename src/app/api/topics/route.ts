@@ -14,7 +14,7 @@ const emptyQuerySchema = z.object({}).optional();
 /** GET /api/topics — daftar topik (untuk filter & editor). */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   query: emptyQuerySchema,
   handler: async () => listTopics(),
 });
@@ -22,7 +22,7 @@ export const GET = wrapRoute({
 /** POST /api/topics — buat topik (butuh `taxonomy:manage`). */
 export const POST = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "taxonomy:manage",
+  authz: { kind: "route", permission: "taxonomy:manage" },
   body: createSchema,
   handler: async ({ body, actor }) => createTopic(body, actor),
 });

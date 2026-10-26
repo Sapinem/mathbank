@@ -17,6 +17,12 @@
 interface Entry {
   status: number;
   body: unknown;
+  /**
+   * Sidik jari request (method + path + body mentah). Key yang sama dengan
+   * **payload berbeda** bukan "permintaan ulang" — itu salah pakai klien dan
+   * harus ditolak, bukan dijawab dengan respons lama.
+   */
+  fingerprint: string;
   /** Kapan entri kedaluwarsa (ms epoch). */
   expiresAt: number;
   /** Penanda "sedang diproses" — cegah dua request paralel key sama. */
@@ -30,7 +36,7 @@ export interface IdempotencyStore {
   /** Simpan hasil respons untuk `key` selama `ttlMs`. */
   save(key: string, entry: Entry): void;
   /** Tandai `key` sedang diproses (in-flight) selama `ttlMs`. */
-  markInFlight(key: string, ttlMs: number): void;
+  markInFlight(key: string, fingerprint: string, ttlMs: number): void;
   /** Hapus entri `key` (mis. saat handler gagal). */
   forget(key: string): void;
   /** Bersihkan entri kedaluwarsa. */
@@ -57,10 +63,11 @@ export class MemoryStore implements IdempotencyStore {
     this.map.set(key, { ...entry, inFlight: false });
   }
 
-  markInFlight(key: string, ttlMs: number): void {
+  markInFlight(key: string, fingerprint: string, ttlMs: number): void {
     this.map.set(key, {
       status: 0,
       body: null,
+      fingerprint,
       expiresAt: Date.now() + ttlMs,
       inFlight: true,
     });
@@ -101,7 +108,8 @@ export function getIdempotencyStore(): IdempotencyStore {
 export type IdempotencyCheck =
   | { kind: "fresh" } // belum pernah → jalankan handler
   | { kind: "replay"; status: number; body: unknown } // sudah ada → pakai ulang
-  | { kind: "in-flight" }; // sedang diproses → tolak sementara
+  | { kind: "in-flight" } // sedang diproses → tolak sementara
+  | { kind: "mismatch" }; // key sama, payload beda → 422 (jangan replay)
 
 /** TTL bawaan: 60 detik (sesuai catatan enterprise). */
 export const DEFAULT_TTL_MS = 60_000;
@@ -109,19 +117,23 @@ export const DEFAULT_TTL_MS = 60_000;
 /**
  * Periksa key idempotensi.
  * - Bila belum ada → tandai in-flight & kembalikan `fresh`.
- * - Bila sudah ada (selesai) → `replay`.
+ * - Bila sudah ada (selesai) dengan sidik jari SAMA → `replay`.
+ * - Bila sudah ada dengan sidik jari BEDA → `mismatch` (key dipakai ulang
+ *   untuk payload lain; me-replay akan mengembalikan resource yang salah).
  * - Bila sedang diproses → `in-flight`.
  */
 export function checkIdempotency(
   key: string,
+  fingerprint: string,
   ttlMs = DEFAULT_TTL_MS,
 ): IdempotencyCheck {
   const existing = store.get(key);
   if (!existing) {
-    store.markInFlight(key, ttlMs);
+    store.markInFlight(key, fingerprint, ttlMs);
     return { kind: "fresh" };
   }
   if (existing.inFlight) return { kind: "in-flight" };
+  if (existing.fingerprint !== fingerprint) return { kind: "mismatch" };
   return { kind: "replay", status: existing.status, body: existing.body };
 }
 
@@ -130,7 +142,14 @@ export function rememberResponse(
   key: string,
   status: number,
   body: unknown,
+  fingerprint: string,
   ttlMs = DEFAULT_TTL_MS,
 ): void {
-  store.save(key, { status, body, expiresAt: Date.now() + ttlMs, inFlight: false });
+  store.save(key, {
+    status,
+    body,
+    fingerprint,
+    expiresAt: Date.now() + ttlMs,
+    inFlight: false,
+  });
 }

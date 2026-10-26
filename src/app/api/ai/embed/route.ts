@@ -11,7 +11,7 @@ import { embedQuestions } from "@/lib/services/enrichment-service";
  */
 export const POST = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.2 },
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   body: aiEmbedSchema,
   handler: async ({ body, actor }) => {
     const r = await embedQuestions(body.questionIds, actor);

@@ -1,6 +1,6 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
@@ -121,8 +121,8 @@ Yang perlu dibaca cepat dari snapshot terbaru:
 
 Invarian skema tetap dijaga `pnpm db:verify` (angka minimum: `src/lib/db/schema-expectations.ts`).
 
-- ADR berlaku: **0009** (bundle satu tabel), **0010** (event), **0011** (stimulus), **0014** (sumber menempel bundle), **0015** (gabung books/institutions), **0016** (`collections`), **0017** (buang enum `exercise`), **0018** (drop `collections.origin`), **0019** (isolasi vektor), **0020** (event makro vs provenance naskah), **0021** (print config), **0022** (`wrapRoute`, larangan Server Actions). Total 22 ADR di `docs/ADR/`.
-- **Utang terbuka:** soal belum bertopik & tanpa media (angka di snapshot §1) · **kelengkapan pedagogis** — berapa soal `ready`, berapa punya `distractorRationale`/`rubric` (angka di snapshot §2; jangan disalin ke sini) · layanan embedding `:3005` tidak selalu hidup · `main` tertinggal jauh di belakang branch kerja sehingga CI belum pernah menguji pekerjaan terbaru.
+- ADR berlaku: **0009** (bundle satu tabel), **0010** (event), **0011** (stimulus), **0014** (sumber menempel bundle), **0015** (gabung books/institutions), **0016** (`collections`), **0017** (buang enum `exercise`), **0018** (drop `collections.origin`), **0019** (isolasi vektor), **0020** (event makro vs provenance naskah), **0021** (print config), **0022** (`wrapRoute`, larangan Server Actions), **0023** (evaluator invarian skema), **0024** (denormalisasi grade soal dari bundle & pembersihan non-kelas), **0025** (pemisahan status arsip domain vs hapus lunak), **0026** (deklarasi otorisasi eksplisit per method route). Total 26 ADR di `docs/ADR/`.
+- **Utang terbuka:** soal belum bertopik & tanpa media (angka di snapshot §1) · **kelengkapan pedagogis** — berapa soal `ready`, berapa punya `distractorRationale`/`rubric` (angka di snapshot §2; jangan disalin ke sini) · layanan embedding Ollama `:11434` perlu dipastikan aktif (`ollama serve`) · `main` tertinggal jauh di belakang branch kerja sehingga CI belum pernah menguji pekerjaan terbaru.
 
 ## 9. Arsitektur 6 lapisan & layanan embedding
 
@@ -142,26 +142,27 @@ Invarian skema tetap dijaga `pnpm db:verify` (angka minimum: `src/lib/db/schema-
 
 **Aturan:** logika murni **hanya** di L4; route **tidak** menyentuh Drizzle langsung (lewat L3/L5); jangan menambah lapisan baru tanpa ADR.
 
-### 9.2 Layanan embedding (FastAPI BGE-M3, port `:3005`)
+### 9.2 Layanan embedding (Ollama BGE-M3, port `:11434`)
 
 **Kontrak service:**
 
 ```bash
-curl -s localhost:3005/health
-# {"status":"ok","model":"BAAI/bge-m3","dim":1024}
-curl -s -X POST localhost:3005/v1/embeddings \
-  -H 'Content-Type: application/json' -d '{"input":["$x^2+1$"]}'
+curl -s localhost:11434/api/version
+# {"version":"0.32.11"}
+curl -s -X POST localhost:11434/v1/embeddings \
+  -H 'Content-Type: application/json' -d '{"model":"bge-m3","input":["$x^2+1$"]}'
 ```
 
-- Model `BAAI/bge-m3`, **dimensi wajib 1024** (sesuai `vector(1024)`); OpenAPI di `/openapi.json`.
-- Endpoint embedding: `POST /v1/embeddings` (gaya OpenAI), health: `GET /health`.
-- ⚠️ Service ini **tidak selalu hidup** (health timeout saat snapshot 2026-10-21). Nyalakan sebelum ingest/enrichment massal.
+- Backend utama: **Ollama** dengan model `bge-m3`, **dimensi wajib 1024** (sesuai `vector(1024)`). Menghasilkan vektor yang 99,999% identik dengan PyTorch BGE-M3, ~3× lebih cepat pada CPU, dan memutus dependensi ke QBank.
+- Endpoint embedding: `POST /v1/embeddings` (gaya OpenAI) atau `POST /api/embed`, health: `GET /api/version` (Ollama) atau `GET /health` (FastAPI).
+- Pastikan Ollama aktif: `ollama list` (model `bge-m3:latest`), jalankan daemon via `ollama serve` atau `systemctl start ollama`.
 
-**Konvensi integrasi di aplikasi** (`src/lib/embedding/bge-m3.ts`, diselaraskan MAT-115):
+**Konvensi integrasi di aplikasi** (`src/lib/embedding/bge-m3.ts`):
 
-- Base URL dari `BGE_M3_SERVICE_URL` (default `http://127.0.0.1:3005`), model dari `BGE_M3_MODEL` (default `bge-m3`), batas waktu `BGE_M3_TIMEOUT_MS` (default 120000 ms — cold start CPU). **Jangan hardcode port** di kode baru.
+- Base URL dari `BGE_M3_SERVICE_URL` (default `http://127.0.0.1:11434`), model dari `BGE_M3_MODEL` (default `bge-m3`), batas waktu `BGE_M3_TIMEOUT_MS` (default 120000 ms — cold start CPU). **Jangan hardcode port** di kode baru.
 - Transport memakai kontrak **OpenAI-compatible**: `POST {base}/v1/embeddings` dengan body `{ model, input }` → `{ data: [{ embedding }] }`. Balasan gaya lama `{ embeddings: [[…]] }` (Ollama `/api/embed`) **masih diterima** agar pemanggil lama tidak putus.
-- Health check: `GET /health` (fallback probe embed bila endpoint health tidak ada).
+- Layanan FastAPI `:3005` lama tetap didukung jika `BGE_M3_SERVICE_URL` diarahkan ke sana.
+- Health check: `GET /health` atau probe cepat `GET /api/version` (fallback probe embed bila endpoint health tidak ada).
 - ✅ **Backfill selesai:** 11.867 dari 11.889 soal (99,8%) punya vektor; index HNSW terisi. Sisa 22 soal.
 - Aturan data: tolak vektor ≠ 1024 dim; batch + idempoten (skip berdasarkan hash konten); **backup dulu** (`pnpm backup:db`) sebelum backfill massal; jangan simpan vektor parsial.
 

@@ -11,7 +11,11 @@ const emptyQuerySchema = z.object({}).optional();
 /** DELETE /api/bundles/[id]/items/[itemId] — hapus item dari paket. */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 60, refillPerSec: 2 },
-  permission: "question:view", // #35: aturan sebenarnya di service (assertBundleWrite)
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/bundle-shared.ts:assertBundleWrite",
+    routeGate: "question:view",
+  },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ params, actor }) => {

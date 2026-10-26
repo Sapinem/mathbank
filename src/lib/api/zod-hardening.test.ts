@@ -1,13 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
-import fs from "fs";
-import path from "path";
+import { MANUAL_ROUTES, scanRoutes } from "./route-inventory";
 
 /**
- * Uji Verifikasi Pilar 3 — API Hardening (48/48 Route Handlers).
- * (Fase 3: 51 → 48 setelah 3 route stub 410 /api/collections* dihapus.)
+ * Uji Verifikasi Pilar 3 — API Hardening.
+ *
+ * Angka route TIDAK ditulis di sini: daftar method diturunkan dari filesystem
+ * lewat `scanRoutes()` (src/lib/api/route-inventory.ts), sehingga menambah route
+ * tidak menuntut menyunting tes. Sebelumnya tes ini memakai angka 48/60 dan
+ * regex `wrapRoute({([\s\S]*?)\n});` yang berhenti di `});` pertama.
+ *
  * Menjamin:
- * 1. Setiap route handler di `src/app/api/` (kecuali Better Auth auth/[...all]) memakai wrapRoute atau skema Zod.
- * 2. Seluruh endpoint wrapRoute memiliki `query:` atau `body:` atau `params:` schema.
+ * 1. Setiap method memakai `wrapRoute` atau terdaftar di `MANUAL_ROUTES` beralasan.
+ * 2. Seluruh method `wrapRoute` memiliki `query`/`body`/`params` schema.
  * 3. Parameter rute dinamis (UUID) yang tidak sah menghasilkan HTTP 400 { error: { code: "VALIDATION_ERROR" } }.
  */
 
@@ -56,52 +60,27 @@ vi.mock("@/lib/services/topic-service", () => ({
   deleteTopic: vi.fn(async () => ({ ok: true })),
 }));
 
-describe("Pilar 3: Audit Skema Zod 48 Route", () => {
-  function walk(dir: string): string[] {
-    let results: string[] = [];
-    const list = fs.readdirSync(dir);
-    for (const file of list) {
-      const fullPath = path.join(dir, file);
-      const stat = fs.statSync(fullPath);
-      if (stat && stat.isDirectory()) {
-        results = results.concat(walk(fullPath));
-      } else if (file.endsWith("route.ts")) {
-        results.push(fullPath);
-      }
-    }
-    return results;
-  }
+describe("Pilar 3: Audit Skema Zod Route", () => {
+  it("setiap method memakai wrapRoute atau pengecualian beralasan, dan punya skema", () => {
+    const routes = scanRoutes();
+    expect(routes.length).toBeGreaterThan(0);
 
-  it("semua route handler (di luar auth & health/metrics/mcp) terdaftar dan terlindungi Zod", () => {
-    const files = walk("src/app/api");
-    // Fase 3: 51 → 48 (3 route stub 410 /api/collections* dihapus).
-    expect(files.length).toBe(48);
+    const methods = routes.flatMap((r) => r.methods);
+    const wrapped = methods.filter((m) => m.shape === "wrap");
+    expect(wrapped.length).toBeGreaterThan(0);
 
-    const methods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
-    let wrapCount = 0;
-    const missingZod: string[] = [];
+    // Relasional, bukan angka: seluruh method non-wrap WAJIB punya alasan
+    // tertulis; sisanya WAJIB lewat wrapRoute.
+    const unexplained = methods
+      .filter((m) => m.shape !== "wrap")
+      .filter((m) => !(`${m.method} ${m.path}` in MANUAL_ROUTES))
+      .map((m) => `${m.method} ${m.path}`);
+    expect(unexplained).toEqual([]);
 
-    for (const file of files) {
-      if (file.includes("auth/[...all]")) continue; // Better Auth resmi
-
-      const content = fs.readFileSync(file, "utf8");
-      for (const method of methods) {
-        const wrapRegex = new RegExp(`export const ${method}\\s*=\\s*wrapRoute\\((?:<[^>]+>)?\\s*\\{([\\s\\S]*?)\\n\\}\\);`, "m");
-        const wrapMatch = content.match(wrapRegex);
-        if (wrapMatch) {
-          wrapCount++;
-          const opts = wrapMatch[1];
-          const hasQuery = /query\s*:/.test(opts);
-          const hasBody = /body\s*:/.test(opts);
-          const hasParams = /params\s*:/.test(opts);
-          if (!hasQuery && !hasBody && !hasParams) {
-            missingZod.push(`${method} ${file}`);
-          }
-        }
-      }
-    }
-
-    expect(wrapCount).toBeGreaterThanOrEqual(60);
+    // Setiap method wrapRoute WAJIB punya skema Zod di boundary (CONSTRAINT #22).
+    const missingZod = wrapped
+      .filter((m) => !m.hasSchema)
+      .map((m) => `${m.method} ${m.path}`);
     expect(missingZod).toEqual([]);
   });
 

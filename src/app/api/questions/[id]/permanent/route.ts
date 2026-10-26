@@ -17,6 +17,10 @@ const emptyQuerySchema = z.object({}).optional();
  */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 5, refillPerSec: 0.1 },
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/question-write.ts:hardDeleteQuestion",
+  },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ params, actor }) => {

@@ -11,7 +11,7 @@ const emptyQuerySchema = z.object({}).optional();
  * penghapusan dilakukan lewat DELETE /api/media/{shortId} satu per satu.
  */
 export const GET = wrapRoute({
-  permission: "media:manage",
+  authz: { kind: "route", permission: "media:manage" },
   rateLimit: true,
   query: emptyQuerySchema,
   handler: async () => findOrphanAssets(),

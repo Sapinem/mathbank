@@ -31,7 +31,7 @@ const ALLOWED = new Set([
 const emptyQuerySchema = z.object({}).optional();
 
 export const POST = wrapRoute({
-  permission: "media:manage",
+  authz: { kind: "route", permission: "media:manage" },
   rateLimit: { capacity: 30, refillPerSec: 0.5 },
   status: 201,
   query: emptyQuerySchema,

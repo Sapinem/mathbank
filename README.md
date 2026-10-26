@@ -39,7 +39,7 @@ Detail & alasan: `docs/TUMPUKAN-TEKNOLOGI.md`.
 ### Prasyarat
 - Node.js ≥ 20, pnpm
 - PostgreSQL 18 (port `5433`), ekstensi `vector` + `pg_trgm`
-- **Layanan embedding BGE-M3** (FastAPI) di `http://localhost:3005` — dibutuhkan untuk enrichment/pencarian semantik. Tanpa service ini aplikasi tetap jalan, tetapi embedding tidak bisa dibuat. Cek: `curl -s localhost:3005/health` → `{"status":"ok","model":"BAAI/bge-m3","dim":1024}`
+- **Layanan embedding BGE-M3** (Ollama) di `http://localhost:11434` — dibutuhkan untuk enrichment/pencarian semantik. Tanpa service ini aplikasi tetap jalan, tetapi embedding tidak bisa dibuat. Cek: `curl -s localhost:11434/api/version` atau `ollama list` (model `bge-m3:latest`).
 
 ### Pasang & jalankan
 
@@ -71,7 +71,7 @@ pnpm dev                      # http://localhost:3000
 | `pnpm backup:db` | Dump database ke `backups/` (`scripts/backup-db.mjs`) |
 | `pnpm restore:check` | Uji restore dari dump terakhir (`scripts/restore-check.mjs`) |
 | `pnpm theme:build` | Bangun ulang token tema |
-| `pnpm seed:taxonomy` | Seed taksonomi dari `config/curriculum.yaml` |
+| `pnpm seed:taxonomy` | Seed taksonomi dari arsip `docs/archive/historis/curriculum.yaml` |
 
 ### Verifikasi skema
 
@@ -93,21 +93,21 @@ pnpm restore:check    # restore dump terbaru ke DB sementara, lalu verifikasi
 
 Backup manual **tidak cukup** untuk produksi: jadwalkan harian (cron) + retensi 7/30 hari + uji restore bulanan. Lihat `docs/RUNBOOK.md`.
 
-### Layanan embedding (BGE-M3, port `:3005`)
+### Layanan embedding (BGE-M3, port `:11434`)
 
 | Item | Nilai |
 |------|-------|
-| Service | FastAPI, `http://localhost:3005` |
-| Model | `BAAI/bge-m3` · dimensi **1024** (harus cocok `vector(1024)`) |
-| Health | `GET /health` → `{"status":"ok","model":"BAAI/bge-m3","dim":1024}` |
-| Embed | `POST /v1/embeddings` `{"input":["..."]}` (gaya OpenAI); OpenAPI di `/openapi.json` |
-| Env aplikasi | `BGE_M3_SERVICE_URL` (default `http://127.0.0.1:3005`), `BGE_M3_MODEL` (default `bge-m3`), `BGE_M3_TIMEOUT_MS` (default `120000`) |
+| Service | Ollama, `http://localhost:11434` (FastAPI :3005 didukung sebagai fallback/alternatif) |
+| Model | `bge-m3` · dimensi **1024** (harus cocok `vector(1024)`) |
+| Health | `GET /api/version` (Ollama) / `GET /health` (FastAPI) |
+| Embed | `POST /v1/embeddings` `{"model":"bge-m3","input":["..."]}` (OpenAI-compatible) atau `POST /api/embed` |
+| Env aplikasi | `BGE_M3_SERVICE_URL` (default `http://127.0.0.1:11434`), `BGE_M3_MODEL` (default `bge-m3`), `BGE_M3_TIMEOUT_MS` (default `120000`) |
 
-✅ **Klien aplikasi sudah selaras (MAT-115).** `src/lib/embedding/bge-m3.ts` memakai kontrak OpenAI-compatible `POST {base}/v1/embeddings` (`{model,input}` → `{data:[{embedding}]}`), tetap menerima balasan lama `{embeddings:[[…]]}`, dan memakai `GET /health`. `.env`/`.env.example` menunjuk `:3005`.
+✅ **Klien aplikasi sudah selaras.** `src/lib/embedding/bge-m3.ts` memakai kontrak OpenAI-compatible `POST {base}/v1/embeddings` (`{model,input}` → `{data:[{embedding}]}`), tetap menerima balasan lama `{embeddings:[[…]]}`, dan memeriksa health via `/api/version` / `/health`. `.env`/`.env.example` menunjuk `:11434`.
 
 ✅ **Backfill vektor selesai:** **11.867 dari 11.889 soal (99,8%)** punya embedding `vector(1024)` dan index HNSW terisi. Sisa 22 soal belum — jalankan `pnpm backup:db` lalu backfill ulang bila perlu.
 
-⚠️ **Service `:3005` tidak selalu hidup.** Bila `curl -s localhost:3005/health` timeout, enrichment/pencarian semantik untuk soal **baru** akan gagal walau data lama sudah ter-embed. Nyalakan service sebelum ingest massal.
+💡 **Menjalankan Ollama:** Jalankan `ollama serve` (atau `systemctl start ollama`) dan pastikan model terpasang (`ollama list` memuat `bge-m3`). Ingestion/enrichment semantik otomatis memanggil endpoint ini. Hasil pengujian menunjukkan Ollama ~3× lebih cepat pada CPU dengan kemiripan vektor 99,999% terhadap PyTorch BGE-M3.
 
 ---
 

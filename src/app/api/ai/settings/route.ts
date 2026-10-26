@@ -12,7 +12,7 @@ const emptyQuerySchema = z.object({}).optional();
  */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "settings:manage",
+  authz: { kind: "route", permission: "settings:manage" },
   query: emptyQuerySchema,
   handler: async () => {
     const items = await getAiSettings();
@@ -22,7 +22,7 @@ export const GET = wrapRoute({
 
 export const POST = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
-  permission: "settings:manage",
+  authz: { kind: "route", permission: "settings:manage" },
   body: aiSettingsSchema,
   handler: async ({ body }) => {
     const items = await saveAiSettings(body);

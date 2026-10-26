@@ -22,7 +22,7 @@ const emptyQuerySchema = z.object({}).optional();
 /** GET /api/sources — daftar sumber (dengan usageCount). */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   query: emptyQuerySchema,
   handler: async () => listSources(),
 });
@@ -30,7 +30,7 @@ export const GET = wrapRoute({
 /** POST /api/sources — buat sumber (butuh taxonomy:manage). */
 export const POST = wrapRoute({
   rateLimit: true,
-  permission: "reference:manage",
+  authz: { kind: "route", permission: "reference:manage" },
   body: createSchema,
   handler: async ({ body, actor }) => createSource(body, actor),
 });

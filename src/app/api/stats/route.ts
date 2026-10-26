@@ -15,7 +15,7 @@ const emptyQuerySchema = z.object({}).optional();
  */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   query: emptyQuerySchema,
   handler: async () => {
     const [

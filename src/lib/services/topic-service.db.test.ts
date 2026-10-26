@@ -9,7 +9,7 @@ import {
   listTopics,
   buildTree,
 } from "./topic-service";
-import { ConflictError, NotFoundError, ForbiddenError } from "@/lib/auth/guards";
+import { ConflictError, NotFoundError } from "@/lib/auth/guards";
 
 /**
  * Tes INTEGRASI service topik (M5) — DB uji nyata.
@@ -76,10 +76,10 @@ describe("createTopic — level diturunkan dari induk", () => {
     ).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it("teacher TIDAK boleh (izin taxonomy:manage)", async () => {
-    await expect(createTopic({ name: "X" }, teacher)).rejects.toBeInstanceOf(
-      ForbiddenError,
-    );
+  it("teacher BOLEH (taxonomy:manage = yes; dulu 403 karena `own` palsu)", async () => {
+    // `topics` tak punya kolom pemilik → `own` mustahil dipenuhi (CONSTRAINT #35).
+    const t = await createTopic({ name: "X" }, teacher);
+    expect(t.id).toBeTypeOf("string");
   });
 });
 

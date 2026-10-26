@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { resolveActor } from "@/lib/auth/resolve";
@@ -26,11 +27,37 @@ import {
   rememberResponse,
   getIdempotencyStore,
 } from "./idempotency";
-import type { Actor } from "@/lib/auth/actor";
-import type { Permission } from "@/lib/auth/permissions";
+import type { ActorFor, Authz } from "./authz";
 import { log } from "@/lib/telemetry/logger";
 import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
 import { getClientIp } from "./client-ip";
+
+/**
+ * Deklarasi route yang menempel pada handler (Fase B — generator OpenAPI).
+ *
+ * KENAPA ditempel, bukan didaftarkan terpisah: skema Zod hidup sebagai objek
+ * di opsi `wrapRoute`. Menyalinnya ke registry berarti dua sumber kebenaran
+ * yang bisa menyimpang. Dengan menempelkannya (non-enumerable, jadi tak
+ * mengubah perilaku & tak muncul di `Object.keys`), generator membaca skema
+ * yang PERSIS dipakai runtime.
+ */
+export const ROUTE_DECLARATION = Symbol.for("mathbank.routeDeclaration");
+
+export interface DeclaredRoute {
+  authz: Authz;
+  query?: ZodType;
+  body?: ZodType;
+  params?: ZodType;
+  status: number;
+  idempotent: boolean;
+}
+
+/** Ambil deklarasi yang ditempel `wrapRoute`; `null` bila bukan route handler. */
+export function routeDeclarationOf(handler: unknown): DeclaredRoute | null {
+  if (typeof handler !== "function") return null;
+  const value = (handler as unknown as Record<symbol, unknown>)[ROUTE_DECLARATION];
+  return (value as DeclaredRoute | undefined) ?? null;
+}
 
 /**
  * Pembungkus route (L4) — menghapus boilerplate yang di QBank ditulis
@@ -42,8 +69,8 @@ import { getClientIp } from "./client-ip";
  *   error  → { error: { code, message } }
  */
 
-export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, TAuth extends boolean = true> {
-  actor: TAuth extends false ? Actor | null : Actor;
+export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, TAuthz extends Authz = Authz> {
+  actor: ActorFor<TAuthz>;
   query: TQuery;
   body: TBody;
   req: Request;
@@ -51,14 +78,12 @@ export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, T
   params: TParams;
 }
 
-export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>, TAuth extends boolean = true> {
+export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz> {
   /**
-   * Membutuhkan autentikasi aktor (default: true).
-   * Bila false, endpoint dapat diakses publik tanpa login.
+   * **Wajib.** Deklarasi otorisasi: publik / login saja / gerbang route /
+   * ditegakkan di service. Lihat `./authz.ts` untuk alasan & aturannya.
    */
-  auth?: TAuth;
-  /** Izin yang dibutuhkan (dari matriks L1). Otomatis mewajibkan autentikasi. */
-  permission?: Permission;
+  authz: TAuthz;
   /** Skema query string (Zod). */
   query?: ZodType<TQuery>;
   /** Skema body JSON (Zod). */
@@ -66,7 +91,7 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
   /** Skema parameter rute URL dinamis (Zod), mis. { id: z.string().uuid() }. */
   params?: ZodType<TParams>;
   /** Handler inti. */
-  handler: (ctx: RouteContext<TQuery, TBody, TParams, TAuth>) => Promise<TResult>;
+  handler: (ctx: RouteContext<TQuery, TBody, TParams, TAuthz>) => Promise<TResult>;
   /** Status sukses (default 200). */
   status?: number;
   /**
@@ -75,7 +100,7 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
    * Di-key per aktor (id) atau per IP bila tak terautentikasi.
    */
   rateLimit?: boolean | RateLimitPolicy;
-  /** Nama scope (default: dari permission). */
+  /** Nama scope (default: izin gerbang route, atau `authz.kind`). */
   rateLimitScope?: string;
   /**
    * Izinkan akses meski `mustChangePassword=true` (mis. `GET /api/auth/me`,
@@ -110,6 +135,18 @@ function searchParamsToObject(url: string): Record<string, string | string[]> {
 
 /** Argumen kedua handler Next.js (params rute dinamis, async di Next 15+). */
 type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
+
+/**
+ * Sidik jari request untuk idempotensi: method + path (termasuk query) + body
+ * **mentah**. Memakai body mentah (bukan hasil parse) agar dua payload yang
+ * berbeda tetapi menghasilkan objek sama tetap dianggap berbeda.
+ */
+function requestFingerprint(req: Request, rawBody: string): string {
+  const url = new URL(req.url);
+  return createHash("sha256")
+    .update(`${req.method}\n${url.pathname}${url.search}\n${rawBody}`)
+    .digest("hex");
+}
 
 /** Ambil kode error stabil (bila ada) untuk field log. */
 function extractCode(err: unknown): string {
@@ -252,10 +289,10 @@ function errorResponse(
  * Pemakaian:
  *   export const GET = wrapRoute({ query: listQuery, handler: async ({query, actor}) => ... });
  */
-export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>, TAuth extends boolean = true>(
-  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuth>,
+export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz>(
+  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuthz>,
 ) {
-  return async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
+  const handler = async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
     // **#6 (enterprise):** ID permintaan untuk traceability. Pakai header dari
     // proxy bila ada (agar korelasi dgn log eksternal), jika tidak buat baru.
     const requestId =
@@ -270,6 +307,12 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
     let actorIdForCleanup: string | null = null;
     // Catat hasil akhir (sukses/error) ke metrik — satu tempat, apa pun jalannya.
     const finish = (res: NextResponse): NextResponse => {
+      // Respons API bergantung pada identitas pemanggil (answer_key, draf,
+      // kepemilikan). Tanpa `no-store`, CDN/proxy di depan bisa menyajikan
+      // payload satu pengguna ke pengguna lain. `Vary` menutup cache yang
+      // tetap mengabaikan Cache-Control.
+      res.headers.set("Cache-Control", "no-store");
+      res.headers.set("Vary", "Cookie, Authorization");
       try {
         recordRequest(method, routePath, res.status, Date.now() - startedAt);
       } catch {
@@ -280,14 +323,21 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
     try {
       const actor = await resolveActor(req.headers);
       actorIdForCleanup = actor?.id ?? null;
-      const requireAuth = opts.auth ?? true;
-      if (requireAuth && !actor) throw new UnauthorizedError();
+      // Otorisasi eksplisit: publik / login saja / gerbang route / service.
+      const { authz } = opts;
+      if (authz.kind !== "public" && !actor) throw new UnauthorizedError();
       if (actor && actor.mustChangePassword && !opts.allowPasswordChangePending) {
         throw new PasswordChangeRequiredError();
       }
-      if (opts.permission) {
+      const routeGate =
+        authz.kind === "route"
+          ? authz.permission
+          : authz.kind === "service"
+            ? authz.routeGate
+            : undefined;
+      if (routeGate) {
         if (!actor) throw new UnauthorizedError();
-        assertCan(actor, opts.permission);
+        assertCan(actor, routeGate);
       }
 
       // Rate limit (bila diaktifkan) — di-key per aktor, fallback IP.
@@ -297,7 +347,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         const key = rateLimitKey(
           actor?.id ?? null,
           getClientIp(req),
-          opts.rateLimitScope ?? opts.permission ?? "default",
+          opts.rateLimitScope ?? routeGate ?? authz.kind,
         );
         const result = checkRateLimit(key, policy);
         if (!result.allowed) throw new RateLimitError(result.retryAfterMs);
@@ -307,8 +357,10 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         ? opts.query.parse(searchParamsToObject(req.url))
         : (undefined as TQuery);
 
+      // Body dibaca SEKALI: dipakai validasi Zod dan sidik jari idempotensi.
+      const rawBody = opts.body ? await req.text() : "";
       const body = opts.body
-        ? opts.body.parse(await parseJsonBody(req))
+        ? opts.body.parse(parseJsonText(rawBody))
         : (undefined as TBody);
 
       const rawParams = (await args?.params) ?? {};
@@ -320,9 +372,10 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       const idemKey = opts.idempotent
         ? req.headers.get("idempotency-key")?.slice(0, 128)
         : null;
+      const fingerprint = idemKey ? requestFingerprint(req, rawBody) : "";
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
-        const state = checkIdempotency(`${actorKey}:${idemKey}`);
+        const state = checkIdempotency(`${actorKey}:${idemKey}`, fingerprint);
         if (state.kind === "replay") {
           const replay = NextResponse.json(state.body, { status: state.status });
           replay.headers.set("X-Request-ID", requestId);
@@ -342,10 +395,26 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
           busy.headers.set("X-Request-ID", requestId);
           return finish(busy);
         }
+        if (state.kind === "mismatch") {
+          // Key dipakai ulang untuk payload lain. Me-replay di sini akan
+          // mengembalikan resource yang SALAH secara diam-diam — tolak eksplisit.
+          const reuse = NextResponse.json(
+            {
+              error: {
+                code: "IDEMPOTENCY_KEY_REUSED",
+                message:
+                  "Idempotency-Key sudah dipakai untuk permintaan lain. Gunakan key baru.",
+              },
+            },
+            { status: 422 },
+          );
+          reuse.headers.set("X-Request-ID", requestId);
+          return finish(reuse);
+        }
       }
 
       const data = await opts.handler({
-        actor: actor as TAuth extends false ? Actor | null : Actor,
+        actor: actor as ActorFor<TAuthz>,
         query,
         body,
         req,
@@ -359,6 +428,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
           `${actorKey}:${idemKey}`,
           opts.status ?? 200,
           { data },
+          fingerprint,
         );
         res.headers.set("Idempotency-Key", idemKey);
       }
@@ -380,6 +450,22 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       );
     }
   };
+
+  // Fase B: deklarasi menempel pada handler agar generator OpenAPI membaca
+  // skema yang sama dengan runtime. Non-enumerable → nol perubahan perilaku.
+  Object.defineProperty(handler, ROUTE_DECLARATION, {
+    value: {
+      authz: opts.authz,
+      query: opts.query,
+      body: opts.body,
+      params: opts.params,
+      status: opts.status ?? 200,
+      idempotent: opts.idempotent === true,
+    } satisfies DeclaredRoute,
+    enumerable: false,
+  });
+
+  return handler;
 }
 
 /** Respons sukses manual (bila tak lewat wrapRoute). */
@@ -392,8 +478,7 @@ export function ok<T>(data: T, status = 200): NextResponse {
  * `InvalidJsonError` (400 `INVALID_JSON`) — BUKAN diam-diam `{}` yang lalu
  * memicu pesan Zod menyesatkan ("Data tidak valid").
  */
-async function parseJsonBody(req: Request): Promise<unknown> {
-  const raw = await req.text();
+function parseJsonText(raw: string): unknown {
   if (!raw.trim()) return {};
   try {
     return JSON.parse(raw);

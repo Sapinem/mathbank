@@ -16,7 +16,7 @@ const emptyQuerySchema = z.object({}).optional();
 /** GET /api/events — daftar event (dengan subtes & aliases). */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   query: emptyQuerySchema,
   handler: async () => listEvents(),
 });
@@ -24,7 +24,7 @@ export const GET = wrapRoute({
 /** POST /api/events — buat event. */
 export const POST = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "reference:manage",
+  authz: { kind: "route", permission: "reference:manage" },
   body: eventSchema,
   handler: async ({ body, actor }) => createEvent(body, actor),
 });
