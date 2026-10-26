@@ -201,3 +201,84 @@ DROP TRIGGER IF EXISTS trg_audit_logs_immutable ON audit_logs;
 CREATE TRIGGER trg_audit_logs_immutable
   BEFORE UPDATE OR DELETE ON audit_logs
   FOR EACH ROW EXECUTE FUNCTION reject_audit_mutation();
+
+-- ============================================================================
+-- 7. Invarian #9 — Denormalisasi grades soal dari bundles
+-- ============================================================================
+CREATE OR REPLACE FUNCTION sync_question_grades()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  target_qid uuid;
+  target_bid uuid;
+BEGIN
+  IF (TG_TABLE_NAME = 'bundle_items') THEN
+    target_qid := COALESCE(NEW.question_id, OLD.question_id);
+    UPDATE questions
+       SET grades = COALESCE((
+         SELECT ARRAY_AGG(DISTINCT b.grade ORDER BY b.grade)
+         FROM bundle_items bi
+         JOIN bundles b ON bi.bundle_id = b.id
+         WHERE bi.question_id = target_qid
+           AND b.deleted_at IS NULL
+           AND b.grade IS NOT NULL
+           AND b.grade <> ''
+           AND b.grade <> 'umum'
+       ), ARRAY[]::varchar[]),
+       grade = (
+         SELECT b.grade
+         FROM bundle_items bi
+         JOIN bundles b ON bi.bundle_id = b.id
+         WHERE bi.question_id = target_qid
+           AND b.deleted_at IS NULL
+           AND b.grade IS NOT NULL
+           AND b.grade <> ''
+           AND b.grade <> 'umum'
+         ORDER BY b.grade ASC
+         LIMIT 1
+       )
+     WHERE id = target_qid;
+  ELSIF (TG_TABLE_NAME = 'bundles') THEN
+    target_bid := COALESCE(NEW.id, OLD.id);
+    UPDATE questions q
+       SET grades = COALESCE((
+         SELECT ARRAY_AGG(DISTINCT b2.grade ORDER BY b2.grade)
+         FROM bundle_items bi2
+         JOIN bundles b2 ON bi2.bundle_id = b2.id
+         WHERE bi2.question_id = q.id
+           AND b2.deleted_at IS NULL
+           AND b2.grade IS NOT NULL
+           AND b2.grade <> ''
+           AND b2.grade <> 'umum'
+       ), ARRAY[]::varchar[]),
+       grade = (
+         SELECT b2.grade
+         FROM bundle_items bi2
+         JOIN bundles b2 ON bi2.bundle_id = b2.id
+         WHERE bi2.question_id = q.id
+           AND b2.deleted_at IS NULL
+           AND b2.grade IS NOT NULL
+           AND b2.grade <> ''
+           AND b2.grade <> 'umum'
+         ORDER BY b2.grade ASC
+         LIMIT 1
+       )
+     WHERE q.id IN (
+       SELECT question_id FROM bundle_items WHERE bundle_id = target_bid
+     );
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_bundle_items_sync_grades ON bundle_items;
+CREATE TRIGGER trg_bundle_items_sync_grades
+  AFTER INSERT OR DELETE OR UPDATE OF bundle_id, question_id ON bundle_items
+  FOR EACH ROW EXECUTE FUNCTION sync_question_grades();
+
+DROP TRIGGER IF EXISTS trg_bundles_sync_grades ON bundles;
+CREATE TRIGGER trg_bundles_sync_grades
+  AFTER UPDATE OF grade, deleted_at ON bundles
+  FOR EACH ROW EXECUTE FUNCTION sync_question_grades();
+
