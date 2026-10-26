@@ -48,8 +48,10 @@ async function diagnoseRender() {
         console.log(`  [RUMUS${t.display ? " display" : ""}] ${v.length > 70 ? v.slice(0, 70) + "…" : v}`);
       } else if (t.kind === "table") {
         console.log(`  [tabel] ${t.header.length} kolom × ${t.rows.length} baris`);
-      } else {
+      } else if (t.kind === "img") {
         console.log(`  [gambar] ${t.shortId}`);
+      } else {
+        console.log(`  [gambar tidak tersedia] ${t.alt || "(tanpa alt)"}`);
       }
     }
   }

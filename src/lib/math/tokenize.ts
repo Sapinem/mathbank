@@ -13,6 +13,13 @@ export type Token =
   | { kind: "math"; value: string; display: boolean }
   | { kind: "img"; shortId: string }
   | {
+      /** Gambar markdown yang tidak bisa ditampilkan (mis. `corpus://`).
+       * Hanya alt yang disimpan — URL sumber TIDAK PERNAH disimpan di token,
+       * sehingga renderer tidak mungkin menampilkannya kembali ke pengguna. */
+      kind: "unavailableImage";
+      alt: string;
+    }
+  | {
       kind: "table";
       /** Sel header (teks/sub-markdown mentah — boleh mengandung rumus). */
       header: string[];
@@ -22,8 +29,8 @@ export type Token =
       align: Array<"left" | "center" | "right" | null>;
     };
 
-/** Shortcode media `{{img:<shortId>}}` — sinkron dengan src/lib/media/shortcode.ts. */
-const IMG_SHORTCODE = /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})\s*\}\}/g;
+/** Shortcode media `{{img:<shortId>}}` — sinkron dengan src/lib/media/shortcode.ts.
+ * Polanya dipakai di dalam pola gabungan `pushTextWithImages` di bawah. */
 
 /**
  * Deteksi blok tabel markdown GFM (pipe table) pada teks MENTAH (sebelum
@@ -177,17 +184,38 @@ function tokenizeMathText(input: string, tokens: Token[]): void {
  * Pecah teks biasa menjadi token teks & gambar.
  *
  * Gambar dipisah di sini (bukan di regex rumus) supaya shortcode `{{img:…}}`
- * TIDAK pernah tertelan sebagai rumus, dan sebaliknya.
+ * TIDAK pernah tertelan sebagai rumus, dan sebaliknya. Markdown gambar
+ * `corpus://` dipisah di sini juga, menjadi token `unavailableImage`:
+ * tokenizer ini tidak pernah menangani sintaks `![alt](url)` sama sekali,
+ * sehingga markdown gambar yang lolos dari ingest tampil mentah — pola
+ * gabungan menangkap bentuk corpus lengkap maupun terpotong di akhir
+ * string (kasus excerpt kartu yang memotong di tengah URL), dan URL TIDAK
+ * ditangkap sebagai nilai terpisah sehingga tidak ada jalur yang bisa
+ * menampilkannya lagi. `)` tidak pernah ada di path corpus yang sah
+ * (fetchCorpusImage menolak karakter itu), jadi `[^)]*` aman di sini.
+ * Gambar markdown non-corpus SENGAJA tidak diubah (perilaku lama, di luar
+ * scope perbaikan ini).
+ * Batasan yang diketahui: alt yang memakai delimiter rumus `$…$` sudah
+ * dipecah menjadi token rumus SEBELUM sampai ke sini (urutan tokenizer),
+ * jadi bentuk itu tidak tertangkap pola ini — bentuk yang teramati di
+ * lapangan (alt `\frac{…}` tanpa delimiter) tertangkap dengan benar.
  */
 function pushTextWithImages(tokens: Token[], text: string): void {
   if (!text) return;
+  // Satu pola gabungan: shortcode ATAU markdown gambar corpus://.
+  // Grup 1 = shortId shortcode, grup 2 = alt markdown corpus.
+  const combined =
+    /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})\s*\}\}|!\[([^\]]*)\]\(corpus:[^)]*(?:\)|$)/g;
   let last = 0;
-  IMG_SHORTCODE.lastIndex = 0;
   let m: RegExpExecArray | null;
-  while ((m = IMG_SHORTCODE.exec(text)) !== null) {
+  while ((m = combined.exec(text)) !== null) {
     if (m.index > last) tokens.push({ kind: "text", value: text.slice(last, m.index) });
-    tokens.push({ kind: "img", shortId: m[1]! });
-    last = IMG_SHORTCODE.lastIndex;
+    if (m[1] !== undefined) {
+      tokens.push({ kind: "img", shortId: m[1] });
+    } else {
+      tokens.push({ kind: "unavailableImage", alt: (m[2] ?? "").trim() });
+    }
+    last = combined.lastIndex;
   }
   if (last < text.length) tokens.push({ kind: "text", value: text.slice(last) });
 }
