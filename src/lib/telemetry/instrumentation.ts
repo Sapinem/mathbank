@@ -1,10 +1,11 @@
 /**
- * **ACT-03 (P0) C — pemeliharaan state in-memory telemetri.**
+ * **ACT-03 (P0) C — pemeliharaan state rate limit & idempotensi.**
  *
- * Store `rateLimit` dan `idempotency` adalah `Map` in-memory: entri lama
- * (bucket token penuh, respons idempotensi kedaluwarsa) **tidak** hilang
- * dengan sendirinya. Tanpa pembersihan berkala, memori proses tumbuh monoton
- * sampai restart — persis pola kebocoran yang dilaporkan di audit.
+ * Store `rateLimit` dan `idempotency` menyimpan entri ber-TTL (bucket token,
+ * respons idempotensi) yang **tidak** hilang dengan sendirinya. Tanpa
+ * pembersihan berkala: `MemoryStore` membocorkan memori proses, dan
+ * `PgRateLimitStore`/`PgIdempotencyStore` (ADR-0029) menumpuk baris mati.
+ * Prune kini menjalankan DELETE di DB, karena itu **di-await**.
  *
  * Modul ini menjadwalkan `prune()` pada interval tetap, sekali per proses.
  * Dipanggil dari `src/instrumentation.ts` (hook `register()` Next.js).
@@ -37,8 +38,10 @@ export async function runPruneOnce(now: number = Date.now()): Promise<void> {
   try {
     const { getStore } = await import("@/lib/api/rate-limit");
     const { getIdempotencyStore } = await import("@/lib/api/idempotency");
-    getStore().prune?.(now);
-    getIdempotencyStore().prune?.(now);
+    // Store bersama (ADR-0029) melakukan DELETE di PostgreSQL → harus di-await,
+    // jika tidak kegagalannya jadi unhandled rejection di luar try/catch ini.
+    await getStore().prune?.(now);
+    await getIdempotencyStore().prune?.(now);
     s.runs += 1;
     s.lastRunAt = now;
     s.lastError = null;

@@ -34,6 +34,7 @@
 | [0026](0026-deklarasi-otorisasi-eksplisit.md) | Deklarasi otorisasi eksplisit per method route (`authz` wajib + pemeriksa mesin) | **Diterapkan** |
 | [0027](0027-kontrak-openapi-dari-kode.md) | Kontrak OpenAPI 3.1 dihasilkan dari kode (registry + deklarasi `wrapRoute`) | **Diterapkan** |
 | [0028](0028-cabut-prefix-v1-ingest.md) | Cabut prefix `v1` dari jalur ingest; `/api/v1/ingest/*` jadi alias 90 hari | **Diterapkan** |
+| [0029](0029-store-bersama-rate-limit-idempotensi.md) | Rate limit & idempotensi memakai store PostgreSQL bersama (fail-open / fail-closed) | **Diterapkan** |
 
 ## Cara menambah ADR
 

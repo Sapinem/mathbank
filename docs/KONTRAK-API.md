@@ -262,10 +262,12 @@ Ditegakkan sebagai **guard service** (`assertReady()` di `fsm/question-fsm.ts`),
 
 ## 7. Rate Limiting & Keamanan
 
-- **Rate limiting AKTIF**: token bucket **in-memory** per aktor (fallback IP), diterapkan di `wrapRoute` via opsi `rateLimit`. Kelebihan → **429** + header `Retry-After`.
+- **Rate limiting AKTIF**: token bucket per aktor (fallback IP), diterapkan di `wrapRoute` via opsi `rateLimit`. Kelebihan → **429** + header `Retry-After`.
   - **Cakupan terukur: 64/64 pemanggilan `wrapRoute` mengaktifkan `rateLimit`** (tidak ada method yang lolos). `/api/mcp` memakai kebijakan sendiri (60 burst, 2/detik).
   - Kebijakan: default 60 burst / ~60 per menit; mutasi lebih ketat (`POST /api/questions` 20 burst, `DELETE` 10 burst); health 120 burst.
-  - Implementasi: `src/lib/api/rate-limit.ts`; store **siap-swap** ke Redis saat multi-instance. **Batas saat ini per-proses** — dengan >1 instance, batas efektif = batas × jumlah instance.
+  - Implementasi: `src/lib/api/rate-limit.ts` (kontrak) + `rate-limit-store-pg.ts` (**store PostgreSQL bersama**, ADR-0029). Bucket hidup di tabel `rate_limit_buckets` dan dihitung atomik dalam satu UPSERT, jadi batas berlaku **lintas instance** dan selamat dari restart.
+  - **Fail-open**: bila store tak terjangkau, permintaan diizinkan + kegagalan dicatat. Rate limit pagar tambahan, bukan pagar keamanan.
+- **Idempotensi** (`Idempotency-Key`) memakai store bersama `idempotency_keys` dengan klaim atomik (`INSERT … ON CONFLICT DO NOTHING`). **Fail-closed**: store mati → **503 `IDEMPOTENCY_UNAVAILABLE`**, karena duplikat tak bisa dibuktikan.
 - API key di-hash; rahasia tak pernah masuk log.
 - **Proyeksi kolom (S3 — ✅)**: respons soal **tidak pernah** memuat `embedding*`/`aiTagged*` (internal). `answer_key` & `options.is_correct` hanya untuk viewer berwenang (**admin/teacher/reviewer**); `agent`/`machine` tak pernah. Ditegakkan di `src/lib/db/projections/question.ts` — data tak meninggalkan server. Lihat `KEAMANAN.md` §8b.
 

@@ -29,6 +29,11 @@ END;
 $$;
 
 -- Pasang trigger updated_at ke tabel ber-updated_at (idempotent: drop dulu bila ada).
+--
+-- ⚠️ ADR-0029: `rate_limit_buckets` SENGAJA TIDAK didaftarkan di sini meski punya
+--    kolom `updated_at`. Tabel itu ditulis UPSERT di jalur panas dan sudah
+--    menetapkan `updated_at` sendiri; trigger per baris hanya menambah biaya.
+--    `idempotency_keys` memakai `created_at`/`expires_at`, bukan `updated_at`.
 -- ADR-0015: `books` & `institutions` DIHAPUS (kolomnya digabung ke `sources`).
 -- MAT-39: `collections` & `collection_items` DIHAPUS (wadah digabung ke `bundles`).
 DO $$

@@ -169,6 +169,13 @@
       "when": 1793022399498,
       "tag": "0023_new_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793052180406,
+      "tag": "0024_closed_talon",
+      "breakpoints": true
     }
   ]
 }

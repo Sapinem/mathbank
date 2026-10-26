@@ -48,7 +48,7 @@ export async function GET(req: Request) {
   // (Tidak lewat wrapRoute: status sukses di sini dinamis 200/503, sedangkan
   // wrapRoute memakai satu status sukses tetap — mengubahnya akan merusak
   // kontrak monitoring.)
-  const rl = checkRateLimit(
+  const rl = await checkRateLimit(
     rateLimitKey(null, getClientIp(req), "api:health"),
     HEALTH_POLICY,
   );

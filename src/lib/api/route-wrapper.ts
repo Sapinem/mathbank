@@ -349,7 +349,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
           getClientIp(req),
           opts.rateLimitScope ?? routeGate ?? authz.kind,
         );
-        const result = checkRateLimit(key, policy);
+        const result = await checkRateLimit(key, policy);
         if (!result.allowed) throw new RateLimitError(result.retryAfterMs);
       }
 
@@ -375,7 +375,33 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       const fingerprint = idemKey ? requestFingerprint(req, rawBody) : "";
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
-        const state = checkIdempotency(`${actorKey}:${idemKey}`, fingerprint);
+        let state;
+        try {
+          state = await checkIdempotency(`${actorKey}:${idemKey}`, fingerprint);
+        } catch (err) {
+          // **Fail-closed (ADR-0029):** tanpa store bersama kita tak bisa
+          // memastikan permintaan ini bukan duplikat. Menjalankannya buta-buta
+          // berisiko mutasi ganda — lebih baik minta klien mencoba lagi.
+          log.error({
+            msg: "idempotency_store_unavailable",
+            requestId,
+            route: routePath,
+            method,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          const unavailable = NextResponse.json(
+            {
+              error: {
+                code: "IDEMPOTENCY_UNAVAILABLE",
+                message:
+                  "Proteksi idempotensi sedang tidak tersedia. Coba lagi sebentar lagi.",
+              },
+            },
+            { status: 503 },
+          );
+          unavailable.headers.set("X-Request-ID", requestId);
+          return finish(unavailable);
+        }
         if (state.kind === "replay") {
           const replay = NextResponse.json(state.body, { status: state.status });
           replay.headers.set("X-Request-ID", requestId);
@@ -424,7 +450,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       res.headers.set("X-Request-ID", requestId);
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
-        rememberResponse(
+        await rememberResponse(
           `${actorKey}:${idemKey}`,
           opts.status ?? 200,
           { data },
@@ -439,7 +465,13 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       if (opts.idempotent) {
         const k = req.headers.get("idempotency-key")?.slice(0, 128);
         const actorKey = actorIdForCleanup ?? getClientIp(req) ?? "anon";
-        if (k) getIdempotencyStore().forget(`${actorKey}:${k}`);
+        if (k) {
+          try {
+            await getIdempotencyStore().forget(`${actorKey}:${k}`);
+          } catch {
+            // Store tak terjangkau: entri in-flight akan kedaluwarsa sendiri (TTL).
+          }
+        }
       }
       return finish(
         errorResponse(err, requestId, {
