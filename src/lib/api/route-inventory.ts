@@ -51,6 +51,12 @@ export interface RouteFile {
   file: string;
   path: string;
   methods: RouteMethod[];
+  /**
+   * Masalah tingkat BERKAS yang tak terbaca dari `methods` — mis. dua `authz`,
+   * kunci warisan, spread, atau `route.ts` tanpa method. Ikut dilaporkan
+   * `verifyAuthz`; tanpa ini, berkas cacat lolos gerbang secara diam-diam.
+   */
+  problems: AuthzProblem[];
 }
 
 export interface AuthzProblem {
@@ -587,7 +593,7 @@ function scanFile(file: string, root: string): { entry: RouteFile; problems: Aut
     problems.push({ file: relFile, method: null, message: "route tanpa method HTTP" });
   }
 
-  return { entry: { file: relFile, path, methods }, problems };
+  return { entry: { file: relFile, path, methods, problems }, problems };
 }
 
 /** Pindai seluruh `src/app/api/**\/route.ts`. */
@@ -730,6 +736,7 @@ export function verifyAuthz(
   };
 
   for (const route of routes) {
+    problems.push(...route.problems);
     for (const m of route.methods) {
       const key = m.method + " " + m.path;
 

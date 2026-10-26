@@ -59,7 +59,7 @@ function method(over: Record<string, unknown> = {}): RouteMethod {
 }
 
 function one(m: RouteMethod): AuthzProblem[] {
-  const file: RouteFile = { file: FIXTURE_FILE, path: FIXTURE_PATH, methods: [m] };
+  const file: RouteFile = { file: FIXTURE_FILE, path: FIXTURE_PATH, methods: [m], problems: [] };
   return verifyAuthz([file]);
 }
 

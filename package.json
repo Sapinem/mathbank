@@ -31,7 +31,7 @@
     "e2e:manual": "playwright test",
     "e2e:manual:ui": "playwright test --ui",
     "start:lan": "next start -H 0.0.0.0",
-    "check": "pnpm theme:check && pnpm lint:names && pnpm lint:authz && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
+    "check": "pnpm theme:check && pnpm lint:names && pnpm lint:authz && pnpm openapi:check && pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm build",
     "security:secrets": "node scripts/secret-scan.mjs --all",
     "security:advisories": "tsx scripts/security-advisories.ts",
     "prepare": "node scripts/install-hooks.mjs",
@@ -42,7 +42,9 @@
     "media:verify-hygiene": "tsx scripts/verify-hygiene-live.ts",
     "media:register-orphans": "tsx scripts/register-orphan-files.ts",
     "lint:names": "node scripts/check-names.mjs",
-    "lint:authz": "tsx scripts/check-authz.ts"
+    "lint:authz": "tsx scripts/check-authz.ts",
+    "openapi:generate": "tsx scripts/generate-openapi.ts",
+    "openapi:check": "tsx scripts/generate-openapi.ts --check"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

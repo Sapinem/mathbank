@@ -33,6 +33,33 @@ import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
 import { getClientIp } from "./client-ip";
 
 /**
+ * Deklarasi route yang menempel pada handler (Fase B — generator OpenAPI).
+ *
+ * KENAPA ditempel, bukan didaftarkan terpisah: skema Zod hidup sebagai objek
+ * di opsi `wrapRoute`. Menyalinnya ke registry berarti dua sumber kebenaran
+ * yang bisa menyimpang. Dengan menempelkannya (non-enumerable, jadi tak
+ * mengubah perilaku & tak muncul di `Object.keys`), generator membaca skema
+ * yang PERSIS dipakai runtime.
+ */
+export const ROUTE_DECLARATION = Symbol.for("mathbank.routeDeclaration");
+
+export interface DeclaredRoute {
+  authz: Authz;
+  query?: ZodType;
+  body?: ZodType;
+  params?: ZodType;
+  status: number;
+  idempotent: boolean;
+}
+
+/** Ambil deklarasi yang ditempel `wrapRoute`; `null` bila bukan route handler. */
+export function routeDeclarationOf(handler: unknown): DeclaredRoute | null {
+  if (typeof handler !== "function") return null;
+  const value = (handler as unknown as Record<symbol, unknown>)[ROUTE_DECLARATION];
+  return (value as DeclaredRoute | undefined) ?? null;
+}
+
+/**
  * Pembungkus route (L4) — menghapus boilerplate yang di QBank ditulis
  * ulang di 39/52 route: resolve aktor → 401 → cek izin → parse →
  * try/catch → ZodError → format respons.
@@ -265,7 +292,7 @@ function errorResponse(
 export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz>(
   opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuthz>,
 ) {
-  return async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
+  const handler = async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
     // **#6 (enterprise):** ID permintaan untuk traceability. Pakai header dari
     // proxy bila ada (agar korelasi dgn log eksternal), jika tidak buat baru.
     const requestId =
@@ -423,6 +450,22 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       );
     }
   };
+
+  // Fase B: deklarasi menempel pada handler agar generator OpenAPI membaca
+  // skema yang sama dengan runtime. Non-enumerable → nol perubahan perilaku.
+  Object.defineProperty(handler, ROUTE_DECLARATION, {
+    value: {
+      authz: opts.authz,
+      query: opts.query,
+      body: opts.body,
+      params: opts.params,
+      status: opts.status ?? 200,
+      idempotent: opts.idempotent === true,
+    } satisfies DeclaredRoute,
+    enumerable: false,
+  });
+
+  return handler;
 }
 
 /** Respons sukses manual (bila tak lewat wrapRoute). */

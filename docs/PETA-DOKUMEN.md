@@ -1,7 +1,7 @@
 # PETA-DOKUMEN.md — Indeks Kanonikal & Tata Kelola Dokumen MathBank
 
 > **Status:** Kanonikal Hidup (*Living Document*)  
-> **Terakhir Diperbarui:** 23 Oktober 2026 (registrasi `docs/sprint0/`, `docs/verification/`, `docs/architecture/`, AXIOM, ARAHAN-SLUG, dan 14 berkas `docs/plans/`; lihat §4)  
+> **Terakhir Diperbarui:** 27 Oktober 2026 (registrasi ADR-0027 + artefak `public/openapi.json`) (registrasi `docs/sprint0/`, `docs/verification/`, `docs/architecture/`, AXIOM, ARAHAN-SLUG, dan 14 berkas `docs/plans/`; lihat §4)  
 > **Otoritas:** Zaid (Chief of Staff / Lead Orchestrator) & Dewan Direksi Math My Id  
 
 ---
@@ -58,8 +58,12 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
   - `docs/ADR/0021-konfigurasi-cetak-print-config-bundles.md`: ✅ (konfigurasi cetak printConfig di bundles)
   - `docs/ADR/0022-wraproute-pipeline-banned-server-actions.md`: ✅ (wrapRoute pipeline & larangan Server Actions)
   - `docs/ADR/0023-satu-evaluator-invarian-skema.md`: ✅ (satu evaluator invarian skema)
+  - `docs/ADR/0024-denormalisasi-grade-soal-dari-bundle.md`: ✅ (denormalisasi grade soal dari bundle & pembersihan non-kelas)
+  - `docs/ADR/0025-pemisahan-status-arsip-dan-hapus-lunak.md`: ✅ (pemisahan status arsip domain FSM vs hapus lunak soft-delete)
   - `docs/ADR/0026-deklarasi-otorisasi-eksplisit.md`: ✅ (otorisasi eksplisit per method + pemeriksa `pnpm lint:authz`)
+  - `docs/ADR/0027-kontrak-openapi-dari-kode.md`: ✅ (OpenAPI 3.1 + tabel §4 KONTRAK-API dihasilkan dari kode; gerbang `pnpm openapi:check`)
 - `docs/ARAHAN-4-PILAR-ARSITEKTUR-V2.md`: 📋 **Arahan 4 Pilar Arsitektur V2** — cetak biru integrasi empat pilar utama MathBank V2.
+- `public/openapi.json`: 🟢 **Spesifikasi OpenAPI 3.1 (artefak)** — DIHASILKAN oleh `pnpm openapi:generate` dari `route-inventory.ts` + deklarasi `wrapRoute` + `src/lib/api/openapi/registry.ts`; disajikan di `/openapi.json`. Jangan disunting tangan (ADR-0027).
 - `docs/KAMUS-DATA.md`: 📋 **Kamus Data MathBank** — definisi entitas, relasi, format payload JSONB, dan skema kanonik.
 - `docs/STRATEGI-TES.md`: 📋 **Strategi Tes MathBank** — piramida pengujian multi-layer (unit, DB integration, schema invariant).
 - `docs/pedagogy/`: Panduan dan spesifikasi pedagogis:
