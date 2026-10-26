@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -40,32 +42,50 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              render={
-                <Link
-                  href="/"
-                  onClick={handleNavClick}
-                  aria-label="MathBank — Dasbor"
-                />
-              }
+        <div className="flex items-center gap-1">
+          <SidebarMenu className="min-w-0 flex-1">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                size="lg"
+                render={
+                  <Link
+                    href="/"
+                    onClick={handleNavClick}
+                    aria-label="MathBank"
+                  />
+                }
+              >
+                <span className="grid aspect-square size-8 place-items-center rounded-lg bg-brand font-bold text-brand-fg">
+                  ∑
+                </span>
+                <span className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold tracking-tight">
+                    MathBank
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Bank Soal Matematika
+                  </span>
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+          {/* Hanya di drawer mobile: tombol tutup yang terlihat. Di desktop
+            sidebar bukan drawer, jadi tombol ini tidak dirender — penutup
+            desktop tetap trigger di header. Tombol default Sheet
+            disembunyikan di ui/sidebar, sehingga tanpa tombol ini drawer
+            mobile hanya bisa ditutup lewat backdrop/Esc/pilih navigasi. */}
+          {isMobile ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Tutup sidebar"
+              onClick={() => setOpenMobile(false)}
+              className="min-h-[44px] min-w-[44px] shrink-0"
             >
-              <span className="grid aspect-square size-8 place-items-center rounded-lg bg-brand font-bold text-brand-fg">
-                ∑
-              </span>
-              <span className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold tracking-tight">
-                  MathBank
-                </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  Bank Soal Matematika
-                </span>
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+              <X />
+            </Button>
+          ) : null}
+        </div>
       </SidebarHeader>
 
       <SidebarContent>

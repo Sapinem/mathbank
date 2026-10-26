@@ -109,8 +109,8 @@ describe("AppShell", () => {
     expect(trigger?.className).toContain("min-h-[44px]");
     expect(trigger?.className).toContain("min-w-[44px]");
 
-    // Tombol cari mobile
-    const mobileSearch = screen.getByLabelText("Cari");
+    // Tombol cari mobile (label dibedakan dari "Cari soal…" di Bank Soal)
+    const mobileSearch = screen.getByLabelText("Cari halaman");
     expect(mobileSearch.className).toContain("min-h-[44px]");
     expect(mobileSearch.className).toContain("min-w-[44px]");
 
@@ -118,5 +118,58 @@ describe("AppShell", () => {
     const themeBtn = screen.getByLabelText("Ganti tema");
     expect(themeBtn.className).toContain("min-h-[44px]");
     expect(themeBtn.className).toContain("min-w-[44px]");
+  });
+
+  it("tidak menampilkan breadcrumb satu item di halaman tingkat atas (/questions)", () => {
+    withQuery(
+      <AppShell>
+        <p>x</p>
+      </AppShell>,
+    );
+    // Judul mobile tetap tampil (bersama label nav sidebar), breadcrumb
+    // desktop tidak dirender.
+    expect(screen.getAllByText("Bank Soal").length).toBeGreaterThan(0);
+    expect(document.querySelector('nav[aria-label="breadcrumb"]')).toBeNull();
+  });
+
+  it("label merek sidebar dan label rel sidebar tidak menduplikasi tombol trigger", () => {
+    withQuery(
+      <AppShell>
+        <p>x</p>
+      </AppShell>,
+    );
+    expect(screen.getByLabelText("MathBank")).toBeInTheDocument();
+    const rail = document.querySelector('[data-sidebar="rail"]');
+    expect(rail?.getAttribute("aria-label")).toBe(
+      "Ciutkan atau bentangkan rel sidebar",
+    );
+    // Trigger header tetap satu-satunya "Buka/tutup sidebar".
+    const triggers = Array.from(
+      document.querySelectorAll('[data-sidebar="trigger"]'),
+    );
+    expect(triggers).toHaveLength(1);
+  });
+
+  it("tombol cari desktop berlabel 'Cari halaman…', bukan 'Cari soal…'", () => {
+    withQuery(
+      <AppShell>
+        <p>x</p>
+      </AppShell>,
+    );
+    expect(screen.getByText("Cari halaman…")).toBeInTheDocument();
+  });
+
+  it("header berada di luar area gulir, sehingga tetap terlihat saat konten di-scroll", () => {
+    withQuery(
+      <AppShell>
+        <p>x</p>
+      </AppShell>,
+    );
+    const scroller = document.querySelector("[data-app-scroll]");
+    const header = document.querySelector("header");
+    expect(header).toBeTruthy();
+    expect(scroller).toBeTruthy();
+    expect(scroller?.contains(header)).toBe(false);
+    expect(scroller?.textContent).toContain("x");
   });
 });

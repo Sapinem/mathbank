@@ -195,7 +195,7 @@ function DistCard({ title, rows }: { title: string; rows: { label: string; n: nu
           <ul className="flex flex-col gap-2">
             {shown.map((r) => (
               <li key={r.label} className="flex items-center gap-3 text-sm">
-                <span className="w-24 shrink-0 truncate text-muted-foreground">{r.label}</span>
+                <span className="w-24 shrink-0 break-words leading-snug text-muted-foreground line-clamp-2">{r.label}</span>
                 <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                   <span
                     className="block h-full rounded-full bg-brand"
