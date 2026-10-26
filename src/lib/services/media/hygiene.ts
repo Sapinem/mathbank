@@ -11,6 +11,8 @@ import { db } from "@/lib/db";
 import { mediaAssets, questionMedia } from "@/lib/db/schema/media";
 import { removeStoredFile } from "@/lib/ingest/media/store";
 import { mediaStorageRoot } from "@/lib/ingest/config";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { throwVersionedWriteMiss } from "../versioned";
 
 /** Cari aset lewat short_id — dipakai penyaji `/img/{shortId}`. */
 export async function findAssetByShortId(shortId: string) {
@@ -103,13 +105,23 @@ export async function findOrphanAssets() {
  */
 export async function deleteAsset(
   shortId: string,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<{ shortId: string; filesRemoved: number } | { inUse: true } | null> {
   const asset = await findAssetByShortId(shortId);
   if (!asset) return null;
 
   if (await isAssetInUse(asset.id)) return { inUse: true };
 
-  await db.delete(mediaAssets).where(eq(mediaAssets.id, asset.id));
+  // ADR-0030: hapus bersyarat versi. 0 baris = baris berubah/lenyap di antara
+  // baca & hapus → 412, bukan penghapusan diam-diam atas aset yang baru diubah.
+  const removed = await db
+    .delete(mediaAssets)
+    .where(versionPredicate(mediaAssets, asset.id, expectedVersion ?? "*"))
+    .returning({ id: mediaAssets.id });
+  if (removed.length === 0) {
+    return throwVersionedWriteMiss(mediaAssets, asset.id, expectedVersion, "Aset media tidak ditemukan.");
+  }
 
   // Berkas fisik: best-effort. Barisnya sudah hilang, jadi kegagalan I/O di sini
   // tidak membuat data menggantung — hanya menyisakan berkas yatim di disk.

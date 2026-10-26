@@ -28,6 +28,12 @@ import {
   getIdempotencyStore,
 } from "./idempotency";
 import type { ActorFor, Authz } from "./authz";
+import {
+  etagOf,
+  parseIfMatch,
+  PreconditionFailedError,
+  PreconditionRequiredError,
+} from "./version";
 import { log } from "@/lib/telemetry/logger";
 import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
 import { getClientIp } from "./client-ip";
@@ -50,6 +56,10 @@ export interface DeclaredRoute {
   params?: ZodType;
   status: number;
   idempotent: boolean;
+  /** Route menuntut `If-Match` (ADR-0030) → generator memancarkan parameter + 412/428. */
+  ifMatch: boolean;
+  /** Route memancarkan `ETag` dari `version` hasil handler. */
+  etag: boolean;
 }
 
 /** Ambil deklarasi yang ditempel `wrapRoute`; `null` bila bukan route handler. */
@@ -69,16 +79,37 @@ export function routeDeclarationOf(handler: unknown): DeclaredRoute | null {
  *   error  → { error: { code, message } }
  */
 
-export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, TAuthz extends Authz = Authz> {
+export interface RouteContext<
+  TQuery,
+  TBody,
+  TParams = Record<string, string>,
+  TAuthz extends Authz = Authz,
+  TIfMatch extends boolean = false,
+> {
   actor: ActorFor<TAuthz>;
   query: TQuery;
   body: TBody;
   req: Request;
   /** Parameter rute dinamis, mis. { id } untuk /api/questions/[id]. */
   params: TParams;
+  /**
+   * Versi yang diminta klien lewat `If-Match` (ADR-0030).
+   *
+   * Tipenya menyempit: pada route ber-`ifMatch: true` nilainya SELALU terisi
+   * (428 sudah dilempar bila header absen), sehingga service tak perlu
+   * memeriksa `undefined` — dan tak bisa lupa memeriksanya.
+   */
+  expectedVersion: TIfMatch extends true ? number | "*" : undefined;
 }
 
-export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz> {
+export interface RouteOptions<
+  TQuery,
+  TBody,
+  TResult,
+  TParams = Record<string, string>,
+  TAuthz extends Authz = Authz,
+  TIfMatch extends boolean = false,
+> {
   /**
    * **Wajib.** Deklarasi otorisasi: publik / login saja / gerbang route /
    * ditegakkan di service. Lihat `./authz.ts` untuk alasan & aturannya.
@@ -91,7 +122,9 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
   /** Skema parameter rute URL dinamis (Zod), mis. { id: z.string().uuid() }. */
   params?: ZodType<TParams>;
   /** Handler inti. */
-  handler: (ctx: RouteContext<TQuery, TBody, TParams, TAuthz>) => Promise<TResult>;
+  handler: (
+    ctx: RouteContext<TQuery, TBody, TParams, TAuthz, TIfMatch>,
+  ) => Promise<TResult>;
   /** Status sukses (default 200). */
   status?: number;
   /**
@@ -114,6 +147,20 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
    * key, permintaan ulang dgn key sama → di-replay dari cache (anti double-submit).
    */
   idempotent?: boolean;
+  /**
+   * **ADR-0030:** wajibkan header `If-Match` untuk route mutasi baris.
+   *
+   * Absen → 428 `PRECONDITION_REQUIRED`; tidak cocok → 412
+   * `PRECONDITION_FAILED`. Nilainya diteruskan ke handler sebagai
+   * `expectedVersion` dan HARUS dipakai di `WHERE` update/delete
+   * (lihat `versionPredicate`), bukan hanya dibandingkan di memori.
+   */
+  ifMatch?: TIfMatch;
+  /**
+   * Ambil nomor versi dari hasil handler untuk dipancarkan sebagai `ETag`.
+   * Dipakai route GET satu-sumber-daya; daftar tidak punya ETag tunggal.
+   */
+  etagFrom?: (result: TResult) => number | undefined;
 }
 
 /** Bangun objek dari URLSearchParams → plain object untuk Zod. */
@@ -193,7 +240,14 @@ function errorResponse(
     code: string,
     message: string,
     headers?: HeadersInit,
-  ) => withRid(NextResponse.json({ error: { code, message } }, { status, headers }));
+    details?: unknown,
+  ) =>
+    withRid(
+      NextResponse.json(
+        { error: { code, message, ...(details !== undefined ? { details } : {}) } },
+        { status, headers },
+      ),
+    );
 
   if (err instanceof UnauthorizedError) {
     return jsonError(401, err.code, err.message);
@@ -219,6 +273,21 @@ function errorResponse(
   }
   if (err instanceof ConflictError) {
     return jsonError(409, err.code, err.message);
+  }
+  // ADR-0030: prakondisi HTTP. 428 = header wajib tapi tak dikirim;
+  // 412 = dikirim tapi baris sudah bergeser. `currentVersion` menyertai 412
+  // agar klien bisa memutuskan sendiri, bukan menebak.
+  if (err instanceof PreconditionRequiredError) {
+    return jsonError(428, err.code, err.message);
+  }
+  if (err instanceof PreconditionFailedError) {
+    return jsonError(
+      412,
+      err.code,
+      err.message,
+      undefined,
+      err.currentVersion !== undefined ? { currentVersion: err.currentVersion } : undefined,
+    );
   }
   if (err instanceof InvalidTransitionError) {
     return jsonError(409, "INVALID_TRANSITION", err.message);
@@ -289,8 +358,15 @@ function errorResponse(
  * Pemakaian:
  *   export const GET = wrapRoute({ query: listQuery, handler: async ({query, actor}) => ... });
  */
-export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz>(
-  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuthz>,
+export function wrapRoute<
+  TQuery,
+  TBody,
+  TResult,
+  TParams = Record<string, string>,
+  TAuthz extends Authz = Authz,
+  TIfMatch extends boolean = false,
+>(
+  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuthz, TIfMatch>,
 ) {
   const handler = async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
     // **#6 (enterprise):** ID permintaan untuk traceability. Pakai header dari
@@ -367,6 +443,14 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       const params = opts.params
         ? opts.params.parse(rawParams)
         : (rawParams as TParams);
+
+      // **ADR-0030:** prakondisi dievaluasi SETELAH pemeriksaan normal
+      // (auth, rate limit, validasi body) — sesuai RFC 9110 §13.2.2, dan
+      // agar galat 400 yang lebih spesifik tidak tertutup oleh 428.
+      // 428 melempar sendiri bila header absen.
+      const expectedVersion = (opts.ifMatch
+        ? parseIfMatch(req.headers.get("if-match"))
+        : undefined) as TIfMatch extends true ? number | "*" : undefined;
 
       // **#4:** idempotensi (opsional) — hanya bila diaktifkan & klien kirim key.
       const idemKey = opts.idempotent
@@ -445,9 +529,14 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         body,
         req,
         params,
+        expectedVersion,
       });
       const res = NextResponse.json({ data }, { status: opts.status ?? 200 });
       res.headers.set("X-Request-ID", requestId);
+      // ETag = versi baris, sehingga klien bisa langsung mengirimnya balik
+      // sebagai If-Match tanpa menebak dari body.
+      const etagVersion = opts.etagFrom?.(data);
+      if (etagVersion !== undefined) res.headers.set("ETag", etagOf(etagVersion));
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
         await rememberResponse(
@@ -493,6 +582,8 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       params: opts.params,
       status: opts.status ?? 200,
       idempotent: opts.idempotent === true,
+      ifMatch: opts.ifMatch === true,
+      etag: opts.etagFrom !== undefined,
     } satisfies DeclaredRoute,
     enumerable: false,
   });

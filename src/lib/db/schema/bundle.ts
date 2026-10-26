@@ -1,4 +1,4 @@
-import { uuidPk } from "./_columns";
+import { uuidPk, versionColumn } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -66,6 +66,7 @@ export const bundles = pgTable(
     createdById: text("created_by_id"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    version: versionColumn(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [

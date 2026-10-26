@@ -2,8 +2,9 @@ import { auth } from "@/lib/auth/server";
 import { db } from "@/lib/db";
 import { authUser, userRoles, apiKey } from "@/lib/db/schema/auth";
 import { eq, and, desc } from "drizzle-orm";
-import { assertCan, NotFoundError } from "@/lib/auth/guards";
+import { assertCan } from "@/lib/auth/guards";
 import type { Actor } from "@/lib/auth/actor";
+import { throwVersionedWriteMiss } from "./versioned";
 
 /**
  * Manajemen API key untuk AGEN MCP (M11-e).
@@ -147,7 +148,12 @@ export async function createAgentKey(
 }
 
 /** Cabut (hapus) API key agen. */
-export async function revokeAgentKey(actor: Actor, keyId: string): Promise<void> {
+export async function revokeAgentKey(
+  actor: Actor,
+  keyId: string,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<void> {
   assertCan(actor, "user:manage");
   const agentId = await ensureAgentUser();
 
@@ -155,9 +161,13 @@ export async function revokeAgentKey(actor: Actor, keyId: string): Promise<void>
   // lalu hapus langsung dari DB. Kita tak memakai `auth.api.deleteApiKey` karena
   // endpoint itu mensyaratkan sesi login (di sini aktornya admin yang sudah lolos
   // `assertCan`) — menghapus via DB lebih andal & tetap satu jalur izin.
-  const deleted = await db
-    .delete(apiKey)
-    .where(and(eq(apiKey.id, keyId), eq(apiKey.referenceId, agentId)))
-    .returning({ id: apiKey.id });
-  if (deleted.length === 0) throw new NotFoundError("API key tidak ditemukan.");
+  const owned = and(eq(apiKey.id, keyId), eq(apiKey.referenceId, agentId));
+  const where =
+    expectedVersion === undefined || expectedVersion === "*"
+      ? owned
+      : and(owned, eq(apiKey.version, expectedVersion));
+  const deleted = await db.delete(apiKey).where(where).returning({ id: apiKey.id });
+  if (deleted.length === 0) {
+    return throwVersionedWriteMiss(apiKey, keyId, expectedVersion, "API key tidak ditemukan.");
+  }
 }

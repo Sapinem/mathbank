@@ -23,7 +23,9 @@ export const PATCH = wrapRoute({
   authz: { kind: "route", permission: "reference:manage" },
   params: paramsSchema,
   body: patchSchema,
-  handler: async ({ body, actor, params }) => updateSource(params.id, body, actor),
+  ifMatch: true,
+  handler: async ({ body, actor, params, expectedVersion }) =>
+    updateSource(params.id, body, actor, expectedVersion),
 });
 
 /** DELETE /api/sources/[id] — hapus sumber (RESTRICT bila dipakai soal). */
@@ -32,8 +34,9 @@ export const DELETE = wrapRoute({
   authz: { kind: "route", permission: "reference:manage" },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ actor, params }) => {
-    await deleteSource(params.id, actor);
+  ifMatch: true,
+  handler: async ({ actor, params, expectedVersion }) => {
+    await deleteSource(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

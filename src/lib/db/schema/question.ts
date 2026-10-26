@@ -1,4 +1,4 @@
-import { uuidPk } from "./_columns";
+import { uuidPk, versionColumn } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -50,7 +50,10 @@ export const questions = pgTable(
     questionType: questionTypeEnum("question_type").notNull(),
     difficulty: smallint("difficulty").notNull(), // 1–5
     cognitiveLevel: cognitiveLevelEnum("cognitive_level").notNull(),
-    grade: varchar("grade", { length: 20 }).notNull(),
+    grade: varchar("grade", { length: 20 }),
+    grades: varchar("grades", { length: 20 })
+      .array()
+      .default(sql`ARRAY[]::varchar[]`),
 
     contentMarkdown: text("content_markdown").notNull(),
     // Hash konten (stem+opsi, ADR-0012) — dasar anti-duplikat lintas-sumber.
@@ -89,6 +92,7 @@ export const questions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    version: versionColumn(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -97,6 +101,7 @@ export const questions = pgTable(
     index("idx_questions_parent_id").on(t.parentId),
     index("idx_questions_question_type").on(t.questionType),
     index("idx_questions_grade").on(t.grade),
+    index("idx_questions_grades_gin").using("gin", t.grades),
     index("idx_questions_difficulty").on(t.difficulty),
     // PERF-08: filter taksonomi Bloom (C1–C6) sering dipakai di daftar soal.
     index("idx_questions_cognitive_level").on(t.cognitiveLevel),

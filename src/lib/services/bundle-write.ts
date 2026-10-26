@@ -16,6 +16,8 @@ import {
   ConflictError,
 } from "@/lib/auth/guards";
 import { isUniqueViolation } from "@/lib/db/errors";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { assertVersionMatches, PreconditionFailedError } from "@/lib/api/version";
 import {
   assertBundleCreate,
   assertBundleRead,
@@ -75,10 +77,13 @@ export async function updateBundle(
   id: string,
   patch: UpdateBundleInput,
   actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<BundleRow> {
   const existing = await getBundle(id);
   if (!existing) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(existing, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(existing.version, expectedVersion);
 
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (patch.title !== undefined) {
@@ -102,7 +107,13 @@ export async function updateBundle(
     set.printConfig = sql`COALESCE(${bundles.printConfig}, '{}'::jsonb) || ${JSON.stringify(patch.printConfig)}::jsonb`;
   if (patch.status !== undefined) set.status = patch.status;
 
-  await db.update(bundles).set(set).where(eq(bundles.id, id));
+  // ADR-0030: versi di WHERE — pemeriksaan & penulisan satu operasi atomik.
+  const touched = await db
+    .update(bundles)
+    .set(set)
+    .where(versionPredicate(bundles, id, expectedVersion ?? "*"))
+    .returning({ id: bundles.id });
+  if (touched.length === 0) throw new PreconditionFailedError();
   await recordAudit({
     entityType: "bundle",
     entityId: id,
@@ -113,24 +124,55 @@ export async function updateBundle(
   return (await getBundle(id))!;
 }
 
-/** Arsip paket (soft-delete). Hanya pembuat / admin (`assertBundleWrite`). */
+/** Arsip paket (ADR-0025: status FSM = 'archived'). Hanya pembuat / admin (`assertBundleWrite`). */
 export async function archiveBundle(
   id: string,
   actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<void> {
   const existing = await getBundle(id);
   if (!existing) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(existing, actor);
-  await db
+  if (expectedVersion !== undefined) assertVersionMatches(existing.version, expectedVersion);
+  const archived = await db
+    .update(bundles)
+    .set({ status: "archived", updatedAt: new Date() })
+    .where(versionPredicate(bundles, id, expectedVersion ?? "*"))
+    .returning({ id: bundles.id });
+  if (archived.length === 0) throw new PreconditionFailedError();
+  await recordAudit({
+    entityType: "bundle",
+    entityId: id,
+    action: "update",
+    actor,
+    changeSummary: "Paket diarsipkan",
+  });
+}
+
+/** Hapus paket (soft-delete). Hanya pembuat / admin (`assertBundleWrite`). */
+export async function deleteBundle(
+  id: string,
+  actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<void> {
+  const existing = await getBundle(id);
+  if (!existing) throw new NotFoundError("Paket tidak ditemukan.");
+  assertBundleWrite(existing, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(existing.version, expectedVersion);
+  const removed = await db
     .update(bundles)
     .set({ deletedAt: new Date(), updatedAt: new Date() })
-    .where(eq(bundles.id, id));
+    .where(versionPredicate(bundles, id, expectedVersion ?? "*"))
+    .returning({ id: bundles.id });
+  if (removed.length === 0) throw new PreconditionFailedError();
   await recordAudit({
     entityType: "bundle",
     entityId: id,
     action: "delete",
     actor,
-    changeSummary: "Paket diarsipkan (soft-delete)",
+    changeSummary: "Paket dihapus (soft-delete)",
   });
 }
 

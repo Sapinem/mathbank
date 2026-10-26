@@ -27,7 +27,8 @@ export const EXPECTED_INVARIANTS = {
   // MAT-146: trg_question_options_updated_at ikut terhapus (24 → 23).
   // ADR-0019: trg_question_embeddings_updated_at ditambahkan (23 → 24).
   // Denormalisasi grades soal dari bundles (trg_bundle_items_sync_grades, trg_bundles_sync_grades) (24 → 26).
-  triggers: 26,
+  // ADR-0030: trigger bump_version pada 8 tabel berversi (26 → 34).
+  triggers: 34,
 } as const;
 
 /**
@@ -75,6 +76,15 @@ export const REQUIRED_TRIGGERS = [
   "trg_audit_logs_immutable",
   "trg_bundle_items_sync_grades",
   "trg_bundles_sync_grades",
+  // ADR-0030 — konkurensi optimistik (If-Match/ETag).
+  "trg_questions_bump_version",
+  "trg_bundles_bump_version",
+  "trg_events_bump_version",
+  "trg_media_assets_bump_version",
+  "trg_sources_bump_version",
+  "trg_tags_bump_version",
+  "trg_topics_bump_version",
+  "trg_apikey_bump_version",
 ] as const;
 
 /** Nama CHECK kritis yang WAJIB ada. */

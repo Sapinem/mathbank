@@ -14,6 +14,8 @@ export type SourceKind = "book" | "website" | "school";
 
 export interface SourceRow {
   id: string;
+  /** Nomor revisi (ADR-0030) — dipakai sebagai ETag / If-Match. */
+  version: number;
   kind: SourceKind;
   label: string;
   url: string | null;
@@ -29,6 +31,8 @@ export interface SourceRow {
 
 export interface EventRow {
   id: string;
+  /** Nomor revisi (ADR-0030) — dipakai sebagai ETag / If-Match. */
+  version: number;
   name: string;
   shortname: string;
   category: string;
@@ -39,6 +43,8 @@ export interface EventRow {
 
 export interface TagRow {
   id: string;
+  /** Nomor revisi (ADR-0030) — dipakai sebagai ETag / If-Match. */
+  version: number;
   name: string;
   usageCount: number;
 }

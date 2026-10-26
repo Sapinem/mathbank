@@ -34,10 +34,22 @@ const { createQuestion } = await import("@/lib/services/question-service");
 const admin: Actor = { id: "api-admin", name: "Admin", roles: ["admin"], via: "session" };
 const agent: Actor = { id: "api-agent", name: "Agen", roles: ["agent"], via: "session" };
 
-function req(method: string, path: string, body?: unknown): Request {
+/**
+ * ADR-0030: setiap mutasi baris WAJIB membawa `If-Match`. Baris yang baru
+ * di-seed selalu ber-versi 1; uji yang mengubah dua kali memberi versinya sendiri
+ * lewat argumen `headers`.
+ */
+function req(
+  method: string,
+  path: string,
+  body?: unknown,
+  headers: Record<string, string> = {},
+): Request {
+  const base: Record<string, string> = { "if-match": '"1"' };
+  if (body) base["content-type"] = "application/json";
   return new Request(`http://localhost:3000${path}`, {
     method,
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers: { ...base, ...headers },
     body: body ? JSON.stringify(body) : undefined,
   });
 }
@@ -134,9 +146,13 @@ describe("Alur API paket (L4)", () => {
     ).json()).data;
     const patch = await onePATCH(req("PATCH", `/api/bundles/${b.id}`, { status: "ready" }), ctx(b.id));
     expect(patch.status).toBe(200);
-    expect((await patch.json()).data.status).toBe("ready");
-
-    const del = await oneDELETE(req("DELETE", `/api/bundles/${b.id}`), ctx(b.id));
+    const patched = (await patch.json()).data;
+    expect(patched.status).toBe("ready");
+    // ADR-0030: PATCH menaikkan versi → DELETE wajib memakai versi BARU.
+    const del = await oneDELETE(
+      req("DELETE", `/api/bundles/${b.id}`, undefined, { "if-match": `"${patched.version}"` }),
+      ctx(b.id),
+    );
     expect(del.status).toBe(200);
     const list = (await (await listGET(req("GET", "/api/bundles"))).json()).data;
     expect(list.items.find((x: { id: string }) => x.id === b.id)).toBeUndefined();
@@ -148,15 +164,33 @@ describe("Alur API paket (L4)", () => {
     ).json()).data;
     const q1 = await mkQuestion("q1");
     const q2 = await mkQuestion("q2");
+    // Alur klien yang benar (ADR-0030): baca ETag dulu, kirim balik sebagai
+    // If-Match. Setiap penambahan item menaikkan versi paket.
+    const versionNow = async () =>
+      (await (await oneGET(req("GET", `/api/bundles/${b.id}`), ctx(b.id))).json()).data
+        .version as number;
+
     const i1 = (await (
-      await itemsPOST(req("POST", `/api/bundles/${b.id}/items`, { questionId: q1.id }), ctx(b.id))
+      await itemsPOST(
+        req("POST", `/api/bundles/${b.id}/items`, { questionId: q1.id }, {
+          "if-match": `"${await versionNow()}"`,
+        }),
+        ctx(b.id),
+      )
     ).json()).data;
     const i2 = (await (
-      await itemsPOST(req("POST", `/api/bundles/${b.id}/items`, { questionId: q2.id }), ctx(b.id))
+      await itemsPOST(
+        req("POST", `/api/bundles/${b.id}/items`, { questionId: q2.id }, {
+          "if-match": `"${await versionNow()}"`,
+        }),
+        ctx(b.id),
+      )
     ).json()).data;
 
     const res = await itemsPUT(
-      req("PUT", `/api/bundles/${b.id}/items`, { itemIds: [i2.id, i1.id] }),
+      req("PUT", `/api/bundles/${b.id}/items`, { itemIds: [i2.id, i1.id] }, {
+        "if-match": `"${await versionNow()}"`,
+      }),
       ctx(b.id),
     );
     expect(res.status).toBe(200);

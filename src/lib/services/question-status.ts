@@ -13,6 +13,8 @@ import { transition, assertReady, type QuestionStatus } from "@/lib/fsm/question
 import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
 import { assertReleaseContract } from "./question-release";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { assertVersionMatches } from "@/lib/api/version";
 
 /**
  * Transisi status soal (M14 — pecahan `question-service.ts`).
@@ -32,6 +34,11 @@ export interface ChangeStatusOptions {
    * dari aksi 200 soal.
    */
   returnUpdated?: boolean;
+  /**
+   * Versi yang diharapkan (ADR-0030), dari header `If-Match`.
+   * `undefined` = tanpa prakondisi (pemanggil internal & jalur massal).
+   */
+  expectedVersion?: number | "*";
 }
 
 /** Ubah status lewat FSM (L6) + izin status (L1) — tanpa proyeksi balik. */
@@ -59,6 +66,12 @@ export async function changeQuestionStatus(
 ): Promise<PublicQuestion | null> {
   const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
+
+  // ADR-0030: salinan klien yang basi ditolak sebelum aturan bisnis apa pun,
+  // supaya 412 tidak tersamarkan oleh 409/422 yang membingungkan.
+  if (opts.expectedVersion !== undefined) {
+    assertVersionMatches(existing.version, opts.expectedVersion);
+  }
 
   const from = existing.status as QuestionStatus;
   // Transisi tak berubah → tak perlu tulis/audit.
@@ -111,6 +124,13 @@ export async function changeQuestionStatus(
   // **T-M4-5:** penjagaan balapan (optimistic). Update HANYA bila status masih
   // `from` — dua PATCH bersamaan tak bisa dua-duanya lolos FSM dari `from` yang
   // sama. Bila 0 baris → status sudah berubah di antara baca & tulis → 409.
+  //
+  // ADR-0030: predikat versi ditambahkan saat `If-Match` dipakai, sehingga
+  // perubahan isi (bukan hanya status) juga membatalkan transisi.
+  const versionClause =
+    opts.expectedVersion !== undefined
+      ? versionPredicate(questions, id, opts.expectedVersion)
+      : eq(questions.id, id);
   const updated_rows = await db
     .update(questions)
     .set({
@@ -118,9 +138,11 @@ export async function changeQuestionStatus(
       lastReviewedAt: to === "ready" ? new Date() : existing.lastReviewedAt,
       ...(notes !== undefined ? { flagNotes: notes } : {}),
     })
-    .where(and(eq(questions.id, id), eq(questions.status, from)))
+    .where(and(versionClause, eq(questions.status, from)))
     .returning({ id: questions.id });
   if (updated_rows.length === 0) {
+    // Tetap 409 (CONSTRAINT #36): versi sudah diperiksa di awal, jadi 0 baris
+    // di sini berarti STATUS yang bergeser — kelas galat yang berbeda.
     throw new ConflictError(
       "Status soal sudah berubah oleh permintaan lain. Muat ulang lalu coba lagi.",
     );

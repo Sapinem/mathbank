@@ -19,7 +19,9 @@ export const PATCH = wrapRoute({
   authz: { kind: "route", permission: "reference:manage" },
   params: paramsSchema,
   body: patchSchema,
-  handler: async ({ body, actor, params }) => updateEvent(params.id, body, actor),
+  ifMatch: true,
+  handler: async ({ body, actor, params, expectedVersion }) =>
+    updateEvent(params.id, body, actor, expectedVersion),
 });
 
 /** DELETE /api/events/[id] — hapus event (RESTRICT bila dipakai soal). */
@@ -28,8 +30,9 @@ export const DELETE = wrapRoute({
   authz: { kind: "route", permission: "reference:manage" },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ actor, params }) => {
-    await deleteEvent(params.id, actor);
+  ifMatch: true,
+  handler: async ({ actor, params, expectedVersion }) => {
+    await deleteEvent(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

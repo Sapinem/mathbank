@@ -32,6 +32,7 @@ export default defineConfig({
         "src/lib/api/route-wrapper.ts",
         "src/lib/api/route-inventory.ts",
         "src/lib/api/deprecation.ts",
+        "src/lib/api/version.ts",
         "src/lib/api/idempotency.ts",
         "src/lib/api/openapi/spec.ts",
         "src/lib/api/openapi/registry.ts",

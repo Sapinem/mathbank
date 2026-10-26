@@ -21,6 +21,8 @@ import {
   type BundleItemRole,
 } from "./bundle-shared";
 import { getBundle } from "./bundle-query";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { assertVersionMatches, PreconditionFailedError } from "@/lib/api/version";
 
 /** Tambah soal ke paket (di akhir). Tolak duplikat. */
 export async function addItem(
@@ -28,10 +30,13 @@ export async function addItem(
   questionId: string,
   actor: Actor,
   opts: { role?: BundleItemRole; sectionName?: string | null } = {},
+  /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<BundleItemRow> {
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(bundle, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
 
   const [q] = await db
     .select({ id: questions.id })
@@ -58,20 +63,27 @@ export async function addItem(
     .from(bundleItems)
     .where(eq(bundleItems.bundleId, bundleId));
 
-  const [row] = await db
-    .insert(bundleItems)
-    .values({
-      bundleId,
-      questionId,
-      role: opts.role ?? "question",
-      orderIndex: Number(max) + 1,
-      sectionName: opts.sectionName ?? null,
-    })
-    .returning();
-  await db
-    .update(bundles)
-    .set({ updatedAt: new Date() })
-    .where(eq(bundles.id, bundleId));
+  // ADR-0030: sentuh paket LEBIH DULU di dalam transaksi, lalu sisipkan item.
+  // Urutan ini penting — bila versi sudah basi, tak ada item yatim yang
+  // terlanjur masuk sebelum 412 dikembalikan.
+  const [row] = await db.transaction(async (tx) => {
+    const touched = await tx
+      .update(bundles)
+      .set({ updatedAt: new Date() })
+      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
+      .returning({ id: bundles.id });
+    if (touched.length === 0) throw new PreconditionFailedError();
+    return tx
+      .insert(bundleItems)
+      .values({
+        bundleId,
+        questionId,
+        role: opts.role ?? "question",
+        orderIndex: Number(max) + 1,
+        sectionName: opts.sectionName ?? null,
+      })
+      .returning();
+  });
   return row!;
 }
 
@@ -80,21 +92,28 @@ export async function removeItem(
   bundleId: string,
   itemId: string,
   actor: Actor,
+  /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<void> {
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(bundle, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
   const [row] = await db
     .select({ id: bundleItems.id })
     .from(bundleItems)
     .where(and(eq(bundleItems.id, itemId), eq(bundleItems.bundleId, bundleId)))
     .limit(1);
   if (!row) throw new NotFoundError("Item paket tidak ditemukan.");
-  await db.delete(bundleItems).where(eq(bundleItems.id, itemId));
-  await db
-    .update(bundles)
-    .set({ updatedAt: new Date() })
-    .where(eq(bundles.id, bundleId));
+  await db.transaction(async (tx) => {
+    const touched = await tx
+      .update(bundles)
+      .set({ updatedAt: new Date() })
+      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
+      .returning({ id: bundles.id });
+    if (touched.length === 0) throw new PreconditionFailedError();
+    await tx.delete(bundleItems).where(eq(bundleItems.id, itemId));
+  });
 }
 
 /** Susun ulang item sesuai daftar id (urutan baru). */
@@ -102,10 +121,13 @@ export async function reorderItems(
   bundleId: string,
   itemIds: string[],
   actor: Actor,
+  /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<void> {
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(bundle, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
   const existing = await db
     .select({ id: bundleItems.id })
     .from(bundleItems)
@@ -140,9 +162,11 @@ export async function reorderItems(
        WHERE ${bundleItems.bundleId} = ${bundleId}::uuid
          AND ${bundleItems.id} IN (${sql.join(inList, sql`, `)})
     `);
-    await tx
+    const touched = await tx
       .update(bundles)
       .set({ updatedAt: new Date() })
-      .where(eq(bundles.id, bundleId));
+      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
+      .returning({ id: bundles.id });
+    if (touched.length === 0) throw new PreconditionFailedError();
   });
 }

@@ -62,7 +62,16 @@ export async function getMediaDetail(shortId: string) {
 export async function updateMediaMeta(
   shortId: string,
   input: { title: string; altText?: string | null; caption?: string | null; description?: string | null },
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ) {
+  // ADR-0030: kunci baris di sini `short_id`, bukan `id`, jadi predikat versi
+  // ditulis langsung — `versionPredicate` mengasumsikan kolom `id`.
+  const keyed = eq(mediaAssets.shortId, shortId);
+  const where =
+    expectedVersion === undefined || expectedVersion === "*"
+      ? keyed
+      : and(keyed, eq(mediaAssets.version, expectedVersion));
   const [row] = await db
     .update(mediaAssets)
     .set({
@@ -71,7 +80,12 @@ export async function updateMediaMeta(
       caption: input.caption ?? null,
       description: input.description ?? null,
     })
-    .where(eq(mediaAssets.shortId, shortId))
-    .returning({ id: mediaAssets.id, shortId: mediaAssets.shortId, title: mediaAssets.title });
+    .where(where)
+    .returning({
+      id: mediaAssets.id,
+      version: mediaAssets.version,
+      shortId: mediaAssets.shortId,
+      title: mediaAssets.title,
+    });
   return row ?? null;
 }

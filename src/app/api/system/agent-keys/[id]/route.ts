@@ -14,8 +14,9 @@ export const DELETE = wrapRoute({
   authz: { kind: "route", permission: "user:manage" },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ actor, params }) => {
-    await revokeAgentKey(actor, params.id);
+  ifMatch: true,
+  handler: async ({ actor, params, expectedVersion }) => {
+    await revokeAgentKey(actor, params.id, expectedVersion);
     return { ok: true };
   },
 });

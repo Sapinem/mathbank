@@ -15,6 +15,7 @@ import {
 
 function node(over: Partial<TopicNode> & { id: string }): TopicNode {
   return {
+    version: 1,
     name: "n",
     parentId: null,
     level: 1,
@@ -23,7 +24,7 @@ function node(over: Partial<TopicNode> & { id: string }): TopicNode {
     usageCount: 0,
     isActive: true,
     ...over,
-  };
+  } as TopicNode;
 }
 
 describe("slugify", () => {

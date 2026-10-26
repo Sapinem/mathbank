@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
 import { solutions } from "@/lib/db/schema/solution";
@@ -9,6 +9,8 @@ import { contentHash } from "@/lib/ingest/hash";
 import { findQuestionByContentHash } from "@/lib/ingest/dedup";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { isUniqueViolation } from "@/lib/db/errors";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { assertVersionMatches, PreconditionFailedError } from "@/lib/api/version";
 import type { Actor } from "@/lib/auth/actor";
 import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
@@ -110,7 +112,8 @@ export async function createQuestion(
           questionType: input.questionType,
           difficulty: input.difficulty,
           cognitiveLevel: input.cognitiveLevel,
-          grade: input.grade,
+          grade: input.grade ?? (input.grades?.length ? input.grades[0] : null),
+          grades: input.grades?.length ? input.grades : (input.grade ? [input.grade] : []),
           contentMarkdown: input.contentMarkdown,
           // Hash konten (ADR-0012) — dedup lintas-sumber.
           contentHash: calculatedHash,
@@ -183,12 +186,21 @@ export async function updateQuestion(
   id: string,
   input: UpdateQuestionInput,
   actor: Actor,
+  /**
+   * Versi yang diharapkan (ADR-0030). `"*"` atau `undefined` = tanpa
+   * prakondisi, untuk pemanggil internal yang bukan request HTTP.
+   */
+  expectedVersion?: number | "*",
 ): Promise<PublicQuestion> {
   const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   // Izin: reviewer/admin boleh semua; teacher hanya miliknya sendiri
   assertCan(actor, "question:edit", { ownerId: existing.authorId });
+
+  // Prakondisi SEBELUM aturan bisnis: bila salinan klien sudah basi, apa pun
+  // yang ia kirim akan menimpa perubahan orang lain — tolak lebih awal.
+  if (expectedVersion !== undefined) assertVersionMatches(existing.version, expectedVersion);
 
   // Fase 1 — status lock: isi/kunci soal `ready`/`archived` tidak boleh
   // diubah diam-diam tanpa penelaahan ulang. Ditolak (bukan auto-downgrade)
@@ -267,6 +279,7 @@ export async function updateQuestion(
       if (fields.difficulty !== undefined) patch.difficulty = fields.difficulty;
       if (fields.cognitiveLevel !== undefined) patch.cognitiveLevel = fields.cognitiveLevel;
       if (fields.grade !== undefined) patch.grade = fields.grade;
+      if (fields.grades !== undefined) patch.grades = fields.grades;
       if (fields.contentMarkdown !== undefined) patch.contentMarkdown = fields.contentMarkdown;
       if (gated) {
         patch.dataPayload = gated.dataPayload;
@@ -301,8 +314,19 @@ export async function updateQuestion(
         // Pembahasan utama sudah masuk `answer_key.explanationMarkdown` lewat gerbang.
       }
 
-      if (Object.keys(patch).length) {
-        await tx.update(questions).set(patch).where(eq(questions.id, id));
+      // ADR-0030: `version` masuk WHERE, bukan dibandingkan di memori —
+      // pemeriksaan dan penulisan jadi satu operasi atomik.
+      //
+      // Baris tetap disentuh walau `patch` kosong (mis. hanya topicIds yang
+      // berubah) supaya versi ikut naik; kalau tidak, ETag akan berbohong
+      // dengan bilang "belum berubah" padahal isinya sudah berbeda.
+      if (Object.keys(patch).length || expectedVersion !== undefined) {
+        const rows = await tx
+          .update(questions)
+          .set(Object.keys(patch).length ? patch : { version: sql`${questions.version}` })
+          .where(versionPredicate(questions, id, expectedVersion ?? "*"))
+          .returning({ id: questions.id });
+        if (rows.length === 0) throw new PreconditionFailedError();
       }
       if (topicIds) {
         await tx.delete(questionTopics).where(eq(questionTopics.questionId, id));
@@ -348,15 +372,20 @@ export async function setQuestionFlag(
   flagged: boolean,
   notes: string | null,
   actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<PublicQuestion> {
   const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
   assertCan(actor, "question:flag", { ownerId: existing.authorId });
+  if (expectedVersion !== undefined) assertVersionMatches(existing.version, expectedVersion);
 
-  await db
+  const flaggedRows = await db
     .update(questions)
     .set({ isFlagged: flagged, flagNotes: flagged ? notes : null })
-    .where(eq(questions.id, id));
+    .where(versionPredicate(questions, id, expectedVersion ?? "*"))
+    .returning({ id: questions.id });
+  if (flaggedRows.length === 0) throw new PreconditionFailedError();
 
   await recordAudit({
     entityType: "question",
@@ -372,11 +401,17 @@ export async function setQuestionFlag(
 }
 
 /** Hapus lunak (soft delete). */
-export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
+export async function deleteQuestion(
+  id: string,
+  actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<void> {
   const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   assertCan(actor, "question:delete", { ownerId: existing.authorId });
+  if (expectedVersion !== undefined) assertVersionMatches(existing.version, expectedVersion);
 
   // RESTRICT: soal yang dipakai paket AKTIF (M7) tak boleh dihapus.
   // T-M7-3: paket TERARSIP tidak memblokir — jika tidak, soal mustahil dihapus
@@ -388,10 +423,12 @@ export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
     );
   }
 
-  await db
+  const deleted = await db
     .update(questions)
     .set({ deletedAt: new Date() })
-    .where(eq(questions.id, id));
+    .where(versionPredicate(questions, id, expectedVersion ?? "*"))
+    .returning({ id: questions.id });
+  if (deleted.length === 0) throw new PreconditionFailedError();
 
   await recordAudit({
     entityType: "question",
@@ -412,12 +449,18 @@ export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
  * - RESTRICT: soal yang dipakai paket atau koleksi tetap dilarang (FK `restrict` juga menjaga).
  * - Anak (opsi/solusi/topik/label/media) di-CASCADE otomatis oleh DB.
  */
-export async function hardDeleteQuestion(id: string, actor: Actor): Promise<void> {
+export async function hardDeleteQuestion(
+  id: string,
+  actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<void> {
   // includeDeleted: soal yang ingin dihapus permanen PASTI ber-deletedAt (sudah soft-delete).
   const existing = await getQuestionInternal(id, { includeDeleted: true });
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   assertCan(actor, "question:hardDelete", { ownerId: existing.authorId });
+  if (expectedVersion !== undefined) assertVersionMatches(existing.version, expectedVersion);
 
   if (!existing.deletedAt) {
     throw new ConflictError(
@@ -448,7 +491,11 @@ export async function hardDeleteQuestion(id: string, actor: Actor): Promise<void
   // lalu hapus soal secara permanen.
   await db.transaction(async (tx) => {
     await tx.delete(bundleItems).where(eq(bundleItems.questionId, id));
-    await tx.delete(questions).where(eq(questions.id, id));
+    const removed = await tx
+      .delete(questions)
+      .where(versionPredicate(questions, id, expectedVersion ?? "*"))
+      .returning({ id: questions.id });
+    if (removed.length === 0) throw new PreconditionFailedError();
   });
 
   await recordAudit({

@@ -287,3 +287,51 @@ CREATE TRIGGER trg_bundles_sync_grades
   AFTER UPDATE OF grade, deleted_at ON bundles
   FOR EACH ROW EXECUTE FUNCTION sync_question_grades();
 
+-- ============================================================================
+-- 8. ADR-0030 — versi baris untuk konkurensi optimistik (If-Match / ETag)
+-- ============================================================================
+-- Setiap UPDATE menaikkan `version` SATU langkah, apa pun yang dikirim klien.
+-- Nilai dari klien sengaja DITIMPA: `version` adalah otoritas server, bukan
+-- masukan. Tanpa ini, klien bisa mengirim `version: 999` dan mematikan proteksi
+-- lost-update yang justru ingin ditegakkan.
+--
+-- KENAPA trigger, bukan kode aplikasi: ada banyak penulis (service, seed,
+-- skrip ingest, SQL manual). Satu UPDATE yang lupa menaikkan version membuat
+-- ETag basi selamanya — proteksi berubah jadi jebakan. Trigger menutup semuanya.
+--
+-- Tabel yang didaftarkan = tabel yang punya rute mutasi baris ber-`If-Match`.
+-- `app_settings` (singleton) & `bundle_items` (anak dari `bundles`) sengaja
+-- tidak: yang menjadi ETag adalah versi AGREGAT induknya.
+CREATE OR REPLACE FUNCTION bump_version()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.version = OLD.version + 1;
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+DECLARE
+  t text;
+  tables text[] := ARRAY[
+    'questions', 'bundles', 'events', 'media_assets',
+    'sources', 'tags', 'topics', 'apikey'
+  ];
+BEGIN
+  FOREACH t IN ARRAY tables LOOP
+    EXECUTE format(
+      'DROP TRIGGER IF EXISTS %I ON %I',
+      'trg_' || t || '_bump_version', t
+    );
+    EXECUTE format(
+      'CREATE TRIGGER %I BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION bump_version()',
+      'trg_' || t || '_bump_version', t
+    );
+  END LOOP;
+END;
+$$;
+
+
+

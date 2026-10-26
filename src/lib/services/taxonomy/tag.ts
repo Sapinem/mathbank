@@ -9,6 +9,8 @@ import { db } from "@/lib/db";
 import { tags, questionTags } from "@/lib/db/schema/taxonomy";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { throwVersionedWriteMiss } from "../versioned";
 import { recordAudit } from "../audit";
 import type { Actor } from "@/lib/auth/actor";
 import { type TagRow } from "./shared";
@@ -16,6 +18,7 @@ import { type TagRow } from "./shared";
 /** Kolom tag yang diproyeksikan. */
 const tagColumns = {
   id: tags.id,
+  version: tags.version,
   name: tags.name,
   usageCount: tags.usageCount,
 } as const;
@@ -58,6 +61,8 @@ export async function updateTag(
   id: string,
   input: { name: string },
   actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<TagRow> {
   assertCan(actor, "taxonomy:manage");
   const [row] = await withUniqueGuard(
@@ -65,11 +70,11 @@ export async function updateTag(
       db
         .update(tags)
         .set({ name: input.name, updatedAt: new Date() })
-        .where(eq(tags.id, id))
+        .where(versionPredicate(tags, id, expectedVersion ?? "*"))
         .returning(tagColumns),
     "Nama label sudah dipakai.",
   );
-  if (!row) throw new NotFoundError("Label tidak ditemukan.");
+  if (!row) return throwVersionedWriteMiss(tags, id, expectedVersion, "Label tidak ditemukan.");
   await recordAudit({
     entityType: "tag",
     entityId: row.id,
@@ -80,7 +85,12 @@ export async function updateTag(
   return row;
 }
 
-export async function deleteTag(id: string, actor: Actor): Promise<void> {
+export async function deleteTag(
+  id: string,
+  actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<void> {
   assertCan(actor, "taxonomy:manage");
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -89,8 +99,13 @@ export async function deleteTag(id: string, actor: Actor): Promise<void> {
   if (count > 0) {
     throw new ConflictError(`Label dipakai oleh ${count} soal. Lepas keterkaitannya dulu.`);
   }
-  const res = await db.delete(tags).where(eq(tags.id, id)).returning({ id: tags.id });
-  if (res.length === 0) throw new NotFoundError("Label tidak ditemukan.");
+  const res = await db
+    .delete(tags)
+    .where(versionPredicate(tags, id, expectedVersion ?? "*"))
+    .returning({ id: tags.id });
+  if (res.length === 0) {
+    return throwVersionedWriteMiss(tags, id, expectedVersion, "Label tidak ditemukan.");
+  }
   await recordAudit({
     entityType: "tag",
     entityId: id,
