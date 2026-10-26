@@ -31,7 +31,7 @@ Direktori kode mengikuti 9 lapisan. **Aturan tegas:** lapisan atas boleh
 memanggil bawah, **tidak sebaliknya**.
 
 ```
-L9  Layanan luar + MCP      src/lib/mcp/, src/app/api/v1/ingest/, src/lib/ai/
+L9  Layanan luar + MCP      src/lib/mcp/, src/app/api/ingest/, src/lib/ai/
 L8  Database (PostgreSQL)   src/lib/db/ (koneksi), drizzle/ (migrasi)
 L7  Akses data              src/lib/db/schema/ (Drizzle), src/lib/db/projections/
 L6  Modul / engine MURNI    src/lib/fsm/, math/, search/, export/, contracts/
@@ -141,7 +141,7 @@ PostgreSQL 18, port 5433, ekstensi `vector` + `pg_trgm`.
 ### L9 — Layanan Luar + MCP ✅
 - **AI/9router** — konfigurasi di `app_settings` (**bukan hard-code**, #18).
 - **Embedding** bge-m3 (dim 1024) → HNSW.
-- **Ingest** — `/api/v1/ingest/{upload,queue,commit}` (jalur mesin, Bearer token).
+- **Ingest** — `/api/ingest/{upload,queue,commit}` (jalur mesin, Bearer token). Alias `/api/v1/ingest/*` deprecated s.d. 2027-01-25 (ADR-0028).
 - **MCP** — `/api/mcp` untuk agen (tool: question/search/asset/enrich).
 - **Moodle GitSync** — tulis XML ke folder Git.
 

@@ -249,6 +249,7 @@ function manualOperation(key: string, route: RouteLike): Json | null {
     summary: doc.summary,
     description: doc.description,
     tags: doc.tags,
+    ...(doc.deprecated ? { deprecated: true } : {}),
     security: doc.security === "none" ? [] : doc.security === "bearer" ? [{ apiKey: [] }] : [],
     ...(doc.parameters ? { parameters: doc.parameters } : {}),
     ...(doc.requestBody ? { requestBody: doc.requestBody } : {}),

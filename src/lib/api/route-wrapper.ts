@@ -134,7 +134,7 @@ function searchParamsToObject(url: string): Record<string, string | string[]> {
 }
 
 /** Argumen kedua handler Next.js (params rute dinamis, async di Next 15+). */
-type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
+export type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
 
 /**
  * Sidik jari request untuk idempotensi: method + path (termasuk query) + body

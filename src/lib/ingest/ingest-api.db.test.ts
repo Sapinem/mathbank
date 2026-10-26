@@ -19,9 +19,11 @@ vi.mock("@/lib/auth/resolve", () => ({
   resolveActor: async () => mockActor,
 }));
 
-const { POST: uploadPOST } = await import("@/app/api/v1/ingest/upload/route");
-const { GET: queueGET } = await import("@/app/api/v1/ingest/queue/route");
-const { POST: commitPOST } = await import("@/app/api/v1/ingest/commit/route");
+const { POST: uploadPOST } = await import("@/app/api/ingest/upload/route");
+const { GET: queueGET } = await import("@/app/api/ingest/queue/route");
+const { POST: commitPOST } = await import("@/app/api/ingest/commit/route");
+// Alias deprecated (ADR-0028) — harus berperilaku sama + menandai dirinya usang.
+const { GET: aliasQueueGET } = await import("@/app/api/v1/ingest/queue/route");
 
 function req(method: string, path: string, body?: unknown): Request {
   return new Request(`http://localhost:3000${path}`, {
@@ -63,7 +65,7 @@ const MATHCYBER_HTML = `
 describe("alur API ingest", () => {
   it("upload → 201 {data}; baris pending", async () => {
     const res = await uploadPOST(
-      req("POST", "/api/v1/ingest/upload", {
+      req("POST", "/api/ingest/upload", {
         title: "Uji API", source: "uji-api", url: "https://x.test/a",
         rawContent: MATHCYBER_HTML, format: "html",
       }),
@@ -78,19 +80,19 @@ describe("alur API ingest", () => {
 
   it("upload ulang (isi sama) → deduped", async () => {
     const body = { title: "T", source: "uji-api", rawContent: MATHCYBER_HTML, format: "html" };
-    const a = await (await uploadPOST(req("POST", "/api/v1/ingest/upload", body))).json();
-    const b = await (await uploadPOST(req("POST", "/api/v1/ingest/upload", body))).json();
+    const a = await (await uploadPOST(req("POST", "/api/ingest/upload", body))).json();
+    const b = await (await uploadPOST(req("POST", "/api/ingest/upload", body))).json();
     expect(b.data.deduped).toBe(true);
     expect(b.data.id).toBe(a.data.id);
   });
 
   it("queue GET → daftar + counts (peran manusia)", async () => {
-    await uploadPOST(req("POST", "/api/v1/ingest/upload", {
+    await uploadPOST(req("POST", "/api/ingest/upload", {
       title: "Q", source: "uji-api", rawContent: MATHCYBER_HTML, format: "html",
     }));
     // Peran manusia juga boleh (`ingest:queue:read` = yes untuk semua peran manusia).
     mockActor = { id: "q-admin", name: "Admin", roles: ["admin"], via: "session" };
-    const res = await queueGET(req("GET", "/api/v1/ingest/queue?status=pending"));
+    const res = await queueGET(req("GET", "/api/ingest/queue?status=pending"));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.data.items.length).toBeGreaterThanOrEqual(1);
@@ -100,15 +102,27 @@ describe("alur API ingest", () => {
 
   it("queue GET oleh machine → 200 (izin ingest:queue:read; dulu 403)", async () => {
     // `question:view` TETAP `no` untuk machine; antrean punya izin sendiri.
-    const res = await queueGET(req("GET", "/api/v1/ingest/queue"));
+    const res = await queueGET(req("GET", "/api/ingest/queue"));
     expect(res.status).toBe(200);
   });
 
+  it("alias /api/v1/ingest/queue → respons sama + header Deprecation/Sunset", async () => {
+    const canonical = await queueGET(req("GET", "/api/ingest/queue"));
+    const alias = await aliasQueueGET(req("GET", "/api/v1/ingest/queue"));
+
+    expect(alias.status).toBe(canonical.status);
+    expect(await alias.json()).toEqual(await canonical.json());
+
+    expect(alias.headers.get("Deprecation")).toBe("true");
+    expect(alias.headers.get("Sunset")).toBe("Mon, 25 Jan 2027 00:00:00 GMT");
+    expect(alias.headers.get("Link")).toBe('</api/ingest>; rel="successor-version"');
+  });
+
   it("commit → soal DRAFT dibuat; antrean selesai", async () => {
-    await uploadPOST(req("POST", "/api/v1/ingest/upload", {
+    await uploadPOST(req("POST", "/api/ingest/upload", {
       title: "C", source: "uji-api", rawContent: MATHCYBER_HTML, format: "html",
     }));
-    const res = await commitPOST(req("POST", "/api/v1/ingest/commit", { limit: 10 }));
+    const res = await commitPOST(req("POST", "/api/ingest/commit", { limit: 10 }));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.data.summary.processed).toBe(1);
@@ -129,7 +143,7 @@ describe("alur API ingest", () => {
   });
 
   it("commit tanpa pending → processed 0", async () => {
-    const res = await commitPOST(req("POST", "/api/v1/ingest/commit", { limit: 10 }));
+    const res = await commitPOST(req("POST", "/api/ingest/commit", { limit: 10 }));
     const json = await res.json();
     expect(json.data.summary.processed).toBe(0);
   });
@@ -139,7 +153,7 @@ describe("alur API ingest", () => {
     // kecuali machine punya. Uji sebaliknya: machine boleh (201), sudah di atas.
     // Di sini pastikan izin DIPERIKSA: aktor tanpa izin apa pun → 403.
     mockActor = { id: "noone", name: "Tanpa Peran", roles: [], via: "session" };
-    const res = await uploadPOST(req("POST", "/api/v1/ingest/upload", {
+    const res = await uploadPOST(req("POST", "/api/ingest/upload", {
       title: "X", source: "uji-api", rawContent: "<p>x</p>", format: "html",
     }));
     expect(res.status).toBe(403);
@@ -147,7 +161,7 @@ describe("alur API ingest", () => {
   });
 
   it("validasi: rawContent kosong → 400", async () => {
-    const res = await uploadPOST(req("POST", "/api/v1/ingest/upload", {
+    const res = await uploadPOST(req("POST", "/api/ingest/upload", {
       title: "Y", source: "uji-api", rawContent: "", format: "html",
     }));
     expect(res.status).toBe(400);
@@ -155,7 +169,7 @@ describe("alur API ingest", () => {
 
   it("tanpa aktor → 401", async () => {
     mockActor = null;
-    const res = await uploadPOST(req("POST", "/api/v1/ingest/upload", {
+    const res = await uploadPOST(req("POST", "/api/ingest/upload", {
       title: "Z", source: "uji-api", rawContent: "<p>z</p>", format: "html",
     }));
     expect(res.status).toBe(401);

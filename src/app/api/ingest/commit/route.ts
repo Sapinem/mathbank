@@ -5,7 +5,7 @@ import { commitIngestBatch } from "@/lib/ingest/commit-batch";
 import { ConflictError } from "@/lib/auth/guards";
 
 /**
- * POST /api/v1/ingest/commit — wajah MESIN (M9-3).
+ * POST /api/ingest/commit — wajah MESIN (M9-3).
  * Proses antrean `pending` → soal **draft** (segmentasi + media + commit).
  *
  * Batas `limit` menjaga waktu respons; panggil berulang untuk melanjutkan.

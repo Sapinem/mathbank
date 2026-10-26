@@ -31,6 +31,7 @@ export default defineConfig({
         "src/lib/auth/origins.ts",
         "src/lib/api/route-wrapper.ts",
         "src/lib/api/route-inventory.ts",
+        "src/lib/api/deprecation.ts",
         "src/lib/api/openapi/spec.ts",
         "src/lib/api/openapi/registry.ts",
         "src/lib/telemetry/logger.ts",

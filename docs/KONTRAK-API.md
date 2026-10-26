@@ -1,6 +1,6 @@
 # KONTRAK-API.md — Kontrak HTTP API MathBank
 
-> **Status:** ✅ berlaku — mencerminkan **48 route handler · 73 method** di `src/app/api` per 2026-10-27
+> **Status:** ✅ berlaku — mencerminkan **51 route handler · 76 method** di `src/app/api` per 2026-10-27
 > (`/api/auth/[...all]` menyumbang `GET`+`POST` lewat Better Auth). Angka hidup dicetak
 > `pnpm lint:authz`; jangan salin ke dokumen lain.
 > **Sumber kebenaran:** `src/lib/api/route-wrapper.ts` (envelope), `src/lib/contracts/*` (skema Zod).
@@ -38,10 +38,10 @@
 | Izin | `authz` per method, dicek via matriks peran×aksi (`permissions.ts`); lihat ADR-0026 |
 | **Traceability** | Setiap respons menyertakan header `X-Request-ID` (diteruskan dari header masuk bila ada). Log error 500 memuat `rid=<id>`. |
 | **Cache** | Semua respons lewat `wrapRoute` menyetel `Cache-Control: no-store` + `Vary: Cookie, Authorization`. Hanya `/img/*` yang publik dan boleh di-cache. |
-| **Idempotensi** | Empat endpoint mutasi (`POST /api/questions`, `POST /api/bundles`, `POST /api/v1/ingest/upload`, `POST /api/v1/ingest/commit`) menerima `Idempotency-Key`. Key sama + **payload sama** (≤60 dtk) → replay (header `Idempotent-Replay: true`). Key sama + **payload beda** → **422 `IDEMPOTENCY_KEY_REUSED`**, bukan replay. Sidik jari = SHA-256(method + path + body mentah). |
+| **Idempotensi** | Empat endpoint mutasi (`POST /api/questions`, `POST /api/bundles`, `POST /api/ingest/upload`, `POST /api/ingest/commit`) menerima `Idempotency-Key`. Key sama + **payload sama** (≤60 dtk) → replay (header `Idempotent-Replay: true`). Key sama + **payload beda** → **422 `IDEMPOTENCY_KEY_REUSED`**, bukan replay. Sidik jari = SHA-256(method + path + body mentah). |
 | **Path aksi** | Operasi non-CRUD memakai sub-path kata kerja (`/duplicate`, `/validate`, `/merge`, `/clean-unused`, `/flag`, `/status`, `/permanent`, `/export/moodle`). Konsekuensi ADR-0022 (larangan Server Actions), **disengaja** — bukan kelalaian REST. |
 | Ganti password | Bila `mustChangePassword`, semua endpoint diblokir **403 `PASSWORD_CHANGE_REQUIRED`** — **kecuali** `/api/auth/me` (agar UI bisa baca status) & endpoint auth Better Auth (ganti password). UI dialihkan ke `/change-password`. |
-| Versi | Inti **v0** (tanpa prefix versi); hanya ingest memakai `/api/v1`. Penyatuan **belum diputuskan** — lihat §8 |
+| Versi | **Tanpa prefix versi** di seluruh API. Ingest kini di `/api/ingest/*`; `/api/v1/ingest/*` tetap hidup sebagai **alias deprecated** sampai 2027-01-25 — lihat §8 |
 
 ---
 
@@ -183,9 +183,12 @@ Validasi menambah `details`:
 
 | Method | Path | Izin | Ringkasan |
 |--------|------|:----:|-----------|
-| `POST` | `/api/v1/ingest/commit` | `question:create` | Commit antrean → soal draft |
-| `GET` | `/api/v1/ingest/queue` | `ingest:queue:read` | Antrean ingest + ringkasan status |
-| `POST` | `/api/v1/ingest/upload` | `question:create` | Unggah naskah ke antrean ingest |
+| `POST` | `/api/ingest/commit` | `question:create` | Commit antrean → soal draft |
+| `GET` | `/api/ingest/queue` | `ingest:queue:read` | Antrean ingest + ringkasan status |
+| `POST` | `/api/ingest/upload` | `question:create` | Unggah naskah ke antrean ingest |
+| `POST` | `/api/v1/ingest/commit` | API key | Alias deprecated: commit antrean menjadi soal draft |
+| `GET` | `/api/v1/ingest/queue` | API key | Alias deprecated: antrean ingest + ringkasan status |
+| `POST` | `/api/v1/ingest/upload` | API key | Alias deprecated: unggah naskah ke antrean |
 
 ### system — Pengaturan, API key agen, dev.
 
@@ -268,19 +271,28 @@ Ditegakkan sebagai **guard service** (`assertReady()` di `fsm/question-fsm.ts`),
 
 ---
 
-## 8. Versioning (BELUM DIPUTUSKAN)
+## 8. Versioning (DIPUTUSKAN 2026-10-27)
 
-Keadaan sekarang **dua konvensi hidup bersamaan**:
+**Keputusan: API tidak memakai prefix versi.** ADR-0028 mencabut prefix `v1` dari
+jalur ingest karena hanya tiga endpoint yang berversi sementara seluruh API lain
+tidak — perbedaan itu tidak memberi manfaat dan menyesatkan klien.
 
-- Inti aplikasi: **v0** implisit (`/api/questions`, `/api/bundles`, …).
-- Ingest: **v1** eksplisit (`/api/v1/ingest/*`) — dipakai klien ingest eksternal.
+| Jalur | Status |
+|---|---|
+| `/api/ingest/{upload,queue,commit}` | **kanonik** |
+| `/api/v1/ingest/{upload,queue,commit}` | **alias deprecated**, berakhir **2027-01-25** (90 hari) |
 
-Dua pilihan yang sama-sama sah, dan **belum ada yang dipilih**:
+Alias mendelegasikan ke handler kanonik yang sama (bukan salinan), lalu menambahkan:
 
-1. **Naikkan semua ke `/api/v1`** — konsisten, tapi memecah klien yang sudah ada; butuh periode transisi + header `Deprecation`.
-2. **Cabut prefix `v1` dari ingest** — konsisten ke arah v0, tapi memecah klien ingest.
+```http
+Deprecation: true
+Sunset: Mon, 25 Jan 2027 00:00:00 GMT
+Link: </api/ingest>; rel="successor-version"
+```
 
-Sampai keputusan diambil: **jangan menambah prefix versi baru** dan **jangan mengganti path yang sudah dipakai**. Perubahan bentuk respons hanya lewat penambahan field opsional.
+Setelah 2027-01-25 alias dihapus tanpa pengganti. **Jangan menambah prefix versi
+baru**: perubahan yang memutus klien diselesaikan lewat masa transisi + header
+deprecation, bukan lewat `/v2`.
 
 ---
 

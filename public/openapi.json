@@ -9163,6 +9163,974 @@
         }
       }
     },
+    "/api/ingest/commit": {
+      "post": {
+        "operationId": "postIngestCommit",
+        "summary": "Commit antrean → soal draft",
+        "tags": [
+          "ingest"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "grade": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "limit": {
+                    "default": 10,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50
+                  },
+                  "mediaDelayMs": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sukses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "summary": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        },
+                        "results": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "eventsTagged": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "unknownEvents": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "eventsError": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "summary",
+                        "results",
+                        "eventsTagged",
+                        "unknownEvents"
+                      ],
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi input gagal (Zod).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Tidak ada sesi/API key valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tidak punya izin, atau wajib ganti password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit terlampaui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Detik sampai boleh mencoba lagi.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan server tak terduga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mathbank": {
+          "authz": "route",
+          "permission": "question:create",
+          "idempotent": true,
+          "source": "src/app/api (wrapRoute)"
+        }
+      }
+    },
+    "/api/ingest/queue": {
+      "get": {
+        "operationId": "getIngestQueue",
+        "summary": "Antrean ingest + ringkasan status",
+        "tags": [
+          "ingest"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "processing",
+                "completed",
+                "failed",
+                "skipped"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sukses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "processing",
+                                  "completed",
+                                  "failed",
+                                  "skipped"
+                                ]
+                              },
+                              "sourceOrigin": {
+                                "type": "string"
+                              },
+                              "sourceUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "targetType": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "description": "Timestamp ISO-8601 (UTC)."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "status",
+                              "sourceOrigin",
+                              "sourceUrl",
+                              "targetType",
+                              "createdAt"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "counts": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "counts"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi input gagal (Zod).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Tidak ada sesi/API key valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tidak punya izin, atau wajib ganti password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit terlampaui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Detik sampai boleh mencoba lagi.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan server tak terduga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mathbank": {
+          "authz": "route",
+          "permission": "ingest:queue:read",
+          "notes": [
+            "Izin khusus `ingest:queue:read` — `question:view` tertutup untuk peran `machine`."
+          ],
+          "source": "src/app/api (wrapRoute)"
+        }
+      }
+    },
+    "/api/ingest/upload": {
+      "post": {
+        "operationId": "postIngestUpload",
+        "summary": "Unggah naskah ke antrean ingest",
+        "tags": [
+          "ingest"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50
+                  },
+                  "url": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "rawContent": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "format": {
+                    "default": "html",
+                    "type": "string",
+                    "enum": [
+                      "html",
+                      "json",
+                      "text"
+                    ]
+                  },
+                  "targetGrade": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "targetTopicId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "title",
+                  "source",
+                  "rawContent"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sukses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "processing",
+                            "completed",
+                            "failed",
+                            "skipped"
+                          ]
+                        },
+                        "deduped": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "deduped"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi input gagal (Zod).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Tidak ada sesi/API key valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tidak punya izin, atau wajib ganti password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit terlampaui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Detik sampai boleh mencoba lagi.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan server tak terduga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mathbank": {
+          "authz": "route",
+          "permission": "question:create",
+          "idempotent": true,
+          "source": "src/app/api (wrapRoute)"
+        }
+      }
+    },
     "/api/mcp": {
       "post": {
         "operationId": "postMcp",
@@ -23184,968 +24152,84 @@
     "/api/v1/ingest/commit": {
       "post": {
         "operationId": "postV1IngestCommit",
-        "summary": "Commit antrean → soal draft",
+        "summary": "Alias deprecated: commit antrean menjadi soal draft",
+        "description": "DEPRECATED — pakai POST /api/ingest/commit. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
         "tags": [
           "ingest"
         ],
+        "deprecated": true,
         "security": [
-          {
-            "sessionCookie": []
-          },
           {
             "apiKey": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "ids": {
-                    "maxItems": 200,
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "uuid",
-                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                    }
-                  },
-                  "grade": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 20
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "limit": {
-                    "default": 10,
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 50
-                  },
-                  "mediaDelayMs": {
-                    "default": 0,
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 5000
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "Sukses.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "summary": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "results": {
-                          "type": "array",
-                          "items": {}
-                        },
-                        "eventsTagged": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "unknownEvents": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "eventsError": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "summary",
-                        "results",
-                        "eventsTagged",
-                        "unknownEvents"
-                      ],
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
+            "description": "Sama dengan jalur kanonik."
           },
-          "400": {
-            "description": "Validasi input gagal (Zod).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Tidak ada sesi/API key valid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Tidak punya izin, atau wajib ganti password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit terlampaui.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "description": "Detik sampai boleh mencoba lagi.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Kesalahan server tak terduga.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
+          "4XX": {
+            "description": "Sama dengan jalur kanonik."
           }
         },
         "x-mathbank": {
-          "authz": "route",
-          "permission": "question:create",
-          "idempotent": true,
-          "source": "src/app/api (wrapRoute)"
+          "authz": "manual",
+          "security": "bearer"
         }
       }
     },
     "/api/v1/ingest/queue": {
       "get": {
         "operationId": "getV1IngestQueue",
-        "summary": "Antrean ingest + ringkasan status",
+        "summary": "Alias deprecated: antrean ingest + ringkasan status",
+        "description": "DEPRECATED — pakai GET /api/ingest/queue. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
         "tags": [
           "ingest"
         ],
+        "deprecated": true,
         "security": [
-          {
-            "sessionCookie": []
-          },
           {
             "apiKey": []
           }
         ],
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "processing",
-                "completed",
-                "failed",
-                "skipped"
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 200
-            }
-          }
-        ],
         "responses": {
           "200": {
-            "description": "Sukses.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "items": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
-                              "title": {
-                                "type": "string"
-                              },
-                              "status": {
-                                "type": "string",
-                                "enum": [
-                                  "pending",
-                                  "processing",
-                                  "completed",
-                                  "failed",
-                                  "skipped"
-                                ]
-                              },
-                              "sourceOrigin": {
-                                "type": "string"
-                              },
-                              "sourceUrl": {
-                                "type": [
-                                  "string",
-                                  "null"
-                                ]
-                              },
-                              "targetType": {
-                                "type": "string"
-                              },
-                              "createdAt": {
-                                "type": "string",
-                                "description": "Timestamp ISO-8601 (UTC)."
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "title",
-                              "status",
-                              "sourceOrigin",
-                              "sourceUrl",
-                              "targetType",
-                              "createdAt"
-                            ],
-                            "additionalProperties": {}
-                          }
-                        },
-                        "counts": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {
-                            "type": "number"
-                          }
-                        }
-                      },
-                      "required": [
-                        "items",
-                        "counts"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
+            "description": "Sama dengan jalur kanonik."
           },
-          "400": {
-            "description": "Validasi input gagal (Zod).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Tidak ada sesi/API key valid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Tidak punya izin, atau wajib ganti password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit terlampaui.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "description": "Detik sampai boleh mencoba lagi.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Kesalahan server tak terduga.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
+          "4XX": {
+            "description": "Sama dengan jalur kanonik."
           }
         },
         "x-mathbank": {
-          "authz": "route",
-          "permission": "ingest:queue:read",
-          "notes": [
-            "Izin khusus `ingest:queue:read` — `question:view` tertutup untuk peran `machine`."
-          ],
-          "source": "src/app/api (wrapRoute)"
+          "authz": "manual",
+          "security": "bearer"
         }
       }
     },
     "/api/v1/ingest/upload": {
       "post": {
         "operationId": "postV1IngestUpload",
-        "summary": "Unggah naskah ke antrean ingest",
+        "summary": "Alias deprecated: unggah naskah ke antrean",
+        "description": "DEPRECATED — pakai POST /api/ingest/upload. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
         "tags": [
           "ingest"
         ],
+        "deprecated": true,
         "security": [
-          {
-            "sessionCookie": []
-          },
           {
             "apiKey": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 255
-                  },
-                  "source": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 50
-                  },
-                  "url": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 2000,
-                        "format": "uri"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "rawContent": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "format": {
-                    "default": "html",
-                    "type": "string",
-                    "enum": [
-                      "html",
-                      "json",
-                      "text"
-                    ]
-                  },
-                  "targetGrade": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 20
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "targetTopicId": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "title",
-                  "source",
-                  "rawContent"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "201": {
-            "description": "Sukses.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "pending",
-                            "processing",
-                            "completed",
-                            "failed",
-                            "skipped"
-                          ]
-                        },
-                        "deduped": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "status",
-                        "deduped"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
+            "description": "Sama dengan jalur kanonik."
           },
-          "400": {
-            "description": "Validasi input gagal (Zod).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Tidak ada sesi/API key valid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Tidak punya izin, atau wajib ganti password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit terlampaui.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "description": "Detik sampai boleh mencoba lagi.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Kesalahan server tak terduga.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
+          "4XX": {
+            "description": "Sama dengan jalur kanonik."
           }
         },
         "x-mathbank": {
-          "authz": "route",
-          "permission": "question:create",
-          "idempotent": true,
-          "source": "src/app/api (wrapRoute)"
+          "authz": "manual",
+          "security": "bearer"
         }
       }
     }

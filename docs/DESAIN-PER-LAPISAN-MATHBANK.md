@@ -60,7 +60,7 @@
 | Kelola pengaturan | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Kelola pengguna | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Enrichment soal | ✅ | ✅ | ✅ | ✅* | ✅ |
-| Kirim ingest (batch) | ✅ | — | — | — | ✅ *(endpoint `/api/v1/ingest/*`, M9)* |
+| Kirim ingest (batch) | ✅ | — | — | — | ✅ *(endpoint `/api/ingest/*`, M9)* |
 
 > `own` = teacher/reviewer/agent hanya untuk sumber daya **miliknya** (`authorId === actor.id`).
 > `*` **Izin enrichment agen** = keputusan pemilik produk (agen AI boleh enrichment terbatas).
@@ -86,7 +86,7 @@
 | Bentuk | Per-perintah | Pipeline (extract→parse→validate→commit) |
 | Masukan | Teks/permintaan | File/dokumen massal |
 | Analogi | **Barista** (1 pesan → 1 kopi) | **Pabrik** (bahan → 1000 kopi) |
-| Batas | Buat soal/aset; **tak** bundle/hapus/kelola | Hanya endpoint `/api/v1/ingest/*` |
+| Batas | Buat soal/aset; **tak** bundle/hapus/kelola | Hanya endpoint `/api/ingest/*` |
 
 ## Struktur Modul (usulan)
 
@@ -252,7 +252,7 @@ useCurrentUser      — identitas (via /api/auth/me)
 | Wajah | Prefix | Auth | Untuk |
 |-------|--------|------|-------|
 | Internal (UI) | `/api/*` | Session | Guru, admin (UI) |
-| Mesin (ingest) | `/api/v1/ingest/*` | Machine | Pipeline batch |
+| Mesin (ingest) | `/api/ingest/*` | Machine | Pipeline batch |
 
 ## Keputusan L4
 

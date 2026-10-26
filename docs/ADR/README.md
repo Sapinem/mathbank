@@ -32,6 +32,8 @@
 | [0022](0022-wraproute-pipeline-banned-server-actions.md) | Pipa Tunggal API Gateway `wrapRoute()` & Larangan Server Actions untuk Mutasi | Diusulkan (v2.0) |
 | [0023](0023-satu-evaluator-invarian-skema.md) | Satu evaluator invarian skema di modul murni; hitungan tabel mengecualikan sisa migrasi | **Diterapkan** |
 | [0026](0026-deklarasi-otorisasi-eksplisit.md) | Deklarasi otorisasi eksplisit per method route (`authz` wajib + pemeriksa mesin) | **Diterapkan** |
+| [0027](0027-kontrak-openapi-dari-kode.md) | Kontrak OpenAPI 3.1 dihasilkan dari kode (registry + deklarasi `wrapRoute`) | **Diterapkan** |
+| [0028](0028-cabut-prefix-v1-ingest.md) | Cabut prefix `v1` dari jalur ingest; `/api/v1/ingest/*` jadi alias 90 hari | **Diterapkan** |
 
 ## Cara menambah ADR
 

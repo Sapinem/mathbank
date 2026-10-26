@@ -41,6 +41,8 @@ export interface ManualOperationDoc {
   security: "none" | "bearer" | "delegated";
   /** Parameter path/query (route non-wrap tidak punya skema Zod di route). */
   parameters?: readonly Record<string, unknown>[];
+  /** Tandai operasi usang (mis. alias yang akan dimatikan). */
+  deprecated?: boolean;
   /**
    * Label kolom "Izin" di tabel KONTRAK-API bila `security` tidak cukup
    * menggambarkan pagar sebenarnya (mis. token opsional). Hanya memengaruhi
@@ -579,18 +581,18 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     tags: ["ai"],
     response: z.object({ items: z.array(settingsItemSchema) }),
   },
-  "POST /api/v1/ingest/upload": {
+  "POST /api/ingest/upload": {
     summary: "Unggah naskah ke antrean ingest",
     tags: ["ingest"],
     response: z.object({ id: uuid, status: z.enum(["pending", "processing", "completed", "failed", "skipped"]), deduped: z.boolean() }),
   },
-  "GET /api/v1/ingest/queue": {
+  "GET /api/ingest/queue": {
     summary: "Antrean ingest + ringkasan status",
     tags: ["ingest"],
     response: z.object({ items: z.array(queueItemSchema), counts: z.record(z.string(), z.number()) }),
     notes: ["Izin khusus `ingest:queue:read` — `question:view` tertutup untuk peran `machine`."],
   },
-  "POST /api/v1/ingest/commit": {
+  "POST /api/ingest/commit": {
     summary: "Commit antrean → soal draft",
     tags: ["ingest"],
     response: z.looseObject({ summary: z.record(z.string(), z.unknown()), results: z.array(z.unknown()), eventsTagged: z.number().int(), unknownEvents: z.array(z.string()), eventsError: z.string().optional() }),
@@ -883,6 +885,39 @@ export const MANUAL_OPERATIONS: Readonly<Record<string, ManualOperationDoc>> = {
       "200": { description: "Respons Better Auth (JSON sesi / redirect / Set-Cookie)." },
       "3XX": { description: "Redirect OAuth / callback." },
       "4XX": { description: "Galat Better Auth (mis. kredensial salah)." },
+    },
+  },
+  "POST /api/v1/ingest/upload": {
+    summary: "Alias deprecated: unggah naskah ke antrean",
+    description: "DEPRECATED — pakai POST /api/ingest/upload. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
+    tags: ["ingest"],
+    security: "bearer",
+    deprecated: true,
+    responses: {
+      "201": { description: "Sama dengan jalur kanonik." },
+      "4XX": { description: "Sama dengan jalur kanonik." },
+    },
+  },
+  "GET /api/v1/ingest/queue": {
+    summary: "Alias deprecated: antrean ingest + ringkasan status",
+    description: "DEPRECATED — pakai GET /api/ingest/queue. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
+    tags: ["ingest"],
+    security: "bearer",
+    deprecated: true,
+    responses: {
+      "200": { description: "Sama dengan jalur kanonik." },
+      "4XX": { description: "Sama dengan jalur kanonik." },
+    },
+  },
+  "POST /api/v1/ingest/commit": {
+    summary: "Alias deprecated: commit antrean menjadi soal draft",
+    description: "DEPRECATED — pakai POST /api/ingest/commit. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
+    tags: ["ingest"],
+    security: "bearer",
+    deprecated: true,
+    responses: {
+      "200": { description: "Sama dengan jalur kanonik." },
+      "4XX": { description: "Sama dengan jalur kanonik." },
     },
   },
 };

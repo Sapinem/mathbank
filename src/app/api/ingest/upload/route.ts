@@ -3,7 +3,7 @@ import { ingestUploadSchema } from "@/lib/contracts/ingest";
 import { enqueue } from "@/lib/ingest/queue";
 
 /**
- * POST /api/v1/ingest/upload — wajah MESIN (M9-3).
+ * POST /api/ingest/upload — wajah MESIN (M9-3).
  * Kirim satu artikel (HTML/JSON) → masuk antrean (`pending`).
  * Idempoten: artikel dengan isi sama tidak dibuat ulang.
  */
