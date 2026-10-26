@@ -37,13 +37,14 @@ import { createHash } from "node:crypto";
 import { appendFileSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
 import { config } from "dotenv";
 import postgres from "postgres";
+import { DEFAULT_EMBEDDING_URL } from "../src/lib/embedding/bge-m3";
 
 config({ path: ".env" });
 
 const DB_URL = process.env.DATABASE_URL;
 if (!DB_URL) throw new Error("DATABASE_URL wajib (jalankan lewat pnpm tsx)");
 
-const SERVICE = (process.env.BGE_M3_SERVICE_URL?.trim() || "http://127.0.0.1:3005").replace(/\/+$/, "");
+const SERVICE = (process.env.BGE_M3_SERVICE_URL?.trim() || DEFAULT_EMBEDDING_URL).replace(/\/+$/, "");
 const MODEL = process.env.BGE_M3_MODEL?.trim() || "bge-m3";
 const TIMEOUT_MS = Number.parseInt(process.env.BGE_M3_TIMEOUT_MS ?? "", 10) || 180_000;
 const DIM = 1024;
