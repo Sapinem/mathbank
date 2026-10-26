@@ -223,11 +223,48 @@ describe("embedding/bge-m3 — embedText & health", () => {
     expect(call).toBe(3);
   });
 
-  it("health: balasan /health bukan JSON → tetap ok", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("ok", { status: 200 })));
-    const r = await embeddingHealth({ baseUrl: "http://x" });
+  it("health: baseUrl berakhiran /v1 dinormalkan ke root host", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        urls.push(String(u));
+        if (String(u).endsWith("/health")) return new Response("not found", { status: 404 });
+        if (String(u).endsWith("/api/version")) return jsonResponse({ version: "0.32.11" });
+        return jsonResponse(openaiBody([vec()]));
+      }),
+    );
+    const r = await embeddingHealth({ baseUrl: "http://x:11434/v1" });
     expect(r.ok).toBe(true);
-    expect(r.detail).toBeUndefined();
+    expect(urls).toEqual(["http://x:11434/health", "http://x:11434/api/version"]);
+  });
+
+  it("health: /api/version melempar error koneksi → gagal cepat tanpa probe embed", async () => {
+    let call = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        call += 1;
+        if (String(u).endsWith("/health")) return new Response("not found", { status: 404 });
+        if (String(u).endsWith("/api/version")) throw new Error("koneksi terputus saat probe versi");
+        return jsonResponse(openaiBody([vec()]));
+      }),
+    );
+    const r = await embeddingHealth({ baseUrl: "http://x" });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("koneksi terputus saat probe versi");
+    expect(call).toBe(2);
+  });
+
+  it("health: signal yang sudah di-abort sebelum dipanggil → langsung gagal tanpa fetch", async () => {
+    const spy = vi.fn();
+    vi.stubGlobal("fetch", spy);
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const r = await embeddingHealth({ baseUrl: "http://x", signal: ctrl.signal });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("timeout");
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("health: status 500 → ok:false tanpa probe embed", async () => {

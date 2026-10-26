@@ -152,12 +152,22 @@ export async function embedText(text: string, opts: EmbedOptions = {}): Promise<
 export async function embeddingHealth(
   opts: EmbedOptions = {},
 ): Promise<{ ok: boolean; error?: string; detail?: unknown }> {
-  const base = (opts.baseUrl ?? embeddingBaseUrl()).replace(/\/+$/, "");
+  const rawBase = (opts.baseUrl ?? embeddingBaseUrl()).replace(/\/+$/, "");
+  const root = rawBase.replace(/\/(v1(\/embeddings)?)?$/, "");
   const ctrl = new AbortController();
-  if (opts.signal) opts.signal.addEventListener("abort", () => ctrl.abort(), { once: true });
+  if (opts.signal) {
+    if (opts.signal.aborted) {
+      ctrl.abort();
+    } else {
+      opts.signal.addEventListener("abort", () => ctrl.abort(), { once: true });
+    }
+  }
+  if (ctrl.signal.aborted) {
+    return { ok: false, error: "timeout" };
+  }
   const timer = setTimeout(() => ctrl.abort(), 5000);
   try {
-    const res = await fetch(`${base}/health`, { signal: ctrl.signal });
+    const res = await fetch(`${root}/health`, { signal: ctrl.signal });
     if (res.ok) {
       const detail = await res.json().catch(() => undefined);
       const dim = (detail as { dim?: unknown } | undefined)?.dim;
@@ -168,8 +178,8 @@ export async function embeddingHealth(
     }
     // Jika service tanpa /health (mis. Ollama 404), coba probe ringan Ollama /api/version
     if ([404, 405, 501].includes(res.status)) {
-      const versionRes = await fetch(`${base}/api/version`, { signal: ctrl.signal }).catch(() => undefined);
-      if (versionRes && versionRes.ok) {
+      const versionRes = await fetch(`${root}/api/version`, { signal: ctrl.signal });
+      if (versionRes.ok) {
         const detail = await versionRes.json().catch(() => undefined);
         return { ok: true, detail };
       }
@@ -178,7 +188,8 @@ export async function embeddingHealth(
     }
   } catch (err) {
     // Jaringan mati / koneksi ditolak / timeout → langsung gagal tanpa probe fungsional.
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg === "The operation was aborted." ? "timeout" : msg };
   } finally {
     clearTimeout(timer);
   }

@@ -37,14 +37,15 @@ import { createHash } from "node:crypto";
 import { appendFileSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
 import { config } from "dotenv";
 import postgres from "postgres";
-import { DEFAULT_EMBEDDING_URL } from "../src/lib/embedding/bge-m3";
+import { DEFAULT_EMBEDDING_URL, embeddingEndpoint, embeddingHealth } from "../src/lib/embedding/bge-m3";
 
 config({ path: ".env" });
 
 const DB_URL = process.env.DATABASE_URL;
 if (!DB_URL) throw new Error("DATABASE_URL wajib (jalankan lewat pnpm tsx)");
 
-const SERVICE = (process.env.BGE_M3_SERVICE_URL?.trim() || DEFAULT_EMBEDDING_URL).replace(/\/+$/, "");
+const SERVICE_URL = process.env.BGE_M3_SERVICE_URL?.trim() || DEFAULT_EMBEDDING_URL;
+const ENDPOINT = embeddingEndpoint(SERVICE_URL);
 const MODEL = process.env.BGE_M3_MODEL?.trim() || "bge-m3";
 const TIMEOUT_MS = Number.parseInt(process.env.BGE_M3_TIMEOUT_MS ?? "", 10) || 180_000;
 const DIM = 1024;
@@ -121,7 +122,7 @@ async function embedBatch(texts: string[]): Promise<number[][]> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${SERVICE}/v1/embeddings`, {
+    const res = await fetch(ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: MODEL, input: texts }),
@@ -191,14 +192,12 @@ async function main() {
   writeFileSync(PID_FILE, String(process.pid));
 
   // Health check dulu — jangan buang waktu kalau service mati.
-  try {
-    const h = await fetch(`${SERVICE}/health`, { signal: AbortSignal.timeout(5000) });
-    if (!h.ok) throw new Error(`HTTP ${h.status}`);
-    log(`service embedding OK: ${SERVICE} (${await h.text()})`);
-  } catch (e) {
-    logError(`service embedding TIDAK SIAP di ${SERVICE}: ${e instanceof Error ? e.message : e}`);
-    throw e;
+  const h = await embeddingHealth({ baseUrl: SERVICE_URL });
+  if (!h.ok) {
+    logError(`service embedding TIDAK SIAP di ${SERVICE_URL}: ${h.error}`);
+    throw new Error(`Service embedding tidak siap: ${h.error}`);
   }
+  log(`service embedding OK: ${SERVICE_URL} (${JSON.stringify(h.detail ?? "ok")})`);
 
   // ADR-0019: soal tanpa embedding = LEFT JOIN ke question_embeddings, WHERE qe IS NULL.
   const [pending] = await sql<{ n: number }[]>`
