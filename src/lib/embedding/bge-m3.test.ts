@@ -28,9 +28,9 @@ function openaiBody(vectors: number[][]) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("embedding/bge-m3 — env", () => {
-  it("default = service FastAPI BGE-M3 (127.0.0.1:3005)", () => {
-    expect(DEFAULT_EMBEDDING_URL).toBe("http://127.0.0.1:3005");
-    expect(embeddingBaseUrl({})).toBe("http://127.0.0.1:3005");
+  it("default = service Ollama BGE-M3 (127.0.0.1:11434)", () => {
+    expect(DEFAULT_EMBEDDING_URL).toBe("http://127.0.0.1:11434");
+    expect(embeddingBaseUrl({})).toBe("http://127.0.0.1:11434");
     expect(embeddingModel({})).toBe("bge-m3");
     expect(isEmbeddingConfigured({})).toBe(true);
   });
@@ -45,9 +45,9 @@ describe("embedding/bge-m3 — env", () => {
     expect(embeddingTimeoutMs({ BGE_M3_TIMEOUT_MS: "-1" })).toBe(120000);
   });
   it("endpoint: base polos / ber-v1 / URL penuh", () => {
-    expect(embeddingEndpoint("http://x:3005")).toBe("http://x:3005/v1/embeddings");
-    expect(embeddingEndpoint("http://x:3005/v1")).toBe("http://x:3005/v1/embeddings");
-    expect(embeddingEndpoint("http://x:3005/v1/embeddings")).toBe("http://x:3005/v1/embeddings");
+    expect(embeddingEndpoint("http://x:11434")).toBe("http://x:11434/v1/embeddings");
+    expect(embeddingEndpoint("http://x:11434/v1")).toBe("http://x:11434/v1/embeddings");
+    expect(embeddingEndpoint("http://x:11434/v1/embeddings")).toBe("http://x:11434/v1/embeddings");
   });
 });
 
@@ -189,19 +189,38 @@ describe("embedding/bge-m3 — embedText & health", () => {
     expect(r.error).toContain("768");
   });
 
-  it("health: tanpa /health (404) → probe fungsional embed", async () => {
+  it("health: tanpa /health (404) tapi ada Ollama /api/version → ok + detail tanpa probe embed", async () => {
     let call = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (u: string) => {
         call += 1;
         if (String(u).endsWith("/health")) return new Response("not found", { status: 404 });
+        if (String(u).endsWith("/api/version")) return jsonResponse({ version: "0.32.11" });
         return jsonResponse(openaiBody([vec()]));
       }),
     );
     const r = await embeddingHealth({ baseUrl: "http://x" });
     expect(r.ok).toBe(true);
+    expect((r.detail as { version?: string })?.version).toBe("0.32.11");
     expect(call).toBe(2);
+  });
+
+  it("health: tanpa /health dan /api/version (404) → probe fungsional embed", async () => {
+    let call = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        call += 1;
+        if (String(u).endsWith("/health") || String(u).endsWith("/api/version")) {
+          return new Response("not found", { status: 404 });
+        }
+        return jsonResponse(openaiBody([vec()]));
+      }),
+    );
+    const r = await embeddingHealth({ baseUrl: "http://x" });
+    expect(r.ok).toBe(true);
+    expect(call).toBe(3);
   });
 
   it("health: balasan /health bukan JSON → tetap ok", async () => {
