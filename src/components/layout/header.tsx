@@ -28,13 +28,17 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
   const pathname = usePathname();
   const crumbs = breadcrumbFromPath(pathname, NAV_GROUPS);
   const last = crumbs[crumbs.length - 1];
+  // Breadcrumb satu item hanya mengulang H1 (mis. Dasbor, Bank Soal) dan
+  // tidak menambah navigasi: sembunyikan di desktop, tampilkan hanya
+  // breadcrumb bertingkat. Judul mobile tetap tampil sebagai judul halaman.
+  const showBreadcrumb = crumbs.length > 1;
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3 sm:px-4">
       <SidebarTrigger className="-ml-1 min-h-[44px] min-w-[44px]" />
       <Separator
         orientation="vertical"
-        className="mr-1 data-[orientation=vertical]:h-4"
+        className={`mr-1 data-[orientation=vertical]:h-4 ${showBreadcrumb ? "" : "sm:hidden"}`}
       />
 
       {/* Mobile: judul halaman saja */}
@@ -42,28 +46,30 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
         {last.label}
       </span>
 
-      {/* Desktop: breadcrumb penuh */}
-      <Breadcrumb className="hidden min-w-0 sm:block">
-        <BreadcrumbList>
-          {crumbs.map((c, i) => {
-            const isLast = i === crumbs.length - 1;
-            return (
-              <span key={c.href} className="contents">
-                {i > 0 && <BreadcrumbSeparator />}
-                <BreadcrumbItem>
-                  {isLast ? (
-                    <BreadcrumbPage className="truncate">{c.label}</BreadcrumbPage>
-                  ) : (
-                    <BreadcrumbLink render={<Link href={c.href} />}>
-                      {c.label}
-                    </BreadcrumbLink>
-                  )}
-                </BreadcrumbItem>
-              </span>
-            );
-          })}
-        </BreadcrumbList>
-      </Breadcrumb>
+      {/* Desktop: breadcrumb bertingkat saja */}
+      {showBreadcrumb ? (
+        <Breadcrumb className="hidden min-w-0 sm:block">
+          <BreadcrumbList>
+            {crumbs.map((c, i) => {
+              const isLast = i === crumbs.length - 1;
+              return (
+                <span key={c.href} className="contents">
+                  {i > 0 && <BreadcrumbSeparator />}
+                  <BreadcrumbItem>
+                    {isLast ? (
+                      <BreadcrumbPage className="truncate">{c.label}</BreadcrumbPage>
+                    ) : (
+                      <BreadcrumbLink render={<Link href={c.href} />}>
+                        {c.label}
+                      </BreadcrumbLink>
+                    )}
+                  </BreadcrumbItem>
+                </span>
+              );
+            })}
+          </BreadcrumbList>
+        </Breadcrumb>
+      ) : null}
 
       <div className="ml-auto flex items-center gap-1.5">
         {/* Desktop: kotak cari (Button resmi, varian outline) */}
@@ -73,7 +79,7 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
           className="hidden gap-2 bg-muted/40 text-muted-foreground sm:inline-flex"
         >
           <Search data-icon="inline-start" />
-          <span>Cari…</span>
+          <span>Cari halaman…</span>
           <kbd className="rounded border border-border px-1 text-xs">⌘K</kbd>
         </Button>
         {/* Mobile: ikon cari — touch target ≥ 44px (CONSTRAINT #11) */}
@@ -81,7 +87,7 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
           variant="ghost"
           size="icon"
           onClick={onOpenCommand}
-          aria-label="Cari"
+          aria-label="Cari halaman"
           className="min-h-[44px] min-w-[44px] sm:hidden"
         >
           <Search />

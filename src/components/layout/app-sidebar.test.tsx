@@ -49,4 +49,13 @@ describe("AppSidebar — Responsif & Navigasi", () => {
     const state = screen.getByTestId("mobile-state");
     expect(state.textContent).toBe("closed");
   });
+
+  it("tidak menampilkan tombol tutup sidebar di desktop", () => {
+    render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.queryByLabelText("Tutup sidebar")).toBeNull();
+  });
 });
