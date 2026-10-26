@@ -9,7 +9,7 @@ const emptyQuerySchema = z.object({}).optional();
 /** GET /api/tags — daftar label (dengan usageCount). */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   query: emptyQuerySchema,
   handler: async () => listTags(),
 });
@@ -17,7 +17,7 @@ export const GET = wrapRoute({
 /** POST /api/tags — buat label. */
 export const POST = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "taxonomy:manage",
+  authz: { kind: "route", permission: "taxonomy:manage" },
   body: createSchema,
   handler: async ({ body, actor }) => createTag(body, actor),
 });

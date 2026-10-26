@@ -10,7 +10,11 @@ const bodySchema = z
 /** POST /api/bundles/[id]/duplicate — duplikasi paket + seluruh item. */
 export const POST = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
-  permission: "question:view", // #35: aturan sebenarnya di service (assertBundleWrite)
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/bundle-shared.ts:assertBundleCreate",
+    routeGate: "question:view",
+  },
   params: paramsSchema,
   body: bodySchema,
   handler: async ({ params, body, actor }) =>

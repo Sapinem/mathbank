@@ -58,6 +58,7 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
   - `docs/ADR/0021-konfigurasi-cetak-print-config-bundles.md`: ✅ (konfigurasi cetak printConfig di bundles)
   - `docs/ADR/0022-wraproute-pipeline-banned-server-actions.md`: ✅ (wrapRoute pipeline & larangan Server Actions)
   - `docs/ADR/0023-satu-evaluator-invarian-skema.md`: ✅ (satu evaluator invarian skema)
+  - `docs/ADR/0026-deklarasi-otorisasi-eksplisit.md`: ✅ (otorisasi eksplisit per method + pemeriksa `pnpm lint:authz`)
 - `docs/ARAHAN-4-PILAR-ARSITEKTUR-V2.md`: 📋 **Arahan 4 Pilar Arsitektur V2** — cetak biru integrasi empat pilar utama MathBank V2.
 - `docs/KAMUS-DATA.md`: 📋 **Kamus Data MathBank** — definisi entitas, relasi, format payload JSONB, dan skema kanonik.
 - `docs/STRATEGI-TES.md`: 📋 **Strategi Tes MathBank** — piramida pengujian multi-layer (unit, DB integration, schema invariant).

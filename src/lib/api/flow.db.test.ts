@@ -143,10 +143,12 @@ describe("Alur API — autentikasi, izin, validasi, rate-limit", () => {
     expect((await res.json()).error.code).toBe("UNAUTHORIZED");
   });
 
-  it("agent (tanpa taxonomy:manage) → 403 saat POST topik", async () => {
+  it("agent (taxonomy:manage = yes) → 200 saat POST topik (dulu 403)", async () => {
+    // Regresi Fase A: `taxonomy:manage` dulu ber-`own` padahal `topics` tak punya
+    // kolom pemilik → gerbang route tanpa ownerId selalu menolak (CONSTRAINT #35).
     mockActor = agent;
     const res = await listPOST(req("POST", "/api/topics", { name: "X" }));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
   });
 
   it("body tidak valid → 400 VALIDATION_ERROR", async () => {

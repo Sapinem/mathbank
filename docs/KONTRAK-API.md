@@ -1,6 +1,8 @@
 # KONTRAK-API.md — Kontrak HTTP API MathBank
 
-> **Status:** ✅ berlaku — mencerminkan **48 route handler** (71 method) di `src/app/api` per 2026-10-26.
+> **Status:** ✅ berlaku — mencerminkan **48 route handler · 73 method** di `src/app/api` per 2026-10-26
+> (`/api/auth/[...all]` menyumbang `GET`+`POST` lewat Better Auth). Angka hidup dicetak
+> `pnpm lint:authz`; jangan salin ke dokumen lain.
 > **Sumber kebenaran:** `src/lib/api/route-wrapper.ts` (envelope), `src/lib/contracts/*` (skema Zod).
 > **Sifat:** dokumen hidup — perbarui saat endpoint ditambah/diubah.
 
@@ -11,7 +13,17 @@
 1. **Envelope tunggal** — semua respons berbentuk konsisten (lihat §3). Tak ada bentuk ad-hoc.
 2. **Satu tempat validasi** — skema Zod di `src/lib/contracts/`; dipakai service, API, dan (nanti) MCP.
 3. **Guard terpusat** — `wrapRoute` menangani: resolve aktor → 401 → ganti-password → izin → parse → try/catch → format.
-4. **Izin dari matriks L1** — setiap route menyebut `permission` (lihat `KEAMANAN.md` §RBAC).
+4. **Izin dari matriks L1, dideklarasikan per method** — setiap method `wrapRoute` **wajib**
+   memuat `authz` (ADR-0026):
+   - `{ kind: "route", permission }` — gerbang izin di route;
+   - `{ kind: "service", enforcedIn, routeGate? }` — ditegakkan di service yang punya
+     `ownerId` (izin ber-`own` **tidak boleh** jadi gerbang route, CONSTRAINT #35);
+   - `{ kind: "authenticated" }` — cukup login;
+   - `{ kind: "public", reason }` — tanpa login, wajib beralasan + disetujui di
+     `PUBLIC_ROUTES`.
+
+   `pnpm lint:authz` memeriksa setiap deklarasi terhadap matriks izin **dan** terhadap kode
+   service (fungsi di `enforcedIn` harus benar-benar memuat pemeriksaan izin).
 
 ---
 
@@ -22,7 +34,7 @@
 | Base URL | `/api` |
 | Format | JSON (`application/json`) |
 | Autentikasi | **Session cookie** (Better Auth) **atau** header `x-api-key` (agen/mesin) |
-| Izin | Dicek via matriks peran×aksi (`permissions.ts`) |
+| Izin | `authz` per method, dicek via matriks peran×aksi (`permissions.ts`); lihat ADR-0026 |
 | **Traceability** | Setiap respons menyertakan header `X-Request-ID` (diteruskan dari header masuk bila ada). Log error 500 memuat `rid=<id>`. |
 | **Cache** | Semua respons lewat `wrapRoute` menyetel `Cache-Control: no-store` + `Vary: Cookie, Authorization`. Hanya `/img/*` yang publik dan boleh di-cache. |
 | **Idempotensi** | Empat endpoint mutasi (`POST /api/questions`, `POST /api/bundles`, `POST /api/v1/ingest/upload`, `POST /api/v1/ingest/commit`) menerima `Idempotency-Key`. Key sama + **payload sama** (≤60 dtk) → replay (header `Idempotent-Replay: true`). Key sama + **payload beda** → **422 `IDEMPOTENCY_KEY_REUSED`**, bukan replay. Sidik jari = SHA-256(method + path + body mentah). |
@@ -69,7 +81,10 @@ Validasi menambah `details`:
 
 ## 4. Katalog Endpoint
 
-> Legenda izin: `question:view`, `question:create`, dst — lihat `permissions.ts`.
+> Legenda kolom **Izin**: `question:view`, `question:create`, dst — lihat `permissions.ts`.
+> `service` = tidak ada gerbang izin di route; otoritas (termasuk `own`) ditegakkan di
+> service yang punya objeknya (ADR-0026, CONSTRAINT #35). `publik` = `authz.kind`
+> `public` dengan alasan tertulis. `token` = header `Authorization: Bearer $METRICS_TOKEN`.
 
 ### 4.1 Autentikasi & observabilitas
 
@@ -177,7 +192,7 @@ Boolean hanya menerima `true|false|1|0`; nilai lain → **400**. (Jangan kirim `
 | Method | Path | Izin | Keterangan |
 |--------|------|:----:|------------|
 | `POST` | `/api/v1/ingest/upload` | `question:create` | Unggah naskah (`Idempotency-Key`) |
-| `GET` | `/api/v1/ingest/queue` | `question:view` | Antrean ingest |
+| `GET` | `/api/v1/ingest/queue` | `ingest:queue:read` | Antrean ingest + ringkasan status. **Izin khusus**: `question:view` tertutup untuk `machine`, sedangkan mesin wajib membaca antreannya sendiri |
 | `POST` | `/api/v1/ingest/commit` | `question:create` | Commit hasil ingest (`Idempotency-Key`) |
 
 ### 4.8 Sistem & dev
@@ -270,4 +285,9 @@ Sampai keputusan diambil: **jangan menambah prefix versi baru** dan **jangan men
 - Envelope & guard: `src/lib/api/route-wrapper.ts`
 - Skema: `src/lib/contracts/question.ts`
 - Izin: `src/lib/auth/permissions.ts`, `KEAMANAN.md` §RBAC
-- Tes: `src/lib/api/route-wrapper.test.ts`, `src/lib/api/zod-hardening.test.ts` (audit cakupan Zod 48 route), `src/lib/contracts/question.test.ts`, `e2e/api.spec.ts`
+- Otorisasi: `src/lib/api/authz.ts` (tipe deklarasi), `src/lib/api/route-inventory.ts`
+  (inventaris + pemeriksa), `scripts/check-authz.ts` (`pnpm lint:authz`), ADR-0026
+- Tes: `src/lib/api/route-wrapper.test.ts`, `src/lib/api/authz-coverage.test.ts`,
+  `src/lib/api/ingest-authz.db.test.ts`, `src/lib/api/reference-authz.db.test.ts`,
+  `src/lib/api/zod-hardening.test.ts` (cakupan Zod, hitungan diturunkan dari inventaris),
+  `src/lib/contracts/question.test.ts`, `e2e/api.spec.ts`

@@ -33,7 +33,7 @@ const emptyQuerySchema = z.object({}).optional();
  */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "settings:manage",
+  authz: { kind: "route", permission: "settings:manage" },
   query: emptyQuerySchema,
   handler: async () => {
     const items = await getSettings([...GENERAL_KEYS]);
@@ -48,7 +48,7 @@ export const GET = wrapRoute({
  */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
-  permission: "settings:manage",
+  authz: { kind: "route", permission: "settings:manage" },
   body: patchSchema,
   handler: async ({ body }) => {
     await setSettings(body.settings, { allowedKeys: GENERAL_KEYS });

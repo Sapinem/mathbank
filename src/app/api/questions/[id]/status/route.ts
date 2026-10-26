@@ -17,6 +17,10 @@ const paramsSchema = z.object({ id: z.string().uuid() });
  */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/question-status.ts:changeQuestionStatus",
+  },
   params: paramsSchema,
   body: changeStatusSchema,
   handler: async ({ params, body, actor }) =>

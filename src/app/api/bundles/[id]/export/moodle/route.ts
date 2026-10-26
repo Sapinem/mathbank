@@ -35,6 +35,10 @@ const bodySchema = z.object({}).optional();
 
 export const POST = wrapRoute({
   rateLimit: { capacity: 10, refillPerSec: 0.2 },
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/bundle-shared.ts:assertBundleWrite",
+  },
   params: paramsSchema,
   body: bodySchema,
   handler: async ({ params, actor }) => {

@@ -10,7 +10,7 @@ import { listBundles, createBundle } from "@/lib/services/bundle-service";
  */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   query: listBundlesQuerySchema,
   handler: async ({ actor, query }) => listBundles(actor, query),
 });
@@ -19,13 +19,16 @@ export const GET = wrapRoute({
  * POST /api/bundles — buat paket baru.
  *
  * Gerbang route memakai izin **dasar** `question:view` (semua guru punya);
- * aturan sebenarnya (agent tak boleh) ditegakkan `assertCan(actor,
- * "bundle:manage")` di `createBundle` — di sana `ownerId` tak relevan karena
- * barisnya belum ada.
+ * aturan sebenarnya (agent tak boleh) ditegakkan `assertBundleCreate` di
+ * service — di sana `ownerId` tak relevan karena barisnya belum ada.
  */
 export const POST = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
-  permission: "question:view",
+  authz: {
+    kind: "service",
+    enforcedIn: "src/lib/services/bundle-shared.ts:assertBundleCreate",
+    routeGate: "question:view",
+  },
   body: createBundleSchema,
   idempotent: true, // #4: anti double-submit pembuatan paket
   handler: async ({ body, actor }) => createBundle(body, actor),

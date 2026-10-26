@@ -27,8 +27,7 @@ import {
   rememberResponse,
   getIdempotencyStore,
 } from "./idempotency";
-import type { Actor } from "@/lib/auth/actor";
-import type { Permission } from "@/lib/auth/permissions";
+import type { ActorFor, Authz } from "./authz";
 import { log } from "@/lib/telemetry/logger";
 import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
 import { getClientIp } from "./client-ip";
@@ -43,8 +42,8 @@ import { getClientIp } from "./client-ip";
  *   error  → { error: { code, message } }
  */
 
-export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, TAuth extends boolean = true> {
-  actor: TAuth extends false ? Actor | null : Actor;
+export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, TAuthz extends Authz = Authz> {
+  actor: ActorFor<TAuthz>;
   query: TQuery;
   body: TBody;
   req: Request;
@@ -52,14 +51,12 @@ export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, T
   params: TParams;
 }
 
-export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>, TAuth extends boolean = true> {
+export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz> {
   /**
-   * Membutuhkan autentikasi aktor (default: true).
-   * Bila false, endpoint dapat diakses publik tanpa login.
+   * **Wajib.** Deklarasi otorisasi: publik / login saja / gerbang route /
+   * ditegakkan di service. Lihat `./authz.ts` untuk alasan & aturannya.
    */
-  auth?: TAuth;
-  /** Izin yang dibutuhkan (dari matriks L1). Otomatis mewajibkan autentikasi. */
-  permission?: Permission;
+  authz: TAuthz;
   /** Skema query string (Zod). */
   query?: ZodType<TQuery>;
   /** Skema body JSON (Zod). */
@@ -67,7 +64,7 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
   /** Skema parameter rute URL dinamis (Zod), mis. { id: z.string().uuid() }. */
   params?: ZodType<TParams>;
   /** Handler inti. */
-  handler: (ctx: RouteContext<TQuery, TBody, TParams, TAuth>) => Promise<TResult>;
+  handler: (ctx: RouteContext<TQuery, TBody, TParams, TAuthz>) => Promise<TResult>;
   /** Status sukses (default 200). */
   status?: number;
   /**
@@ -76,7 +73,7 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
    * Di-key per aktor (id) atau per IP bila tak terautentikasi.
    */
   rateLimit?: boolean | RateLimitPolicy;
-  /** Nama scope (default: dari permission). */
+  /** Nama scope (default: izin gerbang route, atau `authz.kind`). */
   rateLimitScope?: string;
   /**
    * Izinkan akses meski `mustChangePassword=true` (mis. `GET /api/auth/me`,
@@ -265,8 +262,8 @@ function errorResponse(
  * Pemakaian:
  *   export const GET = wrapRoute({ query: listQuery, handler: async ({query, actor}) => ... });
  */
-export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>, TAuth extends boolean = true>(
-  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuth>,
+export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz>(
+  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuthz>,
 ) {
   return async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
     // **#6 (enterprise):** ID permintaan untuk traceability. Pakai header dari
@@ -299,14 +296,21 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
     try {
       const actor = await resolveActor(req.headers);
       actorIdForCleanup = actor?.id ?? null;
-      const requireAuth = opts.auth ?? true;
-      if (requireAuth && !actor) throw new UnauthorizedError();
+      // Otorisasi eksplisit: publik / login saja / gerbang route / service.
+      const { authz } = opts;
+      if (authz.kind !== "public" && !actor) throw new UnauthorizedError();
       if (actor && actor.mustChangePassword && !opts.allowPasswordChangePending) {
         throw new PasswordChangeRequiredError();
       }
-      if (opts.permission) {
+      const routeGate =
+        authz.kind === "route"
+          ? authz.permission
+          : authz.kind === "service"
+            ? authz.routeGate
+            : undefined;
+      if (routeGate) {
         if (!actor) throw new UnauthorizedError();
-        assertCan(actor, opts.permission);
+        assertCan(actor, routeGate);
       }
 
       // Rate limit (bila diaktifkan) — di-key per aktor, fallback IP.
@@ -316,7 +320,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         const key = rateLimitKey(
           actor?.id ?? null,
           getClientIp(req),
-          opts.rateLimitScope ?? opts.permission ?? "default",
+          opts.rateLimitScope ?? routeGate ?? authz.kind,
         );
         const result = checkRateLimit(key, policy);
         if (!result.allowed) throw new RateLimitError(result.retryAfterMs);
@@ -383,7 +387,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       }
 
       const data = await opts.handler({
-        actor: actor as TAuth extends false ? Actor | null : Actor,
+        actor: actor as ActorFor<TAuthz>,
         query,
         body,
         req,

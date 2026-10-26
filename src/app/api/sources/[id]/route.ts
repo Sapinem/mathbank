@@ -20,7 +20,7 @@ const patchSchema = z.object({
 /** PATCH /api/sources/[id] — ubah sumber. */
 export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "reference:manage",
+  authz: { kind: "route", permission: "reference:manage" },
   params: paramsSchema,
   body: patchSchema,
   handler: async ({ body, actor, params }) => updateSource(params.id, body, actor),
@@ -29,7 +29,7 @@ export const PATCH = wrapRoute({
 /** DELETE /api/sources/[id] — hapus sumber (RESTRICT bila dipakai soal). */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
-  permission: "reference:manage",
+  authz: { kind: "route", permission: "reference:manage" },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ actor, params }) => {

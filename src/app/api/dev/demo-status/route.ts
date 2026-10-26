@@ -11,7 +11,10 @@ import { demoLoginAllowed } from "@/lib/auth/demo-login";
 const querySchema = z.object({}).optional();
 
 export const GET = wrapRoute({
-  auth: false,
+  authz: {
+    kind: "public",
+    reason: "Status login demo dibaca halaman /login sebelum ada sesi.",
+  },
   rateLimit: true,
   rateLimitScope: "dev:demo-status",
   query: querySchema,

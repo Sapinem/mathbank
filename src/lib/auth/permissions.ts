@@ -9,6 +9,8 @@ export type Access = "yes" | "own" | "no";
 export interface PermissionMatrix {
   /** Lihat soal. */
   "question:view": Access;
+  /** Baca antrean ingest (mesin & UI) — sengaja terpisah dari `question:view`. */
+  "ingest:queue:read": Access;
   /** Buat soal baru. */
   "question:create": Access;
   /** Edit soal (own = hanya miliknya). */
@@ -47,9 +49,10 @@ export interface PermissionMatrix {
  * Catatan (L1):
  *  - teacher boleh hard-delete SOAL SENDIRI (maka `own`).
  *  - reviewer boleh set ready (tanpa jadi admin).
- *  - agent: buat soal/aset, cari, enrichment — TIDAK boleh bundle/hapus/status/taksonomi.
+ *  - agent: buat soal/aset, cari, enrichment — TIDAK boleh bundle/hapus/status.
  *  - machine: hanya ingest (endpoint khusus).
- *  - taksonomi: bukan admin-only (teacher/reviewer/agent boleh kelola miliknya).
+ *  - taksonomi & referensi: bukan admin-only (teacher/reviewer/agent boleh kelola).
+ *    Sengaja `yes`, bukan `own` — tabelnya tak punya pemilik (lihat catatan di bawah).
  */
 export const PERMISSIONS: Record<keyof PermissionMatrix, Record<Role, Access>> = {
   "question:view": {
@@ -58,6 +61,13 @@ export const PERMISSIONS: Record<keyof PermissionMatrix, Record<Role, Access>> =
     reviewer: "yes",
     agent: "yes",
     machine: "no",
+  },
+  "ingest:queue:read": {
+    admin: "yes",
+    teacher: "yes",
+    reviewer: "yes",
+    agent: "yes",
+    machine: "yes", // mesin WAJIB bisa membaca antreannya sendiri (M9-3)
   },
   "question:create": {
     admin: "yes",
@@ -108,18 +118,20 @@ export const PERMISSIONS: Record<keyof PermissionMatrix, Record<Role, Access>> =
     agent: "yes", // dedup/agen boleh menandai
     machine: "no",
   },
+  // `yes`, BUKAN `own`: tabel topik/label tak punya kolom pemilik, sehingga
+  // `own` tak mungkin dipenuhi dan gerbang route selalu menolak (403).
   "taxonomy:manage": {
     admin: "yes",
-    teacher: "own",
-    reviewer: "own",
-    agent: "own",
+    teacher: "yes",
+    reviewer: "yes",
+    agent: "yes",
     machine: "yes",
   },
   "reference:manage": {
     admin: "yes",
-    teacher: "own",
-    reviewer: "own",
-    agent: "own",
+    teacher: "yes",
+    reviewer: "yes",
+    agent: "yes",
     machine: "no",
   },
   "bundle:manage": {

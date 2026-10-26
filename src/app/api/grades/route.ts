@@ -7,7 +7,7 @@ const emptyQuerySchema = z.object({}).optional();
 /** GET /api/grades — daftar jenjang/kelas (referensi baca-saja, untuk editor & filter). */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   query: emptyQuerySchema,
   handler: async () => listGrades(),
 });

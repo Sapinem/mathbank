@@ -63,6 +63,25 @@
 33. **Endpoint mutasi & daftar wajib punya rate limit** — set opsi `rateLimit` di `wrapRoute` (`src/lib/api/rate-limit.ts`). Route publik tanpa batas = cacat keamanan.
 34. **Jangan `.select()` tanpa kolom di jalur baca API** — itu `SELECT *`, yang membocorkan `answer_key`, `embedding*`, `aiTagged*`. Pakai proyeksi `questionColumns()`/`optionColumns()` (`src/lib/db/projections/question.ts`). Kunci hanya untuk viewer berwenang (`canSeeAnswerKey`).
 35. **JANGAN pasang izin ber-`own` di gerbang `permission` route** tanpa `ownerId` — `assertCan(actor, perm)` tanpa `ownerId` **selalu menolak** peran ber-`own` (guru/penelaah/agen). Untuk operasi yang izinnya bergantung objek (mis. transisi status soal: `setReady`/`archive`/`edit`+owner), **jangan** gerbang di route — tegakkan **di service** yang punya `ownerId`. Bug kelas ini (T-M4-3) mematikan alur telaah tanpa terdeteksi karena tes umumnya memanggil service, bukan route. **KAMBUH (2026-10-01, audit MathBankAuditor)**: `questions/[id]/route.ts` memasang `question:edit`/`question:delete` → guru 403 pada soal sendiri; diperbaiki + dikunci tes regresi `src/lib/api/question-authz.db.test.ts`. **Cek tiap kali menambah `permission:` di route: apakah izinnya ber-`own`?**
+
+    **Diperluas (2026-10-26, Fase A audit API):** otorisasi kini **dideklarasikan**, bukan
+    disimpulkan dari komentar. Setiap method `wrapRoute` **wajib** memuat `authz` — tanpa itu
+    `typecheck` gagal — dengan empat bentuk:
+    - `{ kind: "route", permission }` — gerbang izin di route (izin **tidak boleh** ber-`own`
+      untuk peran mana pun; dicek terhadap matriks, bukan daftar statis);
+    - `{ kind: "service", enforcedIn, routeGate? }` — otoritas di service yang punya `ownerId`;
+      `enforcedIn` = `path.ts:namaFungsi` dan **diverifikasi** memuat `assertCan(`/
+      `assertBundle*`/`hasRole(`/`ForbiddenError` supaya komentar tak bisa basi;
+    - `{ kind: "authenticated" }` — cukup login, tanpa izin khusus;
+    - `{ kind: "public", reason }` — tanpa login, **wajib** beralasan dan path-nya disetujui
+      di `PUBLIC_ROUTES` (`src/lib/api/route-inventory.ts`).
+    Route yang sengaja tidak memakai `wrapRoute` wajib terdaftar di `MANUAL_ROUTES` dengan
+    alasan. Semua ini ditegakkan `pnpm lint:authz` (`scripts/check-authz.ts`) — masuk
+    `pnpm check`. **Dua bug hidup ditutup bersamaan:** (a) `taxonomy:manage` &
+    `reference:manage` bernilai `own` padahal tabel `topics`/`tags`/`sources`/`events` tak
+    punya kolom pemilik → 14 endpoint 403 ke guru/penelaah/agen; kini `yes`; (b) `machine`
+    403 pada antrean ingest sendiri karena memakai `question:view` (`machine: "no"`) → izin
+    khusus `ingest:queue:read`, `question:view` tetap tertutup untuk mesin.
 36. **Transisi status/operasi baca-lalu-tulis wajib penjagaan balapan** — `UPDATE … WHERE id = ? AND status = <from>` + cek baris terpengaruh (`.returning()`); 0 baris → `ConflictError` 409. Jangan baca-lalu-tulis tanpa syarat status.
 37. **Tes wajib menyentuh JALUR NYATA, bukan hanya service** — uji lewat-route per peran (admin/guru/penelaah) untuk alur multi-peran. Bug gerbang otorisasi hanya muncul di jalur route.
 38. **Ubah `parentId` pada hierarki → WAJIB propagasi kolom turunan (`level`) ke SELURUH subtree**, dalam **satu transaksi**. Jangan hanya update node yang dipindah (T-M5-2). Pakai snapshot in-memory + `db.transaction`.

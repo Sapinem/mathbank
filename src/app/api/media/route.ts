@@ -7,7 +7,7 @@ import { listMedia } from "@/lib/services/media-service";
  * Dipakai AssetPicker (editor soal) & halaman /assets.
  */
 export const GET = wrapRoute({
-  permission: "question:view",
+  authz: { kind: "route", permission: "question:view" },
   rateLimit: true,
   query: listMediaQuerySchema,
   handler: async ({ query }) =>

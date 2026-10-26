@@ -11,7 +11,7 @@ const emptyQuerySchema = z.object({}).optional();
  */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
-  permission: "user:manage",
+  authz: { kind: "route", permission: "user:manage" },
   params: paramsSchema,
   query: emptyQuerySchema,
   handler: async ({ actor, params }) => {

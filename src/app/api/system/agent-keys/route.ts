@@ -19,7 +19,7 @@ const emptyQuerySchema = z.object({}).optional();
 /** GET /api/system/agent-keys — daftar kunci agen (tanpa nilai rahasia). */
 export const GET = wrapRoute({
   rateLimit: true,
-  permission: "user:manage",
+  authz: { kind: "route", permission: "user:manage" },
   query: emptyQuerySchema,
   handler: async ({ actor }) => ({ items: await listAgentKeys(actor) }),
 });
@@ -27,7 +27,7 @@ export const GET = wrapRoute({
 /** POST /api/system/agent-keys — buat kunci baru (nilai penuh hanya sekali). */
 export const POST = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
-  permission: "user:manage",
+  authz: { kind: "route", permission: "user:manage" },
   body: createSchema,
   handler: async ({ body, actor }) => createAgentKey(actor, body),
 });

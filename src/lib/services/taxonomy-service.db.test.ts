@@ -24,6 +24,7 @@ const sql = postgres(url, { max: 4 });
 
 const admin: Actor = { id: "t-admin", name: "Admin", roles: ["admin"], via: "session" };
 const teacher: Actor = { id: "t-teacher", name: "Guru", roles: ["teacher"], via: "session" };
+const machine: Actor = { id: "t-machine", name: "Mesin", roles: ["machine"], via: "apikey" };
 
 beforeAll(async () => {
   await sql`SELECT 1`;
@@ -70,8 +71,14 @@ describe("sumber", () => {
     expect(list[0].usageCount).toBe(0);
   });
 
-  it("teacher TIDAK boleh (taxonomy:manage)", async () => {
-    await expect(createSource({ kind: "book", label: "X" }, teacher)).rejects.toBeInstanceOf(
+  it("teacher BOLEH (reference:manage = yes; dulu 403 karena `own` palsu)", async () => {
+    // `sources` tak punya kolom pemilik → `own` mustahil dipenuhi (CONSTRAINT #35).
+    const s = await createSource({ kind: "book", label: "X" }, teacher);
+    expect(s.id).toBeTypeOf("string");
+  });
+
+  it("machine TIDAK boleh (reference:manage = no)", async () => {
+    await expect(createSource({ kind: "book", label: "X" }, machine)).rejects.toBeInstanceOf(
       ForbiddenError,
     );
   });

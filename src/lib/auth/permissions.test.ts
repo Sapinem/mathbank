@@ -13,6 +13,7 @@ import { ROLES, type Role } from "./roles";
 /** Matriks izin yang DISENGAJA — sumber kebenaran yang di-review. */
 const EXPECTED: Record<Permission, Record<Role, "yes" | "own" | "no">> = {
   "question:view": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "no" },
+  "ingest:queue:read": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "yes" },
   "question:create": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "yes" },
   "question:edit": { admin: "yes", teacher: "own", reviewer: "own", agent: "own", machine: "no" },
   "question:delete": { admin: "yes", teacher: "own", reviewer: "own", agent: "no", machine: "no" },
@@ -20,8 +21,10 @@ const EXPECTED: Record<Permission, Record<Role, "yes" | "own" | "no">> = {
   "question:setReady": { admin: "yes", teacher: "no", reviewer: "yes", agent: "no", machine: "no" },
   "question:archive": { admin: "yes", teacher: "no", reviewer: "no", agent: "no", machine: "no" },
   "question:flag": { admin: "yes", teacher: "own", reviewer: "yes", agent: "yes", machine: "no" },
-  "taxonomy:manage": { admin: "yes", teacher: "own", reviewer: "own", agent: "own", machine: "yes" },
-  "reference:manage": { admin: "yes", teacher: "own", reviewer: "own", agent: "own", machine: "no" },
+  // Tabel taksonomi/referensi tak punya kolom pemilik → `own` mustahil dipenuhi,
+  // sehingga gerbang route selalu 403. Karena itu `yes` (koreksi ADR).
+  "taxonomy:manage": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "yes" },
+  "reference:manage": { admin: "yes", teacher: "yes", reviewer: "yes", agent: "yes", machine: "no" },
   // ADR-0009 "Opsi 2": latihan = milik pembuat (`own`); koleksi (type='source')
   // ditangani `assertBundleWrite` di service sebagai arsip institusional (umum).
   "bundle:manage": { admin: "yes", teacher: "own", reviewer: "own", agent: "no", machine: "no" },
@@ -65,8 +68,6 @@ describe("matriks izin — kunci exhaustive", () => {
         "question:edit",
         "question:flag",
         "question:hardDelete",
-        "reference:manage",
-        "taxonomy:manage",
       ].sort(),
     );
   });

@@ -88,7 +88,7 @@ describe("alur API ingest", () => {
     await uploadPOST(req("POST", "/api/v1/ingest/upload", {
       title: "Q", source: "uji-api", rawContent: MATHCYBER_HTML, format: "html",
     }));
-    // `machine` tak punya `question:view` → lihat antrean pakai peran manusia.
+    // Peran manusia juga boleh (`ingest:queue:read` = yes untuk semua peran manusia).
     mockActor = { id: "q-admin", name: "Admin", roles: ["admin"], via: "session" };
     const res = await queueGET(req("GET", "/api/v1/ingest/queue?status=pending"));
     expect(res.status).toBe(200);
@@ -98,9 +98,10 @@ describe("alur API ingest", () => {
     mockActor = { id: "ing-machine", name: "Mesin", roles: ["machine"], via: "apikey" };
   });
 
-  it("queue GET oleh machine → 403 (tanpa question:view)", async () => {
+  it("queue GET oleh machine → 200 (izin ingest:queue:read; dulu 403)", async () => {
+    // `question:view` TETAP `no` untuk machine; antrean punya izin sendiri.
     const res = await queueGET(req("GET", "/api/v1/ingest/queue"));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
   });
 
   it("commit → soal DRAFT dibuat; antrean selesai", async () => {
