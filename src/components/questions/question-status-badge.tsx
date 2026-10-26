@@ -31,6 +31,10 @@ export function QuestionStatusBadge({
   status: string;
   className?: string;
 }) {
+  // Siap = kondisi normal/default: tidak dirender sama sekali di tampilan
+  // soal (header detail & klasifikasi). Hanya status lain yang tampil.
+  if (status === "ready") return null;
+
   return (
     <Badge
       variant="outline"

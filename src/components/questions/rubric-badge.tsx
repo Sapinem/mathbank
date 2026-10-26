@@ -1,5 +1,6 @@
 "use client";
 
+import { Brain, Gauge } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { DIFFICULTY_LABELS } from "@/lib/display/labels";
@@ -51,7 +52,9 @@ export function RubricBadge({
   );
 }
 
-/** Badge kognitif (C1–C6) dengan rubrik. */
+/** Penanda Bloom (C1–C6): ikon Lucide `brain` + kode, dengan rubrik.
+ *  Ikon tidak pernah berdiri sendiri tanpa arti: `RubricBadge` memberi
+ *  aria-label berisi kode, judul, dan deskripsi rubrik, serta tooltip. */
 export function CognitiveBadge({
   level,
   className,
@@ -65,6 +68,7 @@ export function CognitiveBadge({
       rubric={rubric}
       className={cn("border-border bg-muted text-muted-foreground", className)}
     >
+      <Brain className="size-3.5" aria-hidden="true" />
       {rubric.code}
     </RubricBadge>
   );
@@ -84,7 +88,10 @@ export function difficultyToneClass(level: number): string {
   return DIFFICULTY_TONE[level] ?? DIFFICULTY_TONE[3];
 }
 
-/** Badge kesulitan dengan rubrik + meter titik (●○○○○) + warna 1→5. */
+/** Penanda kesulitan dengan rubrik: ikon Lucide `gauge` + kode level
+ *  (Lv.1–Lv.5) + warna 1→5. Meter titik (●○○○○) diganti ikon karena
+ *  titik bukan ikon bermakna dan mudah tertukar dengan status. Arti
+ *  tetap lewat aria-label dan tooltip rubrik di `RubricBadge`. */
 export function DifficultyBadge({
   level,
   className,
@@ -96,15 +103,12 @@ export function DifficultyBadge({
   showLabel?: boolean;
 }) {
   const rubric = difficultyRubric(level);
-  const dots = "●".repeat(Math.max(0, level)) + "○".repeat(Math.max(0, 5 - level));
   return (
     <RubricBadge
       rubric={rubric}
       className={cn(difficultyToneClass(level), className)}
     >
-      <span aria-hidden className="font-mono text-[10px] tracking-tight">
-        {dots}
-      </span>
+      <Gauge className="size-3.5" aria-hidden="true" />
       {rubric.code}
       {showLabel && (
         <span className="font-normal">{DIFFICULTY_LABELS[level] ?? `Level ${level}`}</span>

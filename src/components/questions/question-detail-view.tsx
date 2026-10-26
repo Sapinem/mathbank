@@ -48,7 +48,10 @@ import {
   readMatrixGridPayload,
 } from "@/components/questions/matrix-grid-view";
 import { MatchingView, readMatchingPayload } from "@/components/questions/matching-view";
-import { formatGradeBadge } from "@/components/questions/question-card";
+import {
+  GradeMarker,
+  QuestionTypeIcon,
+} from "@/components/questions/question-card";
 import { cn } from "@/lib/utils";
 
 /**
@@ -136,9 +139,7 @@ export function QuestionDetailView() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <QuestionStatusBadge status={q.status} />
-                    <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 font-mono text-xs font-semibold text-foreground/90">
-                      Kelas {formatGradeBadge(q.grade)}
-                    </span>
+                    <GradeMarker grade={q.grade} />
                     <DifficultyBadge level={q.difficulty} />
                     <CognitiveBadge level={q.cognitiveLevel} />
                     {q.isFlagged && (
@@ -147,9 +148,7 @@ export function QuestionDetailView() {
                       </Badge>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {TYPE_LABELS[q.questionType] ?? q.questionType}
-                  </span>
+                  <QuestionTypeIcon type={q.questionType} />
                 </div>
               </CardHeader>
 
@@ -391,21 +390,22 @@ export function QuestionDetailView() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-4 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Status</span>
-                  <QuestionStatusBadge status={q.status} />
-                </div>
+                {/* Baris Status hanya tampil bila bukan Siap: Siap adalah
+                    kondisi default, jadi baris berlabel ini pun tidak
+                    menampilkan penanda Siap eksplisit. */}
+                {q.status !== "ready" && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Status</span>
+                    <QuestionStatusBadge status={q.status} />
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tipe Soal</span>
-                  <span className="font-medium text-foreground">
-                    {TYPE_LABELS[q.questionType] ?? q.questionType}
-                  </span>
+                  <QuestionTypeIcon type={q.questionType} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Jenjang Kelas</span>
-                  <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-2 py-0.5 font-mono text-xs font-semibold text-foreground/90">
-                    Kelas {formatGradeBadge(q.grade)}
-                  </span>
+                  <GradeMarker grade={q.grade} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tingkat Kesulitan</span>
