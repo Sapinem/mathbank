@@ -528,6 +528,22 @@ function asArray<T extends z.ZodTypeAny>(item: T) {
   );
 }
 
+/**
+ * Boolean dari query string — **eksplisit**, bukan ditebak.
+ *
+ * JANGAN pakai `z.coerce.boolean()`: ia memakai `Boolean(v)`, sehingga string
+ * `"false"` (dan `"0"`) menjadi **true** — `?includeDeleted=false` justru
+ * memuat soal ter-soft-delete. Di sini hanya `true|false|1|0` yang diterima;
+ * nilai lain ditolak 400 alih-alih ditebak.
+ */
+function booleanQuery() {
+  return z
+    // Boolean bertipe datang dari pemanggil internal (tool MCP, tes, service);
+    // string datang dari query string URL. Keduanya harus diterima.
+    .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
+    .transform((v) => v === true || v === "true" || v === "1");
+}
+
 export const listQuestionsQuerySchema = z.object({
   q: z.string().optional(),
   status: questionStatusSchema.optional(),
@@ -544,13 +560,59 @@ export const listQuestionsQuerySchema = z.object({
    */
   sourceId: z.string().uuid().optional(),
   eventId: z.string().uuid().optional(),
-  flagged: z.coerce.boolean().optional(),
-  includeDeleted: z.coerce.boolean().default(false),
+  flagged: booleanQuery().optional(),
+  includeDeleted: z.preprocess(
+    (v) => (v === undefined ? "false" : v),
+    booleanQuery(),
+  ),
   /** Mode pencarian: `text` (trigram, default) atau `semantic` (embedding HNSW). */
   mode: z.enum(["text", "semantic"]).default("text"),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 });
+
+/**
+ * Bentuk filter tool MCP `search_questions` — diturunkan dari **primitif yang
+ * sama** dengan `listQuestionsQuerySchema` (satu sumber kebenaran), bukan
+ * salinan tangan yang gampang menyimpang.
+ *
+ * `includeDeleted` sengaja TIDAK didaftarkan: agen tak boleh melihat soal
+ * ter-soft-delete. Kesetaraan kunci dijaga tes di `question.test.ts`.
+ */
+export const listQuestionsMcpInputShape = {
+  q: z.string().optional().describe("Kata kunci / pertanyaan alami"),
+  mode: z
+    .enum(["text", "semantic"])
+    .default("text")
+    .describe("Mode pencarian: text (tahan typo) atau semantic (mirip makna)"),
+  status: questionStatusSchema.optional().describe("Filter status"),
+  questionType: z
+    .union([questionTypeSchema, z.array(questionTypeSchema)])
+    .optional()
+    .describe("Filter tipe soal (boleh satu nilai atau daftar)"),
+  grade: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .describe("Filter jenjang/tingkat (mis. '10' atau ['10','11'])"),
+  difficulty: z
+    .union([
+      z.number().int().min(1).max(5),
+      z.array(z.number().int().min(1).max(5)),
+    ])
+    .optional()
+    .describe("Filter tingkat kesulitan 1-5 (boleh satu nilai atau daftar)"),
+  cognitiveLevel: cognitiveLevelSchema.optional().describe("Filter level kognitif"),
+  topicId: z
+    .union([z.string().uuid(), z.array(z.string().uuid())])
+    .optional()
+    .describe("Filter ID topik"),
+  tagId: z.string().uuid().optional().describe("Filter ID label"),
+  sourceId: z.string().uuid().optional().describe("Filter ID sumber (via bundle)"),
+  eventId: z.string().uuid().optional().describe("Filter ID event ujian"),
+  flagged: z.boolean().optional().describe("Hanya soal bertanda / tidak bertanda"),
+  limit: z.number().int().min(1).max(100).default(20),
+  offset: z.number().int().min(0).default(0),
+};
 
 // ── Transisi status ───────────────────────────────────────────
 export const changeStatusSchema = z.object({

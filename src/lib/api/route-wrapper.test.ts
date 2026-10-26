@@ -61,6 +61,13 @@ describe("wrapRoute — alur sukses", () => {
     expect(await res.json()).toEqual({ data: { hello: "dunia" } });
   });
 
+  it("menyetel Cache-Control: no-store + Vary (anti cache-bersama)", async () => {
+    const handler = wrapRoute({ handler: async () => ({ ok: true }) });
+    const res = await handler(req());
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("vary")).toContain("Cookie");
+  });
+
   it("menghormati opts.status (mis. 201)", async () => {
     const handler = wrapRoute({ status: 201, handler: async () => ({ id: "x" }) });
     const res = await handler(req());
@@ -361,6 +368,42 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
     await handler(req("http://localhost/api/x", { headers: { "idempotency-key": "a" } }));
     await handler(req("http://localhost/api/x", { headers: { "idempotency-key": "b" } }));
     expect(calls).toBe(2);
+  });
+
+  it("key sama + payload berbeda → 422 IDEMPOTENCY_KEY_REUSED (bukan replay senyap)", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      idempotent: true,
+      body: z.object({ n: z.number() }),
+      handler: async ({ body }) => ({ n: body.n, calls: ++calls }),
+    });
+    const headers = { "idempotency-key": "k-2", "content-type": "application/json" };
+    const first = await handler(
+      req("http://localhost/api/x", { method: "POST", headers, body: JSON.stringify({ n: 1 }) }),
+    );
+    const second = await handler(
+      req("http://localhost/api/x", { method: "POST", headers, body: JSON.stringify({ n: 2 }) }),
+    );
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(422);
+    expect((await second.json()).error.code).toBe("IDEMPOTENCY_KEY_REUSED");
+    expect(calls).toBe(1); // handler tak dijalankan untuk payload kedua
+  });
+
+  it("key sama + payload sama → tetap replay", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      idempotent: true,
+      body: z.object({ n: z.number() }),
+      handler: async ({ body }) => ({ n: body.n, calls: ++calls }),
+    });
+    const headers = { "idempotency-key": "k-3", "content-type": "application/json" };
+    const init = { method: "POST", headers, body: JSON.stringify({ n: 7 }) };
+    const first = await handler(req("http://localhost/api/x", init));
+    const second = await handler(req("http://localhost/api/x", init));
+    expect(second.headers.get("idempotent-replay")).toBe("true");
+    expect(await first.json()).toEqual(await second.json());
+    expect(calls).toBe(1);
   });
 
   it("tanpa header key → tak ada efek samping idempotensi", async () => {

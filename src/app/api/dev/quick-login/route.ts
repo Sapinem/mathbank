@@ -36,44 +36,58 @@ const bodySchema = z.object({ key: z.string().min(1) });
 /** Kebijakan rate-limit khusus quick-login (lebih ketat dari default). */
 const QUICK_LOGIN_RATE_POLICY = { capacity: 10, refillPerSec: 0.2 };
 
+/** Respons set-cookie tak boleh masuk cache bersama. */
+function noStore(res: NextResponse): NextResponse {
+  res.headers.set("Cache-Control", "no-store");
+  return res;
+}
+
 export async function POST(req: Request) {
   if (!demoLoginAllowed()) {
-    return NextResponse.json(
-      { error: { code: "NOT_FOUND", message: "Tidak ditemukan." } },
-      { status: 404 },
+    return noStore(
+      NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Tidak ditemukan." } },
+        { status: 404 },
+      ),
     );
   }
 
   const rateKey = rateLimitKey(null, getClientIp(req), "dev:quick-login");
   const rate = checkRateLimit(rateKey, QUICK_LOGIN_RATE_POLICY);
   if (!rate.allowed) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "RATE_LIMITED",
-          message: "Terlalu banyak permintaan. Coba lagi nanti.",
+    return noStore(
+      NextResponse.json(
+        {
+          error: {
+            code: "RATE_LIMITED",
+            message: "Terlalu banyak permintaan. Coba lagi nanti.",
+          },
         },
-      },
-      {
-        status: 429,
-        headers: { "Retry-After": String(Math.ceil(rate.retryAfterMs / 1000)) },
-      },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(rate.retryAfterMs / 1000)) },
+        },
+      ),
     );
   }
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: { code: "BAD_REQUEST", message: "Body tak valid." } },
-      { status: 400 },
+    return noStore(
+      NextResponse.json(
+        { error: { code: "BAD_REQUEST", message: "Body tak valid." } },
+        { status: 400 },
+      ),
     );
   }
 
   const demo = demoUserByKey(parsed.data.key);
   if (!demo) {
-    return NextResponse.json(
-      { error: { code: "NOT_FOUND", message: "Akun demo tak dikenal." } },
-      { status: 404 },
+    return noStore(
+      NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Akun demo tak dikenal." } },
+        { status: 404 },
+      ),
     );
   }
 
@@ -92,19 +106,23 @@ export async function POST(req: Request) {
     // Catat server-side saja; klien dapat pesan generik.
     const detail = await res.text().catch(() => "");
     console.error("[dev/quick-login] sign-in gagal:", detail.slice(0, 500));
-    return NextResponse.json(
-      {
-        error: {
-          code: "DEMO_SIGNIN_FAILED",
-          message:
-            "Gagal masuk sebagai akun demo. Jalankan `pnpm seed:users` lebih dulu.",
+    return noStore(
+      NextResponse.json(
+        {
+          error: {
+            code: "DEMO_SIGNIN_FAILED",
+            message:
+              "Gagal masuk sebagai akun demo. Jalankan `pnpm seed:users` lebih dulu.",
+          },
         },
-      },
-      { status: 500 },
+        { status: 500 },
+      ),
     );
   }
 
-  const out = NextResponse.json({ data: { ok: true, key: demo.key, name: demo.name } });
+  const out = noStore(
+    NextResponse.json({ data: { ok: true, key: demo.key, name: demo.name } }),
+  );
   // Teruskan semua cookie sesi (bisa >1).
   for (const cookie of res.headers.getSetCookie()) {
     out.headers.append("set-cookie", cookie);

@@ -7,7 +7,11 @@ import { listQuestions, getQuestion, getQuestionInternal, createQuestion, update
 import { listTopics } from "@/lib/services/topic-service";
 import { listSources } from "@/lib/services/taxonomy-service";
 import { enrichQuestion, embedQuestions } from "@/lib/services/enrichment-service";
-import { createQuestionSchema, listQuestionsQuerySchema } from "@/lib/contracts/question";
+import {
+  createQuestionSchema,
+  listQuestionsQuerySchema,
+  listQuestionsMcpInputShape,
+} from "@/lib/contracts/question";
 import { enrichFieldSchema } from "@/lib/contracts/ai";
 import { lintKatex } from "@/lib/math/katex-lint";
 
@@ -94,29 +98,14 @@ export function registerTools(server: McpServer, actor: Actor): void {
         description:
           "Cari soal di bank soal MathBank. Mode 'text' (default, tahan typo) atau 'semantic' (mirip makna). " +
           "Hasil TIDAK menyertakan answer_key.",
-        inputSchema: {
-          q: z.string().optional().describe("Kata kunci / pertanyaan alami"),
-          mode: z.enum(["text", "semantic"]).default("text"),
-          status: z.string().optional().describe("Filter status (draft/review/ready)"),
-          grade: z.string().optional().describe("Filter jenjang/tingkat (mis. '10', '11', '12')"),
-          difficulty: z.number().int().min(1).max(5).optional().describe("Filter tingkat kesulitan (1-5)"),
-          questionType: z.string().optional().describe("Filter tipe soal (single_choice/multiple_choice/essay/matrix_grid/stimulus)"),
-          topicId: z.string().uuid().optional().describe("Filter ID topik"),
-          limit: z.number().int().min(1).max(100).default(20),
-          offset: z.number().int().min(0).default(0),
-        },
+        // Satu sumber kebenaran dengan REST (contracts/question.ts).
+        inputSchema: listQuestionsMcpInputShape,
       },
       async (args) =>
         guard(async () => {
           assertMcp(actor, "question.read");
-          const parsed = {
-            ...args,
-            grade: args.grade ? [args.grade] : undefined,
-            difficulty: args.difficulty !== undefined ? [args.difficulty] : undefined,
-            questionType: args.questionType ? [args.questionType] : undefined,
-            topicId: args.topicId ? [args.topicId] : undefined,
-          };
-          const query = listQuestionsQuerySchema.parse(parsed);
+          // Skema REST menormalkan nilai tunggal → array sendiri (asArray).
+          const query = listQuestionsQuerySchema.parse(args);
           const res = await listQuestions(query, actor);
           return { items: res.items, total: res.total };
         }),

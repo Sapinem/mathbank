@@ -36,7 +36,13 @@ export const MCP_RATE_POLICY: RateLimitPolicy = {
 function jsonRpcError(httpStatus: number, code: number, message: string): Response {
   return new Response(
     JSON.stringify({ jsonrpc: "2.0", error: { code, message }, id: null }),
-    { status: httpStatus, headers: { "content-type": "application/json" } },
+    {
+      status: httpStatus,
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      },
+    },
   );
 }
 
@@ -71,6 +77,7 @@ async function handleMcp(req: NextRequest): Promise<Response> {
         status: 429,
         headers: {
           "content-type": "application/json",
+          "cache-control": "no-store",
           "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)),
         },
       },
@@ -87,7 +94,10 @@ async function handleMcp(req: NextRequest): Promise<Response> {
   try {
     await server.connect(transport);
     // Transport menerima Web `Request` & mengembalikan `Response`.
-    return await transport.handleRequest(req as unknown as Request);
+    const res = await transport.handleRequest(req as unknown as Request);
+    // Isi bergantung pada API key pemanggil — jangan masuk cache bersama.
+    res.headers.set("cache-control", "no-store");
+    return res;
   } catch (err) {
     console.error("[mcp] http error:", (err as Error).message);
     return jsonRpcError(500, -32603, "Internal error");

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { resolveActor } from "@/lib/auth/resolve";
@@ -110,6 +111,18 @@ function searchParamsToObject(url: string): Record<string, string | string[]> {
 
 /** Argumen kedua handler Next.js (params rute dinamis, async di Next 15+). */
 type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
+
+/**
+ * Sidik jari request untuk idempotensi: method + path (termasuk query) + body
+ * **mentah**. Memakai body mentah (bukan hasil parse) agar dua payload yang
+ * berbeda tetapi menghasilkan objek sama tetap dianggap berbeda.
+ */
+function requestFingerprint(req: Request, rawBody: string): string {
+  const url = new URL(req.url);
+  return createHash("sha256")
+    .update(`${req.method}\n${url.pathname}${url.search}\n${rawBody}`)
+    .digest("hex");
+}
 
 /** Ambil kode error stabil (bila ada) untuk field log. */
 function extractCode(err: unknown): string {
@@ -270,6 +283,12 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
     let actorIdForCleanup: string | null = null;
     // Catat hasil akhir (sukses/error) ke metrik — satu tempat, apa pun jalannya.
     const finish = (res: NextResponse): NextResponse => {
+      // Respons API bergantung pada identitas pemanggil (answer_key, draf,
+      // kepemilikan). Tanpa `no-store`, CDN/proxy di depan bisa menyajikan
+      // payload satu pengguna ke pengguna lain. `Vary` menutup cache yang
+      // tetap mengabaikan Cache-Control.
+      res.headers.set("Cache-Control", "no-store");
+      res.headers.set("Vary", "Cookie, Authorization");
       try {
         recordRequest(method, routePath, res.status, Date.now() - startedAt);
       } catch {
@@ -307,8 +326,10 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         ? opts.query.parse(searchParamsToObject(req.url))
         : (undefined as TQuery);
 
+      // Body dibaca SEKALI: dipakai validasi Zod dan sidik jari idempotensi.
+      const rawBody = opts.body ? await req.text() : "";
       const body = opts.body
-        ? opts.body.parse(await parseJsonBody(req))
+        ? opts.body.parse(parseJsonText(rawBody))
         : (undefined as TBody);
 
       const rawParams = (await args?.params) ?? {};
@@ -320,9 +341,10 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       const idemKey = opts.idempotent
         ? req.headers.get("idempotency-key")?.slice(0, 128)
         : null;
+      const fingerprint = idemKey ? requestFingerprint(req, rawBody) : "";
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
-        const state = checkIdempotency(`${actorKey}:${idemKey}`);
+        const state = checkIdempotency(`${actorKey}:${idemKey}`, fingerprint);
         if (state.kind === "replay") {
           const replay = NextResponse.json(state.body, { status: state.status });
           replay.headers.set("X-Request-ID", requestId);
@@ -342,6 +364,22 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
           busy.headers.set("X-Request-ID", requestId);
           return finish(busy);
         }
+        if (state.kind === "mismatch") {
+          // Key dipakai ulang untuk payload lain. Me-replay di sini akan
+          // mengembalikan resource yang SALAH secara diam-diam — tolak eksplisit.
+          const reuse = NextResponse.json(
+            {
+              error: {
+                code: "IDEMPOTENCY_KEY_REUSED",
+                message:
+                  "Idempotency-Key sudah dipakai untuk permintaan lain. Gunakan key baru.",
+              },
+            },
+            { status: 422 },
+          );
+          reuse.headers.set("X-Request-ID", requestId);
+          return finish(reuse);
+        }
       }
 
       const data = await opts.handler({
@@ -359,6 +397,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
           `${actorKey}:${idemKey}`,
           opts.status ?? 200,
           { data },
+          fingerprint,
         );
         res.headers.set("Idempotency-Key", idemKey);
       }
@@ -392,8 +431,7 @@ export function ok<T>(data: T, status = 200): NextResponse {
  * `InvalidJsonError` (400 `INVALID_JSON`) — BUKAN diam-diam `{}` yang lalu
  * memicu pesan Zod menyesatkan ("Data tidak valid").
  */
-async function parseJsonBody(req: Request): Promise<unknown> {
-  const raw = await req.text();
+function parseJsonText(raw: string): unknown {
   if (!raw.trim()) return {};
   try {
     return JSON.parse(raw);
