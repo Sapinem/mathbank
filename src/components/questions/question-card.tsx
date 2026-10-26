@@ -16,6 +16,7 @@ import {
   ListOrdered,
   FileQuestion,
   BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { MathContent } from "@/components/math/math-content";
@@ -130,6 +131,49 @@ export function formatGradeBadge(grade: string): string {
   return g.toUpperCase();
 }
 
+/** Label jenjang yang terbaca untuk tooltip/aria: angka jadi "Kelas N",
+ *  kode lain (11W, UTBK, UMUM, …) memakai awalan "Jenjang". */
+function gradeLabel(grade: string): string {
+  const formatted = formatGradeBadge(grade);
+  return /^\d+$/.test(formatted) ? `Kelas ${formatted}` : `Jenjang ${formatted}`;
+}
+
+/** Penanda jenjang: ikon Lucide `graduation-cap` + angka/kode jenjang.
+ *  Topik sengaja TIDAK diubah jadi ikon — topik tetap teks bernama.
+ *  Ikon tidak berdiri sendiri: tombol ini punya aria-label dan tooltip
+ *  berisi label jenjang lengkap. */
+export function GradeMarker({
+  grade,
+  className,
+}: {
+  grade: string;
+  className?: string;
+}) {
+  const label = gradeLabel(grade);
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-label={label}
+            className={cn(
+              "inline-flex shrink-0 cursor-help items-center justify-center gap-1 rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground/90 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand",
+              className,
+            )}
+          >
+            <GraduationCap className="size-3.5" aria-hidden="true" />
+            {formatGradeBadge(grade)}
+          </button>
+        }
+      />
+      <TooltipContent>
+        <span className="text-xs font-medium">{label}</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Ikon tipe soal dengan tooltip interaktif. */
 export function QuestionTypeIcon({ type }: { type: string }) {
   const label = TYPE_LABELS[type] ?? type;
@@ -167,9 +211,12 @@ export function QuestionTypeIcon({ type }: { type: string }) {
   );
 }
 
-/** Indikator status alur soal (Siap/Draf/Telaah) dengan dot semantik.
- *  `compact` — di mobile mode list, sembunyikan label teks agar teks soal
- *  mendapat ruang ≥ 180px pada layar 360px. */
+/** Indikator status alur soal (Draf/Telaah/Arsip/…) dengan dot semantik.
+ *  "Siap" SENGAJA tidak dirender sama sekali: Siap adalah kondisi normal/
+ *  default soal, sehingga kartu yang bersih berarti sudah Siap — hanya
+ *  status yang butuh tindakan atau perhatian yang tampil sebagai penanda.
+ *  `compact` — di mobile mode list, label ringkas agar teks soal mendapat
+ *  ruang ≥ 180px pada layar 360px. */
 export function StatusIndicator({
   status,
   compact = false,
@@ -177,6 +224,10 @@ export function StatusIndicator({
   status: string;
   compact?: boolean;
 }) {
+  // Siap = default: tanpa penanda eksplisit (tanpa dot, tanpa teks, tanpa
+  // elemen tersembunyi) di tampilan kartu/baris soal.
+  if (status === "ready") return null;
+
   const label = STATUS_LABELS[status] ?? status;
   // Label ringkas untuk mode compact: "Perlu Telaah" (12 karakter) dipersingkat
   // jadi "Telaah" agar status tetap terbaca di layar sempit tanpa hanya mengandalkan
@@ -185,8 +236,7 @@ export function StatusIndicator({
   // agar makna status tidak hanya dari warna (WCAG 1.4.1). aria-label tetap label penuh.
   const shortLabel = STATUS_SHORT_LABELS[status] ?? label;
   let dotColor = "bg-muted-foreground";
-  if (status === "ready") dotColor = "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
-  else if (status === "draft") dotColor = "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]";
+  if (status === "draft") dotColor = "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]";
   else if (status === "review") dotColor = "bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.5)]";
 
   return (
@@ -194,10 +244,9 @@ export function StatusIndicator({
       className={cn(
         "inline-flex shrink-0 items-center gap-1.5 rounded-full border tabular-nums",
         compact ? "px-1.5 py-0.5 text-[11px] font-medium" : "px-2.5 py-0.5 text-[11px] font-medium",
-        status === "ready" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
         status === "draft" && "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
         status === "review" && "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
-        !["ready", "draft", "review"].includes(status) && "border-border bg-muted text-muted-foreground",
+        !["draft", "review"].includes(status) && "border-border bg-muted text-muted-foreground",
       )}
       aria-label={compact ? label : undefined}
     >
@@ -211,7 +260,6 @@ export function StatusIndicator({
 const STATUS_SHORT_LABELS: Record<string, string> = {
   draft: "Draf",
   review: "Telaah",
-  ready: "Siap",
   archived: "Arsip",
 };
 
@@ -258,13 +306,23 @@ function QuestionCardInner({
     return (
       <div
         className={cn(
-          "group relative flex h-11 max-h-11 items-center gap-2.5 px-4 transition-colors hover:bg-muted/30 cursor-pointer overflow-hidden",
+          "group relative flex h-11 max-h-11 items-center gap-2 px-3 transition-colors hover:bg-muted/30 cursor-pointer overflow-hidden",
           selected && "bg-brand/5 border-l-2 border-l-brand",
         )}
       >
-        {/* 1. Checkbox Seleksi — area sentuh ≥ 44px (CRIT-03) */}
+        {/* 1. Checkbox Seleksi — area sentuh ≥ 44px (CRIT-03).
+            Kompromi tampilan compact (bukan display:none): kotak hanya
+            terlihat saat hover/focus baris, saat kartu terpilih, atau
+            selalu di layar sentuh (tanpa hover). Input tetap di DOM
+            dengan aria-label "Pilih soal: <kutipan>" sehingga keyboard
+            dan screen reader tidak kehilangan fungsi seleksi massal. */}
         {onToggleSelect && (
-          <label className="flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center">
+          <label
+            className={cn(
+              "flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100",
+              selected && "opacity-100",
+            )}
+          >
             <input
               type="checkbox"
               checked={selected}
@@ -278,10 +336,8 @@ function QuestionCardInner({
         {/* 2. Ikon Tipe Soal (Paling Kiri) */}
         <QuestionTypeIcon type={q.questionType} />
 
-        {/* 3. Chip Kelas Ringkas (mis. 10, 11W, 11L, SMP 08) */}
-        <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground/90">
-          {formatGradeBadge(q.grade)}
-        </span>
+        {/* 3. Penanda Jenjang: ikon graduation-cap + angka (mis. 10) */}
+        <GradeMarker grade={q.grade} />
 
         {/* 4. Taksonomi: Kognitif & Kesulitan — disembunyikan di mobile (<md) agar teks soal punya ruang lega */}
         <CognitiveBadge level={q.cognitiveLevel} className="hidden md:inline-flex pointer-coarse:min-h-[44px]" />
@@ -345,21 +401,19 @@ function QuestionCardInner({
   return (
     <article
       className={cn(
-        "group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card/60 p-4 transition-all duration-150",
+        "group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card/60 p-3 transition-all duration-150",
         "hover:border-border hover:bg-card hover:shadow-xs",
         "dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
         mode === "grid" && "min-h-[280px]",
         selected && "border-brand/70 bg-brand/5 ring-1 ring-brand/30",
       )}
     >
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2">
         {/* TOP BAR KARTU */}
-        <div className="flex items-center justify-between border-b border-border/50 pb-2.5">
+        <div className="flex items-center justify-between border-b border-border/50 pb-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <QuestionTypeIcon type={q.questionType} />
-            <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground/90">
-              {formatGradeBadge(q.grade)}
-            </span>
+            <GradeMarker grade={q.grade} />
             <CognitiveBadge level={q.cognitiveLevel} className="pointer-coarse:min-h-[44px]" />
             <DifficultyBadge level={q.difficulty} className="pointer-coarse:min-h-[44px]" />
             {q.isFlagged && (
@@ -369,8 +423,18 @@ function QuestionCardInner({
 
           <div className="flex items-center gap-2">
             <StatusIndicator status={q.status} />
+            {/* Checkbox pojok kartu — kompromi yang sama seperti mode list:
+                bukan display:none (fungsi seleksi massal & aria-label
+                "Pilih soal: <kutipan>" dipertahankan), hanya terlihat
+                saat hover/focus kartu, saat terpilih, atau di layar
+                sentuh. */}
             {onToggleSelect && (
-              <label className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center">
+              <label
+                className={cn(
+                  "flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100",
+                  selected && "opacity-100",
+                )}
+              >
                 <input
                   type="checkbox"
                   checked={selected}
@@ -498,7 +562,7 @@ function QuestionCardInner({
       </div>
 
       {/* FOOTER KARTU */}
-      <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2 text-[11px] font-mono text-muted-foreground">
+      <div className="mt-2 flex items-center justify-between border-t border-border/40 pt-2 text-[11px] font-mono text-muted-foreground">
         <span className="truncate max-w-[180px]">
           {q.bundles?.[0]?.sourceLabel ?? (q.bundles?.length ? "Naskah" : "Mandiri")}
         </span>

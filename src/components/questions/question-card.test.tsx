@@ -38,13 +38,44 @@ describe("QuestionCard", () => {
   it("menampilkan status, tipe, grade, dan badge rubrik (kesulitan + kognitif)", () => {
     const { container } = render(<QuestionCard question={q()} href="/questions/q1" />);
     expect(screen.getByText("Draf")).toBeInTheDocument();
-    // grade dirender sebagai "· SMA-11" dalam satu span
+    // grade dirender sebagai penanda ikon + "SMA-11"
     expect(container.textContent).toContain("SMA-11");
-    // Difficulty 3 → badge "Lv.3" + meter titik ●●●○○
+    // Difficulty 3 → penanda ikon gauge + "Lv.3" (meter titik diganti ikon)
     expect(container.textContent).toContain("Lv.3");
-    expect(container.textContent).toContain("●●●○○");
-    // cognitiveLevel "understand" → badge mikro "C2"
+    expect(container.textContent).not.toContain("●●●○○");
+    // cognitiveLevel "understand" → penanda ikon brain + "C2"
     expect(container.textContent).toContain("C2");
+  });
+
+  it("status Siap tidak dirender eksplisit sama sekali di kartu", () => {
+    render(
+      <QuestionCard
+        question={q({ status: "ready" })}
+        href="/questions/q1"
+      />,
+    );
+    expect(screen.queryByText("Siap")).not.toBeInTheDocument();
+    // (Status lain tetap diuji tampil pada tes kartu draft di atas.)
+  });
+
+  it("penanda jenjang memakai ikon + angka dengan aria-label lengkap", () => {
+    render(
+      <QuestionCard question={q({ grade: "10" })} href="/questions/q1" />,
+    );
+    expect(screen.getByLabelText("Kelas 10")).toBeInTheDocument();
+    expect(screen.getByText("10")).toBeInTheDocument();
+  });
+
+  it("checkbox seleksi kartu tetap dapat diakses walau tersembunyi visual", () => {
+    render(
+      <QuestionCard
+        question={q()}
+        href="/questions/q1"
+        onToggleSelect={() => {}}
+      />,
+    );
+    // aria-label PR #6 dipertahankan: "Pilih soal: <kutipan batang>".
+    expect(screen.getByLabelText(/Pilih soal:/)).toBeInTheDocument();
   });
 
   it("badge rubrik dapat difokus keyboard & punya aria-label rubrik", () => {
