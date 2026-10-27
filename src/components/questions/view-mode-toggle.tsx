@@ -1,7 +1,8 @@
 "use client";
 
-import { List, LayoutGrid, Columns3 } from "lucide-react";
+import { List, LayoutGrid, Columns3, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,9 +14,9 @@ import {
 export type ViewMode = "list" | "grid" | "masonry";
 
 const MODES: { value: ViewMode; label: string; Icon: typeof List }[] = [
-  { value: "list", label: "List", Icon: List },
-  { value: "grid", label: "Grid", Icon: LayoutGrid },
-  { value: "masonry", label: "Masonry", Icon: Columns3 },
+  { value: "list", label: "Daftar", Icon: List },
+  { value: "grid", label: "Kisi", Icon: LayoutGrid },
+  { value: "masonry", label: "Mozaik", Icon: Columns3 },
 ];
 
 /** Kelas kontainer daftar sesuai mode (M6). */
@@ -59,12 +60,22 @@ export function ViewModeToggle({
           >
             <CurrentIcon className="size-4" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-40">
             <DropdownMenuGroup>
               {MODES.map(({ value: m, label, Icon }) => (
-                <DropdownMenuItem key={m} onClick={() => onChange(m)}>
-                  <Icon data-icon="inline-start" className="size-4" />
-                  <span>{label}</span>
+                <DropdownMenuItem
+                  key={m}
+                  onClick={() => onChange(m)}
+                  className={cn(
+                    "min-h-[44px] flex items-center justify-between cursor-pointer text-sm",
+                    value === m && "font-semibold text-brand",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon data-icon="inline-start" className="size-4" />
+                    <span>{label}</span>
+                  </div>
+                  {value === m && <Check className="size-4 text-brand" />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>

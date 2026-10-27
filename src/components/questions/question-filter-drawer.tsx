@@ -188,6 +188,11 @@ export function QuestionFilterDrawer({
 
         {/* Konten Scrollable — Urutan Hierarkis Sesuai Rekomendasi */}
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-4 text-xs">
+          {/* Label Kelompok: Taksonomi Kurikulum */}
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 -mb-2">
+            Taksonomi Kurikulum
+          </span>
+
           {/* ================= 1. TOPIK POKOK ================= */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -223,7 +228,7 @@ export function QuestionFilterDrawer({
               )}
             </div>
 
-            <div className="flex max-h-40 flex-col gap-0.5 overflow-y-auto pr-1">
+            <div className="flex max-h-56 flex-col gap-0.5 overflow-y-auto pr-1">
               {filteredTopics.length === 0 ? (
                 <span className="py-2 text-center text-xs text-muted-foreground">
                   Topik tidak ditemukan
@@ -271,7 +276,7 @@ export function QuestionFilterDrawer({
                 <button
                   type="button"
                   onClick={() => onSelectTag?.(null)}
-                  className="text-[11px] text-muted-foreground hover:text-foreground"
+                  className="text-[11px] text-muted-foreground hover:text-foreground pointer-coarse:min-h-[44px] pointer-coarse:px-2 flex items-center"
                 >
                   Hapus
                 </button>
@@ -465,8 +470,15 @@ export function QuestionFilterDrawer({
             )}
           </div>
 
+          {/* Label Kelompok: Operasional & Sumber */}
+          <div className="border-t border-border/80 pt-4 -mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              Operasional & Sumber
+            </span>
+          </div>
+
           {/* ================= 6. STATUS & KESIAPAN ================= */}
-          <div className="flex flex-col gap-2 border-t border-border/60 pt-3">
+          <div className="flex flex-col gap-2">
             <span className="flex items-center gap-1.5 font-medium text-foreground">
               <CircleDot className="size-3.5 text-muted-foreground" />
               Status & Kesiapan
@@ -538,7 +550,7 @@ export function QuestionFilterDrawer({
                   <button
                     type="button"
                     onClick={() => onSelectSource(null)}
-                    className="text-[11px] text-muted-foreground hover:text-foreground"
+                    className="text-[11px] text-muted-foreground hover:text-foreground pointer-coarse:min-h-[44px] pointer-coarse:px-2 flex items-center"
                   >
                     Semua
                   </button>
@@ -588,7 +600,7 @@ export function QuestionFilterDrawer({
             <button
               type="button"
               onClick={() => setShowLegend(!showLegend)}
-              className="flex items-center justify-between text-muted-foreground hover:text-foreground text-left py-1"
+              className="flex items-center justify-between text-muted-foreground hover:text-foreground text-left py-1 min-h-[32px] pointer-coarse:min-h-[44px]"
             >
               <span className="flex items-center gap-1.5 font-medium text-foreground text-xs">
                 <HelpCircle className="size-3.5 text-muted-foreground" />

@@ -32,14 +32,46 @@ import type { ViewMode } from "@/components/questions/view-mode-toggle";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
 /**
+ * Factory regex segmen matematika KaTeX dan LaTeX environments (L4).
+ * Menghasilkan RegExp baru pada setiap pemanggilan untuk mencegah efek samping stateful lastIndex (/g).
+ */
+export function createMathSegmentRegex(): RegExp {
+  return /(?:\\\[|\\\\\[)[\s\S]*?(?:\\\]|\\\\\])|\$\$[\s\S]*?\$\$|(?<!\$)\$[^$]*?\\(?:begin|end)\{[^$]*?\}\$(?!\$)|(?<!\$)\$[^$\n]+?\$(?!\$)|(?:\\\(|\\\\\()[\s\S]*?(?:\\\)|\\\\\))|\\begin\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|aligned|array|align\*?)\}[\s\S]*?\\end\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|aligned|array|align\*?)\}/g;
+}
+
+/** Bersihkan pemformatan markdown (#, *, `) HANYA pada teks biasa di luar rumus matematika. */
+function cleanMarkdownExcludingMath(md: string): string {
+  let result = "";
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const re = createMathSegmentRegex();
+
+  while ((match = re.exec(md)) !== null) {
+    const textBefore = md.slice(lastIndex, match.index);
+    if (textBefore) {
+      result += textBefore.replace(/[#*`]/g, "").replace(/\r?\n+/g, " ");
+    }
+    result += match[0].replace(/\r?\n+/g, " ");
+    lastIndex = re.lastIndex;
+  }
+
+  const remaining = md.slice(lastIndex);
+  if (remaining) {
+    result += remaining.replace(/[#*`]/g, "").replace(/\r?\n+/g, " ");
+  }
+
+  return result.replace(/[ \t]{2,}/g, " ").trim();
+}
+
+/**
  * Kutipan singkat konten yang aman terhadap rumus KaTeX/LaTeX.
  * Tidak akan pernah memotong di tengah delimiter \(...\), \[...\], $...$, atau $$...$$.
  */
 export function excerpt(md: string, max = 140): string {
-  const clean = md.replace(/[#*`]/g, "").replace(/\r?\n+/g, " ").trim();
+  const clean = cleanMarkdownExcludingMath(md);
   if (clean.length <= max) return clean;
 
-  const mathRegex = /(\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\\\([\s\S]*?\\\)|\$[^$\n]+\$)/g;
+  const mathRegex = createMathSegmentRegex();
   let result = "";
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -88,20 +120,26 @@ export function excerpt(md: string, max = 140): string {
 export function stripImages(text: string): string {
   return text
     .replace(/\{\{\s*img\s*:[^}]+\}\}/gi, "")
-    .replace(/!\[[^\]]*\](?:\([^)]*\)|\[[^\]]*\])?/g, "");
+    .replace(/!\[[^\]]*\](?:\([^)]*\)|\[[^\]]*\])/g, "");
 }
 
-/**
- * Ratakan lingkungan rumus multi-baris (matrix, cases, aligned, \\)
- * dan bersihkan rujukan gambar agar menjadi datar/inline pada baris ikhtisar mode list.
- */
-export function flattenMathForList(text: string): string {
-  return stripImages(text)
+function flattenMathSegment(math: string): string {
+  return math
     .replace(/\\begin\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|aligned|array|align\*?)\}/g, "")
     .replace(/\\end\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|aligned|array|align\*?)\}/g, "")
     .replace(/(?<!\\)&\s*=/g, "=")
     .replace(/(?<!\\)&/g, ",\\; ")
     .replace(/\\\\/g, ",\\; ");
+}
+
+/**
+ * Ratakan lingkungan rumus multi-baris (matrix, cases, aligned, \\)
+ * HANYA di dalam segmen matematika, dan bersihkan rujukan gambar agar menjadi datar/inline pada mode list.
+ */
+export function flattenMathForList(text: string): string {
+  const stripped = stripImages(text);
+  const re = createMathSegmentRegex();
+  return stripped.replace(re, (segment) => flattenMathSegment(segment));
 }
 
 export { formatGradeBadge } from "@/lib/display/labels";
@@ -223,14 +261,14 @@ export function StatusIndicator({
             type="button"
             className={cn(
               "relative flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-brand",
-              status === "draft" &&
-                "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-              status === "review" &&
-                "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
               status === "ready" &&
-                "border-transparent bg-transparent text-muted-foreground/40 hover:text-emerald-500",
-              status === "archived" &&
+                "border-success/30 bg-success/10 text-success hover:bg-success/20",
+              status === "draft" &&
                 "border-border/80 bg-muted/60 text-muted-foreground",
+              status === "review" &&
+                "border-gold/40 bg-gold/15 text-gold-fg",
+              status === "archived" &&
+                "border-error/40 bg-error/10 text-error line-through",
               !["draft", "review", "ready", "archived"].includes(status) &&
                 "border-border bg-muted text-muted-foreground",
             )}
@@ -303,7 +341,7 @@ function QuestionCardInner({
     return (
       <div
         className={cn(
-          "group relative flex h-11 max-h-11 items-center gap-2 px-3 transition-colors hover:bg-muted/30 cursor-pointer overflow-hidden",
+          "group relative flex min-h-11 py-1 items-center gap-2 px-3 transition-colors hover:bg-muted/30 cursor-pointer overflow-hidden",
           selected && "bg-brand/5 border-l-2 border-l-brand",
         )}
       >
@@ -345,8 +383,6 @@ function QuestionCardInner({
               />
             </div>
           </div>
-
-          <ArrowUpRight className="size-3.5 opacity-30 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground" />
         </Link>
 
         {/* 3. Topik Utama — Kolom Tetap Terkunci (hidden di mobile <sm) */}
@@ -458,13 +494,15 @@ function QuestionCardInner({
 
               {/* OPSI PILIHAN GANDA (MENYATU DIDALAM AREA KARTU NASKAH — SETARA TEXT-BASE) */}
               {(q.options?.length ?? 0) > 0 && (
-                <div className="mt-3 flex flex-col gap-2 border-t border-border/40 pt-2.5 text-base">
+                <div className="mt-3 flex flex-col gap-1.5 border-t border-border/40 pt-2.5 text-base">
                   {(q.options ?? []).map((o) => (
                     <div
                       key={o.id}
                       className={cn(
-                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0 text-base",
-                        o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
+                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0 text-base rounded-md px-1.5 py-0.5",
+                        o.isCorrect
+                          ? "bg-success/8 border border-success/20 text-foreground font-medium"
+                          : "text-muted-foreground",
                       )}
                     >
                       <span className={cn(o.isCorrect ? "text-success" : "")}>
@@ -500,7 +538,7 @@ function QuestionCardInner({
               )}
 
               {/* Gradien fade-out lembut di batas bawah jika ruang kartu tidak mencukupi */}
-              <span className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-card to-transparent" aria-hidden="true" />
+              <span className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-card via-card/70 to-transparent" aria-hidden="true" />
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
@@ -510,13 +548,15 @@ function QuestionCardInner({
                 className="text-base leading-relaxed text-foreground overflow-hidden max-h-[440px]"
               />
               {(q.options?.length ?? 0) > 0 && (
-                <div className="mt-2.5 flex flex-col gap-2 border-t border-border/40 pt-2.5 text-base">
+                <div className="mt-2.5 flex flex-col gap-1.5 border-t border-border/40 pt-2.5 text-base">
                   {(q.options ?? []).map((o) => (
                     <div
                       key={o.id}
                       className={cn(
-                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0 text-base",
-                        o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
+                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0 text-base rounded-md px-1.5 py-0.5",
+                        o.isCorrect
+                          ? "bg-success/8 border border-success/20 text-foreground font-medium"
+                          : "text-muted-foreground",
                       )}
                     >
                       <span className={cn(o.isCorrect ? "text-success" : "")}>

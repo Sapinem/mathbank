@@ -122,8 +122,20 @@ function RapidReview() {
   // Navigasi keyboard ←/→.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || total <= 1) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable ||
+          Boolean(target.closest?.("[role='dialog']")))
+      ) {
+        return;
+      }
       if (e.key === "ArrowLeft") setIdx((i) => Math.max(0, i - 1));
-      if (e.key === "ArrowRight") setIdx((i) => Math.min(total - 1, i + 1));
+      if (e.key === "ArrowRight") setIdx((i) => Math.min(Math.max(0, total - 1), i + 1));
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

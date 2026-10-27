@@ -53,7 +53,7 @@ describe("QuestionCard", () => {
     expect(container.textContent).not.toContain("C2");
   });
 
-  it("status Siap tidak dirender teks eksplisit di kartu namun memiliki penanda aksesibel", () => {
+  it("status Siap tidak dirender teks eksplisit di kartu namun memiliki penanda aksesibel dan kelas semantik", () => {
     render(
       <QuestionCard
         question={q({ status: "ready" })}
@@ -61,7 +61,9 @@ describe("QuestionCard", () => {
       />,
     );
     expect(screen.queryByText("Siap")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Status: Siap")).toBeInTheDocument();
+    const statusBtn = screen.getByLabelText("Status: Siap");
+    expect(statusBtn).toBeInTheDocument();
+    expect(statusBtn).toHaveClass("text-success");
   });
 
   it("menampilkan topik utama di bagian kiri header kartu mode grid", () => {
@@ -242,6 +244,28 @@ describe("QuestionCard", () => {
     expect(optA?.className).not.toContain("text-success");
   });
 
+  it("mode list tidak merender ArrowUpRight pada batang dan memakai min-h-11", () => {
+    const { container } = render(<QuestionCard question={q()} href="/questions/q1" mode="list" />);
+    const link = screen.getByRole("link");
+    expect(link.querySelector("svg.lucide-arrow-up-right")).toBeNull();
+    expect(container.firstChild).toHaveClass("min-h-11");
+  });
+
+  it("mode grid memberi highlight border dan background lembut pada opsi yang benar", () => {
+    const withOpts = q({
+      options: [
+        { id: "o1", questionId: "q1", label: "A", contentMarkdown: "3", isCorrect: false, distractorRationale: null, orderIndex: 0, createdAt: new Date(), updatedAt: new Date() },
+        { id: "o2", questionId: "q1", label: "B", contentMarkdown: "4", isCorrect: true, distractorRationale: null, orderIndex: 1, createdAt: new Date(), updatedAt: new Date() },
+      ],
+    } as Partial<PublicQuestion>);
+    const { container } = render(<QuestionCard question={withOpts} href="/x" mode="grid" />);
+    const correctRow = Array.from(container.querySelectorAll("strong"))
+      .find((s) => s.textContent === "B.")
+      ?.closest("div.flex");
+    expect(correctRow?.className).toContain("bg-success/8");
+    expect(correctRow?.className).toContain("border-success/20");
+  });
+
   it("soal TANPA options tidak menampilkan baris opsi", () => {
     const { container } = render(<QuestionCard question={q({ options: [] })} href="/x" />);
     // hanya konten soal; tak ada label A./B.
@@ -311,6 +335,12 @@ describe("excerpt (math-aware)", () => {
     const res = excerpt(input, 20);
     expect(res).toContain("Nilai $x$ adalah");
     expect(res.endsWith("…")).toBe(true);
+  });
+
+  it("mempertahankan simbol perkalian dan adjoint bintang di dalam rumus KaTeX", () => {
+    const input = "Operasi $a * b$ dan ruang dual $V^*$ pada # Bab 1";
+    const res = excerpt(input, 140);
+    expect(res).toBe("Operasi $a * b$ dan ruang dual $V^*$ pada Bab 1");
   });
 });
 
@@ -410,5 +440,10 @@ describe("stripImages & flattenMathForList", () => {
   it("meratakan vmatrix dan align*", () => {
     const input = "\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix} dan \\begin{align*} 2x + y &= 5 \\end{align*}";
     expect(flattenMathForList(input)).toBe(" a ,\\;  b ,\\;  c ,\\;  d  dan  2x + y = 5 ");
+  });
+
+  it("mempertahankan ampersand pada teks biasa di luar KaTeX", () => {
+    const input = "Pernyataan (1) & (2) benar untuk $\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}$";
+    expect(flattenMathForList(input)).toBe("Pernyataan (1) & (2) benar untuk $ 1 ,\\;  2 ,\\;  3 ,\\;  4 $");
   });
 });

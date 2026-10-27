@@ -109,4 +109,11 @@ describe("QuestionBankView — perbaikan desain prioritas", () => {
     render(<QuestionBankView defaultFiltersOpen />);
     expect(screen.getByText("Legenda Simbol & Ikon")).toBeInTheDocument();
   });
+
+  it("drawer filter mengelompokkan filter ke dalam Taksonomi Kurikulum dan Operasional & Sumber", () => {
+    useQuestionsMock.mockReturnValue(dataState({ data: { items: [], total: 0 } }));
+    render(<QuestionBankView defaultFiltersOpen />);
+    expect(screen.getByText("Taksonomi Kurikulum")).toBeInTheDocument();
+    expect(screen.getByText("Operasional & Sumber")).toBeInTheDocument();
+  });
 });

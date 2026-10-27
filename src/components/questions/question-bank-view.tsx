@@ -391,7 +391,7 @@ export function QuestionBankView({
 
       {/* 4. Bar Seleksi Massal */}
       {selected.size > 0 && (
-        <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-lg border border-border bg-popover shadow-lg sm:mx-4">
+        <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-lg border border-border bg-popover shadow-lg sm:mx-4 animate-in fade-in slide-in-from-bottom-2 duration-150">
           {/* Baris atas: jumlah terpilih + tombol aksi utama */}
           <div className="flex items-center gap-2 px-3 py-2">
             <span className="shrink-0 text-sm font-medium">{selected.size} terpilih</span>

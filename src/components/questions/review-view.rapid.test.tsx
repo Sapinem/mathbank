@@ -77,6 +77,21 @@ describe("ReviewView — Mode Kilat (G3.2)", () => {
     expect(screen.getByText("Soal 1 dari 2")).toBeInTheDocument();
   });
 
+  it("navigasi keyboard diabaikan saat fokus pada input atau textarea", () => {
+    render(
+      <div>
+        <ReviewView />
+        <input data-testid="test-input" />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Mode Kilat/ }));
+    const input = screen.getByTestId("test-input");
+    input.focus();
+
+    fireEvent.keyDown(input, { key: "ArrowRight" });
+    expect(screen.getByText("Soal 1 dari 2")).toBeInTheDocument();
+  });
+
   it("Setujui memanggil FSM ke ready", () => {
     render(<ReviewView />);
     fireEvent.click(screen.getByRole("button", { name: /Mode Kilat/ }));
