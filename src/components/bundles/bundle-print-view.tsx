@@ -260,7 +260,7 @@ export function BundlePrintView() {
           </div>
         </div>
 
-        <div className="ml-auto flex gap-2">
+        <div className="flex w-full sm:w-auto sm:ml-auto items-center justify-end gap-2 border-t border-border/40 pt-3 sm:border-0 sm:pt-0">
           <Button
             variant="outline"
             render={<Link href={`/bundles/${bundleId}`} />}
@@ -544,7 +544,7 @@ export function BundlePrintView() {
                   ? matchingShown
                   : correct.length > 0
                     ? correct.join(", ")
-                    : (text ?? "—");
+                    : (text ?? "-");
                 return (
                   <li key={it.item.id} className="flex gap-2 tabular-nums">
                     <span className="w-6 text-right font-medium">{i + 1}.</span>

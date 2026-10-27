@@ -290,12 +290,11 @@ export function BundleListView() {
           </div>
         </div>
 
-        {/* TAB FILTER URL-DRIVEN: Jenis & Asal (MAT-40) */}
+        {/* TAB UTAMA & TOOLBAR FILTER */}
         <div className="flex flex-col gap-3">
-          {/* Sub-tab Jenis Paket */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Jenis Paket</span>
-            <div className="inline-flex w-fit rounded-lg border border-border p-0.5 bg-muted/20">
+          {/* Baris Tab Jenis Paket & Toggle Tampilan */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/20">
               {TYPE_TABS.map((tab) => (
                 <button
                   key={tab.id}
@@ -303,9 +302,9 @@ export function BundleListView() {
                   onClick={() => updateUrl({ type: tab.id })}
                   aria-pressed={typeFilter === tab.id}
                   className={cn(
-                    "min-h-[44px] rounded-md px-3 py-1 text-xs font-medium motion-safe:transition-colors",
+                    "min-h-[40px] sm:min-h-[36px] rounded-md px-3.5 py-1 text-xs font-medium motion-safe:transition-colors",
                     typeFilter === tab.id
-                      ? "bg-background text-foreground shadow-2xs"
+                      ? "bg-background text-foreground shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -313,34 +312,44 @@ export function BundleListView() {
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Sub-tab Asal Paket */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Asal Paket</span>
-            <div className="inline-flex w-fit rounded-lg border border-border p-0.5 bg-muted/20">
-              {ORIGIN_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => updateUrl({ origin: tab.id })}
-                  aria-pressed={originFilter === tab.id}
-                  className={cn(
-                    "min-h-[44px] rounded-md px-3 py-1 text-xs font-medium motion-safe:transition-colors",
-                    originFilter === tab.id
-                      ? "bg-background text-foreground shadow-2xs"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
+            {/* Toggle Mode Tampilan (Grid / List) & Indikator Halaman */}
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <span className="text-xs font-mono text-muted-foreground">
+                {data.length} dari {totalBundles} paket
+                {totalPages > 1 && (
+                  <>
+                    {" · "}
+                    <span className="text-foreground/80">
+                      hal. {safePage + 1}/{totalPages}
+                    </span>
+                  </>
+                )}
+              </span>
+              <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5 bg-muted/20">
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  aria-label="Tampilan Kisi Kartu"
+                  onClick={() => setViewMode("grid")}
+                  className="min-h-[36px] min-w-[36px]"
                 >
-                  {tab.label}
-                </button>
-              ))}
+                  <LayoutGrid className="size-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  aria-label="Tampilan Tabel Rinci"
+                  onClick={() => setViewMode("list")}
+                  className="min-h-[36px] min-w-[36px]"
+                >
+                  <List className="size-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* TOOLBAR PENCARIAN & STATUS */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Toolbar Pencarian, Status, dan Asal Paket */}
           <div className="flex flex-1 flex-wrap items-center gap-2">
             {/* Input Cari */}
             <div className="relative min-w-48 max-w-xs flex-1">
@@ -383,6 +392,25 @@ export function BundleListView() {
               </SelectContent>
             </Select>
 
+            {/* Filter Asal Paket */}
+            <Select
+              value={originFilter}
+              onValueChange={(v) => updateUrl({ origin: v as "all" | BundleOrigin })}
+            >
+              <SelectTrigger className="h-9 min-w-28 text-xs">
+                <SelectValue placeholder="Asal Paket" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {ORIGIN_TABS.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
             {/* Tombol Reset Filter jika aktif */}
             {hasFilterActive && (
               <Button
@@ -395,44 +423,9 @@ export function BundleListView() {
                 }}
                 className="h-9 text-xs text-muted-foreground hover:text-foreground"
               >
-                Reset
+                Reset Filter
               </Button>
             )}
-          </div>
-
-          {/* Toggle Mode Tampilan (Grid / List) */}
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <span className="text-xs font-mono text-muted-foreground">
-              {data.length} dari {totalBundles} paket
-              {totalPages > 1 && (
-                <>
-                  {" · "}
-                  <span className="text-foreground/80">
-                    hal. {safePage + 1}/{totalPages}
-                  </span>
-                </>
-              )}
-            </span>
-            <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5 bg-muted/20">
-              <Button
-                variant={viewMode === "grid" ? "secondary" : "ghost"}
-                size="icon-sm"
-                aria-label="Tampilan Kisi Kartu"
-                onClick={() => setViewMode("grid")}
-                className="min-h-[44px] min-w-[44px]"
-              >
-                <LayoutGrid className="size-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "secondary" : "ghost"}
-                size="icon-sm"
-                aria-label="Tampilan Tabel Rinci"
-                onClick={() => setViewMode("list")}
-                className="min-h-[44px] min-w-[44px]"
-              >
-                <List className="size-4" />
-              </Button>
-            </div>
           </div>
         </div>
 
@@ -636,7 +629,7 @@ export function BundleListView() {
                       {b.origin === "ingest" ? "Ingest" : "Manual"}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground tabular-nums">
-                      {b.year ?? "—"}
+                      {b.year ?? "-"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums font-mono font-medium">
                       {b.itemCount}
@@ -645,7 +638,7 @@ export function BundleListView() {
                       {b.enrichment && b.enrichment.questionCount > 0 ? (
                         <DifficultyAverageChip avg={b.enrichment.avgDifficulty} />
                       ) : (
-                        <span className="text-muted-foreground/60">—</span>
+                        <span className="text-muted-foreground/60">-</span>
                       )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -655,11 +648,11 @@ export function BundleListView() {
                           coverage={b.enrichment.topicCoverage}
                         />
                       ) : (
-                        <span className="text-muted-foreground/60">—</span>
+                        <span className="text-muted-foreground/60">-</span>
                       )}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-right tabular-nums font-mono">
-                      {b.durationMinutes ? `${b.durationMinutes} mnt` : "—"}
+                      {b.durationMinutes ? `${b.durationMinutes} mnt` : "-"}
                     </TableCell>
                     <TableCell>
                       <Badge

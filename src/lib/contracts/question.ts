@@ -25,6 +25,8 @@ export const questionTypeSchema = z.enum([
   "essay",
 ]);
 
+export type QuestionType = z.infer<typeof questionTypeSchema>;
+
 export const questionStatusSchema = z.enum(QUESTION_STATUSES);
 
 export const cognitiveLevelSchema = z.enum([
