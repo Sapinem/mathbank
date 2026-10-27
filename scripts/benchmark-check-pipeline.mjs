@@ -6,7 +6,7 @@ async function runCommand(command, args, options = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
-      shell: true,
+      shell: false,
       env: { ...process.env, CI: "1", ...options.env },
       ...options,
     });
