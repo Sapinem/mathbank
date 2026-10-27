@@ -30,6 +30,10 @@ export interface DeclarationLike {
   params?: z.ZodType;
   status: number;
   idempotent: boolean;
+  /** Route menuntut `If-Match` (ADR-0030). */
+  ifMatch?: boolean;
+  /** Route memancarkan `ETag` dari versi baris. */
+  etag?: boolean;
 }
 
 export interface BuildInput {
@@ -102,7 +106,12 @@ const ERROR_RESPONSES: Record<number, Json> = {
   403: errorResponse("Tidak punya izin, atau wajib ganti password."),
   404: errorResponse("Sumber daya tidak ditemukan."),
   409: errorResponse("Konflik data, atau transisi FSM tidak sah."),
+  // ADR-0030 — prakondisi versi.
+  412: errorResponse(
+    "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+  ),
   422: errorResponse("Guard domain menolak (mis. soal belum siap)."),
+  428: errorResponse("Header If-Match wajib untuk operasi ini, tetapi tidak dikirim."),
   429: errorResponse("Rate limit terlampaui.", {
     headers: {
       "Retry-After": {
@@ -112,6 +121,37 @@ const ERROR_RESPONSES: Record<number, Json> = {
     },
   }),
   500: errorResponse("Kesalahan server tak terduga."),
+};
+
+/**
+ * Parameter `If-Match` (ADR-0030). WAJIB, bukan opsional: tanpa versi yang
+ * diharapkan, dua penyunting bersamaan saling menimpa tanpa ketahuan.
+ *
+ * Nilainya ETag dari GET sebelumnya, mis. `"3"`. `*` berarti "apa pun versinya".
+ */
+const IF_MATCH_PARAMETER: Json = {
+  name: "If-Match",
+  in: "header",
+  required: true,
+  description:
+    'Versi baris yang Anda baca, dari header ETag. Contoh: "3". Nilai * berarti "apa pun versinya".',
+  schema: { type: "string", pattern: '^(\\*|"\\d+"|\\d+)$' },
+  example: '"3"',
+};
+
+/** Parameter `Idempotency-Key` (ADR-0029). */
+const IDEMPOTENCY_KEY_PARAMETER: Json = {
+  name: "Idempotency-Key",
+  in: "header",
+  required: false,
+  description: "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+  schema: { type: "string", maxLength: 128 },
+};
+
+/** Header `ETag` pada respons sukses route ber-versi. */
+const ETAG_HEADER: Json = {
+  description: "Versi baris saat ini — kirim balik sebagai If-Match saat menyunting.",
+  schema: { type: "string", pattern: '^"\\d+"$' },
 };
 
 const SECURITY_SCHEMES: Json = {
@@ -190,10 +230,13 @@ function wrapOperation(
   const parameters = [
     ...(decl.params ? pathParameters(decl.params) : []),
     ...(decl.query ? queryParameters(decl.query) : []),
+    ...(decl.ifMatch ? [IF_MATCH_PARAMETER] : []),
+    ...(decl.idempotent ? [IDEMPOTENCY_KEY_PARAMETER] : []),
   ];
   const responses: Json = {};
   responses[String(decl.status)] = {
     description: meta.successDescription ?? "Sukses.",
+    ...(decl.etag ? { headers: { ETag: ETAG_HEADER } } : {}),
     content: jsonContent(envelopeOf(meta.response)),
   };
   const isPublic = decl.authz.kind === "public";
@@ -203,6 +246,12 @@ function wrapOperation(
     codes.add(403);
   }
   if (decl.params) codes.add(404);
+  // ADR-0030: 428 = header tak dikirim, 412 = versi bergeser. Keduanya wajib
+  // tercantum bila route menuntut If-Match, supaya klien tahu harus menanganinya.
+  if (decl.ifMatch) {
+    codes.add(412);
+    codes.add(428);
+  }
   for (const code of [...codes].sort((a, b) => a - b)) {
     responses[String(code)] = ERROR_RESPONSES[code];
   }
@@ -235,6 +284,8 @@ function wrapOperation(
         : {}),
       ...(decl.authz.kind === "public" ? { reason: decl.authz.reason } : {}),
       ...(decl.idempotent ? { idempotent: true } : {}),
+      ...(decl.ifMatch ? { ifMatch: true } : {}),
+      ...(decl.etag ? { etag: true } : {}),
       ...(meta.notes ? { notes: meta.notes } : {}),
       source: "src/app/api (wrapRoute)",
     },
@@ -249,6 +300,7 @@ function manualOperation(key: string, route: RouteLike): Json | null {
     summary: doc.summary,
     description: doc.description,
     tags: doc.tags,
+    ...(doc.deprecated ? { deprecated: true } : {}),
     security: doc.security === "none" ? [] : doc.security === "bearer" ? [{ apiKey: [] }] : [],
     ...(doc.parameters ? { parameters: doc.parameters } : {}),
     ...(doc.requestBody ? { requestBody: doc.requestBody } : {}),

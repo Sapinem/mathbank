@@ -19,7 +19,7 @@ import { join, resolve, sep } from "node:path";
 import { findAssetByShortId } from "@/lib/services/media-service";
 import { mediaStorageRoot } from "@/lib/ingest/config";
 import { isValidShortId } from "@/lib/media/short-id";
-import { checkRateLimit, rateLimitKey, IMAGE_POLICY } from "@/lib/api/rate-limit";
+import { MemoryStore, rateLimitKey, IMAGE_POLICY } from "@/lib/api/rate-limit";
 import { getClientIp } from "@/lib/api/client-ip";
 import { log } from "@/lib/telemetry/logger";
 
@@ -29,8 +29,12 @@ const SVG_CSP = "default-src 'none'; style-src 'unsafe-inline';";
 /** Cache panjang: isi berkas ditentukan oleh hash, jadi aman di-cache lama. */
 const CACHE_CONTROL = "public, max-age=86400, stale-while-revalidate=604800";
 
-function errorJson(code: string, message: string, status: number) {
-  return NextResponse.json({ error: { code, message } }, { status });
+/** Store in-memory khusus media serving (isolasi dari connection pool DB). */
+export const imageRateLimiter = new MemoryStore();
+let lastImageRateLimitPrune = Date.now();
+
+function errorJson(code: string, message: string, status: number, headers?: Record<string, string>) {
+  return NextResponse.json({ error: { code, message } }, { status, headers });
 }
 
 export async function GET(
@@ -39,17 +43,31 @@ export async function GET(
 ) {
   const { shortId } = await params;
 
-  // 1) Rate limit (CONSTRAINTS #33) — route publik, key per IP.
-  //    PERF-03: pakai IMAGE_POLICY (burst 300) agar memuat paket 40–50 soal
-  //    (puluhan gambar sekaligus) tak memicu HTTP 429 palsu.
-  const rl = checkRateLimit(rateLimitKey(null, getClientIp(req), "media:serve"), IMAGE_POLICY);
-  if (!rl.allowed) {
-    return errorJson("RATE_LIMITED", "Terlalu banyak permintaan.", 429);
-  }
-
-  // 2) Bentuk short_id divalidasi SEBELUM menyentuh DB.
+  // 1) Bentuk short_id divalidasi SEBELUM rate-limiting atau menyentuh DB.
   if (!isValidShortId(shortId)) {
     return errorJson("NOT_FOUND", "Media tidak ditemukan.", 404);
+  }
+
+  // 2) Rate limit (CONSTRAINTS #33) — route publik, key per IP via in-memory store.
+  //    PERF-03: pakai IMAGE_POLICY (burst 300) agar memuat paket 40–50 soal
+  //    (puluhan gambar sekaligus) tak memicu HTTP 429 palsu atau kehabisan pool koneksi DB.
+  const ip = getClientIp(req);
+  const key = rateLimitKey(null, ip, "media:serve");
+  const now = Date.now();
+  if (now - lastImageRateLimitPrune > 300_000 || imageRateLimiter.size() > 2000) {
+    imageRateLimiter.prune(now);
+    lastImageRateLimitPrune = now;
+  }
+  const rl = await imageRateLimiter.take(key, {
+    capacity: IMAGE_POLICY.capacity,
+    refillPerSec: IMAGE_POLICY.refillPerSec,
+    now,
+  });
+  if (!rl.allowed) {
+    const retryAfterSec = Math.ceil(rl.retryAfterMs / 1000);
+    return errorJson("RATE_LIMITED", "Terlalu banyak permintaan.", 429, {
+      "Retry-After": String(retryAfterSec),
+    });
   }
 
   try {

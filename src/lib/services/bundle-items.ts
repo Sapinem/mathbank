@@ -21,6 +21,10 @@ import {
   type BundleItemRole,
 } from "./bundle-shared";
 import { getBundle } from "./bundle-query";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { assertVersionMatches } from "@/lib/api/version";
+import { throwVersionedWriteMiss } from "./versioned";
+import { withUniqueGuard } from "@/lib/db/errors";
 
 /** Tambah soal ke paket (di akhir). Tolak duplikat. */
 export async function addItem(
@@ -28,10 +32,13 @@ export async function addItem(
   questionId: string,
   actor: Actor,
   opts: { role?: BundleItemRole; sectionName?: string | null } = {},
+  /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<BundleItemRow> {
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(bundle, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
 
   const [q] = await db
     .select({ id: questions.id })
@@ -53,26 +60,42 @@ export async function addItem(
     .limit(1);
   if (dup) throw new ConflictError("Soal sudah ada di paket ini.");
 
-  const [{ max }] = await db
-    .select({ max: sql<number>`COALESCE(MAX(order_index), 0)` })
-    .from(bundleItems)
-    .where(eq(bundleItems.bundleId, bundleId));
+  // ADR-0030: sentuh paket LEBIH DULU di dalam transaksi, lalu sisipkan item.
+  // Urutan ini penting — bila versi sudah basi, tak ada item yatim yang
+  // terlanjur masuk sebelum 412 dikembalikan.
+  const row = await db.transaction(async (tx) => {
+    const touched = await tx
+      .update(bundles)
+      .set({ updatedAt: new Date() })
+      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
+      .returning({ id: bundles.id });
+    if (touched.length === 0) {
+      await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
+    }
 
-  const [row] = await db
-    .insert(bundleItems)
-    .values({
-      bundleId,
-      questionId,
-      role: opts.role ?? "question",
-      orderIndex: Number(max) + 1,
-      sectionName: opts.sectionName ?? null,
-    })
-    .returning();
-  await db
-    .update(bundles)
-    .set({ updatedAt: new Date() })
-    .where(eq(bundles.id, bundleId));
-  return row!;
+    const [{ max }] = await tx
+      .select({ max: sql<number>`COALESCE(MAX(order_index), 0)` })
+      .from(bundleItems)
+      .where(eq(bundleItems.bundleId, bundleId));
+
+    return withUniqueGuard(
+      async () => {
+        const [inserted] = await tx
+          .insert(bundleItems)
+          .values({
+            bundleId,
+            questionId,
+            role: opts.role ?? "question",
+            orderIndex: Number(max) + 1,
+            sectionName: opts.sectionName ?? null,
+          })
+          .returning();
+        return inserted!;
+      },
+      "Soal sudah ada di paket ini.",
+    );
+  });
+  return row;
 }
 
 /** Hapus item dari paket. */
@@ -80,21 +103,30 @@ export async function removeItem(
   bundleId: string,
   itemId: string,
   actor: Actor,
+  /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<void> {
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(bundle, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
   const [row] = await db
     .select({ id: bundleItems.id })
     .from(bundleItems)
     .where(and(eq(bundleItems.id, itemId), eq(bundleItems.bundleId, bundleId)))
     .limit(1);
   if (!row) throw new NotFoundError("Item paket tidak ditemukan.");
-  await db.delete(bundleItems).where(eq(bundleItems.id, itemId));
-  await db
-    .update(bundles)
-    .set({ updatedAt: new Date() })
-    .where(eq(bundles.id, bundleId));
+  await db.transaction(async (tx) => {
+    const touched = await tx
+      .update(bundles)
+      .set({ updatedAt: new Date() })
+      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
+      .returning({ id: bundles.id });
+    if (touched.length === 0) {
+      await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
+    }
+    await tx.delete(bundleItems).where(eq(bundleItems.id, itemId));
+  });
 }
 
 /** Susun ulang item sesuai daftar id (urutan baru). */
@@ -102,10 +134,13 @@ export async function reorderItems(
   bundleId: string,
   itemIds: string[],
   actor: Actor,
+  /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<void> {
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(bundle, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
   const existing = await db
     .select({ id: bundleItems.id })
     .from(bundleItems)
@@ -127,9 +162,19 @@ export async function reorderItems(
   }
   if (itemIds.length === 0) return;
   // Transaksi: perbarui seluruh urutan secara atomik (gagal parsial → rollback).
+  // Konsistensi urutan lock: kunci baris `bundles` terlebih dahulu (mencegah deadlock dengan addItem/removeItem).
   // **PERF-06:** satu pernyataan SQL `CASE` untuk seluruh item (batch), bukan
   // N `UPDATE` berurutan → menghilangkan latensi pulang-pergi per item.
   await db.transaction(async (tx) => {
+    const touched = await tx
+      .update(bundles)
+      .set({ updatedAt: new Date() })
+      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
+      .returning({ id: bundles.id });
+    if (touched.length === 0) {
+      await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
+    }
+
     const cases = itemIds.map(
       (id, i) => sql`WHEN ${bundleItems.id} = ${id}::uuid THEN ${i + 1}::int`,
     );
@@ -140,9 +185,5 @@ export async function reorderItems(
        WHERE ${bundleItems.bundleId} = ${bundleId}::uuid
          AND ${bundleItems.id} IN (${sql.join(inList, sql`, `)})
     `);
-    await tx
-      .update(bundles)
-      .set({ updatedAt: new Date() })
-      .where(eq(bundles.id, bundleId));
   });
 }

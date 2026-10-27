@@ -2,11 +2,11 @@
  * Rate limiting (L1/L4) — token bucket.
  *
  * Desain:
- *  - **Interface `RateLimitStore`** → implementasi in-memory (`MemoryStore`)
- *    sekarang; **siap-swap** ke Redis/Upstash nanti tanpa ubah pemakaian.
+ *  - **Interface `RateLimitStore`** (async) → `MemoryStore` untuk tes/dev tanpa
+ *    DB, `PgRateLimitStore` (`rate-limit-store-pg.ts`) untuk server (ADR-0029).
  *  - **Token bucket**: kapasitas `burst`, diisi ulang `refillPerSec` per detik.
- *  - **Per-instance** (in-memory): cukup untuk MVP satu instance. Saat
- *    multi-instance, ganti store ke Redis.
+ *  - **Bersama lintas instance**: store PG menyimpan bucket di tabel, sehingga
+ *    dua replika berbagi satu kuota dan restart tidak mengosongkannya.
  *
  * Prinsip: **nol dependensi** (janji "install saat perlu").
  *
@@ -32,13 +32,13 @@ export interface RateLimitStore {
   take(
     key: string,
     opts: { capacity: number; refillPerSec: number; now: number },
-  ): RateLimitResult;
+  ): Promise<RateLimitResult>;
 
   /** Bersihkan state kedaluwarsa (dipanggil berkala). */
-  prune?(now: number): void;
+  prune?(now: number): Promise<void> | void;
 
   /** Reset semua (untuk tes). */
-  clear?(): void;
+  clear?(): Promise<void> | void;
 }
 
 interface Bucket {
@@ -53,10 +53,10 @@ interface Bucket {
 export class MemoryStore implements RateLimitStore {
   private buckets = new Map<string, Bucket>();
 
-  take(
+  async take(
     key: string,
     opts: { capacity: number; refillPerSec: number; now: number },
-  ): RateLimitResult {
+  ): Promise<RateLimitResult> {
     const { capacity, refillPerSec, now } = opts;
     const prev = this.buckets.get(key) ?? {
       tokens: capacity,
@@ -156,11 +156,11 @@ export const HEALTH_POLICY: RateLimitPolicy = {
  * Cek & pakai token untuk `key`. Murni terhadap store terpasang.
  * @param now injeksi waktu (tes deterministik); default `Date.now()`.
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   policy: RateLimitPolicy = DEFAULT_POLICY,
   now: number = Date.now(),
-): RateLimitResult {
+): Promise<RateLimitResult> {
   return store.take(key, {
     capacity: policy.capacity,
     refillPerSec: policy.refillPerSec,

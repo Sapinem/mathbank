@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   }
 
   const rateKey = rateLimitKey(null, getClientIp(req), "dev:quick-login");
-  const rate = checkRateLimit(rateKey, QUICK_LOGIN_RATE_POLICY);
+  const rate = await checkRateLimit(rateKey, QUICK_LOGIN_RATE_POLICY);
   if (!rate.allowed) {
     return noStore(
       NextResponse.json(

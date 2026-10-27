@@ -29,6 +29,11 @@ END;
 $$;
 
 -- Pasang trigger updated_at ke tabel ber-updated_at (idempotent: drop dulu bila ada).
+--
+-- ⚠️ ADR-0029: `rate_limit_buckets` SENGAJA TIDAK didaftarkan di sini meski punya
+--    kolom `updated_at`. Tabel itu ditulis UPSERT di jalur panas dan sudah
+--    menetapkan `updated_at` sendiri; trigger per baris hanya menambah biaya.
+--    `idempotency_keys` memakai `created_at`/`expires_at`, bukan `updated_at`.
 -- ADR-0015: `books` & `institutions` DIHAPUS (kolomnya digabung ke `sources`).
 -- MAT-39: `collections` & `collection_items` DIHAPUS (wadah digabung ke `bundles`).
 DO $$
@@ -201,3 +206,167 @@ DROP TRIGGER IF EXISTS trg_audit_logs_immutable ON audit_logs;
 CREATE TRIGGER trg_audit_logs_immutable
   BEFORE UPDATE OR DELETE ON audit_logs
   FOR EACH ROW EXECUTE FUNCTION reject_audit_mutation();
+
+-- ============================================================================
+-- 7. Invarian #9 — Denormalisasi grades soal dari bundles
+-- ============================================================================
+CREATE OR REPLACE FUNCTION sync_question_grades()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  target_qids uuid[];
+  target_bid uuid;
+  qid uuid;
+  new_grades varchar[];
+  new_grade varchar;
+BEGIN
+  IF (TG_TABLE_NAME = 'bundle_items') THEN
+    IF (TG_OP = 'UPDATE' AND OLD.question_id IS DISTINCT FROM NEW.question_id) THEN
+      target_qids := ARRAY[NEW.question_id, OLD.question_id];
+    ELSE
+      target_qids := ARRAY[COALESCE(NEW.question_id, OLD.question_id)];
+    END IF;
+
+    FOREACH qid IN ARRAY target_qids LOOP
+      IF qid IS NOT NULL THEN
+        SELECT
+          COALESCE(ARRAY_AGG(DISTINCT b.grade ORDER BY b.grade), ARRAY[]::varchar[]),
+          (ARRAY_AGG(DISTINCT b.grade ORDER BY b.grade))[1]
+        INTO new_grades, new_grade
+        FROM bundle_items bi
+        JOIN bundles b ON bi.bundle_id = b.id
+        WHERE bi.question_id = qid
+          AND b.deleted_at IS NULL
+          AND b.grade IS NOT NULL
+          AND b.grade <> ''
+          AND b.grade <> 'umum';
+
+        UPDATE questions
+           SET grades = new_grades,
+               grade = new_grade
+         WHERE id = qid
+           AND deleted_at IS NULL
+           AND (grades IS DISTINCT FROM new_grades OR grade IS DISTINCT FROM new_grade);
+      END IF;
+    END LOOP;
+
+  ELSIF (TG_TABLE_NAME = 'bundles') THEN
+    target_bid := COALESCE(NEW.id, OLD.id);
+
+    WITH target_questions AS (
+      SELECT DISTINCT question_id
+      FROM bundle_items
+      WHERE bundle_id = target_bid
+    ),
+    new_q_grades AS (
+      SELECT
+        tq.question_id,
+        COALESCE(
+          ARRAY_AGG(DISTINCT b2.grade ORDER BY b2.grade)
+            FILTER (WHERE b2.grade IS NOT NULL AND b2.grade <> '' AND b2.grade <> 'umum'),
+          ARRAY[]::varchar[]
+        ) AS bundle_grades,
+        (
+          ARRAY_AGG(DISTINCT b2.grade ORDER BY b2.grade)
+            FILTER (WHERE b2.grade IS NOT NULL AND b2.grade <> '' AND b2.grade <> 'umum')
+        )[1] AS first_grade
+      FROM target_questions tq
+      LEFT JOIN bundle_items bi2 ON bi2.question_id = tq.question_id
+      LEFT JOIN bundles b2 ON bi2.bundle_id = b2.id AND b2.deleted_at IS NULL
+      GROUP BY tq.question_id
+    )
+    UPDATE questions q
+       SET grades = nqg.bundle_grades,
+           grade = nqg.first_grade
+      FROM new_q_grades nqg
+     WHERE q.id = nqg.question_id
+       AND q.deleted_at IS NULL
+       AND (q.grades IS DISTINCT FROM nqg.bundle_grades OR q.grade IS DISTINCT FROM nqg.first_grade);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_bundle_items_sync_grades ON bundle_items;
+CREATE TRIGGER trg_bundle_items_sync_grades
+  AFTER INSERT OR DELETE OR UPDATE OF bundle_id, question_id ON bundle_items
+  FOR EACH ROW EXECUTE FUNCTION sync_question_grades();
+
+DROP TRIGGER IF EXISTS trg_bundles_sync_grades ON bundles;
+CREATE TRIGGER trg_bundles_sync_grades
+  AFTER UPDATE OF grade, deleted_at ON bundles
+  FOR EACH ROW EXECUTE FUNCTION sync_question_grades();
+
+-- ============================================================================
+-- 8. ADR-0030 — versi baris untuk konkurensi optimistik (If-Match / ETag)
+-- ============================================================================
+-- Setiap UPDATE menaikkan `version` SATU langkah, apa pun yang dikirim klien.
+-- Nilai dari klien sengaja DITIMPA: `version` adalah otoritas server, bukan
+-- masukan. Tanpa ini, klien bisa mengirim `version: 999` dan mematikan proteksi
+-- lost-update yang justru ingin ditegakkan.
+--
+-- KENAPA trigger, bukan kode aplikasi: ada banyak penulis (service, seed,
+-- skrip ingest, SQL manual). Satu UPDATE yang lupa menaikkan version membuat
+-- ETag basi selamanya — proteksi berubah jadi jebakan. Trigger menutup semuanya.
+--
+-- PENGECUALIAN INTERNAL: pembaruan kolom internal/counter seperti usage_count
+-- atau last_request sengaja dilewati agar tidak membatalkan versi klien yang sedang aktif.
+CREATE OR REPLACE FUNCTION bump_version()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF (TG_TABLE_NAME = 'apikey') THEN
+    IF (NEW.name IS NOT DISTINCT FROM OLD.name AND
+        NEW.prefix IS NOT DISTINCT FROM OLD.prefix AND
+        NEW.enabled IS NOT DISTINCT FROM OLD.enabled AND
+        NEW.expires_at IS NOT DISTINCT FROM OLD.expires_at AND
+        NEW.permissions IS NOT DISTINCT FROM OLD.permissions AND
+        NEW.metadata IS NOT DISTINCT FROM OLD.metadata) THEN
+      RETURN NEW;
+    END IF;
+  ELSIF (TG_TABLE_NAME = 'topics') THEN
+    IF (NEW.name IS NOT DISTINCT FROM OLD.name AND
+        NEW.parent_id IS NOT DISTINCT FROM OLD.parent_id AND
+        NEW.description IS NOT DISTINCT FROM OLD.description AND
+        NEW.sort_order IS NOT DISTINCT FROM OLD.sort_order AND
+        NEW.level IS NOT DISTINCT FROM OLD.level AND
+        NEW.is_active IS NOT DISTINCT FROM OLD.is_active) THEN
+      RETURN NEW;
+    END IF;
+  ELSIF (TG_TABLE_NAME = 'tags') THEN
+    IF (NEW.name IS NOT DISTINCT FROM OLD.name AND
+        NEW.description IS NOT DISTINCT FROM OLD.description) THEN
+      RETURN NEW;
+    END IF;
+  END IF;
+
+  NEW.version = OLD.version + 1;
+  RETURN NEW;
+END;
+$$;
+
+DO $$
+DECLARE
+  t text;
+  tables text[] := ARRAY[
+    'questions', 'bundles', 'events', 'media_assets',
+    'sources', 'tags', 'topics', 'apikey'
+  ];
+BEGIN
+  FOREACH t IN ARRAY tables LOOP
+    EXECUTE format(
+      'DROP TRIGGER IF EXISTS %I ON %I',
+      'trg_' || t || '_bump_version', t
+    );
+    EXECUTE format(
+      'CREATE TRIGGER %I BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION bump_version()',
+      'trg_' || t || '_bump_version', t
+    );
+  END LOOP;
+END;
+$$;
+
+
+

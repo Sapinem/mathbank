@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   // Fase 3: sama seperti /api/health — di-rate-limit per IP (publik) karena
   // jalur ini menjalankan checkDbInvariants(). Tidak lewat wrapRoute karena
   // status sukses dinamis 200/503 (lihat komentar di health/route.ts).
-  const rl = checkRateLimit(
+  const rl = await checkRateLimit(
     rateLimitKey(null, getClientIp(req), "api:ready"),
     HEALTH_POLICY,
   );

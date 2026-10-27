@@ -1,6 +1,6 @@
 # KONTRAK-API.md — Kontrak HTTP API MathBank
 
-> **Status:** ✅ berlaku — mencerminkan **48 route handler · 73 method** di `src/app/api` per 2026-10-27
+> **Status:** ✅ berlaku — mencerminkan **51 route handler · 76 method** di `src/app/api` per 2026-10-27
 > (`/api/auth/[...all]` menyumbang `GET`+`POST` lewat Better Auth). Angka hidup dicetak
 > `pnpm lint:authz`; jangan salin ke dokumen lain.
 > **Sumber kebenaran:** `src/lib/api/route-wrapper.ts` (envelope), `src/lib/contracts/*` (skema Zod).
@@ -38,10 +38,10 @@
 | Izin | `authz` per method, dicek via matriks peran×aksi (`permissions.ts`); lihat ADR-0026 |
 | **Traceability** | Setiap respons menyertakan header `X-Request-ID` (diteruskan dari header masuk bila ada). Log error 500 memuat `rid=<id>`. |
 | **Cache** | Semua respons lewat `wrapRoute` menyetel `Cache-Control: no-store` + `Vary: Cookie, Authorization`. Hanya `/img/*` yang publik dan boleh di-cache. |
-| **Idempotensi** | Empat endpoint mutasi (`POST /api/questions`, `POST /api/bundles`, `POST /api/v1/ingest/upload`, `POST /api/v1/ingest/commit`) menerima `Idempotency-Key`. Key sama + **payload sama** (≤60 dtk) → replay (header `Idempotent-Replay: true`). Key sama + **payload beda** → **422 `IDEMPOTENCY_KEY_REUSED`**, bukan replay. Sidik jari = SHA-256(method + path + body mentah). |
+| **Idempotensi** | Empat endpoint mutasi (`POST /api/questions`, `POST /api/bundles`, `POST /api/ingest/upload`, `POST /api/ingest/commit`) menerima `Idempotency-Key`. Key sama + **payload sama** (≤60 dtk) → replay (header `Idempotent-Replay: true`). Key sama + **payload beda** → **422 `IDEMPOTENCY_KEY_REUSED`**, bukan replay. Sidik jari = SHA-256(method + path + body mentah). |
 | **Path aksi** | Operasi non-CRUD memakai sub-path kata kerja (`/duplicate`, `/validate`, `/merge`, `/clean-unused`, `/flag`, `/status`, `/permanent`, `/export/moodle`). Konsekuensi ADR-0022 (larangan Server Actions), **disengaja** — bukan kelalaian REST. |
 | Ganti password | Bila `mustChangePassword`, semua endpoint diblokir **403 `PASSWORD_CHANGE_REQUIRED`** — **kecuali** `/api/auth/me` (agar UI bisa baca status) & endpoint auth Better Auth (ganti password). UI dialihkan ke `/change-password`. |
-| Versi | Inti **v0** (tanpa prefix versi); hanya ingest memakai `/api/v1`. Penyatuan **belum diputuskan** — lihat §8 |
+| Versi | **Tanpa prefix versi** di seluruh API. Ingest kini di `/api/ingest/*`; `/api/v1/ingest/*` tetap hidup sebagai **alias deprecated** sampai 2027-01-25 — lihat §8 |
 
 ---
 
@@ -94,121 +94,124 @@ Validasi menambah `details`:
 <!-- BEGIN:GENERATED:endpoints -->
 ### auth — Autentikasi & identitas (Better Auth).
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `GET` | `/api/auth/{all}` | Better Auth | Handler Better Auth (semua metode) |
-| `POST` | `/api/auth/{all}` | Better Auth | Handler Better Auth (semua metode) |
-| `GET` | `/api/auth/me` | (login) | Identitas aktor aktif |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `GET` | `/api/auth/{all}` | Better Auth | — | Handler Better Auth (semua metode) |
+| `POST` | `/api/auth/{all}` | Better Auth | — | Handler Better Auth (semua metode) |
+| `GET` | `/api/auth/me` | (login) | — | Identitas aktor aktif |
 
 ### questions — Bank soal: baca, tulis, transisi status.
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `GET` | `/api/questions` | `question:view` | Daftar soal (filter + paginasi) |
-| `POST` | `/api/questions` | `question:create` | Buat soal baru |
-| `DELETE` | `/api/questions/{id}` | service | Hapus lunak soal |
-| `GET` | `/api/questions/{id}` | `question:view` | Detail soal + opsi |
-| `PATCH` | `/api/questions/{id}` | service | Perbarui soal |
-| `PATCH` | `/api/questions/{id}/flag` | service | Tandai/lepas 'perlu perhatian' |
-| `DELETE` | `/api/questions/{id}/permanent` | service | Hapus permanen soal |
-| `PATCH` | `/api/questions/{id}/status` | service | Ubah status soal (FSM) |
-| `POST` | `/api/questions/batch` | service | Aksi massal soal (maks 200 id) |
-| `GET` | `/api/stats` | `question:view` | Statistik dasbor |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `GET` | `/api/questions` | `question:view` | — | Daftar soal (filter + paginasi) |
+| `POST` | `/api/questions` | `question:create` | — | Buat soal baru |
+| `DELETE` | `/api/questions/{id}` | service | If-Match | Hapus lunak soal |
+| `GET` | `/api/questions/{id}` | `question:view` | ETag | Detail soal + opsi |
+| `PATCH` | `/api/questions/{id}` | service | If-Match | Perbarui soal |
+| `PATCH` | `/api/questions/{id}/flag` | service | If-Match | Tandai/lepas 'perlu perhatian' |
+| `DELETE` | `/api/questions/{id}/permanent` | service | If-Match | Hapus permanen soal |
+| `PATCH` | `/api/questions/{id}/status` | service | If-Match | Ubah status soal (FSM) |
+| `POST` | `/api/questions/batch` | service | — | Aksi massal soal (maks 200 id) |
+| `GET` | `/api/stats` | `question:view` | — | Statistik dasbor |
 
 ### bundles — Paket soal, item, ekspor Moodle.
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `GET` | `/api/bundles` | `question:view` | Daftar paket soal |
-| `POST` | `/api/bundles` | service (gerbang `question:view`) | Buat paket soal |
-| `DELETE` | `/api/bundles/{id}` | service | Arsipkan paket (hapus lunak) |
-| `GET` | `/api/bundles/{id}` | `question:view` | Detail paket + item berurutan |
-| `PATCH` | `/api/bundles/{id}` | service | Ubah metadata paket |
-| `POST` | `/api/bundles/{id}/duplicate` | service (gerbang `question:view`) | Duplikasi paket |
-| `POST` | `/api/bundles/{id}/export/moodle` | service | Ekspor paket ke folder GitSync |
-| `GET` | `/api/bundles/{id}/items` | `question:view` | Item paket berurutan + soal tertanam |
-| `POST` | `/api/bundles/{id}/items` | service (gerbang `question:view`) | Tambah soal ke paket |
-| `PUT` | `/api/bundles/{id}/items` | service (gerbang `question:view`) | Susun ulang urutan item (atomik) |
-| `DELETE` | `/api/bundles/{id}/items/{itemId}` | service (gerbang `question:view`) | Lepas soal dari paket |
-| `GET` | `/api/bundles/{id}/validate` | `question:view` | Pratinjau kesiapan ekspor |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `GET` | `/api/bundles` | `question:view` | — | Daftar paket soal |
+| `POST` | `/api/bundles` | service (gerbang `question:view`) | — | Buat paket soal |
+| `DELETE` | `/api/bundles/{id}` | service | If-Match | Arsipkan paket (hapus lunak) |
+| `GET` | `/api/bundles/{id}` | `question:view` | ETag | Detail paket + item berurutan |
+| `PATCH` | `/api/bundles/{id}` | service | If-Match | Ubah metadata paket |
+| `POST` | `/api/bundles/{id}/duplicate` | service (gerbang `question:view`) | — | Duplikasi paket |
+| `POST` | `/api/bundles/{id}/export/moodle` | service | — | Ekspor paket ke folder GitSync |
+| `GET` | `/api/bundles/{id}/items` | `question:view` | — | Item paket berurutan + soal tertanam |
+| `POST` | `/api/bundles/{id}/items` | service (gerbang `question:view`) | If-Match | Tambah soal ke paket |
+| `PUT` | `/api/bundles/{id}/items` | service (gerbang `question:view`) | If-Match | Susun ulang urutan item (atomik) |
+| `DELETE` | `/api/bundles/{id}/items/{itemId}` | service (gerbang `question:view`) | If-Match | Lepas soal dari paket |
+| `GET` | `/api/bundles/{id}/validate` | `question:view` | — | Pratinjau kesiapan ekspor |
 
 ### taxonomy — Topik, label, sumber, event, jenjang.
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `GET` | `/api/events` | `question:view` | Daftar event ujian |
-| `POST` | `/api/events` | `reference:manage` | Buat event |
-| `DELETE` | `/api/events/{id}` | `reference:manage` | Hapus event |
-| `PATCH` | `/api/events/{id}` | `reference:manage` | Ubah event |
-| `GET` | `/api/grades` | `question:view` | Daftar jenjang |
-| `GET` | `/api/sources` | `question:view` | Daftar sumber |
-| `POST` | `/api/sources` | `reference:manage` | Buat sumber |
-| `DELETE` | `/api/sources/{id}` | `reference:manage` | Hapus sumber |
-| `PATCH` | `/api/sources/{id}` | `reference:manage` | Ubah sumber |
-| `GET` | `/api/tags` | `question:view` | Daftar label |
-| `POST` | `/api/tags` | `taxonomy:manage` | Buat label |
-| `DELETE` | `/api/tags/{id}` | `taxonomy:manage` | Hapus label |
-| `PATCH` | `/api/tags/{id}` | `taxonomy:manage` | Ubah label |
-| `POST` | `/api/tags/clean-unused` | `taxonomy:manage` | Hapus label tanpa pemakaian |
-| `POST` | `/api/tags/merge` | `taxonomy:manage` | Gabung label |
-| `GET` | `/api/topics` | `question:view` | Daftar topik |
-| `POST` | `/api/topics` | `taxonomy:manage` | Buat topik |
-| `DELETE` | `/api/topics/{id}` | `taxonomy:manage` | Hapus topik |
-| `GET` | `/api/topics/{id}` | `question:view` | Detail topik |
-| `PATCH` | `/api/topics/{id}` | `taxonomy:manage` | Ubah/pindah topik (propagasi level) |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `GET` | `/api/events` | `question:view` | — | Daftar event ujian |
+| `POST` | `/api/events` | `reference:manage` | — | Buat event |
+| `DELETE` | `/api/events/{id}` | `reference:manage` | If-Match | Hapus event |
+| `PATCH` | `/api/events/{id}` | `reference:manage` | If-Match | Ubah event |
+| `GET` | `/api/grades` | `question:view` | — | Daftar jenjang |
+| `GET` | `/api/sources` | `question:view` | — | Daftar sumber |
+| `POST` | `/api/sources` | `reference:manage` | — | Buat sumber |
+| `DELETE` | `/api/sources/{id}` | `reference:manage` | If-Match | Hapus sumber |
+| `PATCH` | `/api/sources/{id}` | `reference:manage` | If-Match | Ubah sumber |
+| `GET` | `/api/tags` | `question:view` | — | Daftar label |
+| `POST` | `/api/tags` | `taxonomy:manage` | — | Buat label |
+| `DELETE` | `/api/tags/{id}` | `taxonomy:manage` | If-Match | Hapus label |
+| `PATCH` | `/api/tags/{id}` | `taxonomy:manage` | If-Match | Ubah label |
+| `POST` | `/api/tags/clean-unused` | `taxonomy:manage` | — | Hapus label tanpa pemakaian |
+| `POST` | `/api/tags/merge` | `taxonomy:manage` | — | Gabung label |
+| `GET` | `/api/topics` | `question:view` | — | Daftar topik |
+| `POST` | `/api/topics` | `taxonomy:manage` | — | Buat topik |
+| `DELETE` | `/api/topics/{id}` | `taxonomy:manage` | If-Match | Hapus topik |
+| `GET` | `/api/topics/{id}` | `question:view` | ETag | Detail topik |
+| `PATCH` | `/api/topics/{id}` | `taxonomy:manage` | If-Match | Ubah/pindah topik (propagasi level) |
 
 ### media — Aset media.
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `GET` | `/api/media` | `question:view` | Daftar aset media |
-| `DELETE` | `/api/media/{shortId}` | `media:manage` | Hapus aset + berkas fisik |
-| `GET` | `/api/media/{shortId}` | `question:view` | Detail aset + soal pemakai |
-| `PATCH` | `/api/media/{shortId}` | `media:manage` | Ubah metadata aset |
-| `GET` | `/api/media/orphans` | `media:manage` | Aset tanpa pemakai |
-| `POST` | `/api/media/upload` | `media:manage` | Unggah aset media (multipart) |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `GET` | `/api/media` | `question:view` | — | Daftar aset media |
+| `DELETE` | `/api/media/{shortId}` | `media:manage` | If-Match | Hapus aset + berkas fisik |
+| `GET` | `/api/media/{shortId}` | `question:view` | ETag | Detail aset + soal pemakai |
+| `PATCH` | `/api/media/{shortId}` | `media:manage` | If-Match | Ubah metadata aset |
+| `GET` | `/api/media/orphans` | `media:manage` | — | Aset tanpa pemakai |
+| `POST` | `/api/media/upload` | `media:manage` | — | Unggah aset media (multipart) |
 
 ### ai — Embedding & enrichment pedagogis.
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `POST` | `/api/ai/embed` | `question:view` | Hitung embedding soal |
-| `POST` | `/api/ai/enrich` | `question:view` | Enrichment pedagogis (satu atau massal) |
-| `GET` | `/api/ai/health` | `settings:manage` | Status layanan LLM & embedding |
-| `GET` | `/api/ai/models` | `settings:manage` | Daftar model yang tersedia |
-| `GET` | `/api/ai/settings` | `settings:manage` | Baca konfigurasi AI |
-| `POST` | `/api/ai/settings` | `settings:manage` | Simpan konfigurasi AI |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `POST` | `/api/ai/embed` | `question:view` | — | Hitung embedding soal |
+| `POST` | `/api/ai/enrich` | `question:view` | — | Enrichment pedagogis (satu atau massal) |
+| `GET` | `/api/ai/health` | `settings:manage` | — | Status layanan LLM & embedding |
+| `GET` | `/api/ai/models` | `settings:manage` | — | Daftar model yang tersedia |
+| `GET` | `/api/ai/settings` | `settings:manage` | — | Baca konfigurasi AI |
+| `POST` | `/api/ai/settings` | `settings:manage` | — | Simpan konfigurasi AI |
 
 ### ingest — Antrean ingest naskah (wajah mesin).
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `POST` | `/api/v1/ingest/commit` | `question:create` | Commit antrean → soal draft |
-| `GET` | `/api/v1/ingest/queue` | `ingest:queue:read` | Antrean ingest + ringkasan status |
-| `POST` | `/api/v1/ingest/upload` | `question:create` | Unggah naskah ke antrean ingest |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `POST` | `/api/ingest/commit` | `question:create` | — | Commit antrean → soal draft |
+| `GET` | `/api/ingest/queue` | `ingest:queue:read` | — | Antrean ingest + ringkasan status |
+| `POST` | `/api/ingest/upload` | `question:create` | — | Unggah naskah ke antrean ingest |
+| `POST` | `/api/v1/ingest/commit` | API key | — | Alias deprecated: commit antrean menjadi soal draft |
+| `GET` | `/api/v1/ingest/queue` | API key | — | Alias deprecated: antrean ingest + ringkasan status |
+| `POST` | `/api/v1/ingest/upload` | API key | — | Alias deprecated: unggah naskah ke antrean |
 
 ### system — Pengaturan, API key agen, dev.
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `GET` | `/api/dev/demo-status` | publik | Status login demo |
-| `POST` | `/api/dev/quick-login` | publik | Login cepat akun demo |
-| `DELETE` | `/api/mcp` | publik | Akhiri sesi MCP (405 pada mode stateless) |
-| `GET` | `/api/mcp` | publik | Metode MCP tak dipakai (405) |
-| `POST` | `/api/mcp` | API key | Transport MCP (Streamable HTTP, stateless) |
-| `GET` | `/api/settings` | `settings:manage` | Baca pengaturan aplikasi |
-| `PATCH` | `/api/settings` | `settings:manage` | Ubah pengaturan aplikasi |
-| `GET` | `/api/system/agent-keys` | `user:manage` | Daftar API key agen |
-| `POST` | `/api/system/agent-keys` | `user:manage` | Buat API key agen (rahasia sekali) |
-| `DELETE` | `/api/system/agent-keys/{id}` | `user:manage` | Cabut API key agen |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `GET` | `/api/dev/demo-status` | publik | — | Status login demo |
+| `POST` | `/api/dev/quick-login` | publik | — | Login cepat akun demo |
+| `DELETE` | `/api/mcp` | publik | — | Akhiri sesi MCP (405 pada mode stateless) |
+| `GET` | `/api/mcp` | publik | — | Metode MCP tak dipakai (405) |
+| `POST` | `/api/mcp` | API key | — | Transport MCP (Streamable HTTP, stateless) |
+| `GET` | `/api/settings` | `settings:manage` | — | Baca pengaturan aplikasi |
+| `PATCH` | `/api/settings` | `settings:manage` | — | Ubah pengaturan aplikasi |
+| `GET` | `/api/system/agent-keys` | `user:manage` | — | Daftar API key agen |
+| `POST` | `/api/system/agent-keys` | `user:manage` | — | Buat API key agen (rahasia sekali) |
+| `DELETE` | `/api/system/agent-keys/{id}` | `user:manage` | If-Match | Cabut API key agen |
 
 ### observability — Health, readiness, metrik.
 
-| Method | Path | Izin | Ringkasan |
-|--------|------|:----:|-----------|
-| `GET` | `/api/health` | publik | Kesehatan aplikasi (liveness + readiness) |
-| `GET` | `/api/metrics` | token | Metrik runtime |
-| `GET` | `/api/ready` | publik | Readiness probe |
+| Method | Path | Izin | Versi | Ringkasan |
+|--------|------|:----:|:-----:|-----------|
+| `GET` | `/api/health` | publik | — | Kesehatan aplikasi (liveness + readiness) |
+| `GET` | `/api/metrics` | token | — | Metrik runtime |
+| `GET` | `/api/ready` | publik | — | Readiness probe |
 <!-- END:GENERATED:endpoints -->
 
 ---
@@ -259,32 +262,72 @@ Ditegakkan sebagai **guard service** (`assertReady()` di `fsm/question-fsm.ts`),
 
 ## 7. Rate Limiting & Keamanan
 
-- **Rate limiting AKTIF**: token bucket **in-memory** per aktor (fallback IP), diterapkan di `wrapRoute` via opsi `rateLimit`. Kelebihan → **429** + header `Retry-After`.
+- **Rate limiting AKTIF**: token bucket per aktor (fallback IP), diterapkan di `wrapRoute` via opsi `rateLimit`. Kelebihan → **429** + header `Retry-After`.
   - **Cakupan terukur: 64/64 pemanggilan `wrapRoute` mengaktifkan `rateLimit`** (tidak ada method yang lolos). `/api/mcp` memakai kebijakan sendiri (60 burst, 2/detik).
   - Kebijakan: default 60 burst / ~60 per menit; mutasi lebih ketat (`POST /api/questions` 20 burst, `DELETE` 10 burst); health 120 burst.
-  - Implementasi: `src/lib/api/rate-limit.ts`; store **siap-swap** ke Redis saat multi-instance. **Batas saat ini per-proses** — dengan >1 instance, batas efektif = batas × jumlah instance.
+  - Implementasi: `src/lib/api/rate-limit.ts` (kontrak) + `rate-limit-store-pg.ts` (**store PostgreSQL bersama**, ADR-0029). Bucket hidup di tabel `rate_limit_buckets` dan dihitung atomik dalam satu UPSERT, jadi batas berlaku **lintas instance** dan selamat dari restart.
+  - **Fail-open**: bila store tak terjangkau, permintaan diizinkan + kegagalan dicatat. Rate limit pagar tambahan, bukan pagar keamanan.
+- **Idempotensi** (`Idempotency-Key`) memakai store bersama `idempotency_keys` dengan klaim atomik (`INSERT … ON CONFLICT DO NOTHING`). **Fail-closed**: store mati → **503 `IDEMPOTENCY_UNAVAILABLE`**, karena duplikat tak bisa dibuktikan.
 - API key di-hash; rahasia tak pernah masuk log.
 - **Proyeksi kolom (S3 — ✅)**: respons soal **tidak pernah** memuat `embedding*`/`aiTagged*` (internal). `answer_key` & `options.is_correct` hanya untuk viewer berwenang (**admin/teacher/reviewer**); `agent`/`machine` tak pernah. Ditegakkan di `src/lib/db/projections/question.ts` — data tak meninggalkan server. Lihat `KEAMANAN.md` §8b.
 
 ---
 
-## 8. Versioning (BELUM DIPUTUSKAN)
+## 9. Konkurensi Optimistik — `ETag` & `If-Match` (ADR-0030)
 
-Keadaan sekarang **dua konvensi hidup bersamaan**:
+Setiap mutasi baris yang sudah ada **wajib** menyertakan versi yang dibaca. Tanpa
+itu, dua penyunting bersamaan saling menimpa tanpa jejak.
 
-- Inti aplikasi: **v0** implisit (`/api/questions`, `/api/bundles`, …).
-- Ingest: **v1** eksplisit (`/api/v1/ingest/*`) — dipakai klien ingest eksternal.
+**Alur klien:**
 
-Dua pilihan yang sama-sama sah, dan **belum ada yang dipilih**:
+1. `GET /api/questions/{id}` → respons memuat `ETag: "3"` dan `data.version: 3`.
+2. `PATCH /api/questions/{id}` dengan header `If-Match: "3"`.
+3. Bila 412 → muat ulang (`GET`), gabungkan perubahan, ulangi dengan ETag baru.
 
-1. **Naikkan semua ke `/api/v1`** — konsisten, tapi memecah klien yang sudah ada; butuh periode transisi + header `Deprecation`.
-2. **Cabut prefix `v1` dari ingest** — konsisten ke arah v0, tapi memecah klien ingest.
+| Keadaan | Status | `error.code` |
+|---|---|---|
+| `If-Match` tidak dikirim | **428** | `PRECONDITION_REQUIRED` |
+| `If-Match` tidak cocok | **412** | `PRECONDITION_FAILED` (+ `details.currentVersion`) |
+| Bentuk header tak dikenal / `W/"3"` | **400** | `INVALID_IF_MATCH` |
 
-Sampai keputusan diambil: **jangan menambah prefix versi baru** dan **jangan mengganti path yang sudah dipakai**. Perubahan bentuk respons hanya lewat penambahan field opsional.
+- `If-Match: *` diterima — berarti "apa pun versinya"; berguna untuk klien yang
+  memang tidak peduli isi sebelumnya. `W/"3"` **ditolak**: RFC 9110 §13.1.1
+  mensyaratkan perbandingan kuat untuk `If-Match`.
+- **21 operasi** menuntut `If-Match` (kolom *Versi* di §4). Dikecualikan:
+  `DELETE /api/mcp` (tak menyentuh baris) dan `PATCH /api/settings` (singleton).
+- **4 GET** memancarkan `ETag`: `questions/{id}`, `bundles/{id}`, `topics/{id}`,
+  `media/{shortId}`.
+- `version` dinaikkan **trigger DB**, bukan kode aplikasi, sehingga penulis mana pun
+  (service, seed, SQL manual) ikut menjaga invarian.
 
 ---
 
-## 9. Rujukan
+## 10. Versioning (DIPUTUSKAN 2026-10-27)
+
+**Keputusan: API tidak memakai prefix versi.** ADR-0028 mencabut prefix `v1` dari
+jalur ingest karena hanya tiga endpoint yang berversi sementara seluruh API lain
+tidak — perbedaan itu tidak memberi manfaat dan menyesatkan klien.
+
+| Jalur | Status |
+|---|---|
+| `/api/ingest/{upload,queue,commit}` | **kanonik** |
+| `/api/v1/ingest/{upload,queue,commit}` | **alias deprecated**, berakhir **2027-01-25** (90 hari) |
+
+Alias mendelegasikan ke handler kanonik yang sama (bukan salinan), lalu menambahkan:
+
+```http
+Deprecation: true
+Sunset: Mon, 25 Jan 2027 00:00:00 GMT
+Link: </api/ingest>; rel="successor-version"
+```
+
+Setelah 2027-01-25 alias dihapus tanpa pengganti. **Jangan menambah prefix versi
+baru**: perubahan yang memutus klien diselesaikan lewat masa transisi + header
+deprecation, bukan lewat `/v2`.
+
+---
+
+## 11. Rujukan
 
 - Envelope & guard: `src/lib/api/route-wrapper.ts`
 - Skema: `src/lib/contracts/question.ts`
@@ -294,6 +337,9 @@ Sampai keputusan diambil: **jangan menambah prefix versi baru** dan **jangan men
 - Kontrak mesin: `src/lib/api/openapi/spec.ts` (penyusun murni), `src/lib/api/openapi/registry.ts`
   (ringkasan/tag/skema respons), `scripts/generate-openapi.ts` (`pnpm openapi:generate`,
   `pnpm openapi:check`), `public/openapi.json` (artefak, disajikan di `/openapi.json`), ADR-0027
+- Konkurensi optimistik: `src/lib/api/version.ts` (parsing & galat),
+  `src/lib/db/optimistic.ts` (`versionPredicate`), `drizzle/manual/db_safety.sql` §8
+  (trigger `bump_version`), ADR-0030
 - Tes: `src/lib/api/route-wrapper.test.ts`, `src/lib/api/authz-coverage.test.ts`,
   `src/lib/api/openapi/registry.test.ts`,
   `src/lib/api/ingest-authz.db.test.ts`, `src/lib/api/reference-authz.db.test.ts`,

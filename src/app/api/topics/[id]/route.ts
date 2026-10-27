@@ -23,6 +23,7 @@ export const GET = wrapRoute({
   authz: { kind: "route", permission: "question:view" },
   params: paramsSchema,
   query: emptyQuerySchema,
+  etagFrom: (t: { version: number }) => t.version,
   handler: async ({ params }) => {
     const t = await getTopic(params.id);
     if (!t) throw new NotFoundError("Topik tidak ditemukan.");
@@ -36,7 +37,9 @@ export const PATCH = wrapRoute({
   authz: { kind: "route", permission: "taxonomy:manage" },
   params: paramsSchema,
   body: patchSchema,
-  handler: async ({ params, body, actor }) => updateTopic(params.id, body, actor),
+  ifMatch: true,
+  handler: async ({ params, body, actor, expectedVersion }) =>
+    updateTopic(params.id, body, actor, expectedVersion),
 });
 
 /** DELETE /api/topics/[id] — hapus (tolak bila ada anak / dipakai). */
@@ -45,8 +48,9 @@ export const DELETE = wrapRoute({
   authz: { kind: "route", permission: "taxonomy:manage" },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ params, actor }) => {
-    await deleteTopic(params.id, actor);
+  ifMatch: true,
+  handler: async ({ params, actor, expectedVersion }) => {
+    await deleteTopic(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

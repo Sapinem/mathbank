@@ -1,16 +1,15 @@
 /**
- * Proteksi idempotensi request (`Idempotency-Key`) — #4 enterprise.
+ * Proteksi idempotensi request (`Idempotency-Key`) — #4 enterprise, ADR-0029.
  *
- * Desain (sejalan dengan `rate-limit.ts`):
- *  - **Interface `IdempotencyStore`** → in-memory (`MemoryStore`) sekarang;
- *    **siap-swap** ke Redis saat multi-instance (kunci harus lintas proses).
- *  - Alur: klien mengirim header `Idempotency-Key` (UUID) pada mutasi
- *    `POST`/`PATCH`. Bila key **sama** masuk lagi dalam jendela TTL →
- *    kembalikan respons yang **disimpan** (tanpa menjalankan handler lagi) →
- *    mencegah double-submit (jaringan lambat / klik ganda).
- *  - **Nol dependensi** (janji "install saat perlu").
- *
- * Lihat: docs/audit/CATATAN-PENYEMPURNAAN-ENTERPRISE.md §4.
+ * Desain:
+ *  - **Interface `IdempotencyStore`** (async) → `MemoryStore` untuk tes/dev tanpa
+ *    DB, `PgIdempotencyStore` (`idempotency-store-pg.ts`) untuk server.
+ *  - Alur: klien mengirim header `Idempotency-Key` pada mutasi. Key sama dalam
+ *    jendela TTL → respons tersimpan dikembalikan tanpa menjalankan handler.
+ *  - **Klaim atomik**: `claim()` adalah satu operasi (bukan baca-lalu-tulis),
+ *    sehingga dua permintaan paralel dengan key sama tak bisa dua-duanya lolos.
+ *  - **Fail-closed**: bila store tak bisa dihubungi, permintaan DITOLAK. Melepas
+ *    proteksi diam-diam akan menjalankan mutasi dua kali — persis yang dicegah.
  */
 
 /** Entri respons tersimpan. */
@@ -29,51 +28,73 @@ interface Entry {
   inFlight: boolean;
 }
 
-/** Kontrak penyimpanan — ganti implementasi untuk Redis nanti. */
+/** Kontrak penyimpanan — implementasi memori (tes) & PostgreSQL (server). */
 export interface IdempotencyStore {
-  /** Ambil entri yang masih berlaku untuk `key` (atau null). */
-  get(key: string): Entry | null;
-  /** Simpan hasil respons untuk `key` selama `ttlMs`. */
-  save(key: string, entry: Entry): void;
-  /** Tandai `key` sedang diproses (in-flight) selama `ttlMs`. */
-  markInFlight(key: string, fingerprint: string, ttlMs: number): void;
+  /**
+   * Klaim `key` untuk permintaan ini — **atomik**.
+   * Mengembalikan keputusan yang sama seperti `checkIdempotency` dulu.
+   */
+  claim(key: string, fingerprint: string, ttlMs: number): Promise<IdempotencyCheck>;
+  /** Simpan hasil agar request berikutnya dengan key sama di-replay. */
+  remember(
+    key: string,
+    status: number,
+    body: unknown,
+    fingerprint: string,
+    ttlMs: number,
+  ): Promise<void>;
   /** Hapus entri `key` (mis. saat handler gagal). */
-  forget(key: string): void;
+  forget(key: string): Promise<void>;
   /** Bersihkan entri kedaluwarsa. */
-  prune?(now: number): void;
+  prune?(now: number): Promise<void> | void;
   /** Reset semua (tes). */
-  clear?(): void;
+  clear?(): Promise<void> | void;
 }
 
-/** Implementasi in-memory sederhana. */
+/** Hasil pemeriksaan idempotensi untuk sebuah key. */
+export type IdempotencyCheck =
+  | { kind: "fresh" } // belum pernah → jalankan handler
+  | { kind: "replay"; status: number; body: unknown } // sudah ada → pakai ulang
+  | { kind: "in-flight" } // sedang diproses → tolak sementara
+  | { kind: "mismatch" }; // key sama, payload beda → 422 (jangan replay)
+
+/** TTL bawaan: 60 detik (sesuai catatan enterprise). */
+export const DEFAULT_TTL_MS = 60_000;
+
+/** Implementasi in-memory — satu proses, cukup untuk tes & dev tanpa DB. */
 export class MemoryStore implements IdempotencyStore {
   private map = new Map<string, Entry>();
 
-  get(key: string): Entry | null {
-    const e = this.map.get(key);
-    if (!e) return null;
-    if (e.expiresAt <= Date.now()) {
-      this.map.delete(key);
-      return null;
+  async claim(key: string, fingerprint: string, ttlMs: number): Promise<IdempotencyCheck> {
+    const now = Date.now();
+    const existing = this.map.get(key);
+
+    if (!existing || existing.expiresAt <= now) {
+      this.map.set(key, { status: 0, body: null, fingerprint, expiresAt: now + ttlMs, inFlight: true });
+      return { kind: "fresh" };
     }
-    return e;
+    if (existing.inFlight) return { kind: "in-flight" };
+    if (existing.fingerprint !== fingerprint) return { kind: "mismatch" };
+    return { kind: "replay", status: existing.status, body: existing.body };
   }
 
-  save(key: string, entry: Entry): void {
-    this.map.set(key, { ...entry, inFlight: false });
-  }
-
-  markInFlight(key: string, fingerprint: string, ttlMs: number): void {
+  async remember(
+    key: string,
+    status: number,
+    body: unknown,
+    fingerprint: string,
+    ttlMs: number,
+  ): Promise<void> {
     this.map.set(key, {
-      status: 0,
-      body: null,
+      status,
+      body,
       fingerprint,
       expiresAt: Date.now() + ttlMs,
-      inFlight: true,
+      inFlight: false,
     });
   }
 
-  forget(key: string): void {
+  async forget(key: string): Promise<void> {
     this.map.delete(key);
   }
 
@@ -94,7 +115,7 @@ export class MemoryStore implements IdempotencyStore {
 
 let store: IdempotencyStore = new MemoryStore();
 
-/** Ganti implementasi store (mis. Redis). */
+/** Ganti implementasi store (dipanggil bootstrap server, ADR-0029). */
 export function setIdempotencyStore(next: IdempotencyStore): void {
   store = next;
 }
@@ -104,37 +125,13 @@ export function getIdempotencyStore(): IdempotencyStore {
   return store;
 }
 
-/** Hasil pemeriksaan idempotensi untuk sebuah key. */
-export type IdempotencyCheck =
-  | { kind: "fresh" } // belum pernah → jalankan handler
-  | { kind: "replay"; status: number; body: unknown } // sudah ada → pakai ulang
-  | { kind: "in-flight" } // sedang diproses → tolak sementara
-  | { kind: "mismatch" }; // key sama, payload beda → 422 (jangan replay)
-
-/** TTL bawaan: 60 detik (sesuai catatan enterprise). */
-export const DEFAULT_TTL_MS = 60_000;
-
-/**
- * Periksa key idempotensi.
- * - Bila belum ada → tandai in-flight & kembalikan `fresh`.
- * - Bila sudah ada (selesai) dengan sidik jari SAMA → `replay`.
- * - Bila sudah ada dengan sidik jari BEDA → `mismatch` (key dipakai ulang
- *   untuk payload lain; me-replay akan mengembalikan resource yang salah).
- * - Bila sedang diproses → `in-flight`.
- */
+/** Klaim key idempotensi (atomik di store). */
 export function checkIdempotency(
   key: string,
   fingerprint: string,
   ttlMs = DEFAULT_TTL_MS,
-): IdempotencyCheck {
-  const existing = store.get(key);
-  if (!existing) {
-    store.markInFlight(key, fingerprint, ttlMs);
-    return { kind: "fresh" };
-  }
-  if (existing.inFlight) return { kind: "in-flight" };
-  if (existing.fingerprint !== fingerprint) return { kind: "mismatch" };
-  return { kind: "replay", status: existing.status, body: existing.body };
+): Promise<IdempotencyCheck> {
+  return store.claim(key, fingerprint, ttlMs);
 }
 
 /** Simpan hasil agar request berikutnya dengan key sama di-replay. */
@@ -144,12 +141,6 @@ export function rememberResponse(
   body: unknown,
   fingerprint: string,
   ttlMs = DEFAULT_TTL_MS,
-): void {
-  store.save(key, {
-    status,
-    body,
-    fingerprint,
-    expiresAt: Date.now() + ttlMs,
-    inFlight: false,
-  });
+): Promise<void> {
+  return store.remember(key, status, body, fingerprint, ttlMs);
 }

@@ -18,6 +18,7 @@ export const GET = wrapRoute({
   authz: { kind: "route", permission: "question:view" },
   params: paramsSchema,
   query: emptyQuerySchema,
+  etagFrom: (b: { version: number }) => b.version,
   handler: async ({ params, actor }) => {
     const [b, items] = await Promise.all([
       getBundle(params.id),
@@ -43,7 +44,9 @@ export const PATCH = wrapRoute({
   },
   params: paramsSchema,
   body: updateBundleSchema,
-  handler: async ({ params, body, actor }) => updateBundle(params.id, body, actor),
+  ifMatch: true,
+  handler: async ({ params, body, actor, expectedVersion }) =>
+    updateBundle(params.id, body, actor, expectedVersion),
 });
 
 /**
@@ -59,8 +62,9 @@ export const DELETE = wrapRoute({
   },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ params, actor }) => {
-    await archiveBundle(params.id, actor);
+  ifMatch: true,
+  handler: async ({ params, actor, expectedVersion }) => {
+    await archiveBundle(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

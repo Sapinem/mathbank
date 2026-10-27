@@ -19,6 +19,9 @@ import { recordAudit } from "./audit";
 import type { Actor } from "@/lib/auth/actor";
 import { buildTree, type TopicNode, type TopicTree, resolveLevel, isSelfOrDescendant, descendantIds, subtreeMaxDepth, type TreeEdgeWithLevel, TopicParentNotFoundError, TopicMaxDepthError } from "@/lib/taxonomy/tree";
 
+import { versionPredicate } from "@/lib/db/optimistic";
+import { throwVersionedWriteMiss } from "./versioned";
+
 export type { TopicNode, TopicTree };
 export { buildTree };
 
@@ -31,6 +34,7 @@ export interface TopicInput {
 
 const COLS = {
   id: topics.id,
+  version: topics.version,
   name: topics.name,
   parentId: topics.parentId,
   level: topics.level,
@@ -104,6 +108,8 @@ export async function updateTopic(
   id: string,
   input: Partial<TopicInput>,
   actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<TopicNode> {
   assertCan(actor, "taxonomy:manage");
   const snapshot = await topicSnapshot();
@@ -160,8 +166,11 @@ export async function updateTopic(
         const updated = await tx
           .update(topics)
           .set({ ...patch, updatedAt: new Date() })
-          .where(eq(topics.id, id))
+          .where(versionPredicate(topics, id, expectedVersion ?? "*"))
           .returning(COLS);
+        if (updated.length === 0) {
+          return throwVersionedWriteMiss(topics, id, expectedVersion, "Topik tidak ditemukan.", { dbOrTx: tx });
+        }
         if (descendantIdsResolved.length > 0) {
           // level + delta untuk SEMUA keturunan (tetap konsisten dgn induk baru).
           await tx
@@ -191,7 +200,12 @@ export async function updateTopic(
 /**
  * Hapus topik. Ditolak bila punya anak atau dipakai soal (RESTRICT) — pesan jelas.
  */
-export async function deleteTopic(id: string, actor: Actor): Promise<void> {
+export async function deleteTopic(
+  id: string,
+  actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<void> {
   assertCan(actor, "taxonomy:manage");
   const existing = await getTopic(id);
   if (!existing) throw new NotFoundError("Topik tidak ditemukan.");
@@ -217,7 +231,13 @@ export async function deleteTopic(id: string, actor: Actor): Promise<void> {
     );
   }
 
-  await db.delete(topics).where(eq(topics.id, id));
+  const removed = await db
+    .delete(topics)
+    .where(versionPredicate(topics, id, expectedVersion ?? "*"))
+    .returning({ id: topics.id });
+  if (removed.length === 0) {
+    return throwVersionedWriteMiss(topics, id, expectedVersion, "Topik tidak ditemukan.");
+  }
   await recordAudit({
     entityType: "topic",
     entityId: id,

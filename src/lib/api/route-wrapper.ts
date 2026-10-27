@@ -28,6 +28,12 @@ import {
   getIdempotencyStore,
 } from "./idempotency";
 import type { ActorFor, Authz } from "./authz";
+import {
+  etagOf,
+  parseIfMatch,
+  PreconditionFailedError,
+  PreconditionRequiredError,
+} from "./version";
 import { log } from "@/lib/telemetry/logger";
 import { recordRequest, normalizeRoutePath } from "@/lib/telemetry/metrics";
 import { getClientIp } from "./client-ip";
@@ -50,6 +56,10 @@ export interface DeclaredRoute {
   params?: ZodType;
   status: number;
   idempotent: boolean;
+  /** Route menuntut `If-Match` (ADR-0030) → generator memancarkan parameter + 412/428. */
+  ifMatch: boolean;
+  /** Route memancarkan `ETag` dari `version` hasil handler. */
+  etag: boolean;
 }
 
 /** Ambil deklarasi yang ditempel `wrapRoute`; `null` bila bukan route handler. */
@@ -69,16 +79,37 @@ export function routeDeclarationOf(handler: unknown): DeclaredRoute | null {
  *   error  → { error: { code, message } }
  */
 
-export interface RouteContext<TQuery, TBody, TParams = Record<string, string>, TAuthz extends Authz = Authz> {
+export interface RouteContext<
+  TQuery,
+  TBody,
+  TParams = Record<string, string>,
+  TAuthz extends Authz = Authz,
+  TIfMatch extends boolean = false,
+> {
   actor: ActorFor<TAuthz>;
   query: TQuery;
   body: TBody;
   req: Request;
   /** Parameter rute dinamis, mis. { id } untuk /api/questions/[id]. */
   params: TParams;
+  /**
+   * Versi yang diminta klien lewat `If-Match` (ADR-0030).
+   *
+   * Tipenya menyempit: pada route ber-`ifMatch: true` nilainya SELALU terisi
+   * (428 sudah dilempar bila header absen), sehingga service tak perlu
+   * memeriksa `undefined` — dan tak bisa lupa memeriksanya.
+   */
+  expectedVersion: TIfMatch extends true ? number | "*" : undefined;
 }
 
-export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz> {
+export interface RouteOptions<
+  TQuery,
+  TBody,
+  TResult,
+  TParams = Record<string, string>,
+  TAuthz extends Authz = Authz,
+  TIfMatch extends boolean = false,
+> {
   /**
    * **Wajib.** Deklarasi otorisasi: publik / login saja / gerbang route /
    * ditegakkan di service. Lihat `./authz.ts` untuk alasan & aturannya.
@@ -91,7 +122,9 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
   /** Skema parameter rute URL dinamis (Zod), mis. { id: z.string().uuid() }. */
   params?: ZodType<TParams>;
   /** Handler inti. */
-  handler: (ctx: RouteContext<TQuery, TBody, TParams, TAuthz>) => Promise<TResult>;
+  handler: (
+    ctx: RouteContext<TQuery, TBody, TParams, TAuthz, TIfMatch>,
+  ) => Promise<TResult>;
   /** Status sukses (default 200). */
   status?: number;
   /**
@@ -114,6 +147,20 @@ export interface RouteOptions<TQuery, TBody, TResult, TParams = Record<string, s
    * key, permintaan ulang dgn key sama → di-replay dari cache (anti double-submit).
    */
   idempotent?: boolean;
+  /**
+   * **ADR-0030:** wajibkan header `If-Match` untuk route mutasi baris.
+   *
+   * Absen → 428 `PRECONDITION_REQUIRED`; tidak cocok → 412
+   * `PRECONDITION_FAILED`. Nilainya diteruskan ke handler sebagai
+   * `expectedVersion` dan HARUS dipakai di `WHERE` update/delete
+   * (lihat `versionPredicate`), bukan hanya dibandingkan di memori.
+   */
+  ifMatch?: TIfMatch;
+  /**
+   * Ambil nomor versi dari hasil handler untuk dipancarkan sebagai `ETag`.
+   * Dipakai route GET satu-sumber-daya; daftar tidak punya ETag tunggal.
+   */
+  etagFrom?: (result: TResult) => number | undefined;
 }
 
 /** Bangun objek dari URLSearchParams → plain object untuk Zod. */
@@ -134,7 +181,7 @@ function searchParamsToObject(url: string): Record<string, string | string[]> {
 }
 
 /** Argumen kedua handler Next.js (params rute dinamis, async di Next 15+). */
-type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
+export type NextRouteArgs = { params?: Promise<Record<string, string>> } | undefined;
 
 /**
  * Sidik jari request untuk idempotensi: method + path (termasuk query) + body
@@ -193,7 +240,14 @@ function errorResponse(
     code: string,
     message: string,
     headers?: HeadersInit,
-  ) => withRid(NextResponse.json({ error: { code, message } }, { status, headers }));
+    details?: unknown,
+  ) =>
+    withRid(
+      NextResponse.json(
+        { error: { code, message, ...(details !== undefined ? { details } : {}) } },
+        { status, headers },
+      ),
+    );
 
   if (err instanceof UnauthorizedError) {
     return jsonError(401, err.code, err.message);
@@ -219,6 +273,21 @@ function errorResponse(
   }
   if (err instanceof ConflictError) {
     return jsonError(409, err.code, err.message);
+  }
+  // ADR-0030: prakondisi HTTP. 428 = header wajib tapi tak dikirim;
+  // 412 = dikirim tapi baris sudah bergeser. `currentVersion` menyertai 412
+  // agar klien bisa memutuskan sendiri, bukan menebak.
+  if (err instanceof PreconditionRequiredError) {
+    return jsonError(428, err.code, err.message);
+  }
+  if (err instanceof PreconditionFailedError) {
+    return jsonError(
+      412,
+      err.code,
+      err.message,
+      undefined,
+      err.currentVersion !== undefined ? { currentVersion: err.currentVersion } : undefined,
+    );
   }
   if (err instanceof InvalidTransitionError) {
     return jsonError(409, "INVALID_TRANSITION", err.message);
@@ -289,8 +358,15 @@ function errorResponse(
  * Pemakaian:
  *   export const GET = wrapRoute({ query: listQuery, handler: async ({query, actor}) => ... });
  */
-export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, string>, TAuthz extends Authz = Authz>(
-  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuthz>,
+export function wrapRoute<
+  TQuery,
+  TBody,
+  TResult,
+  TParams = Record<string, string>,
+  TAuthz extends Authz = Authz,
+  TIfMatch extends boolean = false,
+>(
+  opts: RouteOptions<TQuery, TBody, TResult, TParams, TAuthz, TIfMatch>,
 ) {
   const handler = async (req: Request, args?: NextRouteArgs): Promise<NextResponse> => {
     // **#6 (enterprise):** ID permintaan untuk traceability. Pakai header dari
@@ -305,6 +381,7 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
     const method = req.method;
     const startedAt = Date.now();
     let actorIdForCleanup: string | null = null;
+    let handlerCommitted = false;
     // Catat hasil akhir (sukses/error) ke metrik — satu tempat, apa pun jalannya.
     const finish = (res: NextResponse): NextResponse => {
       // Respons API bergantung pada identitas pemanggil (answer_key, draf,
@@ -347,9 +424,13 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         const key = rateLimitKey(
           actor?.id ?? null,
           getClientIp(req),
-          opts.rateLimitScope ?? routeGate ?? authz.kind,
+          opts.rateLimitScope ??
+            routeGate ??
+            (authz.kind === "service"
+              ? `${authz.enforcedIn}:${method}:${routePath}`
+              : authz.kind),
         );
-        const result = checkRateLimit(key, policy);
+        const result = await checkRateLimit(key, policy);
         if (!result.allowed) throw new RateLimitError(result.retryAfterMs);
       }
 
@@ -368,6 +449,14 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         ? opts.params.parse(rawParams)
         : (rawParams as TParams);
 
+      // **ADR-0030:** prakondisi dievaluasi SETELAH pemeriksaan normal
+      // (auth, rate limit, validasi body) — sesuai RFC 9110 §13.2.2, dan
+      // agar galat 400 yang lebih spesifik tidak tertutup oleh 428.
+      // 428 melempar sendiri bila header absen.
+      const expectedVersion = (opts.ifMatch
+        ? parseIfMatch(req.headers.get("if-match"))
+        : undefined) as TIfMatch extends true ? number | "*" : undefined;
+
       // **#4:** idempotensi (opsional) — hanya bila diaktifkan & klien kirim key.
       const idemKey = opts.idempotent
         ? req.headers.get("idempotency-key")?.slice(0, 128)
@@ -375,11 +464,38 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       const fingerprint = idemKey ? requestFingerprint(req, rawBody) : "";
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
-        const state = checkIdempotency(`${actorKey}:${idemKey}`, fingerprint);
+        let state;
+        try {
+          state = await checkIdempotency(`${actorKey}:${idemKey}`, fingerprint);
+        } catch (err) {
+          // **Fail-closed (ADR-0029):** tanpa store bersama kita tak bisa
+          // memastikan permintaan ini bukan duplikat. Menjalankannya buta-buta
+          // berisiko mutasi ganda — lebih baik minta klien mencoba lagi.
+          log.error({
+            msg: "idempotency_store_unavailable",
+            requestId,
+            route: routePath,
+            method,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          const unavailable = NextResponse.json(
+            {
+              error: {
+                code: "IDEMPOTENCY_UNAVAILABLE",
+                message:
+                  "Proteksi idempotensi sedang tidak tersedia. Coba lagi sebentar lagi.",
+              },
+            },
+            { status: 503 },
+          );
+          unavailable.headers.set("X-Request-ID", requestId);
+          return finish(unavailable);
+        }
         if (state.kind === "replay") {
           const replay = NextResponse.json(state.body, { status: state.status });
           replay.headers.set("X-Request-ID", requestId);
           replay.headers.set("Idempotent-Replay", "true");
+          replay.headers.set("Idempotency-Key", idemKey);
           return finish(replay);
         }
         if (state.kind === "in-flight") {
@@ -419,27 +535,47 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
         body,
         req,
         params,
+        expectedVersion,
       });
+      handlerCommitted = true;
       const res = NextResponse.json({ data }, { status: opts.status ?? 200 });
       res.headers.set("X-Request-ID", requestId);
+      // ETag = versi baris, sehingga klien bisa langsung mengirimnya balik
+      // sebagai If-Match tanpa menebak dari body.
+      const etagVersion = opts.etagFrom?.(data);
+      if (etagVersion !== undefined) res.headers.set("ETag", etagOf(etagVersion));
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
-        rememberResponse(
-          `${actorKey}:${idemKey}`,
-          opts.status ?? 200,
-          { data },
-          fingerprint,
-        );
+        try {
+          await rememberResponse(
+            `${actorKey}:${idemKey}`,
+            opts.status ?? 200,
+            { data },
+            fingerprint,
+          );
+        } catch (rememberErr) {
+          log.error({
+            msg: "idempotency_remember_failed",
+            requestId,
+            error: rememberErr instanceof Error ? rememberErr.message : String(rememberErr),
+          });
+        }
         res.headers.set("Idempotency-Key", idemKey);
       }
       return finish(res);
     } catch (err) {
-      // **#4:** bila gagal, buang penanda in-flight agar percobaan berikutnya
+      // **#4:** bila handler gagal SEBELUM komit, buang penanda in-flight agar percobaan berikutnya
       // (key sama) tidak terjebak 409 — kesalahan bukan hasil yang di-cache.
-      if (opts.idempotent) {
+      if (opts.idempotent && !handlerCommitted) {
         const k = req.headers.get("idempotency-key")?.slice(0, 128);
         const actorKey = actorIdForCleanup ?? getClientIp(req) ?? "anon";
-        if (k) getIdempotencyStore().forget(`${actorKey}:${k}`);
+        if (k) {
+          try {
+            await getIdempotencyStore().forget(`${actorKey}:${k}`);
+          } catch {
+            // Store tak terjangkau: entri in-flight akan kedaluwarsa sendiri (TTL).
+          }
+        }
       }
       return finish(
         errorResponse(err, requestId, {
@@ -461,6 +597,8 @@ export function wrapRoute<TQuery, TBody, TResult, TParams = Record<string, strin
       params: opts.params,
       status: opts.status ?? 200,
       idempotent: opts.idempotent === true,
+      ifMatch: opts.ifMatch === true,
+      etag: opts.etagFrom !== undefined,
     } satisfies DeclaredRoute,
     enumerable: false,
   });

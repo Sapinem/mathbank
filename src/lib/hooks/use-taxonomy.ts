@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { referenceKeys } from "./use-reference";
+import { api, apiFetch } from "@/lib/api/fetcher";
 import type { TopicNode } from "@/lib/taxonomy/tree";
 
 /**
@@ -11,16 +12,6 @@ import type { TopicNode } from "@/lib/taxonomy/tree";
 export const taxonomyKeys = {
   topics: referenceKeys.topics,
 };
-
-async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
-  return json.data as T;
-}
 
 export interface TopicInput {
   name: string;
@@ -53,10 +44,11 @@ export function useCreateTopic() {
 export function useUpdateTopic() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<TopicInput> }) =>
-      apiFetch<TopicNode>(`/api/topics/${id}`, {
+    mutationFn: ({ id, input, version }: { id: string; input: Partial<TopicInput>; version?: number | "*" }) =>
+      api<TopicNode>(`/api/topics/${id}`, {
         method: "PATCH",
         body: JSON.stringify(input),
+        ifMatch: version ?? "*",
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: taxonomyKeys.topics }),
   });
@@ -65,8 +57,14 @@ export function useUpdateTopic() {
 export function useDeleteTopic() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<{ ok: boolean }>(`/api/topics/${id}`, { method: "DELETE" }),
+    mutationFn: (args: string | { id: string; version?: number | "*" }) => {
+      const id = typeof args === "string" ? args : args.id;
+      const version = typeof args === "object" ? args.version : undefined;
+      return api<{ ok: boolean }>(`/api/topics/${id}`, {
+        method: "DELETE",
+        ifMatch: version ?? "*",
+      });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: taxonomyKeys.topics }),
   });
 }

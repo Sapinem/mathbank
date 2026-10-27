@@ -7,6 +7,7 @@ import {
   listBundles,
   updateBundle,
   archiveBundle,
+  deleteBundle,
   addItem,
   removeItem,
   reorderItems,
@@ -225,13 +226,32 @@ describe("createBundle / listBundles", () => {
     expect(copy.printConfig.twoColumnLayout).toBe(false);
   });
 
-  it("paket diarsip tak muncul di daftar", async () => {
+  it("paket diarsip tak muncul di daftar aktif, tapi bisa ditemukan dengan filter status archived", async () => {
     const b = await createBundle({ title: "Arsip", bundleType: "exam" }, admin);
     await archiveBundle(b.id, admin);
     const list = await listBundles(admin);
     expect(list.items.find((x) => x.id === b.id)).toBeUndefined();
-    // API-05: paket ter-soft-delete juga tak dihitung di `total`.
     expect(list.total).toBe(0);
+
+    // ADR-0025: paket terarsip berstatus 'archived', deletedAt tetap NULL, dan muncul di filter status 'archived'
+    const archivedList = await listBundles(admin, { status: "archived" });
+    expect(archivedList.items.find((x) => x.id === b.id)).toBeDefined();
+    expect(archivedList.total).toBe(1);
+
+    const row = await getBundle(b.id);
+    expect(row?.status).toBe("archived");
+
+    const [raw] = await sql`SELECT deleted_at FROM bundles WHERE id = ${b.id}`;
+    expect(raw.deleted_at).toBeNull();
+  });
+
+  it("ADR-0025: deleteBundle mengisi deletedAt (soft-delete)", async () => {
+    const b = await createBundle({ title: "Hapus", bundleType: "exam" }, admin);
+    await deleteBundle(b.id, admin);
+    const row = await getBundle(b.id);
+    expect(row).toBeNull();
+    const list = await listBundles(admin, { status: "archived" });
+    expect(list.items.find((x) => x.id === b.id)).toBeUndefined();
   });
 });
 

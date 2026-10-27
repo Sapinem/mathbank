@@ -17,6 +17,8 @@ export type BundleItemRole = "question" | "stimulus";
 
 export interface BundleRow {
   id: string;
+  /** Nomor revisi (ADR-0030) — dipakai sebagai ETag / If-Match. */
+  version: number;
   title: string;
   bundleType: BundleType;
   origin: BundleOrigin;
@@ -170,6 +172,7 @@ export interface BundleValidation {
 export function bundleColumns() {
   return {
     id: bundles.id,
+    version: bundles.version,
     title: bundles.title,
     bundleType: bundles.bundleType,
     origin: bundles.origin,

@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    pool: "vmThreads",
     globals: true,
     testTimeout: 30_000,
     setupFiles: ["./vitest.setup.ts"],
@@ -31,6 +32,9 @@ export default defineConfig({
         "src/lib/auth/origins.ts",
         "src/lib/api/route-wrapper.ts",
         "src/lib/api/route-inventory.ts",
+        "src/lib/api/deprecation.ts",
+        "src/lib/api/version.ts",
+        "src/lib/api/idempotency.ts",
         "src/lib/api/openapi/spec.ts",
         "src/lib/api/openapi/registry.ts",
         "src/lib/telemetry/logger.ts",

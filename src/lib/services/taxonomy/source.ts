@@ -9,8 +9,10 @@ import { db } from "@/lib/db";
 import { sources } from "@/lib/db/schema/source";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions } from "@/lib/db/schema/question";
-import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
+import { assertCan, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { throwVersionedWriteMiss } from "../versioned";
 import { recordAudit } from "../audit";
 import type { Actor } from "@/lib/auth/actor";
 import { type SourceKind, type SourceRow } from "./shared";
@@ -18,6 +20,7 @@ import { type SourceKind, type SourceRow } from "./shared";
 /** Kolom sumber yang diproyeksikan (hindari duplikasi `.returning`). */
 const sourceColumns = {
   id: sources.id,
+  version: sources.version,
   kind: sources.kind,
   label: sources.label,
   url: sources.url,
@@ -53,6 +56,7 @@ export async function listSources(): Promise<SourceRow[]> {
 
   return rows.map((r) => ({
     id: r.id,
+    version: r.version,
     kind: r.kind as SourceKind,
     label: r.label,
     url: r.url,
@@ -116,6 +120,8 @@ export async function updateSource(
     city?: string | null;
   },
   actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<SourceRow> {
   assertCan(actor, "reference:manage");
   const patch: Partial<typeof sources.$inferInsert> = {};
@@ -133,11 +139,13 @@ export async function updateSource(
       db
         .update(sources)
         .set({ ...patch, updatedAt: new Date() })
-        .where(eq(sources.id, id))
+        .where(versionPredicate(sources, id, expectedVersion ?? "*"))
         .returning(sourceColumns),
     "Sumber dengan nama itu sudah ada.",
   );
-  if (!row) throw new NotFoundError("Sumber tidak ditemukan.");
+  if (!row) {
+    return throwVersionedWriteMiss(sources, id, expectedVersion, "Sumber tidak ditemukan.");
+  }
   await recordAudit({
     entityType: "source",
     entityId: row.id,
@@ -148,7 +156,12 @@ export async function updateSource(
   return { ...row, kind: row.kind as SourceKind, usageCount: 0 };
 }
 
-export async function deleteSource(id: string, actor: Actor): Promise<void> {
+export async function deleteSource(
+  id: string,
+  actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<void> {
   assertCan(actor, "reference:manage");
   // ADR-0014: keberadaan sumber dicek lewat bundle (soal tak punya source_id).
   // Bila sumber dipakai, FK `bundles.source_id` hanya `set null` — jadi tanpa
@@ -160,8 +173,13 @@ export async function deleteSource(id: string, actor: Actor): Promise<void> {
   if (count > 0) {
     throw new ConflictError(`Sumber dipakai oleh ${count} naskah. Lepas keterkaitannya dulu.`);
   }
-  const res = await db.delete(sources).where(eq(sources.id, id)).returning({ id: sources.id });
-  if (res.length === 0) throw new NotFoundError("Sumber tidak ditemukan.");
+  const res = await db
+    .delete(sources)
+    .where(versionPredicate(sources, id, expectedVersion ?? "*"))
+    .returning({ id: sources.id });
+  if (res.length === 0) {
+    return throwVersionedWriteMiss(sources, id, expectedVersion, "Sumber tidak ditemukan.");
+  }
   await recordAudit({
     entityType: "source",
     entityId: id,

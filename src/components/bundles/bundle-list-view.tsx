@@ -57,6 +57,7 @@ import {
   TopicCoverageChip,
 } from "@/components/bundles/bundle-enrichment";
 import { cn } from "@/lib/utils";
+import { StatusIcon } from "@/components/questions/question-status-badge";
 import {
   useBundlesPage,
   useCreateBundle,
@@ -377,8 +378,7 @@ export function BundleListView() {
                   <SelectItem value="draft">Draf</SelectItem>
                   <SelectItem value="review">Telaah</SelectItem>
                   <SelectItem value="ready">Siap</SelectItem>
-                  {/* "Arsip" tak ditawarkan: mengarsipkan = soft-delete, jadi
-                      paket terarsip tak pernah muncul di daftar aktif. */}
+                  <SelectItem value="archived">Arsip</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -515,6 +515,7 @@ export function BundleListView() {
                       variant="outline"
                       className={cn("text-[11px] font-normal", statusBadgeClass(b.status))}
                     >
+                      <StatusIcon status={b.status} data-icon="inline-start" aria-hidden="true" />
                       {STATUS_LABELS[b.status]}
                     </Badge>
                   </div>
@@ -665,6 +666,7 @@ export function BundleListView() {
                         variant="outline"
                         className={cn("text-xs font-normal", statusBadgeClass(b.status))}
                       >
+                        <StatusIcon status={b.status} data-icon="inline-start" aria-hidden="true" />
                         {STATUS_LABELS[b.status]}
                       </Badge>
                     </TableCell>
@@ -818,7 +820,9 @@ export function BundleListView() {
               variant="destructive"
               onClick={() => {
                 if (!confirm) return;
-                archive.mutate(confirm.id, {
+                archive.mutate(
+                  { id: confirm.id, version: confirm.version },
+                  {
                   onSuccess: () => {
                     setConfirm(null);
                     toast.success("Paket diarsipkan.");

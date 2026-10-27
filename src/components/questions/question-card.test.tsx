@@ -1,10 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { QuestionCard, QuestionTypeIcon, excerpt, flattenMathForList, formatGradeBadge } from "./question-card";
+import { QuestionCard, QuestionTypeIcon, excerpt, flattenMathForList, stripImages, formatGradeBadge } from "./question-card";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
 /** Soal uji minimal (hanya field yang dirender kartu). */
 function q(over: Partial<PublicQuestion> = {}): PublicQuestion {
+  const grade = over.grade !== undefined ? over.grade : "SMA-11";
+  const grades = over.grades !== undefined ? over.grades : (grade ? [grade] : []);
   return {
     id: "q1",
     parentId: null,
@@ -12,7 +14,8 @@ function q(over: Partial<PublicQuestion> = {}): PublicQuestion {
     questionType: "single_choice",
     difficulty: 3,
     cognitiveLevel: "understand",
-    grade: "SMA-11",
+    grade,
+    grades,
     contentMarkdown: "Berapa $2+2$?",
     dataPayload: {},
     status: "draft",
@@ -37,17 +40,20 @@ function q(over: Partial<PublicQuestion> = {}): PublicQuestion {
 describe("QuestionCard", () => {
   it("menampilkan status, tipe, grade, dan badge rubrik (kesulitan + kognitif)", () => {
     const { container } = render(<QuestionCard question={q()} href="/questions/q1" />);
-    expect(screen.getByText("Draf")).toBeInTheDocument();
+    // Status kini berupa ikon dengan aria-label tanpa teks tulisan (ruang teks maksimal)
+    expect(screen.getByLabelText("Status: Draf")).toBeInTheDocument();
     // grade dirender sebagai penanda ikon + "SMA-11"
     expect(container.textContent).toContain("SMA-11");
-    // Difficulty 3 → penanda ikon gauge + "Lv.3" (meter titik diganti ikon)
-    expect(container.textContent).toContain("Lv.3");
+    // Difficulty 3 → penanda ikon gauge + angka "3" langsung (tanpa "Lv.")
+    expect(container.textContent).toContain("3");
+    expect(container.textContent).not.toContain("Lv.3");
     expect(container.textContent).not.toContain("●●●○○");
-    // cognitiveLevel "understand" → penanda ikon brain + "C2"
-    expect(container.textContent).toContain("C2");
+    // cognitiveLevel "understand" → penanda ikon brain + angka "2" langsung (tanpa "C")
+    expect(container.textContent).toContain("2");
+    expect(container.textContent).not.toContain("C2");
   });
 
-  it("status Siap tidak dirender eksplisit sama sekali di kartu", () => {
+  it("status Siap tidak dirender teks eksplisit di kartu namun memiliki penanda aksesibel", () => {
     render(
       <QuestionCard
         question={q({ status: "ready" })}
@@ -55,7 +61,27 @@ describe("QuestionCard", () => {
       />,
     );
     expect(screen.queryByText("Siap")).not.toBeInTheDocument();
-    // (Status lain tetap diuji tampil pada tes kartu draft di atas.)
+    expect(screen.getByLabelText("Status: Siap")).toBeInTheDocument();
+  });
+
+  it("menampilkan topik utama di bagian kiri header kartu mode grid", () => {
+    const questionWithTopic = q({
+      topics: [
+        { id: "t1", name: "Aljabar Linear", level: 2, isPrimary: true },
+      ],
+    });
+    render(<QuestionCard question={questionWithTopic} href="/questions/q1" mode="grid" />);
+    expect(screen.getByText("Aljabar Linear")).toBeInTheDocument();
+  });
+
+  it("menampilkan topik utama di mode list bila tersedia", () => {
+    const questionWithTopic = q({
+      topics: [
+        { id: "t2", name: "Trigonometri", level: 2, isPrimary: true },
+      ],
+    });
+    render(<QuestionCard question={questionWithTopic} href="/questions/q1" mode="list" />);
+    expect(screen.getByText("Trigonometri")).toBeInTheDocument();
   });
 
   it("penanda jenjang memakai ikon + angka dengan aria-label lengkap", () => {
@@ -66,7 +92,22 @@ describe("QuestionCard", () => {
     expect(screen.getByText("10")).toBeInTheDocument();
   });
 
-  it("checkbox seleksi kartu tetap dapat diakses walau tersembunyi visual", () => {
+  it("penanda multi-jenjang merender gabungan kode dan aria-label", () => {
+    render(
+      <QuestionCard question={q({ grades: ["08", "11"] })} href="/questions/q1" />,
+    );
+    expect(screen.getByLabelText(/Kelas 08, Kelas 11/)).toBeInTheDocument();
+    expect(screen.getByText("08 · 11")).toBeInTheDocument();
+  });
+
+  it("soal tanpa jenjang tidak merender penanda kelas (kartu bersih)", () => {
+    const { container } = render(
+      <QuestionCard question={q({ grade: null, grades: [] })} href="/questions/q1" />,
+    );
+    expect(container.querySelector('button[aria-label^="Kelas"]')).toBeNull();
+  });
+
+  it("checkbox seleksi kartu dapat diakses dan tampil di mode list", () => {
     render(
       <QuestionCard
         question={q()}
@@ -126,24 +167,52 @@ describe("QuestionCard", () => {
     expect(onToggle).toHaveBeenCalledWith("q1");
   });
 
-  it("nama aksesibel checkbox dan tautan Buka berkonteks soal (bukan generik)", () => {
+  it("nama aksesibel checkbox pada mode list dan tautan Buka berkonteks soal", () => {
     const onToggle = vi.fn();
-    render(
-      <QuestionCard question={q()} href="/x" onToggleSelect={onToggle} mode="grid" />,
+    const { rerender } = render(
+      <QuestionCard question={q()} href="/x" onToggleSelect={onToggle} mode="list" />,
     );
     expect(screen.getByLabelText(/Pilih soal: Berapa/)).toBeInTheDocument();
+
+    rerender(
+      <QuestionCard question={q()} href="/x" onToggleSelect={onToggle} mode="grid" />,
+    );
     expect(screen.getByLabelText(/Buka soal: Berapa/)).toBeInTheDocument();
+    // Di mode grid, kotak ceklis benar-benar dihilangkan dari UI
+    expect(screen.queryByLabelText(/Pilih soal: Berapa/)).not.toBeInTheDocument();
     // Kunci jawaban tidak boleh bocor ke nama aksesibel (batang saja, bukan opsi).
     expect(screen.queryByLabelText(/isCorrect|jawaban benar/i)).not.toBeInTheDocument();
   });
 
-  it("status compact menampilkan label ringkas, bukan hanya titik warna", () => {
+  it("mode grid dapat diseleksi via klik saat mode seleksi atau Ctrl/Cmd+klik tanpa kotak ceklis", () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(
+      <QuestionCard question={q()} href="/x" onToggleSelect={onToggle} mode="grid" isSelectionMode={true} />,
+    );
+    // Klik konten naskah saat mode seleksi aktif memanggil onToggleSelect
+    screen.getByText(/Berapa/).click();
+    expect(onToggle).toHaveBeenCalledWith("q1");
+
+    onToggle.mockClear();
+    rerender(
+      <QuestionCard question={q()} href="/x" onToggleSelect={onToggle} mode="grid" isSelectionMode={false} />,
+    );
+    // Ctrl+klik memanggil onToggleSelect
+    const content = screen.getByText(/Berapa/);
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true });
+    content.dispatchEvent(event);
+    expect(onToggle).toHaveBeenCalledWith("q1");
+  });
+
+  it("status pada kartu berupa ikon murni dengan aria-label tanpa teks tulisan", () => {
     const { container } = render(
       <QuestionCard question={q({ status: "review" })} href="/x" />,
     );
-    // Mode list memakai StatusIndicator compact: "Telaah" terlihat (bukan hanya dot),
-    // sedangkan label penuh "Perlu Telaah" tetap ada sebagai aria-label.
-    expect(container.textContent).toContain("Telaah");
+    // Sesuai arahan: status murni ikon tanpa teks ("Telaah"/"Draf") agar ruang teks maksimal,
+    // aria-label tetap lengkap untuk aksesibilitas dan tooltip.
+    expect(screen.getByLabelText("Status: Perlu Telaah")).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeInTheDocument();
+    expect(container.textContent).not.toContain("Telaah");
     expect(container.textContent).not.toContain("Perlu Telaah");
   });
 
@@ -321,14 +390,25 @@ describe("QuestionCard grid & masonry dengan opsi dan stimulus", () => {
   });
 });
 
-describe("flattenMathForList", () => {
-  it("meratakan lingkungan matriks dan cases menjadi inline", () => {
-    const input = "\\begin{matrix} a \\\\ b \\end{matrix}";
-    expect(flattenMathForList(input)).toBe(" a ,\\;  b ");
+describe("stripImages & flattenMathForList", () => {
+  it("membersihkan shortcode {{img:...}} dan markdown image termasuk variasi spasi", () => {
+    const input = "Perhatikan gambar berikut!\n\n{{ img: n5QjZMTJ }}\n\nBerapa nilai x?";
+    expect(stripImages(input)).toBe("Perhatikan gambar berikut!\n\n\n\nBerapa nilai x?");
+    expect(stripImages("Teks ![diagram](https://example.com/a.png) lanjut")).toBe("Teks  lanjut");
   });
 
-  it("meratakan pmatrix, bmatrix, dan aligned", () => {
-    const input = "\\begin{pmatrix} 1 \\\\ 2 \\end{pmatrix} dan \\begin{aligned} x \\\\ y \\end{aligned}";
-    expect(flattenMathForList(input)).toBe(" 1 ,\\;  2  dan  x ,\\;  y ");
+  it("meratakan lingkungan matriks dan cases menjadi inline sekaligus menghapus gambar untuk mode list", () => {
+    const input = "\\begin{matrix} a \\\\ b \\end{matrix} {{img:XYZ123}}";
+    expect(flattenMathForList(input)).toBe(" a ,\\;  b  ");
+  });
+
+  it("meratakan pmatrix, bmatrix, dan aligned serta mengganti & dengan pemisah aman", () => {
+    const input = "\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix} dan \\begin{aligned} x &= 1 \\\\ y &= 2 \\end{aligned}";
+    expect(flattenMathForList(input)).toBe(" 1 ,\\;  2 ,\\;  3 ,\\;  4  dan  x = 1 ,\\;  y = 2 ");
+  });
+
+  it("meratakan vmatrix dan align*", () => {
+    const input = "\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix} dan \\begin{align*} 2x + y &= 5 \\end{align*}";
+    expect(flattenMathForList(input)).toBe(" a ,\\;  b ,\\;  c ,\\;  d  dan  2x + y = 5 ");
   });
 });

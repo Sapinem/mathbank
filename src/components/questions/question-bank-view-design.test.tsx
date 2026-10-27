@@ -14,6 +14,7 @@ let currentSearch = "";
 
 const useQuestionsMock = vi.fn();
 const useTopicsMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
+const useTagsMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 const useSourcesMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 const useGradesMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 vi.mock("@/lib/hooks/use-questions", () => ({
@@ -22,6 +23,7 @@ vi.mock("@/lib/hooks/use-questions", () => ({
 }));
 vi.mock("@/lib/hooks/use-reference", () => ({
   useTopics: () => useTopicsMock(),
+  useTags: () => useTagsMock(),
   useSources: () => useSourcesMock(),
   useGrades: () => useGradesMock(),
 }));
@@ -36,6 +38,7 @@ beforeEach(() => {
   useQuestionsMock.mockReset();
   useQuestionsMock.mockReturnValue(dataState({ isLoading: true }));
   useTopicsMock.mockReturnValue({ data: [] });
+  useTagsMock.mockReturnValue({ data: [] });
   useSourcesMock.mockReturnValue({ data: [] });
   useGradesMock.mockReturnValue({ data: [] });
 });
@@ -99,5 +102,11 @@ describe("QuestionBankView — perbaikan desain prioritas", () => {
     const { container } = render(<QuestionBankView />);
     // Nama aksesibel eksplisit pada tautan (label teks disembunyikan di <sm).
     expect(container.querySelector('a[aria-label="Buat Soal"]')).not.toBeNull();
+  });
+
+  it("drawer filter memuat Legenda Simbol & Ikon", () => {
+    useQuestionsMock.mockReturnValue(dataState({ data: { items: [], total: 0 } }));
+    render(<QuestionBankView defaultFiltersOpen />);
+    expect(screen.getByText("Legenda Simbol & Ikon")).toBeInTheDocument();
   });
 });

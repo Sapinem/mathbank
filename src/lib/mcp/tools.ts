@@ -172,6 +172,7 @@ export function registerTools(server: McpServer, actor: Actor): void {
         description: "Perbarui draf soal yang dibuat oleh agen ini sendiri (hanya draf milik sendiri).",
         inputSchema: {
           id: z.string().uuid(),
+          version: z.number().int().optional().describe("Versi soal untuk konkurensi optimistik (ADR-0030)"),
           contentMarkdown: z.string().min(1).optional(),
           difficulty: z.number().int().min(1).max(5).optional(),
           cognitiveLevel: z.enum(["remember", "understand", "apply", "analyze", "evaluate", "create"]).optional(),
@@ -183,12 +184,12 @@ export function registerTools(server: McpServer, actor: Actor): void {
           answerKey: z.record(z.string(), z.unknown()).optional(),
         },
       },
-      async ({ id, ...patch }) =>
+      async ({ id, version, ...patch }) =>
         guard(async () => {
           // Fase 3: penegakan `own` di lapisan MCP, bukan hanya di service.
           await assertMcpForQuestion(actor, "question.edit", id);
-          const q = await updateQuestion(id, patch, actor);
-          return { id: q.id, status: q.status };
+          const q = await updateQuestion(id, patch, actor, version);
+          return { id: q.id, status: q.status, version: q.version };
         }),
     );
   }
@@ -199,14 +200,15 @@ export function registerTools(server: McpServer, actor: Actor): void {
       "flag_question",
       {
         title: "Tandai masalah kualitas soal",
-        description: "Tandai soal yang memiliki masalah kualitas (KaTeX rusak, kunci salah, dsb) untuk ditinjau guru.",
+        description: "Tandai soal yang memiliki masalah kualitas (KaTeX rusak, format tidak rapi, dsb) untuk ditinjau guru.",
         inputSchema: {
           id: z.string().uuid(),
+          version: z.number().int().optional().describe("Versi soal untuk konkurensi optimistik (ADR-0030)"),
           flagged: z.boolean().default(true),
           notes: z.string().max(1000).optional(),
         },
       },
-      async ({ id, flagged, notes }) =>
+      async ({ id, version, flagged, notes }) =>
         guard(async () => {
           // Fase 3: ownerId diteruskan agar lapisan MCP konsisten dengan
           // service. Catatan: `question:flag` L1 adalah `yes` untuk agent &
@@ -215,7 +217,8 @@ export function registerTools(server: McpServer, actor: Actor): void {
           // teacher hanya soal sendiri. Perilaku flag TIDAK diubah, yang
           // ditutup adalah ketergantungan pada satu lapisan saja.
           await assertMcpForQuestion(actor, "question.flag", id);
-          return await setQuestionFlag(id, flagged, notes ?? null, actor);
+          const updated = await setQuestionFlag(id, flagged, notes ?? null, actor, version);
+          return { id: updated.id, isFlagged: updated.isFlagged, version: updated.version };
         }),
     );
   }

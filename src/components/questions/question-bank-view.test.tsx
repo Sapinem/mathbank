@@ -17,6 +17,7 @@ let currentSearch = "";
 // ── Mock hook data ──
 const useQuestionsMock = vi.fn();
 const useTopicsMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
+const useTagsMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 const useSourcesMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 const useGradesMock = vi.fn((): { data: unknown[] } => ({ data: [] }));
 vi.mock("@/lib/hooks/use-questions", () => ({
@@ -25,6 +26,7 @@ vi.mock("@/lib/hooks/use-questions", () => ({
 }));
 vi.mock("@/lib/hooks/use-reference", () => ({
   useTopics: () => useTopicsMock(),
+  useTags: () => useTagsMock(),
   useSources: () => useSourcesMock(),
   useGrades: () => useGradesMock(),
 }));
@@ -42,7 +44,8 @@ function q(id: string): PublicQuestion {
     questionType: "single_choice",
     difficulty: 3,
     cognitiveLevel: "understand",
-    grade: "SMA-11",
+    grade: "11",
+    grades: ["11"],
     contentMarkdown: `Soal ${id}`,
     dataPayload: {},
     status: "draft",
@@ -58,6 +61,7 @@ function q(id: string): PublicQuestion {
     lastReviewedAt: null,
     deletedAt: null,
     createdAt: new Date(),
+    version: 1,
     updatedAt: new Date(),
     options: [],
   } as PublicQuestion;
@@ -74,7 +78,9 @@ beforeEach(() => {
   useQuestionsMock.mockReset();
   useQuestionsMock.mockReturnValue(dataState({ isLoading: true }));
   useTopicsMock.mockReturnValue({ data: [] });
+  useTagsMock.mockReturnValue({ data: [] });
   useSourcesMock.mockReturnValue({ data: [] });
+  useGradesMock.mockReturnValue({ data: [] });
 });
 
 describe("QuestionBankView — keadaan render", () => {
@@ -300,5 +306,30 @@ describe("QuestionBankView — paginasi", () => {
     fireEvent.submit(input.closest("form")!);
     // q berubah, page hilang
     expect(replace).toHaveBeenCalledWith("/questions?q=baru");
+  });
+
+  it("menampilkan rentang data dan pemilih ukuran halaman", () => {
+    render(<QuestionBankView />);
+    expect(screen.getByText("1–20")).toBeInTheDocument();
+    expect(screen.getByText("45")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Tampilkan 50 soal per halaman"));
+    expect(replace).toHaveBeenCalledWith("/questions?limit=50");
+  });
+
+  it("lompat ke nomor halaman via input", () => {
+    render(<QuestionBankView />);
+    const jumpInput = screen.getByLabelText("Lompat ke nomor halaman");
+    fireEvent.change(jumpInput, { target: { value: "2" } });
+    fireEvent.submit(jumpInput.closest("form")!);
+    expect(replace).toHaveBeenCalledWith("/questions?page=1");
+  });
+
+  it("tombol halaman pertama dan terakhir bekerja", () => {
+    currentSearch = "page=1";
+    render(<QuestionBankView />);
+    fireEvent.click(screen.getByLabelText("Halaman terakhir"));
+    expect(replace).toHaveBeenCalledWith("/questions?page=2");
+    fireEvent.click(screen.getByLabelText("Halaman pertama"));
+    expect(replace).toHaveBeenCalledWith("/questions?page=0");
   });
 });

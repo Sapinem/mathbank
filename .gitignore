@@ -25,6 +25,7 @@
 # misc
 .DS_Store
 *.pem
+.eslintcache
 
 # backups DB (dump bisa memuat data nyata — JANGAN di-commit)
 /backups/

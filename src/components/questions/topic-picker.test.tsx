@@ -8,13 +8,14 @@ import type { TopicNode } from "@/lib/taxonomy/tree";
  * pencarian bekerja, dan pemilihan (toggle) mengirim id yang tepat.
  */
 
+// ADR-0030: `version` wajib ada di TopicNode (dipakai sebagai ETag/If-Match).
 const TOPICS: TopicNode[] = [
-  { id: "t-alj", name: "Aljabar & Persamaan", parentId: null, level: 1, sortOrder: 0, description: null, usageCount: 0, isActive: true },
-  { id: "t-pk", name: "Persamaan Kuadrat", parentId: "t-alj", level: 2, sortOrder: 0, description: null, usageCount: 0, isActive: true },
-  { id: "t-akar", name: "Bentuk Akar", parentId: "t-alj", level: 2, sortOrder: 1, description: null, usageCount: 0, isActive: true },
-  { id: "t-geo", name: "Geometri & Trigonometri", parentId: null, level: 1, sortOrder: 1, description: null, usageCount: 0, isActive: true },
-  { id: "t-trig", name: "Trigonometri", parentId: "t-geo", level: 2, sortOrder: 0, description: null, usageCount: 0, isActive: true },
-  { id: "t-sinus", name: "Aturan Sinus & Cosinus", parentId: "t-trig", level: 3, sortOrder: 0, description: null, usageCount: 0, isActive: true },
+  { id: "t-alj", version: 1, name: "Aljabar & Persamaan", parentId: null, level: 1, sortOrder: 0, description: null, usageCount: 0, isActive: true },
+  { id: "t-pk", version: 1, name: "Persamaan Kuadrat", parentId: "t-alj", level: 2, sortOrder: 0, description: null, usageCount: 0, isActive: true },
+  { id: "t-akar", version: 1, name: "Bentuk Akar", parentId: "t-alj", level: 2, sortOrder: 1, description: null, usageCount: 0, isActive: true },
+  { id: "t-geo", version: 1, name: "Geometri & Trigonometri", parentId: null, level: 1, sortOrder: 1, description: null, usageCount: 0, isActive: true },
+  { id: "t-trig", version: 1, name: "Trigonometri", parentId: "t-geo", level: 2, sortOrder: 0, description: null, usageCount: 0, isActive: true },
+  { id: "t-sinus", version: 1, name: "Aturan Sinus & Cosinus", parentId: "t-trig", level: 3, sortOrder: 0, description: null, usageCount: 0, isActive: true },
 ];
 
 const mockUseTopicList = vi.fn();

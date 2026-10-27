@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -110,13 +111,30 @@ export function SourcesView() {
     };
     if (editing) {
       update.mutate(
-        { id: editing.id, ...payload },
-        { onSuccess: () => setOpen(false), onError: (e) => setFormErr((e as Error).message) },
+        { id: editing.id, version: editing.version, ...payload },
+        {
+          onSuccess: () => {
+            setOpen(false);
+            toast.success("Perubahan sumber disimpan.");
+          },
+          onError: (e) => {
+            const msg = (e as Error).message;
+            setFormErr(msg);
+            toast.error("Gagal menyimpan sumber", { description: msg });
+          },
+        },
       );
     } else {
       create.mutate(payload, {
-        onSuccess: () => setOpen(false),
-        onError: (e) => setFormErr((e as Error).message),
+        onSuccess: () => {
+          setOpen(false);
+          toast.success("Sumber baru dibuat.");
+        },
+        onError: (e) => {
+          const msg = (e as Error).message;
+          setFormErr(msg);
+          toast.error("Gagal membuat sumber", { description: msg });
+        },
       });
     }
   }
@@ -321,10 +339,17 @@ export function SourcesView() {
               variant="destructive"
               onClick={() => {
                 if (!confirm) return;
-                del.mutate(confirm.id, {
-                  onSuccess: () => setConfirm(null),
-                  onError: (e) => setFormErr((e as Error).message),
-                });
+                del.mutate(
+                  { id: confirm.id, version: confirm.version },
+                  {
+                    onSuccess: () => {
+                      setConfirm(null);
+                      toast.success("Sumber dihapus.");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal menghapus sumber", { description: (e as Error).message }),
+                  },
+                );
               }}
             >
               Hapus

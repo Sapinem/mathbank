@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Pencil,
   Trash2,
@@ -12,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Sliders,
-  Image as ImageIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { EnrichButton } from "@/components/questions/enrich-button";
@@ -37,10 +37,6 @@ import {
 import { TYPE_LABELS } from "@/lib/display/labels";
 import { CognitiveBadge, DifficultyBadge } from "@/components/questions/rubric-badge";
 import { QuestionStatusBadge } from "@/components/questions/question-status-badge";
-import {
-  QuestionMediaGallery,
-  extractMediaShortIds,
-} from "@/components/questions/question-image";
 import { TopicTagList } from "@/components/questions/topic-tag";
 import { StimulusCard } from "@/components/questions/stimulus-card";
 import {
@@ -67,7 +63,7 @@ export function QuestionDetailView() {
 
   const { data: q, isLoading, isError, error } = useQuestion(id);
   const del = useDeleteQuestion();
-  const changeStatus = useChangeQuestionStatus(id);
+  const changeStatus = useChangeQuestionStatus(id, q?.version);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedSolutionIdx, setSelectedSolutionIdx] = useState(0);
@@ -100,7 +96,13 @@ export function QuestionDetailView() {
               variant="outline"
               size="sm"
               onClick={() => {
-                changeStatus.mutate("review");
+                changeStatus.mutate("review", {
+                  onSuccess: () => toast.success("Soal dikirim untuk telaah."),
+                  onError: (e) =>
+                    toast.error("Gagal mengirim telaah", {
+                      description: (e as Error).message,
+                    }),
+                });
               }}
               disabled={
                 changeStatus.isPending || q.status === "review" || q.status === "ready"
@@ -139,7 +141,7 @@ export function QuestionDetailView() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <QuestionStatusBadge status={q.status} />
-                    <GradeMarker grade={q.grade} />
+                    <GradeMarker grade={q.grade} grades={q.grades} />
                     <DifficultyBadge level={q.difficulty} />
                     <CognitiveBadge level={q.cognitiveLevel} />
                     {q.isFlagged && (
@@ -219,36 +221,6 @@ export function QuestionDetailView() {
                 )}
               </CardContent>
             </Card>
-
-            {/* KARTU LAMPIRAN GAMBAR (ACT-08) — hanya bila ada aset / shortcode */}
-            {(() => {
-              const media = q.media ?? [];
-              const inlineIds = extractMediaShortIds(q.contentMarkdown);
-              if (media.length === 0 && inlineIds.length === 0) return null;
-              return (
-                <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
-                  <CardHeader className="border-b border-border/40 pb-3">
-                    <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                      <ImageIcon aria-hidden className="size-4 shrink-0 text-primary" />
-                      Lampiran Gambar
-                      <span className="font-mono text-xs font-normal text-muted-foreground">
-                        {media.length} aset
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <QuestionMediaGallery
-                      media={media}
-                      emptyHint={
-                        inlineIds.length > 0
-                          ? `Naskah memuat ${inlineIds.length} rujukan gambar (${inlineIds.join(", ")}) yang tampil di dalam teks, tetapi belum ada aset tertaut di question_media.`
-                          : undefined
-                      }
-                    />
-                  </CardContent>
-                </Card>
-              );
-            })()}
 
             {/* KARTU KUNCI & PEMBAHASAN */}
             {(() => {
@@ -405,7 +377,7 @@ export function QuestionDetailView() {
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Jenjang Kelas</span>
-                  <GradeMarker grade={q.grade} />
+                  <GradeMarker grade={q.grade} grades={q.grades} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tingkat Kesulitan</span>
@@ -481,9 +453,19 @@ export function QuestionDetailView() {
               variant="destructive"
               disabled={del.isPending}
               onClick={() => {
-                del.mutate(id, {
-                  onSuccess: () => router.push("/questions"),
-                });
+                del.mutate(
+                  { id, version: q.version },
+                  {
+                    onSuccess: () => {
+                      toast.success("Soal berhasil dihapus.");
+                      router.push("/questions");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal menghapus soal", {
+                        description: (e as Error).message,
+                      }),
+                  },
+                );
               }}
             >
               Hapus

@@ -6,6 +6,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { GripVertical, Search, X, ArrowLeft, LayoutList, Loader2, Plus, ListPlus, Clock } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,10 +153,10 @@ export function BundleBuilder() {
   const params = useParams<{ id: string }>();
   const bundleId = params.id;
   const { data: bundle, isPending, isError, error } = useBundle(bundleId);
-  const addItem = useAddBundleItem(bundleId);
-  const removeItem = useRemoveBundleItem(bundleId);
-  const reorder = useReorderBundleItems(bundleId);
-  const updateBundle = useUpdateBundle(bundleId);
+  const addItem = useAddBundleItem(bundleId, bundle?.version);
+  const removeItem = useRemoveBundleItem(bundleId, bundle?.version);
+  const reorder = useReorderBundleItems(bundleId, bundle?.version);
+  const updateBundle = useUpdateBundle(bundleId, bundle?.version);
 
   const [q, setQ] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -198,7 +199,10 @@ export function BundleBuilder() {
     const instr = instructionsDraft.trim() === "" ? null : instructionsDraft.trim();
     if (instr !== (bundle!.instructions ?? null)) patch.instructions = instr;
     if (Object.keys(patch).length === 0) return;
-    updateBundle.mutate(patch);
+    updateBundle.mutate(patch, {
+      onSuccess: () => toast.success("Pengaturan naskah disimpan."),
+      onError: (e) => toast.error("Gagal menyimpan pengaturan", { description: (e as Error).message }),
+    });
   }
 
   /** Panel bank soal — dipakai di desktop (aside) & mobile (Sheet). */
@@ -235,7 +239,18 @@ export function BundleBuilder() {
                   size="sm"
                   variant={sudah ? "ghost" : "outline"}
                   disabled={sudah || addItem.isPending}
-                  onClick={() => addItem.mutate({ questionId: item.id })}
+                  onClick={() =>
+                    addItem.mutate(
+                      { questionId: item.id },
+                      {
+                        onSuccess: () => toast.success("Soal ditambahkan."),
+                        onError: (e) =>
+                          toast.error("Gagal menambahkan soal", {
+                            description: (e as Error).message,
+                          }),
+                      },
+                    )
+                  }
                 >
                   {sudah ? "Ada" : "Tambah"}
                 </Button>
@@ -376,7 +391,14 @@ export function BundleBuilder() {
                 setConfirmRemoveItem({ id, nomor });
                 setIsRemoveOpen(true);
               }}
-              onReorder={(ids) => reorder.mutate(ids)}
+              onReorder={(ids) =>
+                reorder.mutate(ids, {
+                  onError: (e) =>
+                    toast.error("Gagal menyusun urutan soal", {
+                      description: (e as Error).message,
+                    }),
+                })
+              }
             />
           </CardContent>
         </Card>
@@ -413,7 +435,15 @@ export function BundleBuilder() {
               onClick={() => {
                 if (confirmRemoveItem) {
                   removeItem.mutate(confirmRemoveItem.id, {
-                    onSuccess: () => setIsRemoveOpen(false),
+                    onSuccess: () => {
+                      setIsRemoveOpen(false);
+                      setConfirmRemoveItem(null);
+                      toast.success("Soal dikeluarkan dari paket.");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal mengeluarkan soal", {
+                        description: (e as Error).message,
+                      }),
                   });
                 }
               }}

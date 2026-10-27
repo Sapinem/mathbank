@@ -2256,6 +2256,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -2281,6 +2286,7 @@
                         "status",
                         "createdById",
                         "createdAt",
+                        "version",
                         "updatedAt"
                       ],
                       "additionalProperties": {}
@@ -2966,6 +2972,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -3140,6 +3157,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -3225,6 +3314,7 @@
           "authz": "service",
           "enforcedIn": "src/lib/services/bundle-shared.ts:assertBundleWrite",
           "routeGate": "question:view",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -3670,6 +3760,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -3929,6 +4030,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -4014,6 +4187,7 @@
           "authz": "service",
           "enforcedIn": "src/lib/services/bundle-shared.ts:assertBundleWrite",
           "routeGate": "question:view",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -4041,6 +4215,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -4239,6 +4424,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -4324,6 +4581,7 @@
           "authz": "service",
           "enforcedIn": "src/lib/services/bundle-shared.ts:assertBundleWrite",
           "routeGate": "question:view",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -4358,6 +4616,15 @@
         "responses": {
           "200": {
             "description": "Sukses.",
+            "headers": {
+              "ETag": {
+                "description": "Versi baris saat ini — kirim balik sebagai If-Match saat menyunting.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^\"\\d+\"$"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -4487,6 +4754,11 @@
                         "createdAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         },
                         "updatedAt": {
                           "type": "string",
@@ -4656,6 +4928,7 @@
                         "status",
                         "createdById",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "items"
                       ],
@@ -4897,6 +5170,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "question:view",
+          "etag": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -4924,6 +5198,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -5213,6 +5498,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -5238,6 +5528,7 @@
                         "status",
                         "createdById",
                         "createdAt",
+                        "version",
                         "updatedAt"
                       ],
                       "additionalProperties": {}
@@ -5394,6 +5685,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -5478,6 +5841,7 @@
         "x-mathbank": {
           "authz": "service",
           "enforcedIn": "src/lib/services/bundle-shared.ts:assertBundleWrite",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -5505,6 +5869,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -5679,6 +6054,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -5763,6 +6210,7 @@
         "x-mathbank": {
           "authz": "service",
           "enforcedIn": "src/lib/services/bundle-shared.ts:assertBundleWrite",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -6313,6 +6761,11 @@
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
                               },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
                               "updatedAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
@@ -6338,6 +6791,7 @@
                               "status",
                               "createdById",
                               "createdAt",
+                              "version",
                               "updatedAt"
                             ],
                             "additionalProperties": {}
@@ -6606,6 +7060,18 @@
           },
           {
             "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
           }
         ],
         "requestBody": {
@@ -6891,6 +7357,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -6916,6 +7387,7 @@
                         "status",
                         "createdById",
                         "createdAt",
+                        "version",
                         "updatedAt"
                       ],
                       "additionalProperties": {}
@@ -7506,6 +7978,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -7590,6 +8073,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -7598,7 +8086,8 @@
                         "shortname",
                         "category",
                         "subtests",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -7754,6 +8243,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -7838,6 +8399,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "reference:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -7865,6 +8427,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -8039,6 +8612,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -8123,6 +8768,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "reference:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -8183,6 +8829,11 @@
                           },
                           "isActive": {
                             "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -8191,7 +8842,8 @@
                           "shortname",
                           "category",
                           "subtests",
-                          "isActive"
+                          "isActive",
+                          "version"
                         ],
                         "additionalProperties": {}
                       }
@@ -8500,6 +9152,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -8508,7 +9165,8 @@
                         "shortname",
                         "category",
                         "subtests",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -9163,6 +9821,998 @@
         }
       }
     },
+    "/api/ingest/commit": {
+      "post": {
+        "operationId": "postIngestCommit",
+        "summary": "Commit antrean → soal draft",
+        "tags": [
+          "ingest"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "grade": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "limit": {
+                    "default": 10,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50
+                  },
+                  "mediaDelayMs": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sukses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "summary": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        },
+                        "results": {
+                          "type": "array",
+                          "items": {}
+                        },
+                        "eventsTagged": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "unknownEvents": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "eventsError": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "summary",
+                        "results",
+                        "eventsTagged",
+                        "unknownEvents"
+                      ],
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi input gagal (Zod).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Tidak ada sesi/API key valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tidak punya izin, atau wajib ganti password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit terlampaui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Detik sampai boleh mencoba lagi.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan server tak terduga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mathbank": {
+          "authz": "route",
+          "permission": "question:create",
+          "idempotent": true,
+          "source": "src/app/api (wrapRoute)"
+        }
+      }
+    },
+    "/api/ingest/queue": {
+      "get": {
+        "operationId": "getIngestQueue",
+        "summary": "Antrean ingest + ringkasan status",
+        "tags": [
+          "ingest"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "processing",
+                "completed",
+                "failed",
+                "skipped"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sukses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "processing",
+                                  "completed",
+                                  "failed",
+                                  "skipped"
+                                ]
+                              },
+                              "sourceOrigin": {
+                                "type": "string"
+                              },
+                              "sourceUrl": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "targetType": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "description": "Timestamp ISO-8601 (UTC)."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "status",
+                              "sourceOrigin",
+                              "sourceUrl",
+                              "targetType",
+                              "createdAt"
+                            ],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "counts": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "counts"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi input gagal (Zod).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Tidak ada sesi/API key valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tidak punya izin, atau wajib ganti password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit terlampaui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Detik sampai boleh mencoba lagi.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan server tak terduga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mathbank": {
+          "authz": "route",
+          "permission": "ingest:queue:read",
+          "notes": [
+            "Izin khusus `ingest:queue:read` — `question:view` tertutup untuk peran `machine`."
+          ],
+          "source": "src/app/api (wrapRoute)"
+        }
+      }
+    },
+    "/api/ingest/upload": {
+      "post": {
+        "operationId": "postIngestUpload",
+        "summary": "Unggah naskah ke antrean ingest",
+        "tags": [
+          "ingest"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50
+                  },
+                  "url": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "format": "uri"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "rawContent": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "format": {
+                    "default": "html",
+                    "type": "string",
+                    "enum": [
+                      "html",
+                      "json",
+                      "text"
+                    ]
+                  },
+                  "targetGrade": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "targetTopicId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "title",
+                  "source",
+                  "rawContent"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sukses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "processing",
+                            "completed",
+                            "failed",
+                            "skipped"
+                          ]
+                        },
+                        "deduped": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "status",
+                        "deduped"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi input gagal (Zod).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Tidak ada sesi/API key valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tidak punya izin, atau wajib ganti password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit terlampaui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Detik sampai boleh mencoba lagi.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan server tak terduga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mathbank": {
+          "authz": "route",
+          "permission": "question:create",
+          "idempotent": true,
+          "source": "src/app/api (wrapRoute)"
+        }
+      }
+    },
     "/api/mcp": {
       "post": {
         "operationId": "postMcp",
@@ -9409,6 +11059,15 @@
         "responses": {
           "200": {
             "description": "Sukses.",
+            "headers": {
+              "ETag": {
+                "description": "Versi baris saat ini — kirim balik sebagai If-Match saat menyunting.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^\"\\d+\"$"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -9484,6 +11143,11 @@
                             "createdAt": {
                               "type": "string",
                               "description": "Timestamp ISO-8601 (UTC)."
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
@@ -9497,7 +11161,8 @@
                             "height",
                             "fileSize",
                             "sourceOrigin",
-                            "createdAt"
+                            "createdAt",
+                            "version"
                           ],
                           "additionalProperties": {}
                         },
@@ -9780,6 +11445,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "question:view",
+          "etag": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -9806,6 +11472,17 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -10045,6 +11722,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -10129,6 +11878,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "media:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -10155,6 +11905,17 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -10370,6 +12131,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -10454,6 +12287,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "media:manage",
+          "ifMatch": true,
           "notes": [
             "409 bila aset masih dipakai soal (FK RESTRICT)."
           ],
@@ -10541,6 +12375,11 @@
                               "createdAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -10553,7 +12392,8 @@
                               "mimeType",
                               "fileSize",
                               "sourceOrigin",
-                              "createdAt"
+                              "createdAt",
+                              "version"
                             ],
                             "additionalProperties": {}
                           }
@@ -10909,6 +12749,11 @@
                               "createdAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -10921,7 +12766,8 @@
                               "mimeType",
                               "fileSize",
                               "sourceOrigin",
-                              "createdAt"
+                              "createdAt",
+                              "version"
                             ],
                             "additionalProperties": {}
                           }
@@ -10980,6 +12826,11 @@
                               "createdAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -10992,7 +12843,8 @@
                               "mimeType",
                               "fileSize",
                               "sourceOrigin",
-                              "createdAt"
+                              "createdAt",
+                              "version"
                             ],
                             "additionalProperties": {}
                           }
@@ -11639,6 +13491,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -11822,6 +13685,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -11880,6 +13748,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -12037,6 +13906,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -12121,6 +14062,7 @@
         "x-mathbank": {
           "authz": "service",
           "enforcedIn": "src/lib/services/question-write.ts:setQuestionFlag",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -12150,6 +14092,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -12324,6 +14277,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -12408,6 +14433,7 @@
         "x-mathbank": {
           "authz": "service",
           "enforcedIn": "src/lib/services/question-write.ts:hardDeleteQuestion",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -12442,6 +14468,15 @@
         "responses": {
           "200": {
             "description": "Sukses.",
+            "headers": {
+              "ETag": {
+                "description": "Versi baris saat ini — kirim balik sebagai If-Match saat menyunting.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^\"\\d+\"$"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -12596,6 +14631,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -12654,6 +14694,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -12895,6 +14936,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "question:view",
+          "etag": true,
           "notes": [
             "`answerKey` dan `options[].isCorrect` hanya untuk admin/guru/penelaah."
           ],
@@ -12925,6 +14967,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -13505,6 +15558,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -13563,6 +15621,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -13720,6 +15779,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -13804,6 +15935,7 @@
         "x-mathbank": {
           "authz": "service",
           "enforcedIn": "src/lib/services/question-write.ts:updateQuestion",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -13831,6 +15963,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -14005,6 +16148,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -14089,6 +16304,7 @@
         "x-mathbank": {
           "authz": "service",
           "enforcedIn": "src/lib/services/question-write.ts:deleteQuestion",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -14118,6 +16334,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -14312,6 +16539,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -14370,6 +16602,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -14527,8 +16760,80 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "422": {
             "description": "Guard domain menolak (mis. soal belum siap).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14647,6 +16952,7 @@
         "x-mathbank": {
           "authz": "service",
           "enforcedIn": "src/lib/services/question-status.ts:changeQuestionStatus",
+          "ifMatch": true,
           "notes": [
             "422 `NOT_READY` bila `ready` tanpa kunci jawaban."
           ],
@@ -15355,6 +17661,11 @@
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
                               },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
                               "updatedAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
@@ -15413,6 +17724,7 @@
                               "lastReviewedAt",
                               "deletedAt",
                               "createdAt",
+                              "version",
                               "updatedAt",
                               "options"
                             ],
@@ -15648,6 +17960,18 @@
           },
           {
             "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
           }
         ],
         "requestBody": {
@@ -16234,6 +18558,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -16292,6 +18621,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -17254,6 +19584,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -17408,6 +19749,11 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -17420,7 +19766,8 @@
                         "bookYear",
                         "city",
                         "isActive",
-                        "usageCount"
+                        "usageCount",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -17576,6 +19923,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -17660,6 +20079,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "reference:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -17687,6 +20107,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -17861,6 +20292,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -17945,6 +20448,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "reference:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -18036,6 +20540,11 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -18048,7 +20557,8 @@
                           "bookYear",
                           "city",
                           "isActive",
-                          "usageCount"
+                          "usageCount",
+                          "version"
                         ],
                         "additionalProperties": {}
                       }
@@ -18426,6 +20936,11 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -18438,7 +20953,8 @@
                         "bookYear",
                         "city",
                         "isActive",
-                        "usageCount"
+                        "usageCount",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -19055,6 +21571,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -19229,6 +21756,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -19313,6 +21912,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "user:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -19350,6 +21950,11 @@
                             "properties": {
                               "id": {
                                 "type": "string"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
                               },
                               "name": {
                                 "type": [
@@ -19414,6 +22019,7 @@
                             },
                             "required": [
                               "id",
+                              "version",
                               "name",
                               "prefix",
                               "enabled",
@@ -19938,6 +22544,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -19983,12 +22600,18 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
                         "id",
                         "name",
-                        "usageCount"
+                        "usageCount",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -20144,6 +22767,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -20228,6 +22923,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "taxonomy:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -20255,6 +22951,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -20429,6 +23136,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -20513,6 +23292,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "taxonomy:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -21074,12 +23854,18 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
                           "id",
                           "name",
-                          "usageCount"
+                          "usageCount",
+                          "version"
                         ],
                         "additionalProperties": {}
                       }
@@ -21344,12 +24130,18 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
                         "id",
                         "name",
-                        "usageCount"
+                        "usageCount",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -21587,6 +24379,15 @@
         "responses": {
           "200": {
             "description": "Sukses.",
+            "headers": {
+              "ETag": {
+                "description": "Versi baris saat ini — kirim balik sebagai If-Match saat menyunting.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^\"\\d+\"$"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -21638,6 +24439,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -21648,7 +24454,8 @@
                         "description",
                         "sortOrder",
                         "usageCount",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -21888,6 +24695,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "question:view",
+          "etag": true,
           "source": "src/app/api (wrapRoute)"
         }
       },
@@ -21915,6 +24723,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "requestBody": {
@@ -22016,6 +24835,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -22026,7 +24850,8 @@
                         "description",
                         "sortOrder",
                         "usageCount",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -22182,6 +25007,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -22266,6 +25163,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "taxonomy:manage",
+          "ifMatch": true,
           "notes": [
             "Re-parent mempropagasi `level` ke seluruh subtree dalam satu transaksi."
           ],
@@ -22296,6 +25194,17 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
           }
         ],
         "responses": {
@@ -22470,6 +25379,78 @@
               }
             }
           },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit terlampaui.",
             "content": {
@@ -22554,6 +25535,7 @@
         "x-mathbank": {
           "authz": "route",
           "permission": "taxonomy:manage",
+          "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
       }
@@ -22629,6 +25611,11 @@
                           },
                           "isActive": {
                             "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -22639,7 +25626,8 @@
                           "description",
                           "sortOrder",
                           "usageCount",
-                          "isActive"
+                          "isActive",
+                          "version"
                         ],
                         "additionalProperties": {}
                       }
@@ -22963,6 +25951,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -22973,7 +25966,8 @@
                         "description",
                         "sortOrder",
                         "usageCount",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -23184,968 +26178,84 @@
     "/api/v1/ingest/commit": {
       "post": {
         "operationId": "postV1IngestCommit",
-        "summary": "Commit antrean → soal draft",
+        "summary": "Alias deprecated: commit antrean menjadi soal draft",
+        "description": "DEPRECATED — pakai POST /api/ingest/commit. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
         "tags": [
           "ingest"
         ],
+        "deprecated": true,
         "security": [
-          {
-            "sessionCookie": []
-          },
           {
             "apiKey": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "ids": {
-                    "maxItems": 200,
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "uuid",
-                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                    }
-                  },
-                  "grade": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 20
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "limit": {
-                    "default": 10,
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 50
-                  },
-                  "mediaDelayMs": {
-                    "default": 0,
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 5000
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "Sukses.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "summary": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {}
-                        },
-                        "results": {
-                          "type": "array",
-                          "items": {}
-                        },
-                        "eventsTagged": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "unknownEvents": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "eventsError": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "summary",
-                        "results",
-                        "eventsTagged",
-                        "unknownEvents"
-                      ],
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
+            "description": "Sama dengan jalur kanonik."
           },
-          "400": {
-            "description": "Validasi input gagal (Zod).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Tidak ada sesi/API key valid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Tidak punya izin, atau wajib ganti password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit terlampaui.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "description": "Detik sampai boleh mencoba lagi.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Kesalahan server tak terduga.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
+          "4XX": {
+            "description": "Sama dengan jalur kanonik."
           }
         },
         "x-mathbank": {
-          "authz": "route",
-          "permission": "question:create",
-          "idempotent": true,
-          "source": "src/app/api (wrapRoute)"
+          "authz": "manual",
+          "security": "bearer"
         }
       }
     },
     "/api/v1/ingest/queue": {
       "get": {
         "operationId": "getV1IngestQueue",
-        "summary": "Antrean ingest + ringkasan status",
+        "summary": "Alias deprecated: antrean ingest + ringkasan status",
+        "description": "DEPRECATED — pakai GET /api/ingest/queue. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
         "tags": [
           "ingest"
         ],
+        "deprecated": true,
         "security": [
-          {
-            "sessionCookie": []
-          },
           {
             "apiKey": []
           }
         ],
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "processing",
-                "completed",
-                "failed",
-                "skipped"
-              ]
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 200
-            }
-          }
-        ],
         "responses": {
           "200": {
-            "description": "Sukses.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "items": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
-                              "title": {
-                                "type": "string"
-                              },
-                              "status": {
-                                "type": "string",
-                                "enum": [
-                                  "pending",
-                                  "processing",
-                                  "completed",
-                                  "failed",
-                                  "skipped"
-                                ]
-                              },
-                              "sourceOrigin": {
-                                "type": "string"
-                              },
-                              "sourceUrl": {
-                                "type": [
-                                  "string",
-                                  "null"
-                                ]
-                              },
-                              "targetType": {
-                                "type": "string"
-                              },
-                              "createdAt": {
-                                "type": "string",
-                                "description": "Timestamp ISO-8601 (UTC)."
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "title",
-                              "status",
-                              "sourceOrigin",
-                              "sourceUrl",
-                              "targetType",
-                              "createdAt"
-                            ],
-                            "additionalProperties": {}
-                          }
-                        },
-                        "counts": {
-                          "type": "object",
-                          "propertyNames": {
-                            "type": "string"
-                          },
-                          "additionalProperties": {
-                            "type": "number"
-                          }
-                        }
-                      },
-                      "required": [
-                        "items",
-                        "counts"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
+            "description": "Sama dengan jalur kanonik."
           },
-          "400": {
-            "description": "Validasi input gagal (Zod).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Tidak ada sesi/API key valid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Tidak punya izin, atau wajib ganti password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit terlampaui.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "description": "Detik sampai boleh mencoba lagi.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Kesalahan server tak terduga.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
+          "4XX": {
+            "description": "Sama dengan jalur kanonik."
           }
         },
         "x-mathbank": {
-          "authz": "route",
-          "permission": "ingest:queue:read",
-          "notes": [
-            "Izin khusus `ingest:queue:read` — `question:view` tertutup untuk peran `machine`."
-          ],
-          "source": "src/app/api (wrapRoute)"
+          "authz": "manual",
+          "security": "bearer"
         }
       }
     },
     "/api/v1/ingest/upload": {
       "post": {
         "operationId": "postV1IngestUpload",
-        "summary": "Unggah naskah ke antrean ingest",
+        "summary": "Alias deprecated: unggah naskah ke antrean",
+        "description": "DEPRECATED — pakai POST /api/ingest/upload. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
         "tags": [
           "ingest"
         ],
+        "deprecated": true,
         "security": [
-          {
-            "sessionCookie": []
-          },
           {
             "apiKey": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 255
-                  },
-                  "source": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 50
-                  },
-                  "url": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 2000,
-                        "format": "uri"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "rawContent": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "format": {
-                    "default": "html",
-                    "type": "string",
-                    "enum": [
-                      "html",
-                      "json",
-                      "text"
-                    ]
-                  },
-                  "targetGrade": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 20
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "targetTopicId": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "format": "uuid",
-                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "required": [
-                  "title",
-                  "source",
-                  "rawContent"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "201": {
-            "description": "Sukses.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "pending",
-                            "processing",
-                            "completed",
-                            "failed",
-                            "skipped"
-                          ]
-                        },
-                        "deduped": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "status",
-                        "deduped"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
+            "description": "Sama dengan jalur kanonik."
           },
-          "400": {
-            "description": "Validasi input gagal (Zod).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Tidak ada sesi/API key valid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Tidak punya izin, atau wajib ganti password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit terlampaui.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "description": "Detik sampai boleh mencoba lagi.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Kesalahan server tak terduga.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "error"
-                  ],
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "required": [
-                        "code",
-                        "message"
-                      ],
-                      "properties": {
-                        "code": {
-                          "type": "string",
-                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
-                        }
-                      },
-                      "additionalProperties": false
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              }
-            }
+          "4XX": {
+            "description": "Sama dengan jalur kanonik."
           }
         },
         "x-mathbank": {
-          "authz": "route",
-          "permission": "question:create",
-          "idempotent": true,
-          "source": "src/app/api (wrapRoute)"
+          "authz": "manual",
+          "security": "bearer"
         }
       }
     }

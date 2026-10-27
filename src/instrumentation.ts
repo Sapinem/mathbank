@@ -24,6 +24,12 @@ export async function register() {
 
   if (!process.env.DATABASE_URL) return;
 
+  // **ADR-0029:** rate limit & idempotensi pindah dari memori proses ke
+  // PostgreSQL bersama. Dipasang di sini (sekali per server), bukan saat impor
+  // route, supaya unit test tetap memakai MemoryStore tanpa DB.
+  const { installSharedStores } = await import("@/lib/api/stores");
+  installSharedStores();
+
   const { checkDbInvariants } = await import("@/lib/db/invariants");
 
   try {

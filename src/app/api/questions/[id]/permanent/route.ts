@@ -23,8 +23,9 @@ export const DELETE = wrapRoute({
   },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ params, actor }) => {
-    await hardDeleteQuestion(params.id, actor);
+  ifMatch: true,
+  handler: async ({ params, actor, expectedVersion }) => {
+    await hardDeleteQuestion(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

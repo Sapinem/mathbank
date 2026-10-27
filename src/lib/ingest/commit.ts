@@ -141,7 +141,7 @@ export async function resolveBundleId(input: {
   sourceId: string;
   title: string;
   url: string | null;
-  grade: string;
+  grade: string | null;
 }): Promise<string> {
   const where = input.url
     ? and(eq(bundles.sourceId, input.sourceId), eq(bundles.url, input.url))
@@ -311,7 +311,8 @@ export async function commitItems(
   opts: CommitOptions,
 ): Promise<CommitResult> {
   const sourceId = await resolveSourceId(opts.sourceOrigin, opts.sourceUrl);
-  const grade = (opts.grade && opts.grade.trim()) || "umum";
+  const rawGrade = opts.grade && opts.grade.trim();
+  const grade = rawGrade && rawGrade.toLowerCase() !== "umum" ? rawGrade : null;
 
   // ADR-0014 #7: ingest WAJIB membuat bundle — tak ada soal "nyasar" tanpa naskah.
   // Bundle = naskah/artikel utuh dari satu sumber; URL artikel hidup di sini

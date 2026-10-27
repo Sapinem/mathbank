@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,10 +94,17 @@ export function EventsView() {
       aliases: csv(aliases),
     };
     const opts = {
-      onSuccess: () => setOpen(false),
-      onError: (e: unknown) => setFormErr((e as Error).message),
+      onSuccess: () => {
+        setOpen(false);
+        toast.success(editing ? "Perubahan event disimpan." : "Event baru dibuat.");
+      },
+      onError: (e: unknown) => {
+        const msg = (e as Error).message;
+        setFormErr(msg);
+        toast.error("Gagal menyimpan event", { description: msg });
+      },
     };
-    if (editing) update.mutate({ id: editing.id, ...payload }, opts);
+    if (editing) update.mutate({ id: editing.id, version: editing.version, ...payload }, opts);
     else create.mutate(payload, opts);
   }
 
@@ -237,10 +245,17 @@ export function EventsView() {
               variant="destructive"
               onClick={() => {
                 if (!confirm) return;
-                del.mutate(confirm.id, {
-                  onSuccess: () => setConfirm(null),
-                  onError: (e) => setFormErr((e as Error).message),
-                });
+                del.mutate(
+                  { id: confirm.id, version: confirm.version },
+                  {
+                    onSuccess: () => {
+                      setConfirm(null);
+                      toast.success("Event dihapus.");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal menghapus event", { description: (e as Error).message }),
+                  },
+                );
               }}
             >
               Hapus

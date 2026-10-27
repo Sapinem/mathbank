@@ -23,6 +23,7 @@ vi.mock("@/components/math/math-content", () => ({
 function bundle(over: Partial<BundleDetail> = {}): BundleDetail {
   return {
     id: "b1",
+    version: 1,
     title: "Pemantapan ASTS I",
     bundleType: "exam",
     origin: "manual",
@@ -109,7 +110,7 @@ function bundle(over: Partial<BundleDetail> = {}): BundleDetail {
       },
     ],
     ...over,
-  };
+  } as BundleDetail;
 }
 
 beforeEach(() => {

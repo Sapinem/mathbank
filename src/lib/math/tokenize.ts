@@ -137,9 +137,10 @@ export function splitTableBlocks(input: string): Segment[] {
 }
 
 export function tokenizeMath(input: string): Token[] {
+  const normalized = input.replace(/\r\n|\r/g, "\n");
   const tokens: Token[] = [];
   // Blok tabel dipisah lebih dulu (sel boleh memuat rumus) — lihat splitTableBlocks.
-  for (const seg of splitTableBlocks(input)) {
+  for (const seg of splitTableBlocks(normalized)) {
     if (seg.kind === "table") {
       tokens.push(seg.token);
     } else {

@@ -11,7 +11,7 @@ import postgres from "postgres";
 config({ path: ".env" });
 
 const CURRICULUM_PATH = resolve(
-  process.env.CURRICULUM_YAML ?? "config/curriculum.yaml",
+  process.env.CURRICULUM_YAML ?? "docs/archive/historis/curriculum.yaml",
 );
 
 interface Grade {
@@ -55,11 +55,14 @@ async function main() {
   if (!url) throw new Error("DATABASE_URL belum diatur");
   const sql = postgres(url, { max: 1 });
 
+  const EXCLUDED_GRADES = new Set(["utbk", "mandiri", "umum", "11w", "11l", "12w", "12l"]);
+  const validGrades = data.grades.filter((g) => !EXCLUDED_GRADES.has(g.id));
+
   console.log(
-    `Seed: ${data.grades.length} grades, ${data.difficulties.length} difficulties, ${data.cognitive_levels.length} cognitive`,
+    `Seed: ${validGrades.length} grades (filtered ${data.grades.length - validGrades.length} legacy), ${data.difficulties.length} difficulties, ${data.cognitive_levels.length} cognitive`,
   );
 
-  for (const g of data.grades) {
+  for (const g of validGrades) {
     await sql`
       INSERT INTO grades (id, label, level_group, curriculum_phase, order_index, is_active)
       VALUES (${g.id}, ${g.label}, ${g.level_group ?? null}, ${g.curriculum_phase ?? null},
