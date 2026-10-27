@@ -42,6 +42,12 @@ export async function runPruneOnce(now: number = Date.now()): Promise<void> {
     // jika tidak kegagalannya jadi unhandled rejection di luar try/catch ini.
     await getStore().prune?.(now);
     await getIdempotencyStore().prune?.(now);
+    try {
+      const { imageRateLimiter } = await import("@/app/img/[shortId]/route");
+      imageRateLimiter.prune(now);
+    } catch {
+      // route belum diimpor atau berjalan di lingkungan tanpa route
+    }
     s.runs += 1;
     s.lastRunAt = now;
     s.lastError = null;

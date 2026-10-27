@@ -16,6 +16,7 @@ export default defineConfig({
     include: ["src/**/*.db.test.ts"],
     // Tes integrasi berurutan (hindari rebutan koneksi/transaksi).
     fileParallelism: false,
+    maxWorkers: 1,
     testTimeout: 20000,
     hookTimeout: 20000,
   },

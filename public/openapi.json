@@ -2256,6 +2256,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -2281,6 +2286,7 @@
                         "status",
                         "createdById",
                         "createdAt",
+                        "version",
                         "updatedAt"
                       ],
                       "additionalProperties": {}
@@ -4749,6 +4755,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -4917,6 +4928,7 @@
                         "status",
                         "createdById",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "items"
                       ],
@@ -5486,6 +5498,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -5511,6 +5528,7 @@
                         "status",
                         "createdById",
                         "createdAt",
+                        "version",
                         "updatedAt"
                       ],
                       "additionalProperties": {}
@@ -6743,6 +6761,11 @@
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
                               },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
                               "updatedAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
@@ -6768,6 +6791,7 @@
                               "status",
                               "createdById",
                               "createdAt",
+                              "version",
                               "updatedAt"
                             ],
                             "additionalProperties": {}
@@ -7036,6 +7060,18 @@
           },
           {
             "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
           }
         ],
         "requestBody": {
@@ -7321,6 +7357,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -7346,6 +7387,7 @@
                         "status",
                         "createdById",
                         "createdAt",
+                        "version",
                         "updatedAt"
                       ],
                       "additionalProperties": {}
@@ -8031,6 +8073,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -8039,7 +8086,8 @@
                         "shortname",
                         "category",
                         "subtests",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -8781,6 +8829,11 @@
                           },
                           "isActive": {
                             "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -8789,7 +8842,8 @@
                           "shortname",
                           "category",
                           "subtests",
-                          "isActive"
+                          "isActive",
+                          "version"
                         ],
                         "additionalProperties": {}
                       }
@@ -9098,6 +9152,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -9106,7 +9165,8 @@
                         "shortname",
                         "category",
                         "subtests",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -9776,6 +9836,18 @@
             "apiKey": []
           }
         ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -10411,6 +10483,18 @@
           },
           {
             "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
           }
         ],
         "requestBody": {
@@ -11059,6 +11143,11 @@
                             "createdAt": {
                               "type": "string",
                               "description": "Timestamp ISO-8601 (UTC)."
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
@@ -11072,7 +11161,8 @@
                             "height",
                             "fileSize",
                             "sourceOrigin",
-                            "createdAt"
+                            "createdAt",
+                            "version"
                           ],
                           "additionalProperties": {}
                         },
@@ -12285,6 +12375,11 @@
                               "createdAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -12297,7 +12392,8 @@
                               "mimeType",
                               "fileSize",
                               "sourceOrigin",
-                              "createdAt"
+                              "createdAt",
+                              "version"
                             ],
                             "additionalProperties": {}
                           }
@@ -12653,6 +12749,11 @@
                               "createdAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -12665,7 +12766,8 @@
                               "mimeType",
                               "fileSize",
                               "sourceOrigin",
-                              "createdAt"
+                              "createdAt",
+                              "version"
                             ],
                             "additionalProperties": {}
                           }
@@ -12724,6 +12826,11 @@
                               "createdAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -12736,7 +12843,8 @@
                               "mimeType",
                               "fileSize",
                               "sourceOrigin",
-                              "createdAt"
+                              "createdAt",
+                              "version"
                             ],
                             "additionalProperties": {}
                           }
@@ -13577,6 +13685,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -13635,6 +13748,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -14517,6 +14631,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -14575,6 +14694,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -15438,6 +15558,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -15496,6 +15621,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -16413,6 +16539,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -16471,6 +16602,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -17529,6 +17661,11 @@
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
                               },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
                               "updatedAt": {
                                 "type": "string",
                                 "description": "Timestamp ISO-8601 (UTC)."
@@ -17587,6 +17724,7 @@
                               "lastReviewedAt",
                               "deletedAt",
                               "createdAt",
+                              "version",
                               "updatedAt",
                               "options"
                             ],
@@ -17822,6 +17960,18 @@
           },
           {
             "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
           }
         ],
         "requestBody": {
@@ -18408,6 +18558,11 @@
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
                         },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
                         "updatedAt": {
                           "type": "string",
                           "description": "Timestamp ISO-8601 (UTC)."
@@ -18466,6 +18621,7 @@
                         "lastReviewedAt",
                         "deletedAt",
                         "createdAt",
+                        "version",
                         "updatedAt",
                         "options"
                       ],
@@ -19593,6 +19749,11 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -19605,7 +19766,8 @@
                         "bookYear",
                         "city",
                         "isActive",
-                        "usageCount"
+                        "usageCount",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -20378,6 +20540,11 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -20390,7 +20557,8 @@
                           "bookYear",
                           "city",
                           "isActive",
-                          "usageCount"
+                          "usageCount",
+                          "version"
                         ],
                         "additionalProperties": {}
                       }
@@ -20768,6 +20936,11 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -20780,7 +20953,8 @@
                         "bookYear",
                         "city",
                         "isActive",
-                        "usageCount"
+                        "usageCount",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -21777,6 +21951,11 @@
                               "id": {
                                 "type": "string"
                               },
+                              "version": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
                               "name": {
                                 "type": [
                                   "string",
@@ -21840,6 +22019,7 @@
                             },
                             "required": [
                               "id",
+                              "version",
                               "name",
                               "prefix",
                               "enabled",
@@ -22420,12 +22600,18 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
                         "id",
                         "name",
-                        "usageCount"
+                        "usageCount",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -23668,12 +23854,18 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
                           "id",
                           "name",
-                          "usageCount"
+                          "usageCount",
+                          "version"
                         ],
                         "additionalProperties": {}
                       }
@@ -23938,12 +24130,18 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
                         "id",
                         "name",
-                        "usageCount"
+                        "usageCount",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -24241,6 +24439,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -24251,7 +24454,8 @@
                         "description",
                         "sortOrder",
                         "usageCount",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -24631,6 +24835,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -24641,7 +24850,8 @@
                         "description",
                         "sortOrder",
                         "usageCount",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }
@@ -25401,6 +25611,11 @@
                           },
                           "isActive": {
                             "type": "boolean"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -25411,7 +25626,8 @@
                           "description",
                           "sortOrder",
                           "usageCount",
-                          "isActive"
+                          "isActive",
+                          "version"
                         ],
                         "additionalProperties": {}
                       }
@@ -25735,6 +25951,11 @@
                         },
                         "isActive": {
                           "type": "boolean"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -25745,7 +25966,8 @@
                         "description",
                         "sortOrder",
                         "usageCount",
-                        "isActive"
+                        "isActive",
+                        "version"
                       ],
                       "additionalProperties": {}
                     }

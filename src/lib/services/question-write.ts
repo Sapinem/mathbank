@@ -1,8 +1,8 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
 import { solutions } from "@/lib/db/schema/solution";
-import { bundleItems } from "@/lib/db/schema/bundle";
+import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import { isQuestionUsedInBundles } from "./bundle-service";
 import { contentHash } from "@/lib/ingest/hash";
@@ -10,7 +10,8 @@ import { findQuestionByContentHash } from "@/lib/ingest/dedup";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { isUniqueViolation } from "@/lib/db/errors";
 import { versionPredicate } from "@/lib/db/optimistic";
-import { assertVersionMatches, PreconditionFailedError } from "@/lib/api/version";
+import { assertVersionMatches } from "@/lib/api/version";
+import { throwVersionedWriteMiss } from "./versioned";
 import type { Actor } from "@/lib/auth/actor";
 import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
@@ -326,7 +327,9 @@ export async function updateQuestion(
           .set(Object.keys(patch).length ? patch : { version: sql`${questions.version}` })
           .where(versionPredicate(questions, id, expectedVersion ?? "*"))
           .returning({ id: questions.id });
-        if (rows.length === 0) throw new PreconditionFailedError();
+        if (rows.length === 0) {
+          return throwVersionedWriteMiss(questions, id, expectedVersion, "Soal tidak ditemukan.", { dbOrTx: tx });
+        }
       }
       if (topicIds) {
         await tx.delete(questionTopics).where(eq(questionTopics.questionId, id));
@@ -385,7 +388,9 @@ export async function setQuestionFlag(
     .set({ isFlagged: flagged, flagNotes: flagged ? notes : null })
     .where(versionPredicate(questions, id, expectedVersion ?? "*"))
     .returning({ id: questions.id });
-  if (flaggedRows.length === 0) throw new PreconditionFailedError();
+  if (flaggedRows.length === 0) {
+    return throwVersionedWriteMiss(questions, id, expectedVersion, "Soal tidak ditemukan.");
+  }
 
   await recordAudit({
     entityType: "question",
@@ -428,7 +433,9 @@ export async function deleteQuestion(
     .set({ deletedAt: new Date() })
     .where(versionPredicate(questions, id, expectedVersion ?? "*"))
     .returning({ id: questions.id });
-  if (deleted.length === 0) throw new PreconditionFailedError();
+  if (deleted.length === 0) {
+    return throwVersionedWriteMiss(questions, id, expectedVersion, "Soal tidak ditemukan.");
+  }
 
   await recordAudit({
     entityType: "question",
@@ -490,12 +497,48 @@ export async function hardDeleteQuestion(
   // Atomik: bersihkan referensi item dari paket yang sudah terarsip agar foreign key RESTRICT tidak gagal,
   // lalu hapus soal secara permanen.
   await db.transaction(async (tx) => {
-    await tx.delete(bundleItems).where(eq(bundleItems.questionId, id));
-    const removed = await tx
-      .delete(questions)
+    const [locked] = await tx
+      .select({ id: questions.id, version: questions.version })
+      .from(questions)
       .where(versionPredicate(questions, id, expectedVersion ?? "*"))
-      .returning({ id: questions.id });
-    if (removed.length === 0) throw new PreconditionFailedError();
+      .for("update");
+    if (!locked) {
+      return throwVersionedWriteMiss(questions, id, expectedVersion, "Soal tidak ditemukan.", { dbOrTx: tx });
+    }
+
+    // Validasi ulang di dalam transaksi agar tidak balapan dengan penambahan paket aktif baru
+    const [activeUsage] = await tx
+      .select({ id: bundleItems.id })
+      .from(bundleItems)
+      .innerJoin(bundles, eq(bundleItems.bundleId, bundles.id))
+      .where(
+        and(
+          eq(bundleItems.questionId, id),
+          isNull(bundles.deletedAt),
+          ne(bundles.status, "archived"),
+        ),
+      )
+      .limit(1);
+    if (activeUsage) {
+      throw new ConflictError(
+        "Soal ini dipakai di paket soal aktif — keluarkan dari paket dulu.",
+      );
+    }
+
+    // Bersihkan hanya item dari paket yang sudah terarsip/terhapus lunak
+    await tx.delete(bundleItems).where(
+      and(
+        eq(bundleItems.questionId, id),
+        inArray(
+          bundleItems.bundleId,
+          tx
+            .select({ id: bundles.id })
+            .from(bundles)
+            .where(or(isNotNull(bundles.deletedAt), eq(bundles.status, "archived"))),
+        ),
+      ),
+    );
+    await tx.delete(questions).where(eq(questions.id, id));
   });
 
   await recordAudit({

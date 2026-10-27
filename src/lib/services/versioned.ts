@@ -6,7 +6,7 @@
  * tidak bisa dibedakan dari `rowCount`. Pemeriksaan lanjutan hanya dijalankan
  * pada jalur gagal, jadi jalur sukses tetap satu query.
  */
-import { eq } from "drizzle-orm";
+import { and, eq, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import { PreconditionFailedError } from "@/lib/api/version";
@@ -26,12 +26,18 @@ export async function throwVersionedWriteMiss(
   id: string,
   expected: number | "*" | undefined,
   notFoundMessage: string,
+  opts?: { scope?: SQL; idCol?: AnyPgColumn; dbOrTx?: unknown },
 ): Promise<never> {
-  if (expected !== undefined) {
-    const [row] = await db
+  // Hanya lempar 412 bila klien meminta nomor versi eksplisit dan baris sebenarnya ada di DB.
+  // Bila expected === '*' atau undefined, ketiadaan baris adalah 404 Not Found (RFC 9110).
+  if (typeof expected === "number") {
+    const runner = (opts?.dbOrTx as typeof db) ?? db;
+    const col = opts?.idCol ?? table.id;
+    const cond = opts?.scope ? and(eq(col, id), opts.scope) : eq(col, id);
+    const [row] = await runner
       .select({ version: table.version })
       .from(table)
-      .where(eq(table.id, id))
+      .where(cond)
       .limit(1);
     if (row) {
       throw new PreconditionFailedError(undefined, (row as { version: number }).version);

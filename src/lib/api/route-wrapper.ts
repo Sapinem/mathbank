@@ -381,6 +381,7 @@ export function wrapRoute<
     const method = req.method;
     const startedAt = Date.now();
     let actorIdForCleanup: string | null = null;
+    let handlerCommitted = false;
     // Catat hasil akhir (sukses/error) ke metrik — satu tempat, apa pun jalannya.
     const finish = (res: NextResponse): NextResponse => {
       // Respons API bergantung pada identitas pemanggil (answer_key, draf,
@@ -423,7 +424,11 @@ export function wrapRoute<
         const key = rateLimitKey(
           actor?.id ?? null,
           getClientIp(req),
-          opts.rateLimitScope ?? routeGate ?? authz.kind,
+          opts.rateLimitScope ??
+            routeGate ??
+            (authz.kind === "service"
+              ? `${authz.enforcedIn}:${method}:${routePath}`
+              : authz.kind),
         );
         const result = await checkRateLimit(key, policy);
         if (!result.allowed) throw new RateLimitError(result.retryAfterMs);
@@ -490,6 +495,7 @@ export function wrapRoute<
           const replay = NextResponse.json(state.body, { status: state.status });
           replay.headers.set("X-Request-ID", requestId);
           replay.headers.set("Idempotent-Replay", "true");
+          replay.headers.set("Idempotency-Key", idemKey);
           return finish(replay);
         }
         if (state.kind === "in-flight") {
@@ -531,6 +537,7 @@ export function wrapRoute<
         params,
         expectedVersion,
       });
+      handlerCommitted = true;
       const res = NextResponse.json({ data }, { status: opts.status ?? 200 });
       res.headers.set("X-Request-ID", requestId);
       // ETag = versi baris, sehingga klien bisa langsung mengirimnya balik
@@ -539,19 +546,27 @@ export function wrapRoute<
       if (etagVersion !== undefined) res.headers.set("ETag", etagOf(etagVersion));
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
-        await rememberResponse(
-          `${actorKey}:${idemKey}`,
-          opts.status ?? 200,
-          { data },
-          fingerprint,
-        );
+        try {
+          await rememberResponse(
+            `${actorKey}:${idemKey}`,
+            opts.status ?? 200,
+            { data },
+            fingerprint,
+          );
+        } catch (rememberErr) {
+          log.error({
+            msg: "idempotency_remember_failed",
+            requestId,
+            error: rememberErr instanceof Error ? rememberErr.message : String(rememberErr),
+          });
+        }
         res.headers.set("Idempotency-Key", idemKey);
       }
       return finish(res);
     } catch (err) {
-      // **#4:** bila gagal, buang penanda in-flight agar percobaan berikutnya
+      // **#4:** bila handler gagal SEBELUM komit, buang penanda in-flight agar percobaan berikutnya
       // (key sama) tidak terjebak 409 — kesalahan bukan hasil yang di-cache.
-      if (opts.idempotent) {
+      if (opts.idempotent && !handlerCommitted) {
         const k = req.headers.get("idempotency-key")?.slice(0, 128);
         const actorKey = actorIdForCleanup ?? getClientIp(req) ?? "anon";
         if (k) {

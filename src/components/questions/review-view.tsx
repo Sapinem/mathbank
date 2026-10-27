@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   CheckCircle2,
   Flag,
@@ -36,6 +37,7 @@ import {
   DIFFICULTY_LABELS,
   statusClass,
 } from "@/lib/display/labels";
+import { StatusIcon } from "@/components/questions/question-status-badge";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
 /**
@@ -114,8 +116,8 @@ function RapidReview() {
   const total = items.length;
   const q = items[Math.min(idx, Math.max(0, total - 1))];
 
-  const status = useChangeQuestionStatus(q?.id ?? "");
-  const flag = useSetQuestionFlag(q?.id ?? "");
+  const status = useChangeQuestionStatus(q?.id ?? "", q?.version);
+  const flag = useSetQuestionFlag(q?.id ?? "", q?.version);
 
   // Navigasi keyboard ←/→.
   useEffect(() => {
@@ -138,6 +140,12 @@ function RapidReview() {
     );
 
   const advance = () => setIdx((i) => Math.min(total - 1, i + 1));
+  const onQueueResolved = (msg: string) => {
+    toast.success(msg);
+    // Saat item keluar dari antrean, elemen berikutnya bergeser ke indeks `idx`.
+    // Kita clamp idx agar tidak melompati soal yang baru bergeser.
+    setIdx((i) => Math.min(i, Math.max(0, total - 2)));
+  };
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
@@ -152,6 +160,7 @@ function RapidReview() {
         <CardContent className="flex flex-col gap-4 pt-6">
           <div className="flex flex-wrap items-center gap-2">
             <Badge className={statusClass(q.status)}>
+              <StatusIcon status={q.status} data-icon="inline-start" aria-hidden="true" />
               {STATUS_LABELS[q.status] ?? q.status}
             </Badge>
             <Badge variant="outline">{q.grade}</Badge>
@@ -176,7 +185,7 @@ function RapidReview() {
           </div>
 
           {q.options.length > 0 && (
-            <ul className="flex flex-col gap-1.5 text-sm">
+            <ul className="flex flex-col gap-1.5 text-base">
               {q.options.map((o) => (
                 <li
                   key={o.id}
@@ -204,7 +213,13 @@ function RapidReview() {
           <div className="flex flex-wrap gap-2">
             <Button
               disabled={status.isPending}
-              onClick={() => status.mutate("ready", { onSuccess: advance })}
+              onClick={() =>
+                status.mutate("ready", {
+                  onSuccess: () => onQueueResolved("Soal disetujui (Siap)."),
+                  onError: (e) =>
+                    toast.error("Gagal menyetujui soal", { description: (e as Error).message }),
+                })
+              }
               className="min-h-[44px]"
             >
               <CheckCircle2 data-icon="inline-start" /> Setujui (Siap)
@@ -212,7 +227,13 @@ function RapidReview() {
             <Button
               variant="outline"
               disabled={status.isPending}
-              onClick={() => status.mutate("draft", { onSuccess: advance })}
+              onClick={() =>
+                status.mutate("draft", {
+                  onSuccess: () => onQueueResolved("Soal dikembalikan ke Draf."),
+                  onError: (e) =>
+                    toast.error("Gagal menolak soal", { description: (e as Error).message }),
+                })
+              }
               className="min-h-[44px]"
             >
               Tolak → Draf
@@ -221,7 +242,15 @@ function RapidReview() {
               variant="ghost"
               disabled={flag.isPending}
               onClick={() =>
-                flag.mutate({ flagged: !q.isFlagged, notes: q.flagNotes })
+                flag.mutate(
+                  { flagged: !q.isFlagged, notes: q.flagNotes },
+                  {
+                    onSuccess: () =>
+                      toast.success(q.isFlagged ? "Tanda dilepas." : "Soal ditandai."),
+                    onError: (e) =>
+                      toast.error("Gagal mengubah tanda", { description: (e as Error).message }),
+                  },
+                )
               }
               className="min-h-[44px]"
             >
@@ -253,7 +282,7 @@ function RapidReview() {
           variant="outline"
           size="sm"
           disabled={idx >= total - 1}
-          onClick={() => setIdx((i) => Math.min(total - 1, i + 1))}
+          onClick={advance}
           className="min-h-[44px]"
         >
           Berikutnya →
@@ -288,8 +317,8 @@ function ReviewQueue() {
 }
 
 function ReviewRow({ question: q }: { question: PublicQuestion }) {
-  const status = useChangeQuestionStatus(q.id);
-  const flag = useSetQuestionFlag(q.id);
+  const status = useChangeQuestionStatus(q.id, q.version);
+  const flag = useSetQuestionFlag(q.id, q.version);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [notes, setNotes] = useState("");
 
@@ -298,6 +327,7 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
       <CardContent className="flex flex-col gap-3 pt-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={statusClass(q.status)}>
+            <StatusIcon status={q.status} data-icon="inline-start" aria-hidden="true" />
             {STATUS_LABELS[q.status] ?? q.status}
           </Badge>
           <Badge variant="outline">{q.grade}</Badge>
@@ -321,7 +351,13 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
           <Button
             size="sm"
             disabled={status.isPending}
-            onClick={() => status.mutate("ready")}
+            onClick={() =>
+              status.mutate("ready", {
+                onSuccess: () => toast.success("Soal disetujui (Siap)."),
+                onError: (e) =>
+                  toast.error("Gagal menyetujui soal", { description: (e as Error).message }),
+              })
+            }
             className="min-h-[44px]"
           >
             <CheckCircle2 data-icon="inline-start" /> Setujui (Siap)
@@ -340,7 +376,15 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
             size="sm"
             disabled={flag.isPending}
             onClick={() =>
-              flag.mutate({ flagged: !q.isFlagged, notes: q.flagNotes })
+              flag.mutate(
+                { flagged: !q.isFlagged, notes: q.flagNotes },
+                {
+                  onSuccess: () =>
+                    toast.success(q.isFlagged ? "Tanda dilepas." : "Soal ditandai."),
+                  onError: (e) =>
+                    toast.error("Gagal mengubah tanda", { description: (e as Error).message }),
+                },
+              )
             }
             className="min-h-[44px]"
           >
@@ -387,7 +431,10 @@ function ReviewRow({ question: q }: { question: PublicQuestion }) {
                     onSuccess: () => {
                       setRejectOpen(false);
                       setNotes("");
+                      toast.success("Soal dikembalikan ke Draf.");
                     },
+                    onError: (e) =>
+                      toast.error("Gagal menolak soal", { description: (e as Error).message }),
                   },
                 );
               }}
@@ -426,7 +473,7 @@ function FlaggedQueue() {
 }
 
 function FlaggedRow({ question: q }: { question: PublicQuestion }) {
-  const flag = useSetQuestionFlag(q.id);
+  const flag = useSetQuestionFlag(q.id, q.version);
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 pt-4">
@@ -436,6 +483,7 @@ function FlaggedRow({ question: q }: { question: PublicQuestion }) {
             Ditandai
           </Badge>
           <Badge variant="outline">
+            <StatusIcon status={q.status} data-icon="inline-start" aria-hidden="true" />
             {STATUS_LABELS[q.status] ?? q.status}
           </Badge>
         </div>

@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { MathContent } from "@/components/math/math-content";
 import { useBundle, useBundleValidation } from "@/lib/hooks/use-bundles";
+import { cn } from "@/lib/utils";
+import { StatusIcon } from "@/components/questions/question-status-badge";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draf",
@@ -18,6 +20,21 @@ const STATUS_LABELS: Record<string, string> = {
   ready: "Siap",
   archived: "Arsip",
 };
+
+function statusBadgeClass(status: string): string {
+  switch (status) {
+    case "ready":
+      return "border-success/30 bg-success/10 text-success";
+    case "review":
+      return "border-gold/30 bg-gold/10 text-gold";
+    case "draft":
+      return "border-border bg-muted/60 text-muted-foreground";
+    case "archived":
+      return "border-border/60 bg-muted/30 text-muted-foreground/70";
+    default:
+      return "";
+  }
+}
 
 const ORIGIN_LABELS: Record<string, string> = {
   manual: "Manual",
@@ -91,7 +108,11 @@ export function BundleDetailView() {
         <CardHeader>
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle>Pratinjau Naskah</CardTitle>
-            <Badge variant="outline" className="text-xs font-normal">
+            <Badge
+              variant="outline"
+              className={cn("text-xs font-normal", statusBadgeClass(bundle.status))}
+            >
+              <StatusIcon status={bundle.status} data-icon="inline-start" aria-hidden="true" />
               {STATUS_LABELS[bundle.status] ?? bundle.status}
             </Badge>
             <Badge variant="secondary" className="text-xs font-normal">
@@ -131,7 +152,7 @@ export function BundleDetailView() {
                           <li
                             key={o.id}
                             className={
-                              "flex items-start gap-2 text-sm leading-relaxed " +
+                              "flex items-start gap-2 text-base leading-relaxed " +
                               (benar ? "font-medium text-foreground" : "text-muted-foreground")
                             }
                           >

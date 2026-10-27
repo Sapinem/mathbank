@@ -43,6 +43,7 @@ export {
   createBundle,
   updateBundle,
   archiveBundle,
+  deleteBundle,
   duplicateBundle,
 } from "./bundle-write";
 

@@ -21,17 +21,20 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 /** Kolom minimum yang harus dimiliki tabel berversi. */
 export interface VersionedTable {
-  id: AnyPgColumn;
+  id?: AnyPgColumn;
   version: AnyPgColumn;
 }
 
-/** `id = ?` saja bila `expected === "*"`, selain itu `id = ? AND version = ?`. */
+/** `key = ?` saja bila `expected === "*"`, selain itu `key = ? AND version = ?`. */
 export function versionPredicate(
   table: VersionedTable,
   id: string,
   expected: number | "*",
+  keyCol?: AnyPgColumn,
 ): SQL {
-  const byId = eq(table.id, id);
+  const col = keyCol ?? table.id;
+  if (!col) throw new Error("Kolom kunci tidak ditemukan pada tabel.");
+  const byId = eq(col, id);
   if (expected === "*") return byId;
   return and(byId, eq(table.version, expected))!;
 }

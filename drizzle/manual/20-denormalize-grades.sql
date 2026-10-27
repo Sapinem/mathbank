@@ -20,7 +20,7 @@ SET grade = bdg.grade
 FROM bundle_dominant_grade bdg
 WHERE b.id = bdg.bundle_id
   AND bdg.rn = 1
-  AND (b.grade = 'umum' OR b.grade IS NULL);
+  AND b.grade = 'umum';
 
 -- 3. Untuk bundle yang tersisa dengan 'umum', netralkan ke NULL
 UPDATE bundles SET grade = NULL WHERE grade = 'umum';
@@ -48,4 +48,8 @@ SET
   grade = COALESCE(qga.first_grade, q.grade)
 FROM questions q_orig
 LEFT JOIN question_grade_agg qga ON qga.question_id = q_orig.id
-WHERE q.id = q_orig.id;
+WHERE q.id = q_orig.id
+  AND (
+    q.grades IS DISTINCT FROM COALESCE(qga.bundle_grades, CASE WHEN q.grade IS NOT NULL THEN ARRAY[q.grade]::varchar[] ELSE ARRAY[]::varchar[] END)
+    OR q.grade IS DISTINCT FROM COALESCE(qga.first_grade, q.grade)
+  );

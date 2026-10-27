@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
@@ -22,10 +22,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useQuestions, useBulkQuestionAction, type BulkAction } from "@/lib/hooks/use-questions";
-import { useTopics, useSources, useGrades } from "@/lib/hooks/use-reference";
+import { useTopics, useSources, useGrades, useTags } from "@/lib/hooks/use-reference";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
+import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 /** Baca daftar nilai dari URL (tunggal maupun banyak, dukung CSV). */
 function readList(params: URLSearchParams, key: string): string[] {
@@ -37,7 +38,7 @@ function readList(params: URLSearchParams, key: string): string[] {
  *
  * Tinggi tiap baris disamakan dengan `QuestionCard` mode list (`h-11`) agar
  * transisi skeleton → konten nyata tidak menggeser tata letak (zero layout
- * shift). Untuk mode grid/masonry dipakai kartu setinggi `min-h-[280px]`.
+ * shift). Untuk mode grid/masonry dipakai kartu setinggi `min-h-[300px]`.
  */
 function QuestionListSkeleton({ mode }: { mode: ViewMode }) {
   if (mode === "grid" || mode === "masonry") {
@@ -46,7 +47,7 @@ function QuestionListSkeleton({ mode }: { mode: ViewMode }) {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="flex min-h-[280px] flex-col gap-3 rounded-xl border border-border/70 bg-card/60 p-4"
+            className="flex min-h-[300px] flex-col gap-3 rounded-xl border border-border/70 bg-card/60 p-4"
           >
             <div className="flex items-center gap-2">
               <Skeleton className="size-6 rounded-md" />
@@ -71,13 +72,15 @@ function QuestionListSkeleton({ mode }: { mode: ViewMode }) {
       aria-hidden="true"
     >
       {Array.from({ length: 10 }).map((_, i) => (
-        <div key={i} className="flex h-11 items-center gap-2.5 px-4">
+        <div key={i} className="flex h-11 items-center gap-2.5 px-3">
           <Skeleton className="size-4 rounded" />
+          <Skeleton className="h-3 flex-1" />
+          <Skeleton className="h-3 w-28 hidden sm:block" />
           <Skeleton className="size-6 rounded-md" />
           <Skeleton className="h-4 w-8" />
-          <Skeleton className="h-4 w-10" />
-          <Skeleton className="h-3 flex-1" />
-          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-8 hidden md:block" />
+          <Skeleton className="h-4 w-10 hidden md:block" />
+          <Skeleton className="size-2 rounded-full" />
         </div>
       ))}
     </div>
@@ -102,17 +105,25 @@ export function QuestionBankView({
     .map(Number)
     .filter((n) => !Number.isNaN(n));
   const topicId = readList(params, "topicId");
+  const tagId = params.get("tagId") ?? undefined;
   const status = (params.get("status") as ListQuestionsQuery["status"]) ?? undefined;
+  const cognitiveLevel = (params.get("cognitiveLevel") as ListQuestionsQuery["cognitiveLevel"]) ?? undefined;
   const sourceId = params.get("sourceId") ?? undefined;
+  const flagged = params.get("flagged") === "true" ? true : undefined;
   const q = params.get("q") ?? undefined;
+  const limitParam = Number(params.get("limit") ?? String(DEFAULT_PAGE_SIZE));
+  const pageSize = [20, 50, 100].includes(limitParam) ? limitParam : DEFAULT_PAGE_SIZE;
   const page = Number(params.get("page") ?? "0");
 
   const [search, setSearch] = useState(q ?? "");
+  const [jumpInput, setJumpInput] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(defaultFiltersOpen);
   const mode = (params.get("mode") as ViewMode) ?? "list";
 
   // Seleksi massal
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectionModeManual, setSelectionModeManual] = useState(false);
+  const isSelectionMode = selectionModeManual || selected.size > 0;
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
   const bulk = useBulkQuestionAction();
   const [bulkMsg, setBulkMsg] = useState<string | null>(null);
@@ -128,6 +139,7 @@ export function QuestionBankView({
 
   function clearSelection() {
     setSelected(new Set());
+    setSelectionModeManual(false);
     setBulkMsg(null);
   }
 
@@ -168,21 +180,25 @@ export function QuestionBankView({
   const query: Partial<ListQuestionsQuery> = {
     q,
     status,
+    cognitiveLevel,
     questionType,
     grade,
     difficulty,
     topicId,
+    tagId,
     sourceId,
-    limit: PAGE_SIZE,
-    offset: page * PAGE_SIZE,
+    flagged,
+    limit: pageSize,
+    offset: page * pageSize,
   };
 
   const { data, isLoading, isError, error } = useQuestions(query);
   const { data: topics } = useTopics();
+  const { data: tags } = useTags();
   const { data: sources } = useSources();
   const { data: grades } = useGrades();
 
-  /** Perbarui satu param tunggal (q, status, sourceId, mode, page). */
+  /** Perbarui satu param tunggal (q, status, sourceId, mode, page, limit). */
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value);
@@ -221,25 +237,45 @@ export function QuestionBankView({
   }
 
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.ceil(total / pageSize);
+  const from = total === 0 ? 0 : page * pageSize + 1;
+  const to = Math.min(total, (page + 1) * pageSize);
+
+  function handleJump(e: React.FormEvent) {
+    e.preventDefault();
+    const target = Number(jumpInput.trim());
+    if (!Number.isNaN(target) && target >= 1 && target <= totalPages) {
+      setParam("page", String(target - 1));
+      setJumpInput("");
+    }
+  }
+
+  function handlePageSizeChange(newSize: number) {
+    setParam("limit", newSize === DEFAULT_PAGE_SIZE ? null : String(newSize));
+  }
 
   /** Ada filter/pencarian aktif — menentukan deskripsi & tombol reset state kosong. */
   const hasActiveFilter =
     topicId.length > 0 ||
+    Boolean(tagId) ||
     grade.length > 0 ||
     difficulty.length > 0 ||
     questionType.length > 0 ||
     Boolean(status) ||
     Boolean(sourceId) ||
+    Boolean(flagged) ||
     Boolean(q);
 
   const filterValues = {
     topicId,
+    tagId,
     grade,
     difficulty,
+    cognitiveLevel: cognitiveLevel ? [cognitiveLevel] : [],
     questionType,
     status,
     sourceId,
+    flagged,
   };
 
   return (
@@ -260,13 +296,17 @@ export function QuestionBankView({
         onClearSearch={clearSearch}
         filters={filterValues}
         topics={topics ?? []}
+        tags={tags ?? []}
         grades={grades ?? []}
         sources={sources ?? []}
         onRemoveTopic={(id) => toggleValue("topicId", id)}
+        onClearTag={() => setParam("tagId", null)}
         onRemoveGrade={(id) => toggleValue("grade", id)}
         onRemoveDifficulty={(lvl) => toggleValue("difficulty", String(lvl))}
+        onRemoveCognitive={() => setParam("cognitiveLevel", null)}
         onRemoveType={(t) => toggleValue("questionType", t)}
         onClearStatus={() => setParam("status", null)}
+        onClearFlagged={() => setParam("flagged", null)}
         onClearSource={() => setParam("sourceId", null)}
         onResetAll={() => router.replace("/questions")}
         totalFiltered={total}
@@ -281,13 +321,17 @@ export function QuestionBankView({
         onOpenChange={setFiltersOpen}
         filters={filterValues}
         topics={topics ?? []}
+        tags={tags ?? []}
         grades={grades ?? []}
         sources={sources ?? []}
         onToggleTopic={(id) => toggleValue("topicId", id)}
+        onSelectTag={(id) => setParam("tagId", id)}
         onToggleGrade={(id) => toggleValue("grade", id)}
         onToggleDifficulty={(lvl) => toggleValue("difficulty", String(lvl))}
+        onToggleCognitive={(lvl) => setParam("cognitiveLevel", cognitiveLevel === lvl ? null : lvl)}
         onToggleType={(t) => toggleValue("questionType", t)}
         onSelectStatus={(s) => setParam("status", s)}
+        onToggleFlagged={() => setParam("flagged", flagged ? null : "true")}
         onSelectSource={(s) => setParam("sourceId", s)}
         onReset={() => {
           router.replace("/questions");
@@ -338,6 +382,7 @@ export function QuestionBankView({
                 selected={selected.has(question.id)}
                 onToggleSelect={toggleSelect}
                 mode={mode}
+                isSelectionMode={isSelectionMode}
               />
             ))}
           </div>
@@ -450,33 +495,117 @@ export function QuestionBankView({
         </DialogContent>
       </Dialog>
 
-      {/* 5. Paginasi — Ringkas, tetap satu baris di mobile */}
+      {/* 5. Paginasi — Model Terpadu (IBM Carbon / Linear Workbench Model) */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-sm sm:px-4">
-          <span className="truncate text-muted-foreground">
-            Hal. {page + 1}/{totalPages}
-          </span>
-          <div className="flex shrink-0 gap-2">
+        <nav
+          aria-label="Navigasi halaman"
+          className="flex flex-wrap items-center justify-between gap-2.5 border-t border-border bg-background/80 px-3 py-2 text-xs sm:px-4 backdrop-blur-xs"
+        >
+          {/* Sisi Kiri: Pilihan Jumlah Baris & Jangkauan Data */}
+          <div className="flex items-center gap-3">
+            {/* Pilihan jumlah baris */}
+            <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground">
+              <span>Baris:</span>
+              <div className="flex items-center rounded-md border border-border bg-muted/20 p-0.5">
+                {[20, 50, 100].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => handlePageSizeChange(size)}
+                    aria-label={`Tampilkan ${size} soal per halaman`}
+                    className={cn(
+                      "rounded px-2 py-0.5 text-xs font-mono font-medium transition-colors pointer-coarse:min-h-[44px]",
+                      pageSize === size
+                        ? "bg-background font-bold text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Jangkauan Data */}
+            <span className="text-muted-foreground font-mono">
+              <span className="hidden sm:inline">Menampilkan </span>
+              <strong className="font-semibold text-foreground">{from}–{to}</strong> dari{" "}
+              <strong className="font-semibold text-foreground">{total.toLocaleString("id-ID")}</strong>
+              <span className="hidden sm:inline"> soal</span>
+            </span>
+          </div>
+
+          {/* Sisi Kanan: Lompat Cepat & Kontrol Navigasi Halaman */}
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            {/* Input Lompat Cepat */}
+            <form onSubmit={handleJump} className="hidden lg:flex items-center gap-1.5 mr-1">
+              <span className="text-muted-foreground">Lompat:</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={jumpInput}
+                onChange={(e) => setJumpInput(e.target.value)}
+                placeholder={String(page + 1)}
+                aria-label="Lompat ke nomor halaman"
+                className="h-7 w-12 rounded-md border border-border bg-background px-1.5 text-center font-mono text-xs text-foreground focus-visible:border-brand focus-visible:outline-none"
+              />
+            </form>
+
+            {/* Tombol Halaman Pertama (|<) */}
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page === 0}
+              onClick={() => setParam("page", "0")}
+              aria-label="Halaman pertama"
+              className="relative hidden sm:inline-flex h-8 w-8 after:absolute after:-inset-1.5 after:content-['']"
+            >
+              <ChevronsLeft className="size-3.5" />
+            </Button>
+
+            {/* Tombol Sebelumnya */}
             <Button
               variant="outline"
               size="sm"
               disabled={page === 0}
               onClick={() => setParam("page", String(page - 1))}
-              className="min-h-[44px]"
+              className="relative h-8 gap-1 px-2.5 after:absolute after:-inset-1.5 after:content-['']"
             >
+              <ChevronLeft className="size-3.5" />
               Sebelumnya
             </Button>
+
+            {/* Nomor Halaman */}
+            <span className="px-1 text-muted-foreground font-mono whitespace-nowrap">
+              Hal. {page + 1}/{totalPages}
+            </span>
+
+            {/* Tombol Berikutnya */}
             <Button
               variant="outline"
               size="sm"
               disabled={page + 1 >= totalPages}
               onClick={() => setParam("page", String(page + 1))}
-              className="min-h-[44px]"
+              className="relative h-8 gap-1 px-2.5 after:absolute after:-inset-1.5 after:content-['']"
             >
               Berikutnya
+              <ChevronRight className="size-3.5" />
+            </Button>
+
+            {/* Tombol Halaman Terakhir (>|) */}
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={page + 1 >= totalPages}
+              onClick={() => setParam("page", String(totalPages - 1))}
+              aria-label="Halaman terakhir"
+              className="relative hidden sm:inline-flex h-8 w-8 after:absolute after:-inset-1.5 after:content-['']"
+            >
+              <ChevronsRight className="size-3.5" />
             </Button>
           </div>
-        </div>
+        </nav>
       )}
     </div>
   );

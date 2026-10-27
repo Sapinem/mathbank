@@ -215,63 +215,74 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  target_qid uuid;
+  target_qids uuid[];
   target_bid uuid;
+  qid uuid;
+  new_grades varchar[];
+  new_grade varchar;
 BEGIN
   IF (TG_TABLE_NAME = 'bundle_items') THEN
-    target_qid := COALESCE(NEW.question_id, OLD.question_id);
-    UPDATE questions
-       SET grades = COALESCE((
-         SELECT ARRAY_AGG(DISTINCT b.grade ORDER BY b.grade)
-         FROM bundle_items bi
-         JOIN bundles b ON bi.bundle_id = b.id
-         WHERE bi.question_id = target_qid
-           AND b.deleted_at IS NULL
-           AND b.grade IS NOT NULL
-           AND b.grade <> ''
-           AND b.grade <> 'umum'
-       ), ARRAY[]::varchar[]),
-       grade = (
-         SELECT b.grade
-         FROM bundle_items bi
-         JOIN bundles b ON bi.bundle_id = b.id
-         WHERE bi.question_id = target_qid
-           AND b.deleted_at IS NULL
-           AND b.grade IS NOT NULL
-           AND b.grade <> ''
-           AND b.grade <> 'umum'
-         ORDER BY b.grade ASC
-         LIMIT 1
-       )
-     WHERE id = target_qid;
+    IF (TG_OP = 'UPDATE' AND OLD.question_id IS DISTINCT FROM NEW.question_id) THEN
+      target_qids := ARRAY[NEW.question_id, OLD.question_id];
+    ELSE
+      target_qids := ARRAY[COALESCE(NEW.question_id, OLD.question_id)];
+    END IF;
+
+    FOREACH qid IN ARRAY target_qids LOOP
+      IF qid IS NOT NULL THEN
+        SELECT
+          COALESCE(ARRAY_AGG(DISTINCT b.grade ORDER BY b.grade), ARRAY[]::varchar[]),
+          (ARRAY_AGG(DISTINCT b.grade ORDER BY b.grade))[1]
+        INTO new_grades, new_grade
+        FROM bundle_items bi
+        JOIN bundles b ON bi.bundle_id = b.id
+        WHERE bi.question_id = qid
+          AND b.deleted_at IS NULL
+          AND b.grade IS NOT NULL
+          AND b.grade <> ''
+          AND b.grade <> 'umum';
+
+        UPDATE questions
+           SET grades = new_grades,
+               grade = new_grade
+         WHERE id = qid
+           AND deleted_at IS NULL
+           AND (grades IS DISTINCT FROM new_grades OR grade IS DISTINCT FROM new_grade);
+      END IF;
+    END LOOP;
+
   ELSIF (TG_TABLE_NAME = 'bundles') THEN
     target_bid := COALESCE(NEW.id, OLD.id);
+
+    WITH target_questions AS (
+      SELECT DISTINCT question_id
+      FROM bundle_items
+      WHERE bundle_id = target_bid
+    ),
+    new_q_grades AS (
+      SELECT
+        tq.question_id,
+        COALESCE(
+          ARRAY_AGG(DISTINCT b2.grade ORDER BY b2.grade)
+            FILTER (WHERE b2.grade IS NOT NULL AND b2.grade <> '' AND b2.grade <> 'umum'),
+          ARRAY[]::varchar[]
+        ) AS bundle_grades,
+        (
+          ARRAY_AGG(DISTINCT b2.grade ORDER BY b2.grade)
+            FILTER (WHERE b2.grade IS NOT NULL AND b2.grade <> '' AND b2.grade <> 'umum')
+        )[1] AS first_grade
+      FROM target_questions tq
+      LEFT JOIN bundle_items bi2 ON bi2.question_id = tq.question_id
+      LEFT JOIN bundles b2 ON bi2.bundle_id = b2.id AND b2.deleted_at IS NULL
+      GROUP BY tq.question_id
+    )
     UPDATE questions q
-       SET grades = COALESCE((
-         SELECT ARRAY_AGG(DISTINCT b2.grade ORDER BY b2.grade)
-         FROM bundle_items bi2
-         JOIN bundles b2 ON bi2.bundle_id = b2.id
-         WHERE bi2.question_id = q.id
-           AND b2.deleted_at IS NULL
-           AND b2.grade IS NOT NULL
-           AND b2.grade <> ''
-           AND b2.grade <> 'umum'
-       ), ARRAY[]::varchar[]),
-       grade = (
-         SELECT b2.grade
-         FROM bundle_items bi2
-         JOIN bundles b2 ON bi2.bundle_id = b2.id
-         WHERE bi2.question_id = q.id
-           AND b2.deleted_at IS NULL
-           AND b2.grade IS NOT NULL
-           AND b2.grade <> ''
-           AND b2.grade <> 'umum'
-         ORDER BY b2.grade ASC
-         LIMIT 1
-       )
-     WHERE q.id IN (
-       SELECT question_id FROM bundle_items WHERE bundle_id = target_bid
-     );
+       SET grades = nqg.bundle_grades,
+           grade = nqg.first_grade
+      FROM new_q_grades nqg
+     WHERE q.id = nqg.question_id
+       AND q.deleted_at IS NULL
+       AND (q.grades IS DISTINCT FROM nqg.bundle_grades OR q.grade IS DISTINCT FROM nqg.first_grade);
   END IF;
   RETURN NULL;
 END;
@@ -299,14 +310,38 @@ CREATE TRIGGER trg_bundles_sync_grades
 -- skrip ingest, SQL manual). Satu UPDATE yang lupa menaikkan version membuat
 -- ETag basi selamanya — proteksi berubah jadi jebakan. Trigger menutup semuanya.
 --
--- Tabel yang didaftarkan = tabel yang punya rute mutasi baris ber-`If-Match`.
--- `app_settings` (singleton) & `bundle_items` (anak dari `bundles`) sengaja
--- tidak: yang menjadi ETag adalah versi AGREGAT induknya.
+-- PENGECUALIAN INTERNAL: pembaruan kolom internal/counter seperti usage_count
+-- atau last_request sengaja dilewati agar tidak membatalkan versi klien yang sedang aktif.
 CREATE OR REPLACE FUNCTION bump_version()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
+  IF (TG_TABLE_NAME = 'apikey') THEN
+    IF (NEW.name IS NOT DISTINCT FROM OLD.name AND
+        NEW.prefix IS NOT DISTINCT FROM OLD.prefix AND
+        NEW.enabled IS NOT DISTINCT FROM OLD.enabled AND
+        NEW.expires_at IS NOT DISTINCT FROM OLD.expires_at AND
+        NEW.permissions IS NOT DISTINCT FROM OLD.permissions AND
+        NEW.metadata IS NOT DISTINCT FROM OLD.metadata) THEN
+      RETURN NEW;
+    END IF;
+  ELSIF (TG_TABLE_NAME = 'topics') THEN
+    IF (NEW.name IS NOT DISTINCT FROM OLD.name AND
+        NEW.parent_id IS NOT DISTINCT FROM OLD.parent_id AND
+        NEW.description IS NOT DISTINCT FROM OLD.description AND
+        NEW.sort_order IS NOT DISTINCT FROM OLD.sort_order AND
+        NEW.level IS NOT DISTINCT FROM OLD.level AND
+        NEW.is_active IS NOT DISTINCT FROM OLD.is_active) THEN
+      RETURN NEW;
+    END IF;
+  ELSIF (TG_TABLE_NAME = 'tags') THEN
+    IF (NEW.name IS NOT DISTINCT FROM OLD.name AND
+        NEW.description IS NOT DISTINCT FROM OLD.description) THEN
+      RETURN NEW;
+    END IF;
+  END IF;
+
   NEW.version = OLD.version + 1;
   RETURN NEW;
 END;

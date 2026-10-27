@@ -12,6 +12,7 @@ import { mediaAssets, questionMedia } from "@/lib/db/schema/media";
 import { removeStoredFile } from "@/lib/ingest/media/store";
 import { mediaStorageRoot } from "@/lib/ingest/config";
 import { versionPredicate } from "@/lib/db/optimistic";
+import { assertVersionMatches } from "@/lib/api/version";
 import { throwVersionedWriteMiss } from "../versioned";
 
 /** Cari aset lewat short_id — dipakai penyaji `/img/{shortId}`. */
@@ -110,6 +111,10 @@ export async function deleteAsset(
 ): Promise<{ shortId: string; filesRemoved: number } | { inUse: true } | null> {
   const asset = await findAssetByShortId(shortId);
   if (!asset) return null;
+
+  if (expectedVersion !== undefined) {
+    assertVersionMatches(asset.version, expectedVersion);
+  }
 
   if (await isAssetInUse(asset.id)) return { inUse: true };
 

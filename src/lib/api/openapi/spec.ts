@@ -139,6 +139,15 @@ const IF_MATCH_PARAMETER: Json = {
   example: '"3"',
 };
 
+/** Parameter `Idempotency-Key` (ADR-0029). */
+const IDEMPOTENCY_KEY_PARAMETER: Json = {
+  name: "Idempotency-Key",
+  in: "header",
+  required: false,
+  description: "Kunci idempotensi unik per permintaan (maks 128 karakter) untuk mencegah mutasi ganda (ADR-0029).",
+  schema: { type: "string", maxLength: 128 },
+};
+
 /** Header `ETag` pada respons sukses route ber-versi. */
 const ETAG_HEADER: Json = {
   description: "Versi baris saat ini — kirim balik sebagai If-Match saat menyunting.",
@@ -222,6 +231,7 @@ function wrapOperation(
     ...(decl.params ? pathParameters(decl.params) : []),
     ...(decl.query ? queryParameters(decl.query) : []),
     ...(decl.ifMatch ? [IF_MATCH_PARAMETER] : []),
+    ...(decl.idempotent ? [IDEMPOTENCY_KEY_PARAMETER] : []),
   ];
   const responses: Json = {};
   responses[String(decl.status)] = {

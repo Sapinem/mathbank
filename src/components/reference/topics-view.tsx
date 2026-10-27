@@ -127,14 +127,17 @@ export function TopicsView() {
               disabled={del.isPending}
               onClick={() => {
                 if (!confirmDelete) return;
-                del.mutate(confirmDelete.id, {
-                  onSuccess: () => {
-                    setConfirmDelete(null);
-                    toast.success("Topik dihapus.");
+                del.mutate(
+                  { id: confirmDelete.id, version: confirmDelete.version },
+                  {
+                    onSuccess: () => {
+                      setConfirmDelete(null);
+                      toast.success("Topik dihapus.");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal menghapus topik", { description: e.message }),
                   },
-                  onError: (e) =>
-                    toast.error("Gagal menghapus topik", { description: e.message }),
-                });
+                );
               }}
             >
               Hapus
@@ -295,7 +298,7 @@ function TopicDialog({
       });
     } else if (topic) {
       update.mutate(
-        { id: topic.id, input },
+        { id: topic.id, input, version: topic.version },
         {
           onSuccess: () => {
             toast.success("Perubahan topik disimpan.");

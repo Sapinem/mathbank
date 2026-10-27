@@ -100,7 +100,7 @@ export async function findNearDuplicates(
       and(
         isNull(questions.deletedAt),
         ne(questions.id, questionId),
-        eq(questions.grade, src.grade),
+        src.grade ? eq(questions.grade, src.grade) : undefined,
       ),
     )
     .orderBy(sql`${questionEmbeddings.embedding} <=> ${literal}::vector`)

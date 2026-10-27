@@ -23,6 +23,7 @@ const AGENT_NAME = "Agen MCP";
 /** Info ringkas key untuk UI (TANPA nilai rahasia). */
 export interface AgentKeyInfo {
   id: string;
+  version: number;
   name: string | null;
   prefix: string | null;
   enabled: boolean;
@@ -83,6 +84,7 @@ export async function listAgentKeys(actor: Actor): Promise<AgentKeyInfo[]> {
   const rows = await db
     .select({
       id: apiKey.id,
+      version: apiKey.version,
       name: apiKey.name,
       prefix: apiKey.prefix,
       enabled: apiKey.enabled,
@@ -97,6 +99,7 @@ export async function listAgentKeys(actor: Actor): Promise<AgentKeyInfo[]> {
 
   return rows.map((r) => ({
     id: r.id,
+    version: r.version,
     name: r.name,
     prefix: r.prefix,
     enabled: r.enabled,
@@ -168,6 +171,8 @@ export async function revokeAgentKey(
       : and(owned, eq(apiKey.version, expectedVersion));
   const deleted = await db.delete(apiKey).where(where).returning({ id: apiKey.id });
   if (deleted.length === 0) {
-    return throwVersionedWriteMiss(apiKey, keyId, expectedVersion, "API key tidak ditemukan.");
+    return throwVersionedWriteMiss(apiKey, keyId, expectedVersion, "API key tidak ditemukan.", {
+      scope: eq(apiKey.referenceId, agentId),
+    });
   }
 }

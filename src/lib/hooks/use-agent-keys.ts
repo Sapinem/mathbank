@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/fetcher";
 
 /**
  * Hook Akses Agen (API key MCP, M11-e) — React Query.
@@ -9,18 +10,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
  * - `useRevokeAgentKey` : cabut kunci
  */
 
-async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
-  return json.data as T;
-}
-
 export interface AgentKeyInfo {
   id: string;
+  version: number;
   name: string | null;
   prefix: string | null;
   enabled: boolean;
@@ -37,7 +29,7 @@ export const agentKeyKeys = {
 export function useAgentKeys(enabled = true) {
   return useQuery({
     queryKey: agentKeyKeys.all,
-    queryFn: () => apiFetch<{ items: AgentKeyInfo[] }>("/api/system/agent-keys"),
+    queryFn: () => api<{ items: AgentKeyInfo[] }>("/api/system/agent-keys"),
     enabled,
     staleTime: 30_000,
   });
@@ -47,7 +39,7 @@ export function useCreateAgentKey() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { name?: string; expiresInDays?: number }) =>
-      apiFetch<{ id: string; key: string; prefix: string | null; name: string | null }>(
+      api<{ id: string; key: string; prefix: string | null; name: string | null }>(
         "/api/system/agent-keys",
         { method: "POST", body: JSON.stringify(input) },
       ),
@@ -58,8 +50,14 @@ export function useCreateAgentKey() {
 export function useRevokeAgentKey() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<{ ok: boolean }>(`/api/system/agent-keys/${id}`, { method: "DELETE" }),
+    mutationFn: (args: string | { id: string; version?: number | "*" }) => {
+      const id = typeof args === "string" ? args : args.id;
+      const version = typeof args === "object" ? args.version : undefined;
+      return api<{ ok: boolean }>(`/api/system/agent-keys/${id}`, {
+        method: "DELETE",
+        ifMatch: version ?? "*",
+      });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: agentKeyKeys.all }),
   });
 }

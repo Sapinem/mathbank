@@ -17,7 +17,8 @@ import {
 } from "@/lib/auth/guards";
 import { isUniqueViolation } from "@/lib/db/errors";
 import { versionPredicate } from "@/lib/db/optimistic";
-import { assertVersionMatches, PreconditionFailedError } from "@/lib/api/version";
+import { assertVersionMatches } from "@/lib/api/version";
+import { throwVersionedWriteMiss } from "./versioned";
 import {
   assertBundleCreate,
   assertBundleRead,
@@ -113,7 +114,9 @@ export async function updateBundle(
     .set(set)
     .where(versionPredicate(bundles, id, expectedVersion ?? "*"))
     .returning({ id: bundles.id });
-  if (touched.length === 0) throw new PreconditionFailedError();
+  if (touched.length === 0) {
+    return throwVersionedWriteMiss(bundles, id, expectedVersion, "Paket tidak ditemukan.");
+  }
   await recordAudit({
     entityType: "bundle",
     entityId: id,
@@ -140,7 +143,9 @@ export async function archiveBundle(
     .set({ status: "archived", updatedAt: new Date() })
     .where(versionPredicate(bundles, id, expectedVersion ?? "*"))
     .returning({ id: bundles.id });
-  if (archived.length === 0) throw new PreconditionFailedError();
+  if (archived.length === 0) {
+    return throwVersionedWriteMiss(bundles, id, expectedVersion, "Paket tidak ditemukan.");
+  }
   await recordAudit({
     entityType: "bundle",
     entityId: id,
@@ -166,7 +171,9 @@ export async function deleteBundle(
     .set({ deletedAt: new Date(), updatedAt: new Date() })
     .where(versionPredicate(bundles, id, expectedVersion ?? "*"))
     .returning({ id: bundles.id });
-  if (removed.length === 0) throw new PreconditionFailedError();
+  if (removed.length === 0) {
+    return throwVersionedWriteMiss(bundles, id, expectedVersion, "Paket tidak ditemukan.");
+  }
   await recordAudit({
     entityType: "bundle",
     entityId: id,

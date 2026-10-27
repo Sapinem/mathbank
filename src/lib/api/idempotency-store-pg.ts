@@ -79,7 +79,7 @@ export class PgIdempotencyStore implements IdempotencyStore {
   ): Promise<void> {
     await this.db.execute(sql`
       UPDATE idempotency_keys
-      SET in_flight = false, status = ${status}, body = ${JSON.stringify(body)}::jsonb,
+      SET in_flight = false, status = ${status}, body = ${JSON.stringify(body ?? null)}::jsonb,
           fingerprint = ${fingerprint}, expires_at = ${new Date(Date.now() + ttlMs).toISOString()}::timestamptz
       WHERE key = ${key}
     `);

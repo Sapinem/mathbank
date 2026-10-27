@@ -14,19 +14,7 @@ import type { QuestionStatus } from "@/lib/fsm/question-fsm";
  * staleTime per-jenis: questions 30s (sering berubah), reference 30m (jarang).
  */
 
-/** Pembungkus fetch → { data } atau lempar error terformat. */
-async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = json?.error?.message ?? `HTTP ${res.status}`;
-    throw new Error(msg);
-  }
-  return json.data as T;
-}
+import { api, apiFetch } from "@/lib/api/fetcher";
 
 /** Bangun query string dari filter (buang nilai kosong). */
 function toQueryString(query: Partial<ListQuestionsQuery>): string {
@@ -85,13 +73,14 @@ export function useCreateQuestion() {
 }
 
 /** Perbarui soal. */
-export function useUpdateQuestion(id: string) {
+export function useUpdateQuestion(id: string, defaultVersion?: number | "*") {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: UpdateQuestionInput) =>
-      apiFetch<PublicQuestion>(`/api/questions/${id}`, {
+    mutationFn: (input: UpdateQuestionInput & { version?: number | "*" }) =>
+      api<PublicQuestion>(`/api/questions/${id}`, {
         method: "PATCH",
         body: JSON.stringify(input),
+        ifMatch: input.version ?? defaultVersion ?? "*",
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: questionKeys.all }),
   });
@@ -99,18 +88,20 @@ export function useUpdateQuestion(id: string) {
 
 export type ChangeQuestionStatusArgs =
   | QuestionStatus
-  | { status: QuestionStatus; notes?: string | null };
+  | { status: QuestionStatus; notes?: string | null; version?: number | "*" };
 export type ChangeStatusInput = ChangeQuestionStatusArgs;
 
 /** Ubah status (FSM). */
-export function useChangeQuestionStatus(id: string) {
+export function useChangeQuestionStatus(id: string, defaultVersion?: number | "*") {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: ChangeQuestionStatusArgs) => {
-      const body = typeof input === "string" ? { status: input } : input;
-      return apiFetch<PublicQuestion>(`/api/questions/${id}/status`, {
+      const body = typeof input === "string" ? { status: input } : { status: input.status, notes: input.notes };
+      const version = typeof input === "object" ? input.version : undefined;
+      return api<PublicQuestion>(`/api/questions/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify(body),
+        ifMatch: version ?? defaultVersion ?? "*",
       });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: questionKeys.all }),
@@ -118,13 +109,14 @@ export function useChangeQuestionStatus(id: string) {
 }
 
 /** Tandai/lepas tanda. */
-export function useSetQuestionFlag(id: string) {
+export function useSetQuestionFlag(id: string, defaultVersion?: number | "*") {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { flagged: boolean; notes?: string | null }) =>
-      apiFetch<PublicQuestion>(`/api/questions/${id}/flag`, {
+    mutationFn: (input: { flagged: boolean; notes?: string | null; version?: number | "*" }) =>
+      api<PublicQuestion>(`/api/questions/${id}/flag`, {
         method: "PATCH",
-        body: JSON.stringify(input),
+        body: JSON.stringify({ flagged: input.flagged, notes: input.notes }),
+        ifMatch: input.version ?? defaultVersion ?? "*",
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: questionKeys.all }),
   });
@@ -134,8 +126,14 @@ export function useSetQuestionFlag(id: string) {
 export function useDeleteQuestion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<{ ok: boolean }>(`/api/questions/${id}`, { method: "DELETE" }),
+    mutationFn: (args: string | { id: string; version?: number | "*" }) => {
+      const id = typeof args === "string" ? args : args.id;
+      const version = typeof args === "object" ? args.version : undefined;
+      return api<{ ok: boolean }>(`/api/questions/${id}`, {
+        method: "DELETE",
+        ifMatch: version ?? "*",
+      });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: questionKeys.all }),
   });
 }

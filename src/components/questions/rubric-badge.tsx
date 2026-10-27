@@ -36,7 +36,7 @@ export function RubricBadge({
             type="button"
             aria-label={`${title}: ${rubric.description}`}
             className={cn(
-              "inline-flex h-5 w-fit shrink-0 cursor-help items-center justify-center gap-1 rounded-4xl border px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums",
+              "inline-flex h-5 w-fit shrink-0 cursor-help items-center justify-center gap-1 rounded-4xl border px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums relative after:absolute after:-inset-1.5 after:content-['']",
               className,
             )}
           />
@@ -52,9 +52,9 @@ export function RubricBadge({
   );
 }
 
-/** Penanda Bloom (C1–C6): ikon Lucide `brain` + kode, dengan rubrik.
+/** Penanda Bloom (1–6): ikon Lucide `brain` + angka level, dengan rubrik.
  *  Ikon tidak pernah berdiri sendiri tanpa arti: `RubricBadge` memberi
- *  aria-label berisi kode, judul, dan deskripsi rubrik, serta tooltip. */
+ *  aria-label berisi kode (C1–C6), judul, dan deskripsi rubrik, serta tooltip. */
 export function CognitiveBadge({
   level,
   className,
@@ -63,13 +63,14 @@ export function CognitiveBadge({
   className?: string;
 }) {
   const rubric = cognitiveRubric(level);
+  const numericLevel = rubric.code.replace(/^C/i, "");
   return (
     <RubricBadge
       rubric={rubric}
       className={cn("border-border bg-muted text-muted-foreground", className)}
     >
       <Brain className="size-3.5" aria-hidden="true" />
-      {rubric.code}
+      {numericLevel}
     </RubricBadge>
   );
 }
@@ -88,8 +89,8 @@ export function difficultyToneClass(level: number): string {
   return DIFFICULTY_TONE[level] ?? DIFFICULTY_TONE[3];
 }
 
-/** Penanda kesulitan dengan rubrik: ikon Lucide `gauge` + kode level
- *  (Lv.1–Lv.5) + warna 1→5. Meter titik (●○○○○) diganti ikon karena
+/** Penanda kesulitan dengan rubrik: ikon Lucide `gauge` + angka level
+ *  (1–5) + warna 1→5. Meter titik (●○○○○) diganti ikon karena
  *  titik bukan ikon bermakna dan mudah tertukar dengan status. Arti
  *  tetap lewat aria-label dan tooltip rubrik di `RubricBadge`. */
 export function DifficultyBadge({
@@ -103,13 +104,14 @@ export function DifficultyBadge({
   showLabel?: boolean;
 }) {
   const rubric = difficultyRubric(level);
+  const numericLevel = rubric.code.replace(/^Lv\./i, "");
   return (
     <RubricBadge
       rubric={rubric}
       className={cn(difficultyToneClass(level), className)}
     >
       <Gauge className="size-3.5" aria-hidden="true" />
-      {rubric.code}
+      {numericLevel}
       {showLabel && (
         <span className="font-normal">{DIFFICULTY_LABELS[level] ?? `Level ${level}`}</span>
       )}

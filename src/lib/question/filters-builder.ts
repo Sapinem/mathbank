@@ -16,7 +16,7 @@
  * Tidak mengimpor `@/lib/db` — hanya `drizzle-orm` (SQL builder, murni) dan
  * tipe dari skema/kontrak.
  */
-import { and, eq, isNull, inArray, sql, type SQL } from "drizzle-orm";
+import { and, or, eq, ne, isNull, inArray, arrayOverlaps, sql, type SQL } from "drizzle-orm";
 import { questions } from "@/lib/db/schema/question";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
@@ -89,10 +89,22 @@ export function buildFilterFrom(
 ): BuiltFilter {
   const conds: SQL[] = [];
   if (!query.includeDeleted) conds.push(isNull(questions.deletedAt));
-  if (query.status) conds.push(eq(questions.status, query.status));
+  if (query.status) {
+    conds.push(eq(questions.status, query.status));
+  } else {
+    // ADR-0025: Daftar utama menyaring hanya soal aktif (draft, review, ready).
+    // Soal terarsip hanya muncul bila query.status === "archived".
+    conds.push(ne(questions.status, "archived"));
+  }
   if (query.questionType?.length)
     conds.push(inArray(questions.questionType, query.questionType));
-  if (query.grade?.length) conds.push(inArray(questions.grade, query.grade));
+  if (query.grade?.length)
+    conds.push(
+      or(
+        arrayOverlaps(questions.grades, query.grade),
+        inArray(questions.grade, query.grade),
+      )!,
+    );
   if (query.difficulty?.length)
     conds.push(inArray(questions.difficulty, query.difficulty));
   if (query.cognitiveLevel)

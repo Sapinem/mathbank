@@ -168,6 +168,9 @@ export async function updateTopic(
           .set({ ...patch, updatedAt: new Date() })
           .where(versionPredicate(topics, id, expectedVersion ?? "*"))
           .returning(COLS);
+        if (updated.length === 0) {
+          return throwVersionedWriteMiss(topics, id, expectedVersion, "Topik tidak ditemukan.", { dbOrTx: tx });
+        }
         if (descendantIdsResolved.length > 0) {
           // level + delta untuk SEMUA keturunan (tetap konsisten dgn induk baru).
           await tx

@@ -52,19 +52,22 @@ function getTkaImagesDir(): string {
  * @param html  HTML artikel
  * @param slug  Nama berkas tanpa `.json` (mis. `sd-matematika-p1`)
  */
-function lokalkanGambarTka(html: string, slug: string): string {
+function lokalkanGambarTka(html: string, slug: string, globalIndeks?: Map<string, number>): string {
   if (!slug) return html;
-  // Urutan URL unik sesuai kemunculan.
-  const urut: string[] = [];
-  for (const m of html.matchAll(/cbt_images\/([A-Za-z0-9_.-]+?\.(?:png|jpg|jpeg))/gi)) {
-    if (!urut.includes(m[1]!)) urut.push(m[1]!);
+  let indeks = globalIndeks;
+  if (!indeks) {
+    // Urutan URL unik sesuai kemunculan.
+    const urut: string[] = [];
+    for (const m of html.matchAll(/cbt_images\/([A-Za-z0-9_.-]+?\.(?:png|jpg|jpeg))/gi)) {
+      if (!urut.includes(m[1]!)) urut.push(m[1]!);
+    }
+    if (urut.length === 0) return html;
+    indeks = new Map(urut.map((u, i) => [u, i + 1]));
   }
-  if (urut.length === 0) return html;
-  const indeks = new Map(urut.map((u, i) => [u, i + 1]));
   return html.replace(
     /(?:https?:\/\/[^)"'\s]*)?\/tka\/cbt_images\/([A-Za-z0-9_.-]+?\.(?:png|jpg|jpeg))/gi,
     (_m, nama: string) => {
-      const n = indeks.get(nama);
+      const n = indeks!.get(nama);
       if (!n) return _m;
       // ⚠️ EKSTENSI HARUS DARI BERKAS NYATA, bukan dari URL.
       // Bukti: `sd-matematika-p2` — URL ke-1 berekstensi `.jpg` (`72392_….jpg`),
@@ -104,7 +107,18 @@ export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResul
   let skipped = 0;
 
   // Slug dari judul/url (mis. `sd-matematika-p1`) untuk nama berkas lokal.
-  const slug = (meta?.title ?? "").trim().replace(/\.json$/i, "") || "";
+  let slug = (meta?.title ?? "").trim().replace(/\.json$/i, "") || "";
+  if (slug.toLowerCase() === "simulasi tka" && meta?.url) {
+    const uSlug = meta.url.split("/").filter(Boolean).pop()?.replace(/\.json$/i, "");
+    if (uSlug) slug = uSlug;
+  }
+
+  // Bangun indeks gambar global untuk seluruh file rawHtml (urutan kemunculan di file).
+  const globalUrut: string[] = [];
+  for (const m of rawHtml.matchAll(/cbt_images\/([A-Za-z0-9_.-]+?\.(?:png|jpg|jpeg))/gi)) {
+    if (!globalUrut.includes(m[1]!)) globalUrut.push(m[1]!);
+  }
+  const globalIndeks = new Map(globalUrut.map((u, i) => [u, i + 1]));
 
   // Tiap soal dibungkus `div.soal-soal … id="soal-no-N"`.
   const blocks = rawHtml.split(/(?=<div class="soal-soal)/i).filter((b) => /soal-no-\d+/i.test(b));
@@ -125,7 +139,7 @@ export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResul
     const gridRows = parseTabelBenarSalah(block, slug);
     if (gridRows.length > 0) {
       const stemSource = extractStemSource(block);
-      const stem = cleanHtml(lokalkanGambarTka(stripUi(stemSource), slug)).text.trim();
+      const stem = cleanHtml(lokalkanGambarTka(stripUi(stemSource), slug, globalIndeks)).text.trim();
       if (!stem) {
         skipped++;
         continue;
@@ -149,9 +163,9 @@ export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResul
     }
     const name = nameMatch[1]!;
 
-    // STEM = isi `div.isi-soal` SEBELUM `<!-- PG -->` (soal = <img> + data-latex).
+    // STEM = isi `div.isi-soal` SEBELUM pilihan opsi (soal = <img> + data-latex).
     const stemSource = extractStemSource(block);
-    const stem = cleanHtml(lokalkanGambarTka(stripUi(stemSource), slug)).text.trim();
+    const stem = cleanHtml(lokalkanGambarTka(stripUi(stemSource), slug, globalIndeks)).text.trim();
     if (!stem) {
       skipped++;
       continue;
@@ -166,7 +180,7 @@ export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResul
     let lm: RegExpExecArray | null;
     while ((lm = optRe.exec(block)) !== null) {
       const label = lm[1]!.toUpperCase();
-      const text = cleanHtml(lokalkanGambarTka(stripUi(lm[2]!), slug)).text.trim();
+      const text = cleanHtml(lokalkanGambarTka(stripUi(lm[2]!), slug, globalIndeks)).text.trim();
       if (text) opts.push({ label, text });
     }
 
@@ -225,20 +239,29 @@ function parseTabelBenarSalah(block: string, slug: string): { text: string; answ
   return rows;
 }
 
-/** Ambil bagian `div.isi-soal` sebelum `<!-- PG -->` (soal inti). */
+/** Ambil bagian `div.isi-soal` sebelum pilihan opsi (radio/checkbox/tabel). */
 function extractStemSource(block: string): string {
-  const pgIdx = block.search(/<!--\s*PG\s*-->/i);
+  // Potong sebelum komentar penanda opsi (radio atau checkbox)
+  const pgIdx = block.search(/<!--\s*PG\b[^>]*-->/i);
   const head = pgIdx === -1 ? block : block.slice(0, pgIdx);
 
+  // Jika tidak ada komentar PG tapi ada tabel pilihan:
+  const tableIdx = head.search(/<table\b[^>]*class="[^"]*\btable\b[^"]*"/i);
+  const beforeTable = tableIdx === -1 ? head : head.slice(0, tableIdx);
+
   // Mulai dari div.isi-soal bila ada (hindari kolom kosong cont-soal).
-  const isi = head.search(/<div class="[^"]*\bisi-soal\b[^"]*"/i);
+  const isi = beforeTable.search(/<div class="[^"]*\bisi-soal\b[^"]*"/i);
   const from = isi === -1 ? 0 : isi;
-  return head.slice(from);
+  return beforeTable.slice(from);
 }
 
-/** Buang elemen UI interaktif (radio, tombol, label kosong, komentar XML). */
+/** Buang elemen UI interaktif (radio, tombol, label kosong, komentar XML, modal/dialog CBT). */
 function stripUi(s: string): string {
   return s
+    .replace(/<div\b[^>]*\bmodal\b[\s\S]*$/gi, "")
+    .replace(/Daftar Soal[\s\S]*$/gi, "")
+    .replace(/Informasi Soal[\s\S]*$/gi, "")
+    .replace(/PERHATIAN\s*!![\s\S]*$/gi, "")
     .replace(/<input\b[^>]*>/gi, "")
     .replace(/<label\b[^>]*>\s*<\/label>/gi, "")
     .replace(/<div class="radio[^"]*"[^>]*>/gi, "")
@@ -246,7 +269,7 @@ function stripUi(s: string): string {
     .replace(/<div class="[^"]*\bcont-soal\b[^"]*"[^>]*>/gi, "")
     .replace(/<\?xml[^>]*\?>/gi, "")
     .replace(/<!--\?xml[^>]*-->/gi, "")
-    .replace(/<!--\s*PG\s*-->/gi, "");
+    .replace(/<!--\s*PG\b[^>]*-->/gi, "");
 }
 
 /** Escape untuk RegExp. */

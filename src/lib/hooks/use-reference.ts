@@ -1,18 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api/fetcher";
 
 /**
  * Hook data referensi (L3) — topik, sumber, event.
  * staleTime 30 menit (jarang berubah).
  */
-
-async function apiFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { "Content-Type": "application/json" } });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
-  return json.data as T;
-}
 
 /**
  * MAT-131B (Tahap A): `slug` **deprecated & opsional** pada topik.
@@ -72,7 +66,7 @@ export const referenceKeys = {
 export function useGrades() {
   return useQuery({
     queryKey: referenceKeys.grades,
-    queryFn: () => apiFetch<GradeRow[]>("/api/grades"),
+    queryFn: () => api<GradeRow[]>("/api/grades"),
     staleTime: 30 * 60_000,
   });
 }
@@ -80,7 +74,7 @@ export function useGrades() {
 export function useTopics() {
   return useQuery({
     queryKey: referenceKeys.topics,
-    queryFn: () => apiFetch<TopicRow[]>("/api/topics"),
+    queryFn: () => api<TopicRow[]>("/api/topics"),
     staleTime: 30 * 60_000,
   });
 }
@@ -88,7 +82,7 @@ export function useTopics() {
 export function useSources() {
   return useQuery({
     queryKey: referenceKeys.sources,
-    queryFn: () => apiFetch<SourceRow[]>("/api/sources"),
+    queryFn: () => api<SourceRow[]>("/api/sources"),
     staleTime: 30 * 60_000,
   });
 }
@@ -96,7 +90,7 @@ export function useSources() {
 export function useTags() {
   return useQuery({
     queryKey: referenceKeys.tags,
-    queryFn: () => apiFetch<TagRow[]>("/api/tags"),
+    queryFn: () => api<TagRow[]>("/api/tags"),
     staleTime: 30 * 60_000,
   });
 }
@@ -104,7 +98,7 @@ export function useTags() {
 export function useEvents() {
   return useQuery({
     queryKey: referenceKeys.events,
-    queryFn: () => apiFetch<EventRow[]>("/api/events"),
+    queryFn: () => api<EventRow[]>("/api/events"),
     staleTime: 30 * 60_000,
   });
 }
@@ -122,7 +116,7 @@ export function useStimulusParents() {
   return useQuery({
     queryKey: ["reference", "stimulus-parents"],
     queryFn: async () => {
-      const res = await apiFetch<{ items: StimulusRow[] }>(
+      const res = await api<{ items: StimulusRow[] }>(
         "/api/questions?questionType=stimulus&limit=100",
       );
       return res.items ?? [];

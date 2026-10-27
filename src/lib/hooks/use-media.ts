@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/fetcher";
 
 /**
  * Hook media (G4.5) — React Query, mengikuti pola `use-questions.ts`/`use-ai.ts`.
@@ -41,13 +42,6 @@ export const mediaKeys = {
   detail: (shortId: string) => ["media", "detail", shortId] as const,
 };
 
-async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
-  return json.data as T;
-}
-
 /** Daftar aset galeri. `enabled=false` saat dialog tertutup (hindari fetch sia-sia). */
 export function useMediaList(q: string, origin: string | undefined, enabled: boolean) {
   return useQuery({
@@ -57,7 +51,7 @@ export function useMediaList(q: string, origin: string | undefined, enabled: boo
       const params = new URLSearchParams({ limit: "48" });
       if (q) params.set("q", q);
       if (origin) params.set("origin", origin);
-      return apiFetch<MediaListResult>(`/api/media?${params.toString()}`);
+      return api<MediaListResult>(`/api/media?${params.toString()}`);
     },
     staleTime: 30_000,
   });
@@ -80,7 +74,7 @@ export function useMediaPage(opts: {
       });
       if (q) params.set("q", q);
       if (origin) params.set("origin", origin);
-      return apiFetch<MediaListResult>(`/api/media?${params.toString()}`);
+      return api<MediaListResult>(`/api/media?${params.toString()}`);
     },
     staleTime: 30_000,
   });
@@ -92,7 +86,7 @@ export function useOrphanAssets(enabled: boolean) {
     queryKey: ["media", "orphans"] as const,
     enabled,
     queryFn: () =>
-      apiFetch<{ data: MediaListItem[]; total: number; totalBytes: number }>(
+      api<{ data: MediaListItem[]; total: number; totalBytes: number }>(
         "/api/media/orphans",
       ),
     staleTime: 10_000,
@@ -103,11 +97,37 @@ export function useOrphanAssets(enabled: boolean) {
 export function useDeleteMedia() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (shortId: string) => {
-      const res = await fetch(`/api/media/${shortId}`, { method: "DELETE" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
-      return json.data as { shortId: string; filesRemoved: number };
+    mutationFn: async (args: string | { shortId: string; version?: number | "*" }) => {
+      const shortId = typeof args === "string" ? args : args.shortId;
+      const version = typeof args === "object" ? args.version : undefined;
+      return api<{ shortId: string; filesRemoved: number }>(`/api/media/${shortId}`, {
+        method: "DELETE",
+        ifMatch: version ?? "*",
+      });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["media"] });
+    },
+  });
+}
+
+/** Ubah metadata aset (judul/alt/caption/deskripsi). */
+export function useUpdateMediaMeta(shortId: string, defaultVersion?: number | "*") {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      title: string;
+      altText?: string | null;
+      caption?: string | null;
+      description?: string | null;
+      version?: number | "*";
+    }) => {
+      const { version, ...body } = input;
+      return api<MediaListItem>(`/api/media/${shortId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+        ifMatch: version ?? defaultVersion ?? "*",
+      });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["media"] });
@@ -120,7 +140,7 @@ export function useMediaDetail(shortId: string | null) {
   return useQuery({
     queryKey: mediaKeys.detail(shortId ?? ""),
     enabled: Boolean(shortId),
-    queryFn: () => apiFetch<MediaDetail>(`/api/media/${shortId}`),
+    queryFn: () => api<MediaDetail>(`/api/media/${shortId}`),
     staleTime: 30_000,
   });
 }
@@ -140,7 +160,7 @@ export function useUploadMedia() {
     mutationFn: async (file: File) => {
       const form = new FormData();
       form.append("file", file);
-      return apiFetch<UploadMediaResult>("/api/media/upload", { method: "POST", body: form });
+      return api<UploadMediaResult>("/api/media/upload", { method: "POST", body: form });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["media"] });

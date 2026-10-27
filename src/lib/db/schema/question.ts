@@ -125,6 +125,10 @@ export const questions = pgTable(
     index("idx_questions_listing")
       .on(t.status, desc(t.createdAt))
       .where(sql`${t.deletedAt} IS NULL`),
+    // ADR-0025: default view daftar soal menyaring status <> 'archived'
+    index("idx_questions_active_listing")
+      .on(desc(t.createdAt))
+      .where(sql`${t.deletedAt} IS NULL AND ${t.status} <> 'archived'`),
     index("idx_questions_content_trgm").using(
       "gin",
       sql`${t.contentMarkdown} gin_trgm_ops`,

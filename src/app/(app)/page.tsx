@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { MathContent } from "@/components/math/math-content";
 import { STATUS_LABELS, statusClass } from "@/lib/display/labels";
+import { StatusIcon } from "@/components/questions/question-status-badge";
 import { cn } from "@/lib/utils";
 import { useStats } from "@/lib/hooks/use-stats";
 
@@ -108,6 +109,7 @@ export default function DashboardPage() {
                               variant="outline"
                               className={cn("shrink-0 text-xs", statusClass(q.status))}
                             >
+                              <StatusIcon status={q.status} data-icon="inline-start" aria-hidden="true" />
                               {STATUS_LABELS[q.status] ?? q.status}
                             </Badge>
                           </Link>
@@ -158,7 +160,10 @@ export default function DashboardPage() {
               />
               <DistCard
                 title="Sebaran Jenjang"
-                rows={data.byGrade.map((g) => ({ label: g.key, n: g.n }))}
+                rows={data.byGrade.map((g) => ({
+                  label: g.key ? `Kelas ${g.key}` : "Tanpa Jenjang",
+                  n: g.n,
+                }))}
               />
             </div>
           </>

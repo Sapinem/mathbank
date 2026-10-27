@@ -103,6 +103,7 @@ export const questionSchema = z.looseObject({
   lastReviewedAt: iso.nullable(),
   deletedAt: iso.nullable(),
   createdAt: iso,
+  version: z.number().int(),
   updatedAt: iso,
   options: z.array(optionSchema),
   answerKey: z.record(z.string(), z.unknown()).optional().describe("Hanya viewer berwenang."),
@@ -123,6 +124,7 @@ const bundleSchema = z.looseObject({
   status: questionStatusSchema,
   createdById: z.string().nullable(),
   createdAt: iso,
+  version: z.number().int(),
   updatedAt: iso,
   itemCount: z.number().int().optional(),
 });
@@ -163,12 +165,14 @@ const topicSchema = z.looseObject({
   sortOrder: z.number().int(),
   usageCount: z.number().int(),
   isActive: z.boolean(),
+  version: z.number().int(),
 });
 
 const tagSchema = z.looseObject({
   id: uuid,
   name: z.string(),
   usageCount: z.number().int(),
+  version: z.number().int(),
 });
 
 const sourceSchema = z.looseObject({
@@ -182,6 +186,7 @@ const sourceSchema = z.looseObject({
   city: z.string().nullable(),
   isActive: z.boolean(),
   usageCount: z.number().int(),
+  version: z.number().int(),
 });
 
 const eventSchema = z.looseObject({
@@ -192,6 +197,7 @@ const eventSchema = z.looseObject({
   subtests: z.array(z.string()),
   aliases: z.array(z.string()).optional(),
   isActive: z.boolean(),
+  version: z.number().int(),
 });
 
 const gradeSchema = z.looseObject({
@@ -214,6 +220,7 @@ const galleryRowSchema = z.looseObject({
   fileSize: z.number().int(),
   sourceOrigin: z.string().nullable(),
   createdAt: iso,
+  version: z.number().int(),
 });
 
 const mediaAssetSchema = z.looseObject({
@@ -228,10 +235,12 @@ const mediaAssetSchema = z.looseObject({
   fileSize: z.number().int(),
   sourceOrigin: z.string().nullable(),
   createdAt: iso,
+  version: z.number().int(),
 });
 
 const agentKeySchema = z.looseObject({
   id: z.string(),
+  version: z.number().int(),
   name: z.string().nullable(),
   prefix: z.string().nullable(),
   enabled: z.boolean(),

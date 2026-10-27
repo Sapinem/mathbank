@@ -14,7 +14,7 @@ import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
 import { assertReleaseContract } from "./question-release";
 import { versionPredicate } from "@/lib/db/optimistic";
-import { assertVersionMatches } from "@/lib/api/version";
+import { assertVersionMatches, PreconditionFailedError } from "@/lib/api/version";
 
 /**
  * Transisi status soal (M14 — pecahan `question-service.ts`).
@@ -121,6 +121,10 @@ export async function changeQuestionStatus(
     assertCan(actor, "question:edit", { ownerId: existing.authorId });
   }
 
+  if (opts.expectedVersion !== undefined) {
+    assertVersionMatches(existing.version, opts.expectedVersion);
+  }
+
   // **T-M4-5:** penjagaan balapan (optimistic). Update HANYA bila status masih
   // `from` — dua PATCH bersamaan tak bisa dua-duanya lolos FSM dari `from` yang
   // sama. Bila 0 baris → status sudah berubah di antara baca & tulis → 409.
@@ -141,8 +145,18 @@ export async function changeQuestionStatus(
     .where(and(versionClause, eq(questions.status, from)))
     .returning({ id: questions.id });
   if (updated_rows.length === 0) {
-    // Tetap 409 (CONSTRAINT #36): versi sudah diperiksa di awal, jadi 0 baris
-    // di sini berarti STATUS yang bergeser — kelas galat yang berbeda.
+    if (opts.expectedVersion !== undefined && typeof opts.expectedVersion === "number") {
+      const [current] = await db
+        .select({ version: questions.version })
+        .from(questions)
+        .where(eq(questions.id, id))
+        .limit(1);
+      if (current && current.version !== opts.expectedVersion) {
+        throw new PreconditionFailedError(undefined, current.version);
+      }
+    }
+    // Tetap 409 (CONSTRAINT #36): bila versi cocok atau tak ada prakondisi, 0 baris
+    // berarti STATUS yang bergeser.
     throw new ConflictError(
       "Status soal sudah berubah oleh permintaan lain. Muat ulang lalu coba lagi.",
     );

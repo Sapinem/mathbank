@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Merge, Tag as TagIcon } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -162,10 +163,17 @@ export function LabelsView() {
   function submit() {
     setFormErr(null);
     const opts = {
-      onSuccess: () => setOpen(false),
-      onError: (e: unknown) => setFormErr((e as Error).message),
+      onSuccess: () => {
+        setOpen(false);
+        toast.success(editing ? "Perubahan label disimpan." : "Label baru dibuat.");
+      },
+      onError: (e: unknown) => {
+        const msg = (e as Error).message;
+        setFormErr(msg);
+        toast.error("Gagal menyimpan label", { description: msg });
+      },
     };
-    if (editing) update.mutate({ id: editing.id, name: name.trim() }, opts);
+    if (editing) update.mutate({ id: editing.id, version: editing.version, name: name.trim() }, opts);
     else create.mutate({ name: name.trim() }, opts);
   }
 
@@ -315,10 +323,17 @@ export function LabelsView() {
               variant="destructive"
               onClick={() => {
                 if (!confirm) return;
-                del.mutate(confirm.id, {
-                  onSuccess: () => setConfirm(null),
-                  onError: (e) => setFormErr((e as Error).message),
-                });
+                del.mutate(
+                  { id: confirm.id, version: confirm.version },
+                  {
+                    onSuccess: () => {
+                      setConfirm(null);
+                      toast.success("Label dihapus.");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal menghapus label", { description: (e as Error).message }),
+                  },
+                );
               }}
             >
               Hapus
@@ -366,8 +381,15 @@ export function LabelsView() {
                 merge.mutate(
                   { sourceId: merging.id, targetId: mergeTarget },
                   {
-                    onSuccess: () => setMerging(null),
-                    onError: (e) => setFormErr((e as Error).message),
+                    onSuccess: () => {
+                      setMerging(null);
+                      toast.success("Label berhasil digabungkan.");
+                    },
+                    onError: (e) => {
+                      const msg = (e as Error).message;
+                      setFormErr(msg);
+                      toast.error("Gagal menggabungkan label", { description: msg });
+                    },
                   },
                 );
               }}

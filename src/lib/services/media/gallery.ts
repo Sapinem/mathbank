@@ -11,6 +11,8 @@ import { db } from "@/lib/db";
 import { mediaAssets, questionMedia } from "@/lib/db/schema/media";
 import { GALLERY_COLUMNS, type MediaOrigin } from "./shared";
 import { findAssetByShortId } from "./hygiene";
+import { throwVersionedWriteMiss, type VersionedPgTable } from "../versioned";
+import { versionPredicate } from "@/lib/db/optimistic";
 
 /** Daftar aset untuk galeri/picker, dengan pencarian judul & filter asal. */
 export async function listMedia(opts: {
@@ -65,13 +67,14 @@ export async function updateMediaMeta(
   /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
   expectedVersion?: number | "*",
 ) {
-  // ADR-0030: kunci baris di sini `short_id`, bukan `id`, jadi predikat versi
-  // ditulis langsung — `versionPredicate` mengasumsikan kolom `id`.
-  const keyed = eq(mediaAssets.shortId, shortId);
-  const where =
-    expectedVersion === undefined || expectedVersion === "*"
-      ? keyed
-      : and(keyed, eq(mediaAssets.version, expectedVersion));
+  const asset = await findAssetByShortId(shortId);
+  if (!asset) return null;
+
+  const where = versionPredicate(
+    mediaAssets,
+    asset.id,
+    expectedVersion ?? "*",
+  );
   const [row] = await db
     .update(mediaAssets)
     .set({
@@ -87,5 +90,15 @@ export async function updateMediaMeta(
       shortId: mediaAssets.shortId,
       title: mediaAssets.title,
     });
-  return row ?? null;
+
+  if (!row) {
+    return throwVersionedWriteMiss(
+      mediaAssets as unknown as VersionedPgTable,
+      asset.id,
+      expectedVersion,
+      "Media tidak ditemukan.",
+    );
+  }
+
+  return row;
 }

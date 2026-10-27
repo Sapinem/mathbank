@@ -413,13 +413,43 @@ async function attachOptions(
   const parentIds = [
     ...new Set(rows.map((r) => r.parentId).filter((v): v is string => !!v)),
   ];
+  const questionIds = rows.map((r) => r.id);
+
+  const [parents, qTopics] = await Promise.all([
+    parentIds.length > 0
+      ? db
+          .select({ id: questions.id, contentMarkdown: questions.contentMarkdown })
+          .from(questions)
+          .where(inArray(questions.id, parentIds))
+      : Promise.resolve([]),
+    questionIds.length > 0
+      ? db
+          .select({
+            questionId: questionTopics.questionId,
+            id: topics.id,
+            name: topics.name,
+            level: topics.level,
+            isPrimary: questionTopics.isPrimary,
+          })
+          .from(questionTopics)
+          .innerJoin(topics, eq(questionTopics.topicId, topics.id))
+          .where(inArray(questionTopics.questionId, questionIds))
+      : Promise.resolve([]),
+  ]);
+
   const parentMap = new Map<string, { id: string; contentMarkdown: string }>();
-  if (parentIds.length > 0) {
-    const parents = await db
-      .select({ id: questions.id, contentMarkdown: questions.contentMarkdown })
-      .from(questions)
-      .where(inArray(questions.id, parentIds));
-    for (const p of parents) parentMap.set(p.id, p);
+  for (const p of parents) parentMap.set(p.id, p);
+
+  const topicMap = new Map<string, QuestionTopicView[]>();
+  for (const qt of qTopics) {
+    const list = topicMap.get(qt.questionId) ?? [];
+    list.push({
+      id: qt.id,
+      name: qt.name,
+      level: Number(qt.level),
+      isPrimary: qt.isPrimary,
+    });
+    topicMap.set(qt.questionId, list);
   }
 
   return rows.map((r) => {
@@ -435,6 +465,7 @@ async function attachOptions(
         { withAnswerKey, createdAt: r.createdAt, updatedAt: r.updatedAt },
       ),
       parent: r.parentId ? (parentMap.get(r.parentId) ?? null) : null,
+      topics: topicMap.get(r.id) ?? [],
     } as PublicQuestion;
   });
 }
