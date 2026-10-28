@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
+  ArrowLeft,
+  Check,
   Pencil,
   Trash2,
   AlertTriangle,
@@ -13,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sliders,
+  SendHorizontal,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { EnrichButton } from "@/components/questions/enrich-button";
@@ -47,11 +50,12 @@ import { MatchingView, readMatchingPayload } from "@/components/questions/matchi
 import {
   GradeMarker,
   QuestionTypeIcon,
+  FlagIndicator,
 } from "@/components/questions/question-card";
 import { cn } from "@/lib/utils";
 
 /**
- * Halaman detail soal (M4c) — lihat + edit + ubah status (FSM) + hapus.
+ * Halaman detail soal (M4c) - lihat + edit + ubah status (FSM) + hapus.
  *
  * Format naskah dokumen matematika terpadu (soal + opsi menyatu),
  * bukan format CBT terpisah. Pembahasan KaTeX terstruktur di bawahnya.
@@ -91,6 +95,18 @@ export function QuestionDetailView() {
         description={TYPE_LABELS[q.questionType] ?? q.questionType}
         actions={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href="/questions" />}
+              nativeButton={false}
+              className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3"
+              aria-label="Kembali ke Bank Soal"
+              title="Kembali ke Bank Soal"
+            >
+              <ArrowLeft data-icon="inline-start" />
+              <span className="hidden sm:inline">Bank Soal</span>
+            </Button>
             <EnrichButton questionId={id} />
             <Button
               variant="outline"
@@ -107,21 +123,30 @@ export function QuestionDetailView() {
               disabled={
                 changeStatus.isPending || q.status === "review" || q.status === "ready"
               }
+              className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3"
+              aria-label="Kirim Telaah"
+              title="Kirim Telaah"
             >
-              Kirim Telaah
+              <SendHorizontal data-icon="inline-start" />
+              <span className="hidden sm:inline">Kirim Telaah</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               render={<Link href={`/questions/${id}/edit`} />}
               nativeButton={false}
+              className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3"
+              aria-label="Sunting soal"
+              title="Sunting soal"
             >
-              <Pencil data-icon="inline-start" /> Sunting
+              <Pencil data-icon="inline-start" />
+              <span className="hidden sm:inline">Sunting</span>
             </Button>
             <Button
               variant="destructive"
               size="icon-sm"
               aria-label="Hapus soal"
+              title="Hapus soal"
               onClick={() => setConfirmDelete(true)}
               className="min-h-[44px] min-w-[44px]"
             >
@@ -140,15 +165,11 @@ export function QuestionDetailView() {
               <CardHeader className="border-b border-border/40 pb-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <QuestionStatusBadge status={q.status} />
+                    <QuestionStatusBadge status={q.status} showReady />
                     <GradeMarker grade={q.grade} grades={q.grades} />
                     <DifficultyBadge level={q.difficulty} />
                     <CognitiveBadge level={q.cognitiveLevel} />
-                    {q.isFlagged && (
-                      <Badge variant="outline" className="border-gold/40 bg-gold/15 text-gold-fg">
-                        <AlertTriangle data-icon="inline-start" /> Ditandai
-                      </Badge>
-                    )}
+                    {q.isFlagged && <FlagIndicator />}
                   </div>
                   <QuestionTypeIcon type={q.questionType} />
                 </div>
@@ -160,7 +181,7 @@ export function QuestionDetailView() {
                   <StimulusCard content={q.parent.contentMarkdown} className="text-sm" />
                 )}
 
-                {/* Batang Soal (Stem) — Font 17px di Desktop */}
+                {/* Batang Soal (Stem) - Font 17px di Desktop */}
                 <div className="text-base lg:text-[17px] lg:leading-[1.7] text-foreground">
                   <MathContent content={q.contentMarkdown} className="no-scrollbar" />
                 </div>
@@ -185,14 +206,14 @@ export function QuestionDetailView() {
                           key={o.id}
                           className={cn(
                             "flex items-start gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors",
-                            isKey ? "bg-emerald-500/5 dark:bg-emerald-950/20" : "",
+                            isKey ? "bg-success/8 border border-success/20" : "",
                           )}
                         >
                           <span
                             className={cn(
                               "font-mono font-semibold text-base lg:text-[17px] shrink-0",
                               isKey
-                                ? "text-success text-emerald-600 dark:text-emerald-400 font-bold"
+                                ? "text-success font-bold"
                                 : "text-foreground/70",
                             )}
                           >
@@ -207,12 +228,12 @@ export function QuestionDetailView() {
                             )}
                           </div>
                           {isKey && (
-                            <span
-                              className="inline-flex items-center text-base lg:text-[17px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
-                              title="Kunci Jawaban"
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 text-[10px] border-success/30 bg-success/10 text-success font-mono font-semibold"
                             >
-                              ✓
-                            </span>
+                              Kunci
+                            </Badge>
                           )}
                         </div>
                       );
@@ -256,8 +277,9 @@ export function QuestionDetailView() {
                     {key && (correctLabels.length > 0 || key.text) && (
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <span className="text-muted-foreground">Kunci Jawaban:</span>
-                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                          {correctLabels.join(", ") || key.text} ✓
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success/10 px-2 py-0.5 font-mono text-xs font-bold text-success">
+                          <Check className="size-3.5 stroke-[2.5]" aria-hidden="true" />
+                          {correctLabels.join(", ") || key.text}
                         </span>
                       </div>
                     )}
@@ -295,7 +317,7 @@ export function QuestionDetailView() {
                       </div>
                     )}
 
-                    {/* Pembahasan Detail — Font 20px di Desktop */}
+                    {/* Pembahasan Detail - Font 20px di Desktop */}
                     {activeSol?.contentMarkdown ? (
                       <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-4">
                         <div className="flex items-center justify-between">
@@ -362,18 +384,16 @@ export function QuestionDetailView() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-4 text-xs">
-                {/* Baris Status hanya tampil bila bukan Siap: Siap adalah
-                    kondisi default, jadi baris berlabel ini pun tidak
-                    menampilkan penanda Siap eksplisit. */}
-                {q.status !== "ready" && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Status</span>
-                    <QuestionStatusBadge status={q.status} />
-                  </div>
-                )}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Status</span>
+                  <QuestionStatusBadge status={q.status} showReady />
+                </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tipe Soal</span>
-                  <QuestionTypeIcon type={q.questionType} />
+                  <div className="flex items-center gap-1.5 font-medium text-foreground">
+                    <QuestionTypeIcon type={q.questionType} />
+                    <span>{TYPE_LABELS[q.questionType] ?? q.questionType}</span>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Jenjang Kelas</span>
@@ -388,7 +408,7 @@ export function QuestionDetailView() {
                   <CognitiveBadge level={q.cognitiveLevel} />
                 </div>
 
-                {/* Topik (ACT-09) — klik untuk menyaring Bank Soal */}
+                {/* Topik (ACT-09) - klik untuk menyaring Bank Soal */}
                 <div className="flex flex-col gap-1.5 border-t border-border/30 pt-2">
                   <span className="text-muted-foreground">Topik</span>
                   <TopicTagList
@@ -570,13 +590,13 @@ function QuestionSourcesCard({
           <div>
             <span className="text-muted-foreground block text-[11px]">Jenis</span>
             <span className="font-mono text-foreground capitalize">
-              {current?.sourceKind || "—"}
+              {current?.sourceKind || "-"}
             </span>
           </div>
           <div>
             <span className="text-muted-foreground block text-[11px]">Tahun</span>
             <span className="font-mono text-foreground">
-              {current?.year ?? "—"}
+              {current?.year ?? "-"}
             </span>
           </div>
         </div>

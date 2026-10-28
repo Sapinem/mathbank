@@ -179,7 +179,7 @@ export function GradeMarker({
             type="button"
             aria-label={label}
             className={cn(
-              "inline-flex shrink-0 cursor-help items-center justify-center gap-1 rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground/90 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand",
+              "inline-flex h-6 shrink-0 cursor-help items-center justify-center gap-1 rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground/90 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand",
               className,
             )}
           >
@@ -232,6 +232,31 @@ export function QuestionTypeIcon({ type }: { type: string }) {
   );
 }
 
+/** Indikator penanda bendera (soal ditandai untuk ditinjau) dengan tooltip interaktif dan border konsisten. */
+export function FlagIndicator({ className }: { className?: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Ditandai"
+            className={cn(
+              "relative flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border border-gold/40 bg-gold/10 text-gold transition-colors hover:bg-gold/20 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-brand after:absolute after:-inset-2 after:content-['']",
+              className,
+            )}
+          >
+            <Flag className="size-3.5 fill-gold/20 text-gold" aria-hidden="true" />
+          </button>
+        }
+      />
+      <TooltipContent>
+        <span className="text-xs font-medium">Ditandai untuk ditinjau</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Indikator status alur soal (Draf/Telaah/Arsip/…) dengan dot semantik.
  *  "Siap" SENGAJA dirender sebagai titik netral kecil (•) tanpa teks/badge berlebih
  *  sesuai DESIGN.md §134, agar dapat dibedakan dari status yang belum termuat,
@@ -260,7 +285,7 @@ export function StatusIndicator({
           <button
             type="button"
             className={cn(
-              "relative flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-brand",
+              "relative flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-brand after:absolute after:-inset-2 after:content-['']",
               status === "ready" &&
                 "border-success/30 bg-success/10 text-success hover:bg-success/20",
               status === "draft" &&
@@ -372,9 +397,7 @@ function QuestionCardInner({
                 Wacana
               </span>
             )}
-            {q.isFlagged && (
-              <Flag className="size-3.5 text-gold shrink-0" role="img" aria-label="Ditandai" />
-            )}
+            {q.isFlagged && <FlagIndicator />}
             <div className="min-w-0 flex-1 truncate text-base text-foreground/90 font-normal">
               <MathContent
                 content={excerpt(flattenMathForList(q.contentMarkdown), 180)}
@@ -470,9 +493,7 @@ function QuestionCardInner({
             <QuestionTypeIcon type={q.questionType} />
             <CognitiveBadge level={q.cognitiveLevel} />
             <DifficultyBadge level={q.difficulty} />
-            {q.isFlagged && (
-              <Flag className="size-3.5 text-gold shrink-0" role="img" aria-label="Ditandai" />
-            )}
+            {q.isFlagged && <FlagIndicator />}
             <StatusIndicator status={q.status} />
           </div>
         </div>

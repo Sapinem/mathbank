@@ -36,7 +36,7 @@ export function RubricBadge({
             type="button"
             aria-label={`${title}: ${rubric.description}`}
             className={cn(
-              "inline-flex h-5 w-fit shrink-0 cursor-help items-center justify-center gap-1 rounded-4xl border px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums relative after:absolute after:-inset-1.5 after:content-['']",
+              "inline-flex h-6 w-fit shrink-0 cursor-help items-center justify-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-mono font-semibold whitespace-nowrap tabular-nums relative after:absolute after:-inset-1.5 after:content-[''] focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-brand",
               className,
             )}
           />

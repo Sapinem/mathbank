@@ -74,14 +74,14 @@ export function QuestionStatusBadge({
     <Badge
       variant="outline"
       className={cn(
-        "font-medium",
+        "h-6 font-medium inline-flex items-center gap-1 px-1.5 sm:px-2 text-xs",
         STATUS_STYLES[status] ?? STATUS_STYLES.draft,
         className,
       )}
       title={`Status: ${STATUS_LABELS[status] ?? status}`}
     >
       <StatusIcon status={status} data-icon="inline-start" aria-hidden="true" />
-      {STATUS_LABELS[status] ?? status}
+      <span className="hidden sm:inline">{STATUS_LABELS[status] ?? status}</span>
     </Badge>
   );
 }
