@@ -8,6 +8,7 @@ import type {
   BundleOrigin,
   BundleValidation,
 } from "@/lib/services/bundle-service";
+import type { UpdateBundleItemSlotContract } from "@/lib/contracts/bundle";
 import { api } from "@/lib/api/fetcher";
 
 /**
@@ -275,3 +276,26 @@ export function useReorderBundleItems(bundleId: string, defaultVersion?: number 
     onSuccess: () => qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) }),
   });
 }
+
+export function useUpdateBundleItemSlot(bundleId: string, defaultVersion?: number | "*") {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      itemId: string;
+      patch: UpdateBundleItemSlotContract;
+      version?: number | "*";
+    }) => {
+      const { itemId, patch, version } = input;
+      return api<BundleItemView["item"]>(`/api/bundles/${bundleId}/items/${itemId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+        ifMatch: version ?? defaultVersion ?? "*",
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+      qc.invalidateQueries({ queryKey: bundleKeys.all });
+    },
+  });
+}
+
