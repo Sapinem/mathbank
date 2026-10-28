@@ -245,6 +245,23 @@ describe("createBundle / listBundles", () => {
     expect(raw.deleted_at).toBeNull();
   });
 
+  it("archiveBundle memicu sync_question_grades dan mengeluarkan grade dari questions.grades", async () => {
+    const b = await createBundle({ title: "Paket Kelas 11", bundleType: "exam" }, admin);
+    await updateBundle(b.id, { grade: "11" }, admin);
+    const q = await mkQuestion("Soal Kelas 11");
+    await addItem(b.id, q.id, admin);
+
+    const [qBefore] = await sql`SELECT grades, grade FROM questions WHERE id = ${q.id}`;
+    expect(qBefore.grades).toEqual(["11"]);
+    expect(qBefore.grade).toBe("11");
+
+    await archiveBundle(b.id, admin);
+
+    const [qAfter] = await sql`SELECT grades, grade FROM questions WHERE id = ${q.id}`;
+    expect(qAfter.grades).toEqual([]);
+    expect(qAfter.grade).toBeNull();
+  });
+
   it("ADR-0025: deleteBundle mengisi deletedAt (soft-delete)", async () => {
     const b = await createBundle({ title: "Hapus", bundleType: "exam" }, admin);
     await deleteBundle(b.id, admin);

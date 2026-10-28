@@ -4,7 +4,7 @@ import { updateBundleSchema } from "@/lib/contracts/bundle";
 import {
   getBundle,
   updateBundle,
-  archiveBundle,
+  deleteBundle,
   listBundleItems,
 } from "@/lib/services/bundle-service";
 import { NotFoundError } from "@/lib/auth/guards";
@@ -50,9 +50,9 @@ export const PATCH = wrapRoute({
 });
 
 /**
- * DELETE /api/bundles/[id] — arsipkan paket (soft-delete).
+ * DELETE /api/bundles/[id] — hapus paket (soft-delete).
  *
- * Alasan sama seperti PATCH: ditegakkan di `archiveBundle` → `assertBundleWrite`.
+ * Alasan sama seperti PATCH: ditegakkan di `deleteBundle` → `assertBundleWrite`.
  */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
@@ -64,7 +64,7 @@ export const DELETE = wrapRoute({
   query: emptyQuerySchema,
   ifMatch: true,
   handler: async ({ params, actor, expectedVersion }) => {
-    await archiveBundle(params.id, actor, expectedVersion);
+    await deleteBundle(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

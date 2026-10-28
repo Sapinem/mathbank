@@ -154,6 +154,8 @@ describe("Alur API paket (L4)", () => {
       ctx(b.id),
     );
     expect(del.status).toBe(200);
+    const [raw] = await sql`SELECT deleted_at FROM bundles WHERE id = ${b.id}`;
+    expect(raw.deleted_at).not.toBeNull();
     const list = (await (await listGET(req("GET", "/api/bundles"))).json()).data;
     expect(list.items.find((x: { id: string }) => x.id === b.id)).toBeUndefined();
   });
