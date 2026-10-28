@@ -3,13 +3,15 @@ import { performance } from "node:perf_hooks";
 
 async function runCommand(command, args, options = {}) {
   const start = performance.now();
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       env: { ...process.env, CI: "1", ...options.env },
       ...options,
     });
+
+    child.on("error", reject);
 
     let stdout = "";
     let stderr = "";
@@ -39,12 +41,10 @@ async function main() {
   const res = await runCommand("pnpm", ["check"]);
   const totalDuration = Math.round(((performance.now() - overallStart) / 1000) * 100) / 100;
 
-  let statementsCoverage = 0;
+  let statementsCoverage = null;
   const coverageMatch = res.stdout.match(/Statements\s*:\s*([\d.]+)%/);
   if (coverageMatch) {
     statementsCoverage = parseFloat(coverageMatch[1]);
-  } else if (res.code === 0) {
-    statementsCoverage = 90.0;
   }
 
   const result = {

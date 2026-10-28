@@ -25,7 +25,6 @@
 # misc
 .DS_Store
 *.pem
-.eslintcache
 
 # backups DB (dump bisa memuat data nyata — JANGAN di-commit)
 /backups/
@@ -80,4 +79,6 @@ logs/
 # Artefak lokal agen/editor (bukan kode; jangan di-commit)
 /.codebuddy/
 /.scratch*/
+/.context/
+/.eslintcache
 /.mat160-build-css.mjs

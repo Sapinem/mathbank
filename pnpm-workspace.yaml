@@ -30,3 +30,15 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-x64-msvc@16.3.7'
   - eslint-config-next@16.3.7
   - next@16.3.7
+  - '@better-auth/api-key@1.7.14'
+  - '@better-auth/core@1.7.14'
+  - '@better-auth/drizzle-adapter@1.7.14'
+  - '@better-auth/kysely-adapter@1.7.14'
+  - '@better-auth/memory-adapter@1.7.14'
+  - '@better-auth/mongo-adapter@1.7.14'
+  - '@better-auth/prisma-adapter@1.7.14'
+  - '@better-auth/telemetry@1.7.14'
+  - better-auth@1.7.14
+  - '@shadcn/registry@0.2.1'
+  - lucide-react@1.62.0
+  - shadcn@4.23.0
