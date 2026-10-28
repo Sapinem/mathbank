@@ -16,9 +16,13 @@ import {
   ChevronRight,
   Sliders,
   SendHorizontal,
+  FileText,
+  ListPlus,
+  ExternalLink,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { EnrichButton } from "@/components/questions/enrich-button";
+import { AddToBundleDialog } from "@/components/questions/add-to-bundle-dialog";
 import { MathContent } from "@/components/math/math-content";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -156,7 +160,7 @@ export function QuestionDetailView() {
         }
       />
 
-      <div className="p-4 sm:p-6 max-w-7xl w-full">
+      <div className="p-4 sm:p-6 max-w-7xl w-full mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* KOLOM KIRI (UTAMA: LEMBAR SOAL & PEMBAHASAN) (~68%) */}
           <div className="lg:col-span-8 flex flex-col gap-6">
@@ -451,7 +455,7 @@ export function QuestionDetailView() {
             </Card>
 
             {/* KARTU ASAL-USUL (ADR-0014: dari BUNDLE/naskah, bukan per-butir) */}
-            <QuestionSourcesCard bundles={q.bundles} />
+            <QuestionSourcesCard bundles={q.bundles} questionId={q.id} />
           </div>
         </div>
       </div>
@@ -500,11 +504,12 @@ export function QuestionDetailView() {
 /**
  * Kartu Asal-Usul & Sumber (Slide Carousel bila > 1).
  *
- * Catatan CONSTRAINTS #6: Tanpa useMemo/useCallback.
- * Tanpa tautan asli sesuai instruksi pengguna.
+ * Menghubungkan butir soal ke naskah paket (ADR-0014) dengan tautan langsung,
+ * penanda peran naskah (Soal vs Wacana), dan tombol aksi cepat "Masukkan ke Paket".
  */
 function QuestionSourcesCard({
   bundles = [],
+  questionId,
 }: {
   bundles?: Array<{
     id: string;
@@ -516,131 +521,163 @@ function QuestionSourcesCard({
     sourceLabel?: string | null;
     sourceKind?: string | null;
     itemNumber?: string | null;
+    role?: "question" | "stimulus";
+    sectionName?: string | null;
   }>;
+  questionId: string;
 }) {
   const [index, setIndex] = useState(0);
+  const [addToBundleOpen, setAddToBundleOpen] = useState(false);
   const total = bundles.length;
 
-  if (total === 0) {
-    return (
+  return (
+    <>
       <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
         <CardHeader className="border-b border-border/40 pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <BookOpen className="size-4 text-primary shrink-0" />
-            Asal-Usul
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <BookOpen className="size-4 text-primary shrink-0" />
+              <span>Asal-Usul Naskah {total > 0 && `(${total})`}</span>
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddToBundleOpen(true)}
+              className="min-h-[32px] h-8 px-2 text-xs gap-1"
+              title="Masukkan soal ini ke salah satu paket ujian"
+            >
+              <ListPlus className="size-3.5" />
+              <span>+ Paket</span>
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="pt-4 text-xs text-muted-foreground">
-          Butir ini belum masuk naskah mana pun.
-        </CardContent>
-      </Card>
-    );
-  }
+        {total === 0 ? (
+          <CardContent className="pt-4 text-xs text-muted-foreground flex flex-col gap-2">
+            <p>Butir ini berstatus mandiri — belum dimasukkan ke dalam paket ujian mana pun.</p>
+          </CardContent>
+        ) : (
+          (() => {
+            const safeIndex = index < total ? index : 0;
+            const current = bundles[safeIndex] ?? bundles[0];
+            const isStimulus = current?.role === "stimulus";
 
-  // Jaga index aman bila daftar bundle berubah
-  const safeIndex = index < total ? index : 0;
-  const current = bundles[safeIndex] ?? bundles[0];
-
-  return (
-    <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
-      <CardHeader className="border-b border-border/40 pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <BookOpen className="size-4 text-primary shrink-0" />
-            Asal-Usul
-          </CardTitle>
-          {total > 1 && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="min-h-[44px] min-w-[44px]"
-                aria-label="Naskah sebelumnya"
-                onClick={() => setIndex((prev) => (prev > 0 ? prev - 1 : total - 1))}
-              >
-                <ChevronLeft className="size-3.5" />
-              </Button>
-              <span className="font-mono font-medium text-[11px]">
-                {safeIndex + 1}/{total}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="min-h-[44px] min-w-[44px]"
-                aria-label="Naskah berikutnya"
-                onClick={() => setIndex((prev) => (prev < total - 1 ? prev + 1 : 0))}
-              >
-                <ChevronRight className="size-3.5" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2.5 pt-4 text-xs">
-        <div>
-          <span className="text-muted-foreground block text-[11px] uppercase tracking-wider font-semibold">
-            Judul / Dokumen
-          </span>
-          <span className="font-medium text-foreground text-sm leading-snug">
-            {current?.title || "Tanpa judul"}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
-          <div>
-            <span className="text-muted-foreground block text-[11px]">Jenis</span>
-            <span className="font-mono text-foreground capitalize">
-              {current?.sourceKind || "-"}
-            </span>
-          </div>
-          <div>
-            <span className="text-muted-foreground block text-[11px]">Tahun</span>
-            <span className="font-mono text-foreground">
-              {current?.year ?? "-"}
-            </span>
-          </div>
-        </div>
-
-        {current?.sourceLabel && (
-          <div className="pt-1 border-t border-border/30">
-            <span className="text-muted-foreground block text-[11px]">Sumber</span>
-            <span className="text-foreground">{current.sourceLabel}</span>
-          </div>
-        )}
-
-        {current?.itemNumber && (
-          <div className="pt-1 border-t border-border/30">
-            <span className="text-muted-foreground block text-[11px]">Nomor Butir</span>
-            <span className="font-mono text-foreground">{current.itemNumber}</span>
-          </div>
-        )}
-
-        {current?.bundleType && (
-          <div className="pt-1 border-t border-border/30">
-            <span className="text-muted-foreground block text-[11px]">Jenis naskah</span>
-            <p className="text-muted-foreground capitalize leading-relaxed">{current.bundleType}</p>
-          </div>
-        )}
-
-        {/* Indikator titik slide bila > 1 naskah */}
-        {total > 1 && (
-          <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/30">
-            {bundles.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setIndex(i)}
-                aria-label={`Pindah ke naskah ${i + 1}`}
-                className={cn(
-                  "h-1.5 rounded-full transition-all",
-                  i === safeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",
+            return (
+              <CardContent className="flex flex-col gap-2.5 pt-4 text-xs">
+                {total > 1 && (
+                  <div className="flex items-center justify-between border-b border-border/30 pb-2 text-xs text-muted-foreground">
+                    <span className="font-mono text-[11px]">
+                      Naskah {safeIndex + 1} dari {total}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7"
+                        aria-label="Naskah sebelumnya"
+                        onClick={() => setIndex((prev) => (prev > 0 ? prev - 1 : total - 1))}
+                      >
+                        <ChevronLeft className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7"
+                        aria-label="Naskah berikutnya"
+                        onClick={() => setIndex((prev) => (prev < total - 1 ? prev + 1 : 0))}
+                      >
+                        <ChevronRight className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
                 )}
-              />
-            ))}
-          </div>
+
+                <div>
+                  <span className="text-muted-foreground block text-[11px] uppercase tracking-wider font-semibold">
+                    Judul Naskah
+                  </span>
+                  <Link
+                    href={`/bundles/${current?.id}`}
+                    className="font-medium text-primary hover:underline text-sm leading-snug inline-flex items-center gap-1 pt-0.5"
+                  >
+                    <span>{current?.title || "Tanpa judul"}</span>
+                    <ExternalLink className="size-3 shrink-0" />
+                  </Link>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {isStimulus ? (
+                    <Badge variant="secondary" className="gap-1 border-info/30 bg-info/10 text-info text-[10px]">
+                      <BookOpen className="size-3" /> Wacana / Stimulus
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="gap-1 text-[10px]">
+                      <FileText className="size-3" /> Soal
+                    </Badge>
+                  )}
+                  {current?.itemNumber && (
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      No. {current.itemNumber}
+                    </Badge>
+                  )}
+                  {current?.sectionName && (
+                    <Badge variant="outline" className="border-border/80 text-[10px] text-muted-foreground">
+                      {current.sectionName}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Tipe Naskah</span>
+                    <span className="font-mono text-foreground capitalize">
+                      {current?.bundleType === "exam" ? "Ujian" : current?.bundleType || "-"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Tahun</span>
+                    <span className="font-mono text-foreground">
+                      {current?.year ?? "-"}
+                    </span>
+                  </div>
+                </div>
+
+                {current?.sourceLabel && (
+                  <div className="pt-1 border-t border-border/30">
+                    <span className="text-muted-foreground block text-[11px]">Asal Sumber</span>
+                    <span className="text-foreground">{current.sourceLabel}</span>
+                  </div>
+                )}
+
+                {/* Indikator titik slide bila > 1 naskah */}
+                {total > 1 && (
+                  <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/30">
+                    {bundles.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setIndex(i)}
+                        aria-label={`Pindah ke naskah ${i + 1}`}
+                        className={cn(
+                          "h-1.5 rounded-full transition-all",
+                          i === safeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            );
+          })()
         )}
-      </CardContent>
-    </Card>
+      </Card>
+
+      <AddToBundleDialog
+        open={addToBundleOpen}
+        onOpenChange={setAddToBundleOpen}
+        questionId={questionId}
+      />
+    </>
   );
 }
+
 

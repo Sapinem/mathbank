@@ -160,15 +160,15 @@ export function QuestionFilterBar({
         {/* Toggle Mode Tampilan (List / Grid / Masonry) */}
         <ViewModeToggle value={viewMode} onChange={onViewModeChange} />
 
-        {/* Tombol Buat Soal — disembunyikan di mobile (< sm) */}
+        {/* Tombol Buat Soal — di mobile ikon saja (+), di desktop ikon + teks */}
         <Button
           render={<Link href="/questions/new" aria-label="Buat Soal" />}
           nativeButton={false}
           size="sm"
-          className="hidden sm:inline-flex shrink-0 gap-1.5 px-3 pointer-coarse:min-h-[44px]"
+          className="inline-flex shrink-0 gap-1.5 px-2.5 sm:px-3 pointer-coarse:min-h-[44px]"
         >
           <Plus className="size-3.5" />
-          <span className="text-xs font-medium">Buat Soal</span>
+          <span className="hidden sm:inline text-xs font-medium">Buat Soal</span>
         </Button>
       </div>
 

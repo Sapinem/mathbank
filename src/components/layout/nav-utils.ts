@@ -6,6 +6,31 @@ export function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Terjemahkan segmen teknis (UUID atau slug aksi) ke teks Indonesia yang ramah pengguna. */
+export function humanizeSegment(seg: string, parentHref: string): string {
+  const decoded = decodeURIComponent(seg);
+  if (UUID_RE.test(decoded)) {
+    if (parentHref.startsWith("/questions")) return "Detail Soal";
+    if (parentHref.startsWith("/bundles")) return "Detail Paket";
+    return "Detail";
+  }
+  if (decoded === "edit") {
+    if (parentHref.startsWith("/bundles")) return "Susun Paket";
+    return "Sunting";
+  }
+  if (decoded === "new") {
+    if (parentHref.startsWith("/questions")) return "Buat Soal";
+    if (parentHref.startsWith("/bundles")) return "Buat Paket";
+    return "Baru";
+  }
+  if (decoded === "print") {
+    return "Cetak Naskah";
+  }
+  return decoded;
+}
+
 /**
  * Bangun jejak breadcrumb dari pathname berdasarkan daftar item navigasi.
  * Mengembalikan minimal satu crumb (fallback: Dasbor).
@@ -27,8 +52,9 @@ export function breadcrumbFromPath(
           .filter(Boolean);
         let acc = item.href;
         for (const seg of rest) {
+          const parentHref = acc;
           acc += "/" + seg;
-          parts.push({ label: decodeURIComponent(seg), href: acc });
+          parts.push({ label: humanizeSegment(seg, parentHref), href: acc });
         }
         return parts;
       }

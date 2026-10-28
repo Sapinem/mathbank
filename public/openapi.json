@@ -2938,6 +2938,485 @@
       }
     },
     "/api/bundles/{id}/items/{itemId}": {
+      "patch": {
+        "operationId": "patchBundlesByIdItemsByItemId",
+        "summary": "Perbarui metadata slot item paket (nomor, peran, seksi, catatan)",
+        "tags": [
+          "bundles"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Versi baris yang Anda baca, dari header ETag. Contoh: \"3\". Nilai * berarti \"apa pun versinya\".",
+            "schema": {
+              "type": "string",
+              "pattern": "^(\\*|\"\\d+\"|\\d+)$"
+            },
+            "example": "\"3\""
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "question",
+                      "stimulus"
+                    ]
+                  },
+                  "itemNumber": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 50
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sectionName": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "notes": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sukses.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "bundleId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "questionId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "orderIndex": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "question",
+                            "stimulus"
+                          ]
+                        },
+                        "sectionName": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "itemNumber": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "notes": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "bundleId",
+                        "questionId",
+                        "orderIndex",
+                        "role",
+                        "sectionName"
+                      ],
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi input gagal (Zod).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Tidak ada sesi/API key valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tidak punya izin, atau wajib ganti password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sumber daya tidak ditemukan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match tidak cocok: sumber daya sudah berubah sejak dibaca. Muat ulang lalu ulangi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Header If-Match wajib untuk operasi ini, tetapi tidak dikirim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit terlampaui.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Detik sampai boleh mencoba lagi.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Kesalahan server tak terduga.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "description": "Kode galat stabil (mis. VALIDATION_ERROR)."
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "description": "Rincian tambahan bila ada (isu Zod, daftar soal, dst.)."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mathbank": {
+          "authz": "service",
+          "enforcedIn": "src/lib/services/bundle-shared.ts:assertBundleWrite",
+          "routeGate": "question:view",
+          "ifMatch": true,
+          "source": "src/app/api (wrapRoute)"
+        }
+      },
       "delete": {
         "operationId": "deleteBundlesByIdItemsByItemId",
         "summary": "Lepas soal dari paket",
@@ -5355,6 +5834,30 @@
                         "type": "number",
                         "minimum": 0,
                         "maximum": 20
+                      },
+                      "backgroundGrid": {
+                        "type": "boolean"
+                      },
+                      "columnBreaks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "institutionLogoUrl": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "string",
+                            "const": ""
+                          }
+                        ]
+                      },
+                      "brandColor": {
+                        "type": "string"
                       }
                     }
                   },
@@ -7226,6 +7729,30 @@
                         "type": "number",
                         "minimum": 0,
                         "maximum": 20
+                      },
+                      "backgroundGrid": {
+                        "type": "boolean"
+                      },
+                      "columnBreaks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "institutionLogoUrl": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          {
+                            "type": "string",
+                            "const": ""
+                          }
+                        ]
+                      },
+                      "brandColor": {
+                        "type": "string"
                       }
                     }
                   }

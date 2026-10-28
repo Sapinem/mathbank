@@ -224,19 +224,35 @@ export function BundleDetailView() {
                         hasNoKey && "bg-amber-500/5",
                       )}
                     >
-                      <span className="w-6 shrink-0 text-right font-medium tabular-nums text-muted-foreground pt-0.5">
-                        {nomor}.
+                      <span className="w-8 shrink-0 text-right font-medium tabular-nums text-muted-foreground pt-0.5 font-mono text-xs">
+                        {it.item.itemNumber
+                          ? it.item.itemNumber.endsWith(".")
+                            ? it.item.itemNumber
+                            : `${it.item.itemNumber}.`
+                          : `${nomor}.`}
                       </span>
                       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
                         <div className="text-base leading-relaxed text-foreground">
                           <MathContent content={it.question.contentMarkdown} />
                         </div>
 
-                        {it.item.role === "stimulus" && (
-                          <Badge variant="secondary" className="w-fit text-[10px]">
-                            Stimulus
-                          </Badge>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {it.item.role === "stimulus" && (
+                            <Badge variant="secondary" className="gap-1 border-info/30 bg-info/10 text-info text-[10px]">
+                              <BookOpen className="size-3" /> Wacana
+                            </Badge>
+                          )}
+                          {it.item.sectionName && (
+                            <Badge variant="outline" className="border-border/80 text-[10px] text-muted-foreground">
+                              {it.item.sectionName}
+                            </Badge>
+                          )}
+                          {it.item.notes && (
+                            <span className="font-mono text-[10px] text-muted-foreground" title={it.item.notes}>
+                              (Ada Catatan)
+                            </span>
+                          )}
+                        </div>
 
                         {it.question.options.length > 0 && (
                           <ul className="flex flex-col gap-1.5 pl-1">
@@ -300,11 +316,16 @@ export function BundleDetailView() {
                       <div className="flex items-center justify-between border-b border-border/40 pb-2">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-xs font-bold text-brand">
-                            Butir #{nomor}
+                            Butir #{it.item.itemNumber || nomor}
                           </span>
                           {it.item.role === "stimulus" && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              Stimulus
+                            <Badge variant="secondary" className="gap-1 border-info/30 bg-info/10 text-info text-[10px]">
+                              <BookOpen className="size-3" /> Wacana
+                            </Badge>
+                          )}
+                          {it.item.sectionName && (
+                            <Badge variant="outline" className="border-border/80 text-[10px] text-muted-foreground">
+                              {it.item.sectionName}
                             </Badge>
                           )}
                         </div>

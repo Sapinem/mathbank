@@ -397,6 +397,11 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     tags: ["bundles"],
     response: okSchema,
   },
+  "PATCH /api/bundles/[id]/items/[itemId]": {
+    summary: "Perbarui metadata slot item paket (nomor, peran, seksi, catatan)",
+    tags: ["bundles"],
+    response: bundleItemSchema,
+  },
   "DELETE /api/bundles/[id]/items/[itemId]": {
     summary: "Lepas soal dari paket",
     tags: ["bundles"],

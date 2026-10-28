@@ -1,6 +1,6 @@
 # KONTRAK-API.md — Kontrak HTTP API MathBank
 
-> **Status:** ✅ berlaku — mencerminkan **51 route handler · 76 method** di `src/app/api` per 2026-10-27
+> **Status:** ✅ berlaku — mencerminkan **51 route handler · 77 method** di `src/app/api` per 2026-10-28
 > (`/api/auth/[...all]` menyumbang `GET`+`POST` lewat Better Auth). Angka hidup dicetak
 > `pnpm lint:authz`; jangan salin ke dokumen lain.
 > **Sumber kebenaran:** `src/lib/api/route-wrapper.ts` (envelope), `src/lib/contracts/*` (skema Zod).
@@ -130,6 +130,7 @@ Validasi menambah `details`:
 | `POST` | `/api/bundles/{id}/items` | service (gerbang `question:view`) | If-Match | Tambah soal ke paket |
 | `PUT` | `/api/bundles/{id}/items` | service (gerbang `question:view`) | If-Match | Susun ulang urutan item (atomik) |
 | `DELETE` | `/api/bundles/{id}/items/{itemId}` | service (gerbang `question:view`) | If-Match | Lepas soal dari paket |
+| `PATCH` | `/api/bundles/{id}/items/{itemId}` | service (gerbang `question:view`) | If-Match | Perbarui metadata slot item paket (nomor, peran, seksi, catatan) |
 | `GET` | `/api/bundles/{id}/validate` | `question:view` | — | Pratinjau kesiapan ekspor |
 
 ### taxonomy — Topik, label, sumber, event, jenjang.

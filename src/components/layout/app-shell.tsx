@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="flex min-w-0 flex-col overflow-hidden outline-none"
         >
           <Header onOpenCommand={() => setCommandOpen(true)} />
-          <div className="flex-1 overflow-y-auto" data-app-scroll>
+          <div className="flex-1 min-h-0 flex flex-col overflow-y-auto" data-app-scroll>
             {children}
           </div>
         </SidebarInset>

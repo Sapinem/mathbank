@@ -21,6 +21,12 @@ vi.mock("@/lib/hooks/use-questions", () => ({
   useChangeQuestionStatus: () => useChangeQuestionStatusMock(),
 }));
 
+// ── Mock hook bundles untuk AddToBundleDialog ──
+vi.mock("@/lib/hooks/use-bundles", () => ({
+  useBundles: () => ({ data: [], isPending: false }),
+  useAddBundleItem: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
 // ── Mock KaTeX ──
 vi.mock("@/components/math/math-content", () => ({
   MathContent: ({ content }: { content: string }) => <span data-testid="math">{content}</span>,
@@ -156,6 +162,8 @@ describe("QuestionDetailView", () => {
             sourceId: null,
             sourceLabel: null,
             itemNumber: null,
+            role: "question" as const,
+            sectionName: null,
             status: "ready",
           },
         ],

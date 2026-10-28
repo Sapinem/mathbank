@@ -111,6 +111,10 @@ export interface QuestionBundleView {
   sourceKind: string | null;
   /** Nomor butir di dalam naskah (`bundle_items.item_number`). */
   itemNumber: string | null;
+  /** Peran butir dalam naskah: scored question atau wacana/stimulus bersama. */
+  role: "question" | "stimulus";
+  /** Seksi naskah (mis. "Bagian A"). */
+  sectionName: string | null;
   status: string;
 }
 
@@ -164,6 +168,8 @@ export async function getQuestion(
         sourceLabel: sources.label,
         sourceKind: sources.kind,
         itemNumber: bundleItems.itemNumber,
+        role: bundleItems.role,
+        sectionName: bundleItems.sectionName,
         status: bundles.status,
       })
       .from(bundleItems)
