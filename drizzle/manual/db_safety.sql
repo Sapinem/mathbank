@@ -238,6 +238,7 @@ BEGIN
         JOIN bundles b ON bi.bundle_id = b.id
         WHERE bi.question_id = qid
           AND b.deleted_at IS NULL
+          AND b.status <> 'archived'
           AND b.grade IS NOT NULL
           AND b.grade <> ''
           AND b.grade <> 'umum';
@@ -273,7 +274,9 @@ BEGIN
         )[1] AS first_grade
       FROM target_questions tq
       LEFT JOIN bundle_items bi2 ON bi2.question_id = tq.question_id
-      LEFT JOIN bundles b2 ON bi2.bundle_id = b2.id AND b2.deleted_at IS NULL
+      LEFT JOIN bundles b2 ON bi2.bundle_id = b2.id
+                          AND b2.deleted_at IS NULL
+                          AND b2.status <> 'archived'
       GROUP BY tq.question_id
     )
     UPDATE questions q
@@ -295,7 +298,7 @@ CREATE TRIGGER trg_bundle_items_sync_grades
 
 DROP TRIGGER IF EXISTS trg_bundles_sync_grades ON bundles;
 CREATE TRIGGER trg_bundles_sync_grades
-  AFTER UPDATE OF grade, deleted_at ON bundles
+  AFTER UPDATE OF grade, deleted_at, status ON bundles
   FOR EACH ROW EXECUTE FUNCTION sync_question_grades();
 
 -- ============================================================================
