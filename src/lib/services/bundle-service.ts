@@ -48,7 +48,7 @@ export {
 } from "./bundle-write";
 
 // Pengelolaan item (items).
-export { addItem, removeItem, reorderItems } from "./bundle-items";
+export { addItem, removeItem, updateBundleItemSlot, reorderItems } from "./bundle-items";
 
 // Otorisasi per-paket (dipakai `moodle-export-service` & lintas modul).
 export {

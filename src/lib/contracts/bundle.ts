@@ -69,3 +69,18 @@ export const listBundlesQuerySchema = z.object({
 export type CreateBundleContract = z.infer<typeof createBundleSchema>;
 export type UpdateBundleContract = z.infer<typeof updateBundleSchema>;
 export type ListBundlesQuery = z.infer<typeof listBundlesQuerySchema>;
+
+/** Skema pembaruan metadata slot item dalam paket. */
+export const updateBundleItemSlotSchema = z
+  .object({
+    role: z.enum(["question", "stimulus"]).optional(),
+    itemNumber: z.string().trim().max(50).nullable().optional(),
+    sectionName: z.string().trim().max(100).nullable().optional(),
+    notes: z.string().max(2000).nullable().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "Setidaknya satu field harus diisi untuk memperbarui slot item.",
+  });
+
+export type UpdateBundleItemSlotContract = z.infer<typeof updateBundleItemSlotSchema>;
+

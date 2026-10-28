@@ -25,6 +25,7 @@ import { versionPredicate } from "@/lib/db/optimistic";
 import { assertVersionMatches } from "@/lib/api/version";
 import { throwVersionedWriteMiss } from "./versioned";
 import { withUniqueGuard } from "@/lib/db/errors";
+import type { UpdateBundleItemSlotContract } from "@/lib/contracts/bundle";
 
 /** Tambah soal ke paket (di akhir). Tolak duplikat. */
 export async function addItem(
@@ -126,6 +127,52 @@ export async function removeItem(
       await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
     }
     await tx.delete(bundleItems).where(eq(bundleItems.id, itemId));
+  });
+}
+
+/** Perbarui metadata slot item dalam paket. */
+export async function updateBundleItemSlot(
+  bundleId: string,
+  itemId: string,
+  patch: UpdateBundleItemSlotContract,
+  actor: Actor,
+  /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<BundleItemRow> {
+  const bundle = await getBundle(bundleId);
+  if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
+  assertBundleWrite(bundle, actor);
+  if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
+
+  const [row] = await db
+    .select({ id: bundleItems.id })
+    .from(bundleItems)
+    .where(and(eq(bundleItems.id, itemId), eq(bundleItems.bundleId, bundleId)))
+    .limit(1);
+  if (!row) throw new NotFoundError("Item paket tidak ditemukan.");
+
+  return await db.transaction(async (tx) => {
+    const touched = await tx
+      .update(bundles)
+      .set({ updatedAt: new Date() })
+      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
+      .returning({ id: bundles.id });
+    if (touched.length === 0) {
+      await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
+    }
+
+    const [updated] = await tx
+      .update(bundleItems)
+      .set({
+        ...(patch.role !== undefined && { role: patch.role }),
+        ...(patch.itemNumber !== undefined && { itemNumber: patch.itemNumber }),
+        ...(patch.sectionName !== undefined && { sectionName: patch.sectionName }),
+        ...(patch.notes !== undefined && { notes: patch.notes }),
+      })
+      .where(and(eq(bundleItems.id, itemId), eq(bundleItems.bundleId, bundleId)))
+      .returning();
+
+    return updated!;
   });
 }
 
