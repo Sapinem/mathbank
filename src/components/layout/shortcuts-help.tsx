@@ -65,6 +65,9 @@ export function ShortcutsHelp({
             ))}
           </div>
         </div>
+        <div className="border-t pt-2 text-right text-[11px] text-muted-foreground">
+          Tekan <kbd className="font-mono bg-muted px-1.5 py-0.5 rounded border border-border text-[10px]">Esc</kbd> untuk menutup
+        </div>
       </DialogContent>
     </Dialog>
   );

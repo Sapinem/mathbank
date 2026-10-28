@@ -54,8 +54,8 @@ export async function GET(
   const ip = getClientIp(req);
   const key = rateLimitKey(null, ip, "media:serve");
   const now = Date.now();
-  if (now - lastImageRateLimitPrune > 300_000 || imageRateLimiter.size() > 2000) {
-    imageRateLimiter.prune(now);
+  if (now - lastImageRateLimitPrune > 300_000 || (imageRateLimiter.size() > 2000 && now - lastImageRateLimitPrune > 5_000)) {
+    imageRateLimiter.prune(now, 2000);
     lastImageRateLimitPrune = now;
   }
   const rl = await imageRateLimiter.take(key, {

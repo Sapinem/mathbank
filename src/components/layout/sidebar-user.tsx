@@ -28,9 +28,12 @@ import {
 import { ROLE_LABELS } from "@/lib/display/labels";
 import { useCurrentUser } from "@/lib/hooks/use-current-user";
 
-/** Inisial dari nama (maks 1 huruf). */
+/** Inisial dari nama (1 huruf untuk nama tunggal, 2 huruf untuk nama multi-kata). */
 function initial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
 /**

@@ -79,4 +79,21 @@ describe("SidebarUser", () => {
       screen.getByRole("menuitem", { name: /ganti kata sandi/i }),
     ).toHaveAttribute("href", "/change-password");
   });
+
+  it("menghasilkan inisial 2 huruf untuk nama multi-kata dan 1 huruf untuk nama tunggal", () => {
+    mockUser.mockReturnValue({
+      data: { id: "u1", name: "Budi Santoso", roles: ["teacher"], via: "session" },
+      isLoading: false,
+    });
+    const { unmount } = renderUser();
+    expect(screen.getByText("BS")).toBeInTheDocument();
+    unmount();
+
+    mockUser.mockReturnValue({
+      data: { id: "u2", name: "Admin", roles: ["admin"], via: "session" },
+      isLoading: false,
+    });
+    renderUser();
+    expect(screen.getByText("A")).toBeInTheDocument();
+  });
 });
