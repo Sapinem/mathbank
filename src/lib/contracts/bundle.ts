@@ -19,6 +19,10 @@ export const bundlePrintConfigSchema = z.object({
   pageSize: z.enum(["A4", "Letter"]).optional(),
   explanationPlacement: z.enum(["none", "inline", "end"]).optional(),
   answerSpaceCm: z.number().min(0).max(20).optional(),
+  backgroundGrid: z.boolean().optional(),
+  columnBreaks: z.array(z.string()).optional(),
+  institutionLogoUrl: z.string().url().or(z.literal("")).optional(),
+  brandColor: z.string().optional(),
 });
 
 /** Field yang boleh diisi saat buat paket. */
@@ -30,7 +34,7 @@ const baseFields = {
   eventId: z.string().uuid().nullish(),
   year: z.coerce.number().int().min(1900).max(2100).nullish(),
   grade: z.string().trim().max(20).nullish(),
-  durationMinutes: z.number().int().min(1).max(600).optional(),
+  durationMinutes: z.number().int().min(1).max(600).nullish(),
   instructions: z.string().max(5000).nullish(),
   printConfig: bundlePrintConfigSchema.optional(),
 };
