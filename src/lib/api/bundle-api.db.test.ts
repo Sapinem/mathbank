@@ -27,6 +27,9 @@ const { GET: oneGET, PATCH: onePATCH, DELETE: oneDELETE } = await import(
 const { POST: itemsPOST, PUT: itemsPUT } = await import(
   "@/app/api/bundles/[id]/items/route"
 );
+const { PATCH: itemPATCH } = await import(
+  "@/app/api/bundles/[id]/items/[itemId]/route"
+);
 const { GET: validateGET } = await import("@/app/api/bundles/[id]/validate/route");
 const { POST: dupPOST } = await import("@/app/api/bundles/[id]/duplicate/route");
 const { createQuestion } = await import("@/lib/services/question-service");
@@ -55,6 +58,9 @@ function req(
 }
 function ctx(id: string) {
   return { params: Promise.resolve({ id }) };
+}
+function itemCtx(id: string, itemId: string) {
+  return { params: Promise.resolve({ id, itemId }) };
 }
 
 async function mkQuestion(tag = "") {
@@ -198,6 +204,41 @@ describe("Alur API paket (L4)", () => {
     expect(res.status).toBe(200);
     const detail = (await (await oneGET(req("GET", `/api/bundles/${b.id}`), ctx(b.id))).json()).data;
     expect(detail.items.map((i: { item: { id: string } }) => i.item.id)).toEqual([i2.id, i1.id]);
+  });
+
+  it("PATCH slot item mengubah metadata", async () => {
+    mockActor = admin;
+    const b = (
+      await (await listPOST(req("POST", "/api/bundles", { title: "Paket Slot Patch", bundleType: "exam" }))).json()
+    ).data;
+    const q = await mkQuestion("slot patch");
+    const item = (
+      await (
+        await itemsPOST(
+          req("POST", `/api/bundles/${b.id}/items`, { questionId: q.id }),
+          ctx(b.id),
+        )
+      ).json()
+    ).data;
+
+    // Ambil versi terbaru paket
+    const bUpdated = (await (await oneGET(req("GET", `/api/bundles/${b.id}`), ctx(b.id))).json()).data;
+
+    const res = await itemPATCH(
+      req(
+        "PATCH",
+        `/api/bundles/${b.id}/items/${item.id}`,
+        { itemNumber: "No. 1", role: "stimulus", sectionName: "Bagian Esai", notes: "Catatan guru" },
+        { "if-match": `"${bUpdated.version}"` },
+      ),
+      itemCtx(b.id, item.id),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.itemNumber).toBe("No. 1");
+    expect(body.data.role).toBe("stimulus");
+    expect(body.data.sectionName).toBe("Bagian Esai");
+    expect(body.data.notes).toBe("Catatan guru");
   });
 });
 
