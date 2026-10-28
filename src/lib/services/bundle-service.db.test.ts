@@ -10,6 +10,7 @@ import {
   deleteBundle,
   addItem,
   removeItem,
+  updateBundleItemSlot,
   reorderItems,
   listBundleItems,
   validateBundle,
@@ -340,6 +341,35 @@ describe("item paket — urutan & jumlah", () => {
     const it = await addItem(b.id, q.id, admin);
     await removeItem(b.id, it.id, admin);
     expect((await listBundleItems(b.id)).length).toBe(0);
+  });
+
+  it("perbarui slot metadata (itemNumber, role, sectionName, notes)", async () => {
+    const b = await createBundle({ title: "Paket Slot Meta", bundleType: "exam" }, admin);
+    const q = await mkQuestion();
+    const it = await addItem(b.id, q.id, admin);
+
+    const updated = await updateBundleItemSlot(
+      b.id,
+      it.id,
+      {
+        itemNumber: "1a",
+        role: "stimulus",
+        sectionName: "Bagian I",
+        notes: "Wacana pengantar",
+      },
+      admin,
+    );
+
+    expect(updated.itemNumber).toBe("1a");
+    expect(updated.role).toBe("stimulus");
+    expect(updated.sectionName).toBe("Bagian I");
+    expect(updated.notes).toBe("Wacana pengantar");
+
+    const items = await listBundleItems(b.id);
+    expect(items[0]?.item.itemNumber).toBe("1a");
+    expect(items[0]?.item.role).toBe("stimulus");
+    expect(items[0]?.item.sectionName).toBe("Bagian I");
+    expect(items[0]?.item.notes).toBe("Wacana pengantar");
   });
 });
 
