@@ -87,6 +87,27 @@ describe("MemoryStore", () => {
     s.prune(1_000_000 + 3_600_001); // > 1 jam
     expect(s.size()).toBe(0);
   });
+
+  it("prune membuang bucket yang sudah terisi penuh kembali", async () => {
+    const s = new MemoryStore();
+    await s.take("x", { capacity: 5, refillPerSec: 1, now: 1_000_000 }); // remaining = 4
+    expect(s.size()).toBe(1);
+    // setelah 10 detik (10.000 ms), 4 + 10 = 14 >= capacity 5 (sudah penuh)
+    s.prune(1_010_000);
+    expect(s.size()).toBe(0);
+  });
+
+  it("prune memangkas kapasitas hingga maxCapacity dengan LRU eviction", async () => {
+    const s = new MemoryStore();
+    // Isi 10 bucket
+    for (let i = 0; i < 10; i++) {
+      await s.take(`k${i}`, { capacity: 100, refillPerSec: 0.001, now: 1_000_000 + i });
+    }
+    expect(s.size()).toBe(10);
+    // Pangkas ke max 5
+    s.prune(1_000_015, 5);
+    expect(s.size()).toBe(5);
+  });
 });
 
 describe("RateLimitError", () => {

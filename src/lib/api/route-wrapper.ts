@@ -425,10 +425,9 @@ export function wrapRoute<
           actor?.id ?? null,
           getClientIp(req),
           opts.rateLimitScope ??
-            routeGate ??
             (authz.kind === "service"
               ? `${authz.enforcedIn}:${method}:${routePath}`
-              : authz.kind),
+              : routeGate ?? authz.kind),
         );
         const result = await checkRateLimit(key, policy);
         if (!result.allowed) throw new RateLimitError(result.retryAfterMs);
@@ -496,6 +495,11 @@ export function wrapRoute<
           replay.headers.set("X-Request-ID", requestId);
           replay.headers.set("Idempotent-Replay", "true");
           replay.headers.set("Idempotency-Key", idemKey);
+          const replayData = (state.body as { data?: unknown })?.data;
+          const replayEtagVersion = opts.etagFrom?.(replayData as TResult);
+          if (replayEtagVersion !== undefined) {
+            replay.headers.set("ETag", etagOf(replayEtagVersion));
+          }
           return finish(replay);
         }
         if (state.kind === "in-flight") {

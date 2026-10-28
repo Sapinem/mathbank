@@ -44,6 +44,8 @@ export interface RateLimitStore {
 interface Bucket {
   tokens: number;
   updatedAt: number;
+  capacity?: number;
+  refillPerSec?: number;
 }
 
 /**
@@ -67,23 +69,39 @@ export class MemoryStore implements RateLimitStore {
     const elapsedSec = Math.max(0, (now - prev.updatedAt) / 1000);
     const refilled = Math.min(capacity, prev.tokens + elapsedSec * refillPerSec);
 
+    // LRU: buang key lama agar penambahan menempatkannya di akhir iterasi Map
+    this.buckets.delete(key);
+
     if (refilled < 1) {
       const deficit = 1 - refilled;
       const retryAfterMs = Math.ceil((deficit / refillPerSec) * 1000);
-      this.buckets.set(key, { tokens: refilled, updatedAt: now });
+      this.buckets.set(key, { tokens: refilled, updatedAt: now, capacity, refillPerSec });
       return { allowed: false, remaining: 0, retryAfterMs };
     }
 
     const tokens = refilled - 1;
-    this.buckets.set(key, { tokens, updatedAt: now });
+    this.buckets.set(key, { tokens, updatedAt: now, capacity, refillPerSec });
     return { allowed: true, remaining: Math.floor(tokens), retryAfterMs: 0 };
   }
 
-  /** Buang bucket yang sudah penuh kembali (tak perlu disimpan). */
-  prune(now: number): void {
+  /** Buang bucket yang sudah penuh kembali atau melebihi kapasitas maksimum. */
+  prune(now: number, maxCapacity = 2000): void {
     for (const [key, b] of this.buckets) {
-      // Anggap kedaluwarsa bila token penuh atau lama tak aktif (> 1 jam).
-      if (now - b.updatedAt > 3_600_000) this.buckets.delete(key);
+      // Anggap kedaluwarsa bila lama tak aktif (> 1 jam) atau token sudah penuh kembali
+      const isFull =
+        b.capacity !== undefined &&
+        b.refillPerSec !== undefined &&
+        b.tokens + Math.max(0, (now - b.updatedAt) / 1000) * b.refillPerSec >= b.capacity;
+      if (now - b.updatedAt > 3_600_000 || isFull) {
+        this.buckets.delete(key);
+      }
+    }
+    // Jika masih melebihi kapasitas maksimum, buang entri tertua (LRU/FIFO)
+    if (this.buckets.size > maxCapacity) {
+      for (const key of this.buckets.keys()) {
+        if (this.buckets.size <= maxCapacity) break;
+        this.buckets.delete(key);
+      }
     }
   }
 

@@ -121,9 +121,9 @@ Validasi menambah `details`:
 |--------|------|:----:|:-----:|-----------|
 | `GET` | `/api/bundles` | `question:view` | — | Daftar paket soal |
 | `POST` | `/api/bundles` | service (gerbang `question:view`) | — | Buat paket soal |
-| `DELETE` | `/api/bundles/{id}` | service | If-Match | Arsipkan paket (hapus lunak) |
+| `DELETE` | `/api/bundles/{id}` | service | If-Match | Hapus paket (soft-delete) |
 | `GET` | `/api/bundles/{id}` | `question:view` | ETag | Detail paket + item berurutan |
-| `PATCH` | `/api/bundles/{id}` | service | If-Match | Ubah metadata paket |
+| `PATCH` | `/api/bundles/{id}` | service | If-Match | Ubah metadata atau status arsip paket |
 | `POST` | `/api/bundles/{id}/duplicate` | service (gerbang `question:view`) | — | Duplikasi paket |
 | `POST` | `/api/bundles/{id}/export/moodle` | service | — | Ekspor paket ke folder GitSync |
 | `GET` | `/api/bundles/{id}/items` | `question:view` | — | Item paket berurutan + soal tertanam |

@@ -5176,7 +5176,7 @@
       },
       "patch": {
         "operationId": "patchBundlesById",
-        "summary": "Ubah metadata paket",
+        "summary": "Ubah metadata atau status arsip paket",
         "tags": [
           "bundles"
         ],
@@ -5285,9 +5285,16 @@
                     ]
                   },
                   "durationMinutes": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 600
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 600
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "instructions": {
                     "anyOf": [
@@ -5847,7 +5854,7 @@
       },
       "delete": {
         "operationId": "deleteBundlesById",
-        "summary": "Arsipkan paket (hapus lunak)",
+        "summary": "Hapus paket (soft-delete)",
         "tags": [
           "bundles"
         ],
@@ -7149,9 +7156,16 @@
                     ]
                   },
                   "durationMinutes": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 600
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 600
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "instructions": {
                     "anyOf": [

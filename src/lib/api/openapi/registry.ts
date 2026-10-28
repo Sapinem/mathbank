@@ -373,12 +373,12 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     response: bundleDetailSchema,
   },
   "PATCH /api/bundles/[id]": {
-    summary: "Ubah metadata paket",
+    summary: "Ubah metadata atau status arsip paket",
     tags: ["bundles"],
     response: bundleSchema,
   },
   "DELETE /api/bundles/[id]": {
-    summary: "Arsipkan paket (hapus lunak)",
+    summary: "Hapus paket (soft-delete)",
     tags: ["bundles"],
     response: okSchema,
   },

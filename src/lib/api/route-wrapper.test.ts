@@ -371,7 +371,24 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
     const r2 = await handler(req("http://localhost/api/x", { headers: h }));
     expect(calls).toBe(1); // handler hanya sekali
     expect(r2.headers.get("idempotent-replay")).toBe("true");
+    expect(r2.headers.get("idempotency-key")).toBe("k-1");
     expect(await r1.json()).toEqual(await r2.json());
+  });
+
+  it("replay menyertakan header ETag dan Idempotency-Key", async () => {
+    const handler = wrapRoute({
+      authz: { kind: "authenticated" },
+      idempotent: true,
+      etagFrom: (data: { version: number }) => data.version,
+      handler: async () => ({ version: 4 }),
+    });
+    const h = { "idempotency-key": "k-etag" };
+    const r1 = await handler(req("http://localhost/api/x", { headers: h }));
+    expect(r1.headers.get("etag")).toBe('"4"');
+    const r2 = await handler(req("http://localhost/api/x", { headers: h }));
+    expect(r2.headers.get("idempotent-replay")).toBe("true");
+    expect(r2.headers.get("idempotency-key")).toBe("k-etag");
+    expect(r2.headers.get("etag")).toBe('"4"');
   });
 
   it("key berbeda → handler jalan lagi", async () => {
