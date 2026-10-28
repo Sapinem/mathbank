@@ -67,6 +67,8 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
   - `docs/ADR/0030-konkurensi-optimistik-if-match.md`: ✅ (`version` + trigger `bump_version`; `ETag`/`If-Match` wajib pada 21 mutasi baris; 428/412)
 - `docs/ARAHAN-4-PILAR-ARSITEKTUR-V2.md`: 📋 **Arahan 4 Pilar Arsitektur V2** — cetak biru integrasi empat pilar utama MathBank V2.
 - `public/openapi.json`: 🟢 **Spesifikasi OpenAPI 3.1 (artefak)** — DIHASILKAN oleh `pnpm openapi:generate` dari `route-inventory.ts` + deklarasi `wrapRoute` + `src/lib/api/openapi/registry.ts`; disajikan di `/openapi.json`. Jangan disunting tangan (ADR-0027).
+- `docs/bakeoff/`: Evaluasi kompetitif multi-kandidat arsitektur (Compound Engineering Bake-off):
+  - `docs/bakeoff/2026-10-28-evaluasi-bundle-questions-design-mathbank-axiom.md`: 🟢 **Bake-off Evaluasi Fitur Bundle, Questions & Desain Percetakan (MathBank vs Axiom)** — evaluasi menyeluruh 3 kandidat arsitektur, putusan yudisial independen, sintesis arsitektur terpilih (Hybrid Trio-Mode reordering, Slot Inspector drawer, live WYSIWYG Print Studio berbasis CSS variables, named pages Axiom, dan Asal-usul Naskah dwiarah).
 - `docs/KAMUS-DATA.md`: 📋 **Kamus Data MathBank** — definisi entitas, relasi, format payload JSONB, dan skema kanonik.
 - `docs/STRATEGI-TES.md`: 📋 **Strategi Tes MathBank** — piramida pengujian multi-layer (unit, DB integration, schema invariant).
 - `docs/pedagogy/`: Panduan dan spesifikasi pedagogis:
