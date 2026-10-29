@@ -227,12 +227,18 @@ describe("getQuestion & listQuestions", () => {
     expect(await getQuestion(crypto.randomUUID())).toBeNull();
   });
 
-  it("listQuestions mengembalikan item + total", async () => {
+  it("listQuestions mengembalikan item + total + stats", async () => {
     await createQuestion(baseInput({ contentMarkdown: "Soal A" }), teacher);
     await createQuestion(baseInput({ contentMarkdown: "Soal B" }), teacher);
     const res = await listQuestions({ includeDeleted: false, mode: "text", limit: 10, offset: 0 });
     expect(res.total).toBeGreaterThanOrEqual(2);
     expect(res.items.length).toBeGreaterThanOrEqual(2);
+    expect(res.stats).toBeDefined();
+    expect(res.stats?.total).toBe(res.total);
+    expect(typeof res.stats?.ready).toBe("number");
+    expect(typeof res.stats?.review).toBe("number");
+    expect(typeof res.stats?.draft).toBe("number");
+    expect(typeof res.stats?.flagged).toBe("number");
   });
 });
 

@@ -1,13 +1,21 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, X, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
+import {
+  Plus,
+  X,
+  Layers,
+  CheckCircle2,
+  FilePenLine,
+  Flag,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { ListWorkbenchPagination } from "@/components/ui/list-workbench-pagination";
 import { QuestionCard } from "@/components/questions/question-card";
 import { modeClass, type ViewMode } from "@/components/questions/view-mode-toggle";
 import { QuestionFilterDrawer } from "@/components/questions/question-filter-drawer";
@@ -116,9 +124,30 @@ export function QuestionBankView({
   const page = Number(params.get("page") ?? "0");
 
   const [search, setSearch] = useState(q ?? "");
-  const [jumpInput, setJumpInput] = useState("");
+  const [prevQ, setPrevQ] = useState(q ?? "");
   const [filtersOpen, setFiltersOpen] = useState(defaultFiltersOpen);
   const mode = (params.get("mode") as ViewMode) ?? "list";
+
+  // Sinkronisasi render-pass saat URL search param berubah secara eksternal (mis. tombol reset)
+  if (prevQ !== (q ?? "")) {
+    setPrevQ(q ?? "");
+    setSearch(q ?? "");
+  }
+
+  // Debounce live search 300 ms ke URL
+  useEffect(() => {
+    const trimmed = search.trim();
+    const currentQ = q ?? "";
+    if (trimmed === currentQ) return;
+    const t = setTimeout(() => {
+      const next = new URLSearchParams(params.toString());
+      if (trimmed) next.set("q", trimmed);
+      else next.delete("q");
+      next.delete("page");
+      router.replace(`/questions?${next.toString()}`);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, q, params, router]);
 
   // Seleksi massal
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -237,18 +266,7 @@ export function QuestionBankView({
   }
 
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / pageSize);
-  const from = total === 0 ? 0 : page * pageSize + 1;
-  const to = Math.min(total, (page + 1) * pageSize);
-
-  function handleJump(e: React.FormEvent) {
-    e.preventDefault();
-    const target = Number(jumpInput.trim());
-    if (!Number.isNaN(target) && target >= 1 && target <= totalPages) {
-      setParam("page", String(target - 1));
-      setJumpInput("");
-    }
-  }
+  const stats = data?.stats;
 
   function handlePageSizeChange(newSize: number) {
     setParam("limit", newSize === DEFAULT_PAGE_SIZE ? null : String(newSize));
@@ -286,6 +304,96 @@ export function QuestionBankView({
         title="Bank Soal"
         description="Cari, saring, dan kelola soal."
       />
+
+      {/* 0.5. STATISTIK RINGKAS (ACT-04 & Omni-List Model) */}
+      <div className="grid grid-cols-2 gap-3 px-3 pt-3 sm:grid-cols-4 sm:px-4">
+        <button
+          type="button"
+          onClick={() => {
+            setParam("status", null);
+            setParam("flagged", null);
+          }}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
+            !status && !flagged
+              ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+              : "border-border/70 bg-card/60",
+          )}
+        >
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+            <Layers className="size-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-bold tracking-tight tabular-nums font-mono">
+              {stats?.total ?? total}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">Total Soal</div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setParam("status", status === "ready" ? null : "ready")}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
+            status === "ready"
+              ? "border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20"
+              : "border-border/70 bg-card/60",
+          )}
+        >
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="size-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-bold tracking-tight tabular-nums font-mono">
+              {stats?.ready ?? 0}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">Siap Pakai</div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setParam("status", status === "review" ? null : "review")}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
+            status === "review"
+              ? "border-amber-500/50 bg-amber-500/5 ring-1 ring-amber-500/20"
+              : "border-border/70 bg-card/60",
+          )}
+        >
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <FilePenLine className="size-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-bold tracking-tight tabular-nums font-mono">
+              {stats?.review ?? 0}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">Perlu Telaah</div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setParam("flagged", flagged ? null : "true")}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
+            flagged
+              ? "border-rose-500/50 bg-rose-500/5 ring-1 ring-rose-500/20"
+              : "border-border/70 bg-card/60",
+          )}
+        >
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+            <Flag className="size-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-bold tracking-tight tabular-nums font-mono">
+              {stats?.flagged ?? 0}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">Ditandai (Flag)</div>
+          </div>
+        </button>
+      </div>
 
       {/* 1. Horizontal Compound Filter Bar */}
       <QuestionFilterBar
@@ -495,118 +603,15 @@ export function QuestionBankView({
         </DialogContent>
       </Dialog>
 
-      {/* 5. Paginasi — Model Terpadu (IBM Carbon / Linear Workbench Model) */}
-      {totalPages > 1 && (
-        <nav
-          aria-label="Navigasi halaman"
-          className="flex flex-wrap items-center justify-between gap-2.5 border-t border-border bg-background/80 px-3 py-2 text-xs sm:px-4 backdrop-blur-xs"
-        >
-          {/* Sisi Kiri: Pilihan Jumlah Baris & Jangkauan Data */}
-          <div className="flex items-center gap-3">
-            {/* Pilihan jumlah baris */}
-            <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground">
-              <span>Baris:</span>
-              <div className="flex items-center rounded-md border border-border bg-muted/20 p-0.5">
-                {[20, 50, 100].map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => handlePageSizeChange(size)}
-                    aria-label={`Tampilkan ${size} soal per halaman`}
-                    className={cn(
-                      "rounded px-2 py-0.5 text-xs font-mono font-medium transition-colors pointer-coarse:min-h-[44px]",
-                      pageSize === size
-                        ? "bg-background font-bold text-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Jangkauan Data */}
-            <span className="text-muted-foreground font-mono">
-              <span className="hidden sm:inline">Menampilkan </span>
-              <strong className="font-semibold text-foreground">{from}–{to}</strong> dari{" "}
-              <strong className="font-semibold text-foreground">{total.toLocaleString("id-ID")}</strong>
-              <span className="hidden sm:inline"> soal</span>
-            </span>
-          </div>
-
-          {/* Sisi Kanan: Lompat Cepat & Kontrol Navigasi Halaman */}
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            {/* Input Lompat Cepat */}
-            <form onSubmit={handleJump} className="hidden lg:flex items-center gap-1.5 mr-1">
-              <span className="text-muted-foreground">Lompat:</span>
-              <input
-                type="number"
-                min={1}
-                max={totalPages}
-                value={jumpInput}
-                onChange={(e) => setJumpInput(e.target.value)}
-                placeholder={String(page + 1)}
-                aria-label="Lompat ke nomor halaman"
-                className="h-7 w-12 rounded-md border border-border bg-background px-1.5 text-center font-mono text-xs text-foreground focus-visible:border-brand focus-visible:outline-none"
-              />
-            </form>
-
-            {/* Tombol Halaman Pertama (|<) */}
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={page === 0}
-              onClick={() => setParam("page", "0")}
-              aria-label="Halaman pertama"
-              className="relative hidden sm:inline-flex h-8 w-8 after:absolute after:-inset-1.5 after:content-['']"
-            >
-              <ChevronsLeft className="size-3.5" />
-            </Button>
-
-            {/* Tombol Sebelumnya */}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page === 0}
-              onClick={() => setParam("page", String(page - 1))}
-              className="relative h-8 gap-1 px-2.5 after:absolute after:-inset-1.5 after:content-['']"
-            >
-              <ChevronLeft className="size-3.5" />
-              Sebelumnya
-            </Button>
-
-            {/* Nomor Halaman */}
-            <span className="px-1 text-muted-foreground font-mono whitespace-nowrap">
-              Hal. {page + 1}/{totalPages}
-            </span>
-
-            {/* Tombol Berikutnya */}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page + 1 >= totalPages}
-              onClick={() => setParam("page", String(page + 1))}
-              className="relative h-8 gap-1 px-2.5 after:absolute after:-inset-1.5 after:content-['']"
-            >
-              Berikutnya
-              <ChevronRight className="size-3.5" />
-            </Button>
-
-            {/* Tombol Halaman Terakhir (>|) */}
-            <Button
-              variant="outline"
-              size="icon"
-              disabled={page + 1 >= totalPages}
-              onClick={() => setParam("page", String(totalPages - 1))}
-              aria-label="Halaman terakhir"
-              className="relative hidden sm:inline-flex h-8 w-8 after:absolute after:-inset-1.5 after:content-['']"
-            >
-              <ChevronsRight className="size-3.5" />
-            </Button>
-          </div>
-        </nav>
-      )}
+      {/* 5. Paginasi — Model Terpadu (Linear / IBM Carbon Workbench) */}
+      <ListWorkbenchPagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        itemLabel="soal"
+        onPageChange={(newPage) => setParam("page", String(newPage))}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </div>
   );
 }

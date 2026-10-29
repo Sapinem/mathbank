@@ -331,11 +331,19 @@ export async function getQuestionInternal(
   return { ...row, options };
 }
 
+export interface QuestionListStats {
+  total: number;
+  ready: number;
+  review: number;
+  draft: number;
+  flagged: number;
+}
+
 /** Daftar soal dengan filter & paginasi (proyeksi aman, S3). */
 export async function listQuestions(
   query: ListQuestionsQuery,
   viewer?: Actor,
-): Promise<{ items: PublicQuestion[]; total: number }> {
+): Promise<{ items: PublicQuestion[]; total: number; stats?: QuestionListStats }> {
   // Impor dinamis menghindari lingkaran modul: buildQuestionFilter memakai
   // tipe/utilitas yang sama tanpa saling mengimpor modul ini.
   const { buildQuestionFilter } = await import("@/lib/question/filters");
@@ -376,14 +384,34 @@ export async function listQuestions(
 
   const countQuery = semanticWhere
     ? db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({
+          count: sql<number>`count(*)::int`,
+          ready: sql<number>`count(*) filter (where ${questions.status} = 'ready')::int`,
+          review: sql<number>`count(*) filter (where ${questions.status} = 'review')::int`,
+          draft: sql<number>`count(*) filter (where ${questions.status} = 'draft')::int`,
+          flagged: sql<number>`count(*) filter (where ${questions.isFlagged} = true)::int`,
+        })
         .from(questions)
         .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
     : db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({
+          count: sql<number>`count(*)::int`,
+          ready: sql<number>`count(*) filter (where ${questions.status} = 'ready')::int`,
+          review: sql<number>`count(*) filter (where ${questions.status} = 'review')::int`,
+          draft: sql<number>`count(*) filter (where ${questions.status} = 'draft')::int`,
+          flagged: sql<number>`count(*) filter (where ${questions.isFlagged} = true)::int`,
+        })
         .from(questions);
 
-  const [{ count }] = await countQuery.where(combined);
+  const [countResult] = await countQuery.where(combined);
+  const count = Number(countResult?.count ?? 0);
+  const stats = {
+    total: count,
+    ready: Number(countResult?.ready ?? 0),
+    review: Number(countResult?.review ?? 0),
+    draft: Number(countResult?.draft ?? 0),
+    flagged: Number(countResult?.flagged ?? 0),
+  };
 
   // Urutkan: semantik (bila aktif) > relevansi trigram > terbaru dulu.
   const finalOrder: SQL[] =
@@ -402,7 +430,7 @@ export async function listQuestions(
     .offset(query.offset);
 
   const items = await attachOptions(rows, viewer ? canSeeAnswerKey(viewer) : false);
-  return { items, total: count };
+  return { items, total: count, stats };
 }
 
 /**

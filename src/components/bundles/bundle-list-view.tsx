@@ -20,12 +20,11 @@ import {
   X,
   LayoutGrid,
   List,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListWorkbenchPagination } from "@/components/ui/list-workbench-pagination";
 import {
   Dialog,
   DialogContent,
@@ -119,45 +118,79 @@ export function BundleListView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ── URL-driven filter state (MAT-40) ──────────────────────
+  // ── URL-driven filter, search, & pagination state (Single Source of Truth) ──
   const typeParam = searchParams.get("type") as BundleType | null;
   const originParam = searchParams.get("origin") as BundleOrigin | null;
+  const statusParam = searchParams.get("status") as BundleRow["status"] | null;
+  const qParam = searchParams.get("q") ?? "";
+  const modeParam = (searchParams.get("mode") as "grid" | "list") ?? "grid";
+  const pageParam = Number(searchParams.get("page") ?? "0");
+  const limitParam = Number(searchParams.get("limit") ?? "20");
+
   const typeFilter: "all" | BundleType =
     typeParam === "exam" || typeParam === "source" ? typeParam : "all";
   const originFilter: "all" | BundleOrigin =
     originParam === "ingest" || originParam === "manual" ? originParam : "all";
+  const statusFilter: "all" | BundleRow["status"] =
+    statusParam && ["draft", "review", "ready", "archived"].includes(statusParam)
+      ? statusParam
+      : "all";
+  const viewMode: "grid" | "list" = modeParam === "list" ? "list" : "grid";
+  const pageSize = [20, 50, 100].includes(limitParam) ? limitParam : 20;
+  const page = Number.isInteger(pageParam) && pageParam >= 0 ? pageParam : 0;
 
-  // ── State filter & halaman ──────────────────────────────
-  // Status & pencarian kini **server-side** (ACT-04): nilainya ikut ke query
-  // API, jadi daftar tak perlu menarik seluruh paket ke memori.
-  const [search, setSearch] = useState(""); // input mentah (responsif)
-  const [debouncedSearch, setDebouncedSearch] = useState(""); // 300 ms
-  const [statusFilter, setStatusFilter] = useState<"all" | BundleRow["status"]>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  // Halaman daftar (0-based). Direset ke 0 saat filter/pencarian berubah.
-  const [page, setPage] = useState(0);
+  // Local state untuk input search yang ter-debounce 300 ms ke URL
+  const [search, setSearch] = useState(qParam);
+  const [prevQ, setPrevQ] = useState(qParam);
 
-  // Debounce: satu request per jeda ketik, bukan per karakter.
+  // Sinkronisasi render-pass saat URL search param berubah secara eksternal (mis. tombol reset)
+  if (prevQ !== qParam) {
+    setPrevQ(qParam);
+    setSearch(qParam);
+  }
+
+  // Debounce: update URL search parameter setelah jeda ketik 300 ms
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    const trimmed = search.trim();
+    if (trimmed === qParam) return;
+    const t = setTimeout(() => {
+      const next = new URLSearchParams(searchParams.toString());
+      if (trimmed) next.set("q", trimmed);
+      else next.delete("q");
+      next.delete("page");
+      router.replace(`/bundles${next.toString() ? `?${next.toString()}` : ""}`, { scroll: false });
+    }, 300);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, qParam, searchParams, router]);
+
+  /** Helper untuk memperbarui satu parameter URL */
+  function setParam(key: string, value: string | null) {
+    const next = new URLSearchParams(searchParams.toString());
+    if (value) next.set(key, value);
+    else next.delete(key);
+    if (key !== "page") next.delete("page");
+    router.replace(`/bundles${next.toString() ? `?${next.toString()}` : ""}`, { scroll: false });
+  }
+
+  /** Reset seluruh filter dan pencarian */
+  function resetAllFilters() {
+    setSearch("");
+    router.replace("/bundles", { scroll: false });
+  }
 
   /**
    * ACT-04 — SATU request HTTP per halaman.
    *
-   * Filter (jenis/asal/status/cari) + `limit` + `offset` dikirim ke server;
-   * sebelumnya daftar menelusuri SEMUA halaman (hingga 50 roundtrip
-   * sekuensial) hanya untuk menampilkan 20 baris. Statistik ikut di amplop
-   * (`stats`) sehingga kartu ringkas tetap akurat tanpa request tambahan.
+   * Filter (jenis/asal/status/cari) + `limit` + `offset` dikirim ke server.
+   * Statistik ikut di amplop (`stats`) sehingga kartu ringkas tetap akurat tanpa request tambahan.
    */
   const { data: pageData, isPending, isError, error } = useBundlesPage({
     bundleType: typeFilter !== "all" ? typeFilter : undefined,
     origin: originFilter !== "all" ? originFilter : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
-    q: debouncedSearch || undefined,
-    limit: BUNDLES_PAGE_SIZE,
-    offset: page * BUNDLES_PAGE_SIZE,
+    q: qParam || undefined,
+    limit: pageSize,
+    offset: page * pageSize,
   });
   const data: BundleRow[] = pageData?.items ?? [];
   /** Total paket cocok filter menurut API (seluruh halaman). */
@@ -183,8 +216,8 @@ export function BundleListView() {
     else params.set("type", nextType);
     if (nextOrigin === "all") params.delete("origin");
     else params.set("origin", nextOrigin);
+    params.delete("page");
     const qs = params.toString();
-    setPage(0); // filter berubah → kembali ke halaman pertama
     router.replace(`/bundles${qs ? `?${qs}` : ""}`, { scroll: false });
   }
 
@@ -232,7 +265,7 @@ export function BundleListView() {
   // lihat cabang `total > 0 && data.length === 0` di bawah.
 
   const hasFilterActive =
-    debouncedSearch !== "" || statusFilter !== "all" || typeFilter !== "all" || originFilter !== "all";
+    qParam !== "" || statusFilter !== "all" || typeFilter !== "all" || originFilter !== "all";
 
   return (
     <>
@@ -331,7 +364,7 @@ export function BundleListView() {
                   variant={viewMode === "grid" ? "secondary" : "ghost"}
                   size="icon-sm"
                   aria-label="Tampilan Kisi Kartu"
-                  onClick={() => setViewMode("grid")}
+                  onClick={() => setParam("mode", "grid")}
                   className="min-h-[36px] min-w-[36px]"
                 >
                   <LayoutGrid className="size-4" />
@@ -340,7 +373,7 @@ export function BundleListView() {
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="icon-sm"
                   aria-label="Tampilan Tabel Rinci"
-                  onClick={() => setViewMode("list")}
+                  onClick={() => setParam("mode", "list")}
                   className="min-h-[36px] min-w-[36px]"
                 >
                   <List className="size-4" />
@@ -356,7 +389,7 @@ export function BundleListView() {
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cari judul naskah/tahun…"
                 aria-label="Cari naskah"
                 className="h-9 pl-8.5 pr-8 text-sm bg-muted/20"
@@ -364,7 +397,10 @@ export function BundleListView() {
               {search && (
                 <button
                   type="button"
-                  onClick={() => setSearch("")}
+                  onClick={() => {
+                    setSearch("");
+                    setParam("q", null);
+                  }}
                   aria-label="Hapus kata kunci"
                   className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
                 >
@@ -376,7 +412,7 @@ export function BundleListView() {
             {/* Filter Status */}
             <Select
               value={statusFilter}
-              onValueChange={(v) => { setStatusFilter(v as "all" | BundleRow["status"]); setPage(0); }}
+              onValueChange={(v) => setParam("status", v === "all" ? null : v)}
             >
               <SelectTrigger className="h-9 min-w-32 text-xs">
                 <SelectValue placeholder="Status" />
@@ -416,11 +452,7 @@ export function BundleListView() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setSearch("");
-                  setStatusFilter("all");
-                  updateUrl({ type: "all", origin: "all" });
-                }}
+                onClick={resetAllFilters}
                 className="h-9 text-xs text-muted-foreground hover:text-foreground"
               >
                 Reset Filter
@@ -441,11 +473,7 @@ export function BundleListView() {
             action={
               <Button
                 variant="outline"
-                onClick={() => {
-                  setSearch("");
-                  setStatusFilter("all");
-                  updateUrl({ type: "all", origin: "all" });
-                }}
+                onClick={resetAllFilters}
                 className="mt-2"
               >
                 Reset Semua Filter
@@ -467,7 +495,7 @@ export function BundleListView() {
             title="Halaman ini kosong"
             description={`Hanya tersedia ${totalPages} halaman untuk filter saat ini.`}
             action={
-              <Button variant="outline" onClick={() => setPage(0)} className="mt-2">
+              <Button variant="outline" onClick={() => setParam("page", null)} className="mt-2">
                 Ke Halaman Pertama
               </Button>
             }
@@ -702,45 +730,17 @@ export function BundleListView() {
           </div>
         )}
 
-        {/* PAGINASI (20 per halaman) */}
-        {!isPending && !isError && totalPages > 1 && (
-          <nav
-            className="flex items-center justify-between gap-3 pt-1"
-            aria-label="Navigasi halaman paket"
-          >
-            <span className="text-xs text-muted-foreground">
-              Menampilkan {safePage * BUNDLES_PAGE_SIZE + 1}–
-              {Math.min((safePage + 1) * BUNDLES_PAGE_SIZE, total)} dari{" "}
-              {total} paket
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={safePage <= 0}
-                onClick={() => {
-                  setPage(Math.max(0, safePage - 1));
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                <ChevronLeft data-icon="inline-start" /> Sebelumnya
-              </Button>
-              <span className="text-xs font-medium tabular-nums">
-                {safePage + 1} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={safePage >= totalPages - 1}
-                onClick={() => {
-                  setPage(Math.min(totalPages - 1, safePage + 1));
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                Berikutnya <ChevronRight data-icon="inline-end" />
-              </Button>
-            </div>
-          </nav>
+        {/* PAGINASI TERPADU (Model Workbench) */}
+        {!isPending && !isError && (
+          <ListWorkbenchPagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            itemLabel="paket"
+            onPageChange={(newPage) => setParam("page", newPage === 0 ? null : String(newPage))}
+            onPageSizeChange={(newSize) => setParam("limit", newSize === 20 ? null : String(newSize))}
+            className="rounded-xl border border-border/70"
+          />
         )}
       </div>
 

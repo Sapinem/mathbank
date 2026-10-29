@@ -33,9 +33,18 @@ export const questionKeys = {
   detail: (id: string) => ["questions", "detail", id] as const,
 };
 
+export interface QuestionListStats {
+  total: number;
+  ready: number;
+  review: number;
+  draft: number;
+  flagged: number;
+}
+
 export interface QuestionListResult {
   items: PublicQuestion[];
   total: number;
+  stats?: QuestionListStats;
 }
 
 /** Daftar soal (filter + paginasi). */

@@ -17,6 +17,7 @@ export {
   listQuestions,
   type PublicQuestion,
   type QuestionInternal,
+  type QuestionListStats,
 } from "./question-read";
 
 export {

@@ -311,7 +311,7 @@ describe("QuestionBankView — paginasi", () => {
   it("menampilkan rentang data dan pemilih ukuran halaman", () => {
     render(<QuestionBankView />);
     expect(screen.getByText("1–20")).toBeInTheDocument();
-    expect(screen.getByText("45")).toBeInTheDocument();
+    expect(screen.getAllByText("45").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByLabelText("Tampilkan 50 soal per halaman"));
     expect(replace).toHaveBeenCalledWith("/questions?limit=50");
   });
@@ -331,5 +331,23 @@ describe("QuestionBankView — paginasi", () => {
     expect(replace).toHaveBeenCalledWith("/questions?page=2");
     fireEvent.click(screen.getByLabelText("Halaman pertama"));
     expect(replace).toHaveBeenCalledWith("/questions?page=0");
+  });
+
+  it("merender 4 kartu metrik statistik dan menyaring saat diklik", () => {
+    render(<QuestionBankView />);
+    expect(screen.getByText("Total Soal")).toBeInTheDocument();
+    expect(screen.getByText("Siap Pakai")).toBeInTheDocument();
+    expect(screen.getByText("Perlu Telaah")).toBeInTheDocument();
+    expect(screen.getByText("Ditandai (Flag)")).toBeInTheDocument();
+
+    // Klik kartu Siap Pakai memfilter status=ready
+    const readyCard = screen.getByText("Siap Pakai").closest("button")!;
+    fireEvent.click(readyCard);
+    expect(replace).toHaveBeenCalledWith(expect.stringContaining("status=ready"));
+
+    // Klik kartu Ditandai memfilter flagged=true
+    const flagCard = screen.getByText("Ditandai (Flag)").closest("button")!;
+    fireEvent.click(flagCard);
+    expect(replace).toHaveBeenCalledWith(expect.stringContaining("flagged=true"));
   });
 });
