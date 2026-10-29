@@ -30,6 +30,7 @@ export interface BundlePrintConfig {
   explanationPlacement?: "none" | "inline" | "end";
   answerSpaceCm?: number;
   backgroundGrid?: boolean;
+  backgroundWatermark?: boolean;
   columnBreaks?: string[];
   institutionLogoUrl?: string;
   brandColor?: string;
@@ -42,10 +43,11 @@ export const DEFAULT_BUNDLE_PRINT_CONFIG: BundlePrintConfig = {
   showQuestionNumber: true,
   pageSize: "A4",
   explanationPlacement: "none",
-  answerSpaceCm: 4,
+  answerSpaceCm: 3,
   backgroundGrid: false,
+  backgroundWatermark: true,
   columnBreaks: [],
-  brandColor: "#0b6b3a",
+  brandColor: "#0158ca",
 };
 
 /** bundles — paket/naskah soal. UTS/PAS = bundle_type 'exam' tanpa event. */

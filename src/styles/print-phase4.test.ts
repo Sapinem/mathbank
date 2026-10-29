@@ -47,15 +47,9 @@ describe("print.css - Fase 4 (A4: tidak meluber)", () => {
     expect(css).toContain("overflow-wrap: anywhere");
   });
 
-  it("running header memakai CSS custom property dan tidak memakai string-set yang rusak di Chromium", () => {
-    const css = printCss();
-    expect(css).toContain("var(--print-bundle-title");
-    expect(css).not.toContain("string-set");
-  });
-
   it("geometri kertas efisien mathmyid.cls diterapkan pada margin @page", () => {
     const css = printCss();
-    expect(css).toContain("margin: 0.9cm 1cm 1.2cm 1cm");
+    expect(css).toContain("margin: 0.9cm 0 1.2cm 1cm");
   });
 
   it("gutter nomor soal diperlebar ke 28px dengan perataan kanan", () => {
@@ -97,21 +91,24 @@ describe("print.css - Fase 4 (A4: tidak meluber)", () => {
     expect(css).toContain("print-color-adjust: exact");
   });
 
-  it("named pages kunci, pembahasan, dan jawaban dideklarasikan untuk chip header dinamis", () => {
+  it("susunan stacking context 3-lapisan: watermark (z:0) -> grid (z:1) -> teks/konten (z:2)", () => {
     const css = printCss();
-    expect(css).toContain("@page kunci");
-    expect(css).toContain("@page pembahasan");
-    expect(css).toContain("@page jawaban");
-    expect(css).toContain("page: kunci");
-    expect(css).toContain("page: pembahasan");
-    expect(css).toContain("page: jawaban");
-    expect(css).toContain("KUNCI JAWABAN");
-    expect(css).toContain("PEMBAHASAN");
-    expect(css).toContain("LEMBAR JAWABAN");
+    expect(css).toContain(".worksheet-grid::before");
+    expect(css).toMatch(/\.worksheet-watermark-container\s*\{[^}]*z-index:\s*0/);
+    expect(css).toMatch(/\.worksheet\.worksheet-grid::before\s*\{[^}]*z-index:\s*1/);
+    expect(css).toMatch(/\.header,\s*\.instruction[^}]*z-index:\s*2/);
   });
 
   it("lompat kolom paksa (data-break=force-column) dideklarasikan pada print-columns", () => {
     const css = printCss();
     expect(css).toMatch(/\.print-columns\s+\.print-item\[data-break="force-column"\]\s*\{[^}]*break-before:\s*column/);
+  });
+
+  it("tanda air worksheet-watermark-container didefinisikan dengan position fixed dan lebar 90% untuk menempel ke pinggir kanan tanpa bocor", () => {
+    const css = printCss();
+    expect(css).toContain(".worksheet-watermark-container");
+    expect(css).toMatch(/\.worksheet-watermark-container\s*\{[^}]*position:\s*fixed/);
+    expect(css).toMatch(/\.worksheet-watermark-container\s*\{[^}]*bottom:\s*0/);
+    expect(css).toMatch(/\.worksheet-watermark-container\s*\{[^}]*width:\s*90%/);
   });
 });

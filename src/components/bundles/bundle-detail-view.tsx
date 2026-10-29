@@ -490,7 +490,7 @@ export function BundleDetailView() {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Ruang Jawaban Esai</span>
                   <span className="font-mono text-foreground">
-                    {bundle.printConfig?.answerSpaceCm ?? 4} cm
+                    {bundle.printConfig?.answerSpaceCm ?? 3} cm
                   </span>
                 </div>
                 <div className="pt-2 border-t border-border/30">

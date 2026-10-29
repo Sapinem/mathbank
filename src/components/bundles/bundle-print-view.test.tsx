@@ -183,7 +183,7 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Tandai tebal/i }));
     expect(screen.queryByRole("heading", { name: /Kunci Jawaban/i })).not.toBeInTheDocument();
     // Opsi "4" (label B, benar): pembungkusnya bertanda bold, opsi "3" (salah) tidak.
-    const bold = document.querySelectorAll("span.font-bold");
+    const bold = document.querySelector(".worksheet")!.querySelectorAll("span.font-bold");
     expect(bold.length).toBeGreaterThan(0);
     expect([...bold].some((el) => el.textContent?.includes("4"))).toBe(true);
     expect([...bold].some((el) => el.textContent?.includes("3"))).toBe(false);
@@ -306,7 +306,8 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
           twoColumnLayout: true,
           includeAnswerKey: false,
           explanationPlacement: "none",
-          answerSpaceCm: 4,
+          answerSpaceCm: 3,
+          backgroundWatermark: true,
         }),
       }),
     );
@@ -435,9 +436,48 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
     fireEvent.click(gridBtn);
     expect(worksheet.className).toContain("worksheet-grid");
 
-    const plainBtn = screen.getByRole("button", { name: "Latar Polos" });
-    fireEvent.click(plainBtn);
+    // Klik lagi untuk menonaktifkan kisi kotak
+    fireEvent.click(gridBtn);
     expect(worksheet.className).not.toContain("worksheet-grid");
+  });
+
+  it("U1: menampilkan tanda air (watermark) logo institusi secara default dan dapat dialihkan secara independen", () => {
+    render(<BundlePrintView />);
+    const worksheet = document.querySelector(".worksheet")!;
+    expect(worksheet.className).toContain("worksheet-watermark");
+    expect(document.querySelector(".worksheet-watermark-container")).toBeInTheDocument();
+    const watermarkSvg = document.querySelector(".worksheet-watermark-svg");
+    expect(watermarkSvg).toBeInTheDocument();
+
+    openSettings();
+    // Klik tombol toggle Tanda Air Logo untuk mematikan
+    const watermarkBtn = screen.getByRole("button", { name: "Tanda Air Logo" });
+    fireEvent.click(watermarkBtn);
+    expect(worksheet.className).not.toContain("worksheet-watermark");
+    expect(document.querySelector(".worksheet-watermark-container")).toBeNull();
+
+    // Nyalakan kembali tanda air
+    fireEvent.click(watermarkBtn);
+    expect(worksheet.className).toContain("worksheet-watermark");
+    expect(document.querySelector(".worksheet-watermark-container")).toBeInTheDocument();
+
+    // Aktifkan juga Kertas Kotak (mode kombinasi: grid di atas watermark)
+    const gridBtn = screen.getByRole("button", { name: "Kertas Kotak (0,5 cm)" });
+    fireEvent.click(gridBtn);
+    expect(worksheet.className).toContain("worksheet-watermark");
+    expect(worksheet.className).toContain("worksheet-grid");
+    expect(document.querySelector(".worksheet-watermark-container")).toBeInTheDocument();
+  });
+
+  it("Preset B: Pedoman Guru mereset tanda air override", () => {
+    render(<BundlePrintView />);
+    openSettings();
+    const teacherBtn = screen.getByRole("button", { name: /Pedoman Guru/i });
+    fireEvent.click(teacherBtn);
+
+    const worksheet = document.querySelector(".worksheet")!;
+    expect(worksheet.className).not.toContain("worksheet-watermark");
+    expect(document.querySelector(".worksheet-watermark-container")).toBeNull();
   });
 
   it("U3: butir soal yang ditandai lompat kolom merender data-break='force-column'", () => {
@@ -460,12 +500,12 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
   it("U4: pergantian preset warna brand mengubah variabel --paper-brand", () => {
     render(<BundlePrintView />);
     const worksheet = document.querySelector(".worksheet")! as HTMLElement;
-    expect(worksheet.style.getPropertyValue("--paper-brand")).toBe("#0b6b3a");
+    expect(worksheet.style.getPropertyValue("--paper-brand")).toBe("#0158ca");
 
     openSettings();
-    const blueBtn = screen.getByRole("button", { name: /Biru/i });
-    fireEvent.click(blueBtn);
-    expect(worksheet.style.getPropertyValue("--paper-brand")).toBe("#0158ca");
+    const greenBtn = screen.getByRole("button", { name: /Hijau/i });
+    fireEvent.click(greenBtn);
+    expect(worksheet.style.getPropertyValue("--paper-brand")).toBe("#0b6b3a");
   });
 
   it("U4: menampilkan logo kustom jika institutionLogoUrl tersedia", () => {

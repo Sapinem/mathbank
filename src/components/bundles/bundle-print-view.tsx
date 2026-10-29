@@ -36,6 +36,7 @@ import { isOptionBased, correctLabelsOf } from "@/lib/contracts/question";
 import { useBundle, useUpdateBundle } from "@/lib/hooks/use-bundles";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
+import { PrintWatermark } from "./print-watermark";
 import { cn } from "@/lib/utils";
 
 /**
@@ -75,9 +76,9 @@ const ANSWER_SPACE_OPTIONS = [0, 2, 3, 4, 5] as const;
 
 /** Preset palet warna brand institusi (Axiom Multi-brand parity). */
 const BRAND_PRESET_COLORS = [
-  { label: "Hijau Math My ID", value: "#0b6b3a" },
-  { label: "Biru Edukasi", value: "#0158ca" },
-  { label: "Hitam Percetakan", value: "#111111" },
+  { label: "Biru MathBank", value: "#0158ca" },
+  { label: "Hijau Zamrud", value: "#0b6b3a" },
+  { label: "Hitam Formal", value: "#111111" },
 ] as const;
 
 /** Baca label opsi benar dari `answerKey` (bila ada). */
@@ -116,6 +117,7 @@ export function BundlePrintView({
   const [answerSpaceCmOverride, setAnswerSpaceCmOverride] = useState<number | null>(null);
   const [fitToScreen, setFitToScreen] = useState(false);
   const [backgroundGridOverride, setBackgroundGridOverride] = useState<boolean | null>(null);
+  const [backgroundWatermarkOverride, setBackgroundWatermarkOverride] = useState<boolean | null>(null);
   const [columnBreaksOverride, setColumnBreaksOverride] = useState<string[] | null>(null);
   const [brandColorOverride, setBrandColorOverride] = useState<string | null>(null);
   const [logoFailed, setLogoFailed] = useState(false);
@@ -141,13 +143,15 @@ export function BundlePrintView({
   const effectiveExplanationMode: ExplanationMode =
     explanationModeOverride ?? config.explanationPlacement ?? "none";
   const effectiveAnswerSpaceCm: number =
-    answerSpaceCmOverride ?? (config.answerSpaceCm ?? 4);
+    answerSpaceCmOverride ?? (config.answerSpaceCm ?? 3);
   const effectiveBackgroundGrid: boolean =
     backgroundGridOverride ?? (config.backgroundGrid ?? false);
+  const effectiveBackgroundWatermark: boolean =
+    backgroundWatermarkOverride ?? (config.backgroundWatermark ?? true);
   const effectiveColumnBreaks: string[] =
     columnBreaksOverride ?? (config.columnBreaks ?? []);
   const effectiveBrandColor: string =
-    brandColorOverride ?? (config.brandColor ?? "#0b6b3a");
+    brandColorOverride ?? (config.brandColor ?? "#0158ca");
 
   const toggleColumnBreak = (questionId: string) => {
     setColumnBreaksOverride((prev) => {
@@ -172,9 +176,10 @@ export function BundlePrintView({
     setColumns("1");
     setKeyModeOverride("hidden");
     setExplanationModeOverride("none");
-    setAnswerSpaceCmOverride(4);
+    setAnswerSpaceCmOverride(3);
     setIncludeAnswerSheet(true);
     setBackgroundGridOverride(false);
+    setBackgroundWatermarkOverride(true);
   };
 
   // Preset B: Pedoman Guru (Lengkap dengan Pembahasan)
@@ -185,6 +190,8 @@ export function BundlePrintView({
     if (canShowExplanation) setExplanationModeOverride("inline");
     setAnswerSpaceCmOverride(0);
     setIncludeAnswerSheet(false);
+    setBackgroundGridOverride(false);
+    setBackgroundWatermarkOverride(false);
   };
 
   // Simpan pengaturan aktif sebagai baku naskah ke database
@@ -199,6 +206,7 @@ export function BundlePrintView({
           explanationPlacement: effectiveExplanationMode,
           answerSpaceCm: effectiveAnswerSpaceCm,
           backgroundGrid: effectiveBackgroundGrid,
+          backgroundWatermark: effectiveBackgroundWatermark,
           columnBreaks: effectiveColumnBreaks,
           brandColor: effectiveBrandColor,
         },
@@ -279,6 +287,12 @@ export function BundlePrintView({
                 <>
                   <span className="hidden md:inline">·</span>
                   <span className="hidden md:inline">Coretan {effectiveAnswerSpaceCm}cm</span>
+                </>
+              )}
+              {effectiveBackgroundWatermark && (
+                <>
+                  <span className="hidden md:inline">·</span>
+                  <span className="hidden md:inline">Tanda Air</span>
                 </>
               )}
               {effectiveBackgroundGrid && (
@@ -443,22 +457,31 @@ export function BundlePrintView({
                   <Button
                     type="button"
                     size="sm"
-                    variant={!effectiveBackgroundGrid ? "default" : "outline"}
-                    onClick={() => setBackgroundGridOverride(false)}
-                    className="min-h-[44px]"
+                    variant={effectiveBackgroundWatermark ? "default" : "outline"}
+                    onClick={() => setBackgroundWatermarkOverride(!effectiveBackgroundWatermark)}
+                    className="min-h-[44px] text-xs px-2"
                   >
-                    Latar Polos
+                    Tanda Air Logo
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant={effectiveBackgroundGrid ? "default" : "outline"}
-                    onClick={() => setBackgroundGridOverride(true)}
-                    className="min-h-[44px]"
+                    onClick={() => setBackgroundGridOverride(!effectiveBackgroundGrid)}
+                    className="min-h-[44px] text-xs px-2"
                   >
                     Kertas Kotak (0,5 cm)
                   </Button>
                 </div>
+                {effectiveBackgroundGrid && effectiveBackgroundWatermark ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    Kombinasi: Kertas kotak membentang di atas tanda air logo.
+                  </span>
+                ) : !effectiveBackgroundGrid && !effectiveBackgroundWatermark ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    Latar polos aktif tanpa kisi atau tanda air.
+                  </span>
+                ) : null}
               </div>
 
               {isTwoColumn && questionItems.length > 1 && (
@@ -484,7 +507,7 @@ export function BundlePrintView({
                           size="sm"
                           variant={isBroken ? "default" : "outline"}
                           onClick={() => toggleColumnBreak(qId)}
-                          className="min-h-[40px] min-w-[40px] px-2 text-xs font-semibold tabular-nums"
+                          className="min-h-[44px] min-w-[44px] px-2 text-xs font-semibold tabular-nums"
                           aria-label={`Butir nomor ${num} ${isBroken ? "pindah kolom" : "normal"}`}
                         >
                           #{num}
@@ -685,9 +708,12 @@ export function BundlePrintView({
             "print-sheet worksheet mx-auto bg-white text-black border rounded-sm print:border-0 print:p-0 print:shadow-none print:w-full print:min-w-0 print:max-w-none print:min-h-0",
             fitToScreen && "worksheet-fit-screen",
             effectiveBackgroundGrid && "worksheet-grid",
+            effectiveBackgroundWatermark && "worksheet-watermark",
           )}
           style={{ "--paper-brand": effectiveBrandColor } as React.CSSProperties}
         >
+        {effectiveBackgroundWatermark && <PrintWatermark />}
+
         {/* Kop Resmi (Format Varian C Prototype Soal) */}
         <header className="header print-header mb-4" style={{ borderColor: effectiveBrandColor }}>
           <div className="headerTop flex justify-between items-start">

@@ -20,6 +20,7 @@ export const bundlePrintConfigSchema = z.object({
   explanationPlacement: z.enum(["none", "inline", "end"]).optional(),
   answerSpaceCm: z.number().min(0).max(20).optional(),
   backgroundGrid: z.boolean().optional(),
+  backgroundWatermark: z.boolean().optional(),
   columnBreaks: z.array(z.string()).optional(),
   institutionLogoUrl: z.string().url().or(z.literal("")).optional(),
   brandColor: z.string().optional(),
