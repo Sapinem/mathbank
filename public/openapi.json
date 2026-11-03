@@ -2175,6 +2175,12 @@
                             }
                           ]
                         },
+                        "url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "eventId": {
                           "anyOf": [
                             {
@@ -5153,6 +5159,12 @@
                             }
                           ]
                         },
+                        "url": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
                         "eventId": {
                           "anyOf": [
                             {
@@ -5838,6 +5850,9 @@
                       "backgroundGrid": {
                         "type": "boolean"
                       },
+                      "backgroundWatermark": {
+                        "type": "boolean"
+                      },
                       "columnBreaks": {
                         "type": "array",
                         "items": {
@@ -5847,8 +5862,16 @@
                       "institutionLogoUrl": {
                         "anyOf": [
                           {
-                            "type": "string",
-                            "format": "uri"
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\/[^\\s]*$"
+                              }
+                            ]
                           },
                           {
                             "type": "string",
@@ -5857,7 +5880,8 @@
                         ]
                       },
                       "brandColor": {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
                       }
                     }
                   },
@@ -5925,6 +5949,12 @@
                             {
                               "type": "null"
                             }
+                          ]
+                        },
+                        "url": {
+                          "type": [
+                            "string",
+                            "null"
                           ]
                         },
                         "eventId": {
@@ -7190,6 +7220,12 @@
                                   }
                                 ]
                               },
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
                               "eventId": {
                                 "anyOf": [
                                   {
@@ -7733,6 +7769,9 @@
                       "backgroundGrid": {
                         "type": "boolean"
                       },
+                      "backgroundWatermark": {
+                        "type": "boolean"
+                      },
                       "columnBreaks": {
                         "type": "array",
                         "items": {
@@ -7742,8 +7781,16 @@
                       "institutionLogoUrl": {
                         "anyOf": [
                           {
-                            "type": "string",
-                            "format": "uri"
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              {
+                                "type": "string",
+                                "pattern": "^\\/[^\\s]*$"
+                              }
+                            ]
                           },
                           {
                             "type": "string",
@@ -7752,7 +7799,8 @@
                         ]
                       },
                       "brandColor": {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
                       }
                     }
                   }
@@ -7815,6 +7863,12 @@
                             {
                               "type": "null"
                             }
+                          ]
+                        },
+                        "url": {
+                          "type": [
+                            "string",
+                            "null"
                           ]
                         },
                         "eventId": {
@@ -18276,6 +18330,43 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "ready": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "review": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "draft": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "flagged": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "ready",
+                            "review",
+                            "draft",
+                            "flagged"
+                          ]
                         }
                       },
                       "required": [

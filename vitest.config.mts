@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: "jsdom",
+    pool: "vmThreads",
     globals: true,
     testTimeout: 30_000,
     setupFiles: ["./vitest.setup.ts"],

@@ -18,6 +18,7 @@ import {
 } from "./bundle-service";
 import { createQuestion, deleteQuestion, getQuestionInternal } from "./question-service";
 import { ConflictError, NotFoundError, ForbiddenError } from "@/lib/auth/guards";
+import { PreconditionFailedError } from "@/lib/api/version";
 
 /**
  * Tes INTEGRASI paket soal (M7) — DB uji nyata.
@@ -370,6 +371,34 @@ describe("item paket — urutan & jumlah", () => {
     expect(items[0]?.item.role).toBe("stimulus");
     expect(items[0]?.item.sectionName).toBe("Bagian I");
     expect(items[0]?.item.notes).toBe("Wacana pengantar");
+  });
+
+  it("updateBundleItemSlot menolak paket tidak ada (404), item tidak ada (404), aktor tak berhak (403), dan versi basi (412)", async () => {
+    const b = await createBundle({ title: "Paket Slot Negatif", bundleType: "exam" }, admin);
+    const q = await mkQuestion();
+    const it = await addItem(b.id, q.id, admin);
+
+    const nonOwner: Actor = { id: "u-asing", name: "Asing", roles: ["teacher"], via: "session" };
+
+    // 1. Bundle tidak ada -> NotFoundError
+    await expect(
+      updateBundleItemSlot("00000000-0000-0000-0000-000000000000", it.id, { role: "stimulus" }, admin),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    // 2. Item tidak ada -> NotFoundError
+    await expect(
+      updateBundleItemSlot(b.id, "00000000-0000-0000-0000-000000000000", { role: "stimulus" }, admin),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    // 3. Aktor tidak berhak -> ForbiddenError
+    await expect(
+      updateBundleItemSlot(b.id, it.id, { role: "stimulus" }, nonOwner),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    // 4. Versi tidak cocok -> PreconditionFailedError
+    await expect(
+      updateBundleItemSlot(b.id, it.id, { role: "stimulus" }, admin, 9999),
+    ).rejects.toBeInstanceOf(PreconditionFailedError);
   });
 });
 

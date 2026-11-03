@@ -236,6 +236,17 @@ export function QuestionBankView({
     router.replace(`/questions?${next.toString()}`);
   }
 
+  /** Perbarui banyak param sekaligus secara atomik (mencegah clobbering closure). */
+  function setParams(entries: Record<string, string | null>) {
+    const next = new URLSearchParams(params.toString());
+    for (const [key, value] of Object.entries(entries)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+      if (key !== "page") next.delete("page");
+    }
+    router.replace(`/questions${next.toString() ? `?${next.toString()}` : ""}`);
+  }
+
   /** Tambah/hapus satu nilai pada param multi-nilai (checkbox/toggle di drawer). */
   function toggleValue(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
@@ -309,10 +320,7 @@ export function QuestionBankView({
       <div className="grid grid-cols-2 gap-3 px-3 pt-3 sm:grid-cols-4 sm:px-4">
         <button
           type="button"
-          onClick={() => {
-            setParam("status", null);
-            setParam("flagged", null);
-          }}
+          onClick={() => setParams({ status: null, flagged: null })}
           className={cn(
             "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
             !status && !flagged

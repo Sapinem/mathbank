@@ -31,14 +31,13 @@ const INBOUND_CSP_HEADERS = [
 ];
 
 export function proxy(request: NextRequest): NextResponse {
-  // Alihkan otomatis HTTP ke HTTPS untuk domain publik produksi
+  // Alihkan otomatis HTTP ke HTTPS untuk domain publik produksi (anti open-redirect: domain kanonikal mutlak)
   const proto = request.headers.get("x-forwarded-proto");
   const host = request.headers.get("host") || "";
-  if (proto === "http" && host.includes("b.iyo.my.id")) {
-    return NextResponse.redirect(
-      `https://${host}${request.nextUrl.pathname}${request.nextUrl.search}`,
-      301,
-    );
+  const isCanonicalProdHost = host === "b.iyo.my.id" || host.startsWith("b.iyo.my.id:");
+  if (proto === "http" && isCanonicalProdHost) {
+    const url = new URL(request.nextUrl.pathname + request.nextUrl.search, "https://b.iyo.my.id");
+    return NextResponse.redirect(url, 301);
   }
 
   const requestHeaders = new Headers(request.headers);

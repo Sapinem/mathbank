@@ -382,35 +382,57 @@ export async function listQuestions(
         .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
         .from(questions);
 
-  const countQuery = semanticWhere
-    ? db
-        .select({
-          count: sql<number>`count(*)::int`,
-          ready: sql<number>`count(*) filter (where ${questions.status} = 'ready')::int`,
-          review: sql<number>`count(*) filter (where ${questions.status} = 'review')::int`,
-          draft: sql<number>`count(*) filter (where ${questions.status} = 'draft')::int`,
-          flagged: sql<number>`count(*) filter (where ${questions.isFlagged} = true)::int`,
-        })
-        .from(questions)
-        .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
-    : db
-        .select({
-          count: sql<number>`count(*)::int`,
-          ready: sql<number>`count(*) filter (where ${questions.status} = 'ready')::int`,
-          review: sql<number>`count(*) filter (where ${questions.status} = 'review')::int`,
-          draft: sql<number>`count(*) filter (where ${questions.status} = 'draft')::int`,
-          flagged: sql<number>`count(*) filter (where ${questions.isFlagged} = true)::int`,
-        })
-        .from(questions);
+  const buildCountQuery = () =>
+    semanticWhere
+      ? db
+          .select({
+            count: sql<number>`count(*)::int`,
+            ready: sql<number>`count(*) filter (where ${questions.status} = 'ready')::int`,
+            review: sql<number>`count(*) filter (where ${questions.status} = 'review')::int`,
+            draft: sql<number>`count(*) filter (where ${questions.status} = 'draft')::int`,
+            flagged: sql<number>`count(*) filter (where ${questions.isFlagged} = true)::int`,
+          })
+          .from(questions)
+          .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
+      : db
+          .select({
+            count: sql<number>`count(*)::int`,
+            ready: sql<number>`count(*) filter (where ${questions.status} = 'ready')::int`,
+            review: sql<number>`count(*) filter (where ${questions.status} = 'review')::int`,
+            draft: sql<number>`count(*) filter (where ${questions.status} = 'draft')::int`,
+            flagged: sql<number>`count(*) filter (where ${questions.isFlagged} = true)::int`,
+          })
+          .from(questions);
 
-  const [countResult] = await countQuery.where(combined);
-  const count = Number(countResult?.count ?? 0);
+  const hasStatusOrFlagFilter = query.status !== undefined || query.flagged !== undefined;
+
+  let statsWhere = combined;
+  if (hasStatusOrFlagFilter) {
+    const { where: baseFilter } = await buildQuestionFilter({
+      ...query,
+      status: undefined,
+      flagged: undefined,
+    });
+    statsWhere = semanticWhere
+      ? baseFilter
+        ? and(baseFilter, semanticWhere)
+        : semanticWhere
+      : baseFilter;
+  }
+
+  const [filteredCountRes, statsCountRes] = await Promise.all([
+    buildCountQuery().where(combined),
+    hasStatusOrFlagFilter ? buildCountQuery().where(statsWhere) : Promise.resolve(null),
+  ]);
+
+  const count = Number(filteredCountRes?.[0]?.count ?? 0);
+  const statsSource = statsCountRes?.[0] ?? filteredCountRes?.[0];
   const stats = {
-    total: count,
-    ready: Number(countResult?.ready ?? 0),
-    review: Number(countResult?.review ?? 0),
-    draft: Number(countResult?.draft ?? 0),
-    flagged: Number(countResult?.flagged ?? 0),
+    total: Number(statsSource?.count ?? 0),
+    ready: Number(statsSource?.ready ?? 0),
+    review: Number(statsSource?.review ?? 0),
+    draft: Number(statsSource?.draft ?? 0),
+    flagged: Number(statsSource?.flagged ?? 0),
   };
 
   // Urutkan: semantik (bila aktif) > relevansi trigram > terbaru dulu.

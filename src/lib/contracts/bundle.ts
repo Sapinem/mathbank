@@ -22,8 +22,10 @@ export const bundlePrintConfigSchema = z.object({
   backgroundGrid: z.boolean().optional(),
   backgroundWatermark: z.boolean().optional(),
   columnBreaks: z.array(z.string()).optional(),
-  institutionLogoUrl: z.string().url().or(z.literal("")).optional(),
-  brandColor: z.string().optional(),
+  institutionLogoUrl: z.string().url().or(z.string().regex(/^\/[^\s]*$/)).or(z.literal("")).optional(),
+  brandColor: z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/, {
+    message: "Warna harus berupa kode heksadesimal valid (misal: #0158ca)",
+  }).optional(),
 });
 
 /** Field yang boleh diisi saat buat paket. */

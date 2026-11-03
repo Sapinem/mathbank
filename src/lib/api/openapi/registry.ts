@@ -115,6 +115,7 @@ const bundleSchema = z.looseObject({
   bundleType: z.enum(["source", "exam"]),
   origin: z.enum(["ingest", "manual"]).nullable(),
   sourceId: uuid.nullable(),
+  url: z.string().nullable().optional(),
   eventId: uuid.nullable(),
   year: z.number().int().nullable(),
   grade: z.string().nullable(),
@@ -311,7 +312,19 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
   "GET /api/questions": {
     summary: "Daftar soal (filter + paginasi)",
     tags: ["questions"],
-    response: z.object({ items: z.array(questionSchema), total: z.number().int() }),
+    response: z.object({
+      items: z.array(questionSchema),
+      total: z.number().int(),
+      stats: z
+        .object({
+          total: z.number().int(),
+          ready: z.number().int(),
+          review: z.number().int(),
+          draft: z.number().int(),
+          flagged: z.number().int(),
+        })
+        .optional(),
+    }),
     notes: ["Filter array menerima pengulangan (`?grade=g10&grade=g11`) atau CSV (`?grade=g10,g11`)."],
   },
   "POST /api/questions": {

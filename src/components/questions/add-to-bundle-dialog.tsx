@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/select";
 import { FieldGroup, Field } from "@/components/ui/field-group";
 import { useBundles, useAddBundleItem } from "@/lib/hooks/use-bundles";
+import { useQueryClient } from "@tanstack/react-query";
+import { questionKeys } from "@/lib/hooks/use-questions";
 
 interface AddToBundleDialogProps {
   open: boolean;
@@ -33,7 +35,8 @@ export function AddToBundleDialog({
   onOpenChange,
   questionId,
 }: AddToBundleDialogProps) {
-  const { data: bundles = [], isPending: bundlesLoading } = useBundles({ status: "active" });
+  const qc = useQueryClient();
+  const { data: bundles = [], isPending: bundlesLoading } = useBundles({ status: "active", limit: 100 });
 
   const [selectedBundleId, setSelectedBundleId] = useState("");
   const [role, setRole] = useState<"question" | "stimulus">("question");
@@ -55,6 +58,7 @@ export function AddToBundleDialog({
       {
         onSuccess: () => {
           toast.success("Soal berhasil ditambahkan ke naskah paket.");
+          qc.invalidateQueries({ queryKey: questionKeys.detail(questionId) });
           onOpenChange(false);
           setSelectedBundleId("");
         },

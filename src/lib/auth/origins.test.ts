@@ -44,6 +44,10 @@ describe("buildTrustedOrigins", () => {
   it("PRODUKSI tanpa APP_URL → tetap punya domain resmi", () => {
     const r = buildTrustedOrigins({ NODE_ENV: "production" });
     expect(r).toEqual(PRODUCTION_ORIGINS);
+    for (const origin of PRODUCTION_ORIGINS) {
+      expect(origin.startsWith("https://")).toBe(true);
+      expect(origin.startsWith("http://")).toBe(false);
+    }
   });
 
   it("DEV → tambah localhost + host LAN dari ALLOWED_DEV_ORIGINS", () => {

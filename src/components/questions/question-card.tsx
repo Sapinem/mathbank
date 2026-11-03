@@ -35,7 +35,7 @@ import type { PublicQuestion } from "@/lib/services/question-service";
  * Factory regex segmen matematika KaTeX dan LaTeX environments (L4).
  * Menghasilkan RegExp baru pada setiap pemanggilan untuk mencegah efek samping stateful lastIndex (/g).
  */
-export function createMathSegmentRegex(): RegExp {
+function createMathSegmentRegex(): RegExp {
   return /(?:\\\[|\\\\\[)[\s\S]*?(?:\\\]|\\\\\])|\$\$[\s\S]*?\$\$|(?<!\$)\$[^$]*?\\(?:begin|end)\{[^$]*?\}\$(?!\$)|(?<!\$)\$[^$\n]+?\$(?!\$)|(?:\\\(|\\\\\()[\s\S]*?(?:\\\)|\\\\\))|\\begin\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|aligned|array|align\*?)\}[\s\S]*?\\end\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases|aligned|array|align\*?)\}/g;
 }
 

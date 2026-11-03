@@ -172,7 +172,11 @@ export async function updateBundleItemSlot(
       .where(and(eq(bundleItems.id, itemId), eq(bundleItems.bundleId, bundleId)))
       .returning();
 
-    return updated!;
+    if (!updated) {
+      throw new NotFoundError("Item paket tidak ditemukan.");
+    }
+
+    return updated;
   });
 }
 

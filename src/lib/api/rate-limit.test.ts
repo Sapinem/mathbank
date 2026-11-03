@@ -107,6 +107,14 @@ describe("MemoryStore", () => {
     // Pangkas ke max 5
     s.prune(1_000_015, 5);
     expect(s.size()).toBe(5);
+
+    // Pastikan 5 key tertua (k0..k4) terdepak dan 5 key terbaru (k5..k9) bertahan
+    for (let i = 0; i < 5; i++) {
+      expect((s as unknown as { buckets: Map<string, unknown> }).buckets.has(`k${i}`)).toBe(false);
+    }
+    for (let i = 5; i < 10; i++) {
+      expect((s as unknown as { buckets: Map<string, unknown> }).buckets.has(`k${i}`)).toBe(true);
+    }
   });
 });
 

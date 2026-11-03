@@ -1,0 +1,2 @@
+ALTER TABLE "bundles" ALTER COLUMN "print_config" SET DEFAULT '{"institutionName":"Math My ID","twoColumnLayout":true,"includeAnswerKey":false,"showQuestionNumber":true,"pageSize":"A4","explanationPlacement":"none","answerSpaceCm":3,"backgroundGrid":false,"backgroundWatermark":true,"columnBreaks":[],"brandColor":"#0158ca"}'::jsonb;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_questions_active_listing" ON "questions" USING btree ("created_at" desc) WHERE "questions"."deleted_at" IS NULL AND "questions"."status" <> 'archived';

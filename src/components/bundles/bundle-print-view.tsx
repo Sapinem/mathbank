@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import {
   ArrowLeft,
   BookOpen,
@@ -37,6 +37,9 @@ import { useBundle, useUpdateBundle } from "@/lib/hooks/use-bundles";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
 import { PrintWatermark } from "./print-watermark";
+import { BundlePrintKop } from "./print/bundle-print-kop";
+import { BundlePrintHeader } from "./print/bundle-print-header";
+import { BundlePrintFooter } from "./print/bundle-print-footer";
 import { cn } from "@/lib/utils";
 
 /**
@@ -164,7 +167,7 @@ export function BundlePrintView({
   };
 
   const institution = config.institutionName || "MATH MY ID";
-  const tagline = config.tagline ?? "Bank Soal & Kurasi Matematika";
+  const tagline = config.tagline ?? null;
   const instructions = config.instructions ?? bundle.instructions;
   const durationMinutes = config.durationMinutes ?? bundle.durationMinutes;
   const isTwoColumn = bodyColumns ? bodyColumns === "2" : config.twoColumnLayout !== false;
@@ -222,14 +225,19 @@ export function BundlePrintView({
     }
   };
 
+  const safeBrandColor = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(effectiveBrandColor)
+    ? effectiveBrandColor
+    : "#0158ca";
+  const safePrintBundleTitle = JSON.stringify(bundle.title).replace(/<\/style/gi, "<\\/style");
+
   return (
     <div className="print-page-root flex flex-col gap-6 bg-muted/20 min-h-screen pb-12 print:block print:min-h-0 print:p-0 print:m-0 print:bg-white">
-      {/* Suntikkan CSS Custom Property untuk running header Chromium */}
+      {/* Suntikkan CSS Custom Property untuk running header Chromium (aman dari injeksi style/XSS) */}
       <style>{`
         @media print {
           :root {
-            --print-bundle-title: ${JSON.stringify(bundle.title)};
-            --paper-brand: ${effectiveBrandColor};
+            --print-bundle-title: ${safePrintBundleTitle};
+            --paper-brand: ${safeBrandColor};
           }
         }
       `}</style>
@@ -714,70 +722,25 @@ export function BundlePrintView({
         >
         {effectiveBackgroundWatermark && <PrintWatermark />}
 
-        {/* Kop Resmi (Format Varian C Prototype Soal) */}
-        <header className="header print-header mb-4" style={{ borderColor: effectiveBrandColor }}>
-          <div className="headerTop flex justify-between items-start">
-            <div className="headerLeft flex items-center gap-2">
-              {config.institutionLogoUrl && !logoFailed ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={config.institutionLogoUrl}
-                  alt={institution}
-                  className="h-9 w-auto max-w-[120px] object-contain rounded"
-                  onError={() => setLogoFailed(true)}
-                />
-              ) : (
-                <div
-                  className="logo text-white px-2 py-1 rounded text-[10px] font-bold text-center leading-tight"
-                  style={{ backgroundColor: effectiveBrandColor }}
-                >
-                  MATH<br />MY ID
-                </div>
-              )}
-              <div className="institution text-xs font-bold leading-tight">
-                {institution.toUpperCase()}
-                {tagline && (
-                  <span className="tagline block font-normal text-[10px] text-gray-600">
-                    {tagline}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div
-              className="title print-bundle-title text-2xl font-extrabold tracking-wide text-right"
-              style={{ color: effectiveBrandColor }}
-            >
-              {bundle.title}
-            </div>
-          </div>
-          <hr
-            className="headerRule border-t-[2.5px] my-2"
-            style={{ borderTopColor: effectiveBrandColor }}
-          />
-          <div className="headerInfo flex justify-between text-xs">
-            <div className="flex flex-col">
-              <b>{bundle.grade ? `Kelas ${bundle.grade}` : "Matematika"}</b>
-              <i className="not-italic text-gray-600">
-                {[bundle.year ? `Tahun ${bundle.year}` : null, `${questionItems.length} Soal`]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </i>
-            </div>
-            <div className="right text-right flex flex-col">
-              <i className="not-italic text-gray-600">
-                {new Intl.DateTimeFormat("id-ID", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                }).format(new Date())}
-              </i>
-              {durationMinutes && (
-                <i className="not-italic text-gray-600">Waktu: {durationMinutes} menit</i>
-              )}
-            </div>
-          </div>
-        </header>
+        {/* Running Header Halaman Lanjutan (Halaman 2+) */}
+        <BundlePrintHeader
+          title={bundle.title}
+          exerciseLabel="Latihan 1"
+        />
+
+        {/* Kop Resmi Naskah Halaman Pertama (Mockup kop.png) */}
+        <BundlePrintKop
+          title={bundle.title}
+          grade={bundle.grade}
+          year={bundle.year}
+          questionCount={questionItems.length}
+          durationMinutes={durationMinutes}
+          exerciseLabel="Latihan 1"
+          institutionName={institution}
+          tagline={tagline ?? undefined}
+          logoUrl={config.institutionLogoUrl && !logoFailed ? config.institutionLogoUrl : undefined}
+          onLogoError={() => setLogoFailed(true)}
+        />
 
         {instructions && (
           <div
@@ -809,22 +772,30 @@ export function BundlePrintView({
                 </li>
               );
             }
-            // Nomor urut soal (1..n)
+            // Nomor urut soal (1..n) atau nomor butir kustom (misal "1a", "1b")
             const num = questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
+            const displayNumber = it.item.itemNumber
+              ? (it.item.itemNumber.endsWith(".") ? it.item.itemNumber : `${it.item.itemNumber}.`)
+              : `${num}.`;
             const correct = itemCorrectLabels(it);
             const showNumber = config.showQuestionNumber !== false;
             const qId = it.item.questionId ?? it.question.id;
             const isForceColumn = isTwoColumn && effectiveColumnBreaks.includes(qId);
             return (
-              <li
-                key={it.item.id}
-                data-first-item={num === 1 ? "true" : undefined}
-                data-break={isForceColumn ? "force-column" : undefined}
-                className="print-question print-item flex gap-2"
-              >
-                {showNumber && (
-                  <span className="print-item-number w-[22px] shrink-0 text-right font-medium tabular-nums">{num}.</span>
+              <Fragment key={it.item.id}>
+                {it.item.sectionName && (
+                  <li className="print-section-header list-none font-bold text-xs uppercase tracking-wider text-slate-700 pt-2 pb-1 border-b border-slate-300 col-span-full">
+                    {it.item.sectionName}
+                  </li>
                 )}
+                <li
+                  data-first-item={num === 1 ? "true" : undefined}
+                  data-break={isForceColumn ? "force-column" : undefined}
+                  className="print-question print-item flex gap-2"
+                >
+                  {showNumber && (
+                    <span className="print-item-number w-[22px] shrink-0 text-right font-medium tabular-nums">{displayNumber}</span>
+                  )}
                 <div className="min-w-0 flex-1">
                   <MathContent content={it.question.contentMarkdown} />
                   {isOptionBased(it.question.questionType as never) &&
@@ -963,8 +934,9 @@ export function BundlePrintView({
                   })()}
                 </div>
               </li>
-            );
-          })}
+            </Fragment>
+          );
+        })}
         </ol>
 
         {/* Lembar kunci jawaban terpisah */}
@@ -1044,6 +1016,9 @@ export function BundlePrintView({
             </table>
           </section>
         )}
+
+        {/* Running Footer Semua Halaman (Mockup footer.png) */}
+        <BundlePrintFooter pageNumber={1} />
         </div>
       </div>
     </div>

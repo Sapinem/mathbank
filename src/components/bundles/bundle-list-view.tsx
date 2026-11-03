@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { STATUS_SHORT_LABELS as STATUS_LABELS } from "@/lib/display/labels";
 import {
   Table,
   TableBody,
@@ -68,13 +69,6 @@ import type { BundleRow, BundleType, BundleOrigin } from "@/lib/services/bundle-
 const TYPE_LABELS: Record<BundleType, string> = {
   source: "Sumber",
   exam: "Ujian",
-};
-
-const STATUS_LABELS: Record<BundleRow["status"], string> = {
-  draft: "Draf",
-  review: "Telaah",
-  ready: "Siap",
-  archived: "Arsip",
 };
 
 function statusBadgeClass(status: BundleRow["status"]): string {
@@ -110,9 +104,6 @@ const ORIGIN_TABS: { id: "all" | BundleOrigin; label: string; param: string }[] 
   { id: "manual", label: "Manual", param: "manual" },
   { id: "ingest", label: "Ingest", param: "ingest" },
 ];
-
-/** Jumlah paket per halaman — dipakai sebagai `limit` API (paginasi server-side). */
-const BUNDLES_PAGE_SIZE = 20;
 
 export function BundleListView() {
   const router = useRouter();
@@ -201,7 +192,7 @@ export function BundleListView() {
   const duplicate = useDuplicateBundle();
 
   // Dialog & local-only state
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(searchParams.get("new") === "true");
   const [title, setTitle] = useState("");
   const [type, setType] = useState<BundleType>(typeFilter !== "all" ? typeFilter : "exam");
   const [formErr, setFormErr] = useState<string | null>(null);
@@ -255,9 +246,9 @@ export function BundleListView() {
   const sourceCount = stats?.byType.source ?? 0;
   const totalItems = stats?.totalItems ?? 0;
 
-  // Paginasi server-side: halaman ini sudah berisi maksimal `BUNDLES_PAGE_SIZE`
+  // Paginasi server-side: halaman ini sudah berisi maksimal `pageSize`
   // baris, jadi tak ada lagi `filter`/`slice` di klien.
-  const totalPages = Math.max(1, Math.ceil(total / BUNDLES_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages - 1);
 
   // Jaring aman tanpa efek: bila halaman ini kosong padahal ada hasil (mis.
@@ -335,7 +326,7 @@ export function BundleListView() {
                   onClick={() => updateUrl({ type: tab.id })}
                   aria-pressed={typeFilter === tab.id}
                   className={cn(
-                    "min-h-[40px] sm:min-h-[36px] rounded-md px-3.5 py-1 text-xs font-medium motion-safe:transition-colors",
+                    "min-h-[44px] rounded-md px-3.5 py-1 text-xs font-medium motion-safe:transition-colors",
                     typeFilter === tab.id
                       ? "bg-background text-foreground shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground",
@@ -365,7 +356,7 @@ export function BundleListView() {
                   size="icon-sm"
                   aria-label="Tampilan Kisi Kartu"
                   onClick={() => setParam("mode", "grid")}
-                  className="min-h-[36px] min-w-[36px]"
+                  className="min-h-[44px] min-w-[44px]"
                 >
                   <LayoutGrid className="size-4" />
                 </Button>
@@ -374,7 +365,7 @@ export function BundleListView() {
                   size="icon-sm"
                   aria-label="Tampilan Tabel Rinci"
                   onClick={() => setParam("mode", "list")}
-                  className="min-h-[36px] min-w-[36px]"
+                  className="min-h-[44px] min-w-[44px]"
                 >
                   <List className="size-4" />
                 </Button>

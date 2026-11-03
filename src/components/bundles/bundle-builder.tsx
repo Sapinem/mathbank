@@ -143,7 +143,7 @@ function SortableRow({
         onClick={() => onQuickShift(item, nomor)}
         title="Klik untuk pindahkan posisi butir secara instan"
         aria-label={`Nomor butir ${item.item.itemNumber || nomor}, klik untuk lompat posisi`}
-        className="mt-0.5 min-h-[32px] min-w-[32px] px-1.5 py-0.5 rounded-md border border-border/80 bg-muted/60 text-center font-mono text-xs font-semibold tabular-nums text-foreground hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors"
+        className="mt-0.5 min-h-[44px] min-w-[44px] px-2 py-1 rounded-md border border-border/80 bg-muted/60 text-center font-mono text-xs font-semibold tabular-nums text-foreground hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-center pointer-coarse:min-h-[44px] pointer-coarse:min-w-[44px]"
       >
         {item.item.itemNumber || `${nomor}.`}
       </button>
@@ -400,7 +400,12 @@ export function BundleBuilder() {
       toast.error(`Nomor posisi tujuan harus antara 1 sampai ${total}.`);
       return;
     }
-    const fromIndex = quickShiftCurrentOrdinal - 1;
+    const fromIndex = bundle.items.findIndex((i) => i.item.id === quickShiftItem.item.id);
+    if (fromIndex === -1) {
+      toast.error("Butir soal tidak ditemukan dalam paket.");
+      setQuickShiftOpen(false);
+      return;
+    }
     const toIndex = targetNum - 1;
     if (fromIndex === toIndex) {
       setQuickShiftOpen(false);

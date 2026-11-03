@@ -59,7 +59,7 @@ export function CommandPalette({
           </CommandItem>
           <CommandItem
             value="Aksi Cepat Buat Paket Soal"
-            onSelect={() => go("/bundles/new")}
+            onSelect={() => go("/bundles?new=true")}
           >
             <Package />
             Buat Paket Soal

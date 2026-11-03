@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { BundleListView } from "./bundle-list-view";
 import type { BundleRow } from "@/lib/services/bundle-service";
@@ -83,6 +83,10 @@ beforeEach(() => {
   useCreateBundleMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
   useArchiveBundleMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
   useDuplicateBundleMock.mockReturnValue({ mutate: vi.fn(), isPending: false });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("BundleListView — URL-driven state & Workbench Pagination", () => {

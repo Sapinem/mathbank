@@ -80,13 +80,12 @@ export interface BundlesListFilter {
   status?: "active" | BundleRow["status"];
   /** Kata kunci judul/tahun. */
   q?: string;
-}
-
-/** Parameter halaman untuk {@link useBundlesPage}. */
-export interface BundlesPageParams extends BundlesListFilter {
   limit?: number;
   offset?: number;
 }
+
+/** Parameter halaman untuk {@link useBundlesPage}. */
+export type BundlesPageParams = BundlesListFilter;
 
 export function useBundles(filter?: BundlesListFilter) {
   const qs = new URLSearchParams();
@@ -94,6 +93,8 @@ export function useBundles(filter?: BundlesListFilter) {
   if (filter?.origin) qs.set("origin", filter.origin);
   if (filter?.status) qs.set("status", filter.status);
   if (filter?.q) qs.set("q", filter.q);
+  if (filter?.limit != null) qs.set("limit", String(filter.limit));
+  if (filter?.offset != null) qs.set("offset", String(filter.offset));
   const query = qs.toString();
   return useQuery({
     queryKey: query
@@ -295,6 +296,9 @@ export function useUpdateBundleItemSlot(bundleId: string, defaultVersion?: numbe
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
       qc.invalidateQueries({ queryKey: bundleKeys.all });
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
     },
   });
 }

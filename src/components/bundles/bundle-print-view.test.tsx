@@ -524,4 +524,59 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
     expect(logoImg).toBeInTheDocument();
     expect(logoImg).toHaveAttribute("src", "https://example.com/logo.png");
   });
+
+  it("merender kop halaman 1, running header halaman 2+, dan running footer lengkap", () => {
+    render(<BundlePrintView />);
+
+    // Kop halaman 1
+    const kop = document.querySelector('[data-slot="bundle-print-kop"]');
+    expect(kop).toBeInTheDocument();
+    const logoImg = screen.getByAltText("Math My ID");
+    expect(logoImg).toBeInTheDocument();
+
+    // Running header halaman 2+
+    const runningHeader = document.querySelector('[data-slot="bundle-print-header"]');
+    expect(runningHeader).toBeInTheDocument();
+    expect(runningHeader).toHaveClass("print-running-header");
+
+    // Running footer
+    const runningFooter = document.querySelector('[data-slot="bundle-print-footer"]');
+    expect(runningFooter).toBeInTheDocument();
+    expect(runningFooter).toHaveClass("print-running-footer");
+    expect(screen.getAllByText("mathmyid").length).toBe(5);
+  });
+
+  it("merender itemNumber kustom dan sectionName jika tersedia pada slot naskah", () => {
+    useBundleMock.mockReturnValue({
+      data: bundle({
+        items: [
+          {
+            item: {
+              id: "bi-1",
+              bundleId: "b1",
+              questionId: "q-1",
+              orderIndex: 0,
+              role: "question",
+              itemNumber: "1a",
+              sectionName: "Bagian A - Pilihan Ganda",
+              notes: null,
+            },
+            question: {
+              id: "q-1",
+              contentMarkdown: "Hitung nilai $x$.",
+              questionType: "short_answer",
+              status: "ready",
+              options: [],
+            },
+          },
+        ],
+      }),
+      isPending: false,
+      isError: false,
+    });
+
+    render(<BundlePrintView />);
+    expect(screen.getByText("1a.")).toBeInTheDocument();
+    expect(screen.getByText("Bagian A - Pilihan Ganda")).toBeInTheDocument();
+  });
 });

@@ -27,6 +27,16 @@ vi.mock("@/lib/hooks/use-bundles", () => ({
   useAddBundleItem: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+vi.mock("@tanstack/react-query", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@tanstack/react-query");
+  return {
+    ...actual,
+    useQueryClient: () => ({
+      invalidateQueries: vi.fn(),
+    }),
+  };
+});
+
 // ── Mock KaTeX ──
 vi.mock("@/components/math/math-content", () => ({
   MathContent: ({ content }: { content: string }) => <span data-testid="math">{content}</span>,
@@ -175,7 +185,8 @@ describe("QuestionDetailView", () => {
 
     expect(screen.getByText("Paket Latihan")).toBeInTheDocument();
     expect(container.textContent).not.toContain("—");
-    expect(container.textContent).toContain("-");
+    const yearValue = screen.getByText("Tahun").nextElementSibling;
+    expect(yearValue).toHaveTextContent("-");
   });
 
   it("merender FlagIndicator ber-border saat soal ditandai (isFlagged: true)", () => {

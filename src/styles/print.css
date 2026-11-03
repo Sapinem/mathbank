@@ -20,6 +20,8 @@
   --paper-brand: var(--mb-brand, #0158ca);
   --paper-accent: var(--mb-accent, #d5ac1e);
   --paper-muted: #4b5563;
+  --paper-navy: #002b66;
+  --paper-gold: #f59e0b;
 
   font-family: 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
   font-size: 10.5pt;
@@ -107,6 +109,8 @@
 
   .header,
   .instruction,
+  .bundle-print-kop,
+  .bundle-print-footer,
   .print-columns,
   .print-single-column,
   .print-sheet-answerkey,
@@ -114,6 +118,11 @@
   .print-sheet-answers {
     position: relative;
     z-index: 2;
+  }
+
+  /* Running header disembunyikan pada pratinjau layar gulir kontinu */
+  .print-running-header {
+    display: none;
   }
 }
 
@@ -267,7 +276,7 @@
     size: A4 portrait;
     /* Margin kanan diatur 0 agar kanvas cetak membentang sampai ujung fisik kanan kertas tanpa terpotong clip-rect area halaman.
        Jarak teks konten di sebelah kanan tetap dijaga 1cm via padding-right pada .print-sheet. */
-    margin: 0.9cm 0 1.2cm 1cm;
+    margin: 1.2cm 0 1.2cm 1cm;
   }
 
   /* Kunci paksa dokumen cetak ke color-scheme: light agar peramban (Chromium)
@@ -535,6 +544,7 @@
 
   /* Elemen konten cetak dinaikkan di atas kisi dan tanda air */
   .print-header,
+  .bundle-print-kop,
   .print-instruction,
   .print-item,
   .print-sheet-answerkey,
@@ -544,11 +554,72 @@
     z-index: 2 !important;
   }
 
-  /* Warna dikunci hitam-putih agar hemat tinta & konsisten. */
-  .print-sheet * {
+  /* Kop resmi naskah hanya di halaman pertama */
+  .bundle-print-kop {
+    display: block !important;
+    position: relative !important;
+    margin-bottom: 12px !important;
+    background: #ffffff !important;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .bundle-print-kop img {
+    height: 32px !important;
+    max-height: 32px !important;
+    width: auto !important;
+    object-fit: contain !important;
+  }
+
+  /* Running header & footer DOM di cetak (KTD3: elemen fixed berulang pada paged media) */
+  .print-running-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 1cm !important;
+    right: 0 !important;
+    z-index: 10 !important;
+    background: #ffffff !important;
+  }
+
+  .print-running-footer {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 1cm !important;
+    right: 0 !important;
+    z-index: 10 !important;
+    background: #ffffff !important;
+  }
+
+  /* Warna dikunci hitam-putih pada butir soal agar hemat tinta & konsisten. */
+  .print-columns,
+  .print-columns *,
+  .print-single-column,
+  .print-single-column *,
+  .print-sheet-answerkey *,
+  .print-sheet-explanation *,
+  .print-sheet-answers * {
     color: #000 !important;
     background: transparent !important;
     box-shadow: none !important;
+  }
+
+  /* Pengecualian elemen branding kop resmi Math My ID agar warna navy & emas tetap terjaga */
+  .bundle-print-kop {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .bundle-print-kop [class*="bg-"] {
+    background-color: var(--paper-navy, #002b66) !important;
+    color: #ffffff !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .bundle-print-kop h1 {
+    color: var(--paper-navy, #002b66) !important;
   }
 
   /* Jangan pisahkan soal antar halaman bila bisa dihindari. */
