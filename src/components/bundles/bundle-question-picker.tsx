@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -39,15 +39,23 @@ export function BundleQuestionPicker({
   isAdding = false,
 }: BundleQuestionPickerProps) {
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [topicId, setTopicId] = useState<string>("all");
   const [questionType, setQuestionType] = useState<string>("all");
   const [pickerPage, setPickerPage] = useState<number>(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQ(q);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [q]);
 
   const PICKER_PAGE_SIZE = 15;
   const { data: topics = [] } = useTopics();
 
   const { data: results, isPending: searchPending } = useQuestions({
-    q: q.trim() || undefined,
+    q: debouncedQ.trim() || undefined,
     topicId: topicId !== "all" ? [topicId] : undefined,
     questionType: questionType !== "all" ? [questionType as QuestionType] : undefined,
     limit: PICKER_PAGE_SIZE,

@@ -4,6 +4,14 @@ import { SlotInspectorDrawer } from "./slot-inspector-drawer";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
 
 const mutateMock = vi.fn();
+const toastErrorMock = vi.fn();
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: (...args: unknown[]) => toastErrorMock(...args),
+  },
+}));
+
 vi.mock("@/lib/hooks/use-bundles", () => ({
   useUpdateBundleItemSlot: () => ({
     mutate: mutateMock,
@@ -115,7 +123,10 @@ describe("SlotInspectorDrawer", () => {
     fireEvent.click(saveButton);
 
     const callbacks = mutateMock.mock.calls[0][1];
-    expect(() => callbacks.onError(new Error("Gagal menyimpan"))).not.toThrow();
+    callbacks.onError(new Error("Gagal menyimpan"));
+    expect(toastErrorMock).toHaveBeenCalledWith("Gagal menyimpan butir soal", {
+      description: "Gagal menyimpan",
+    });
   });
 
   it("mengirim null untuk field teks yang dikosongkan", () => {

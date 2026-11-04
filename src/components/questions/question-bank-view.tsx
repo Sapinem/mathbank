@@ -122,7 +122,8 @@ export function QuestionBankView({
   const q = params.get("q") ?? undefined;
   const limitParam = Number(params.get("limit") ?? String(DEFAULT_PAGE_SIZE));
   const pageSize = [20, 50, 100].includes(limitParam) ? limitParam : DEFAULT_PAGE_SIZE;
-  const page = Number(params.get("page") ?? "0");
+  const rawPage = Number(params.get("page") ?? "0");
+  const page = Number.isInteger(rawPage) && rawPage >= 0 ? rawPage : 0;
 
   const [search, setSearch] = useDebouncedSearchParam("/questions", "q", 300);
   const [filtersOpen, setFiltersOpen] = useState(defaultFiltersOpen);
@@ -392,7 +393,6 @@ export function QuestionBankView({
         filters={filterValues}
         topics={topics ?? []}
         tags={tags ?? []}
-        grades={grades ?? []}
         sources={sources ?? []}
         onRemoveTopic={(id) => toggleValue("topicId", id)}
         onClearTag={() => setParam("tagId", null)}
@@ -596,7 +596,7 @@ export function QuestionBankView({
         pageSize={pageSize}
         total={total}
         itemLabel="soal"
-        onPageChange={(newPage) => setParam("page", String(newPage))}
+        onPageChange={(newPage) => setParam("page", newPage === 0 ? null : String(newPage))}
         onPageSizeChange={handlePageSizeChange}
       />
     </div>

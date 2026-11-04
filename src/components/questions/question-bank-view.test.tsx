@@ -331,7 +331,7 @@ describe("QuestionBankView — paginasi", () => {
     fireEvent.click(screen.getByLabelText("Halaman terakhir"));
     expect(replace).toHaveBeenCalledWith("/questions?page=2");
     fireEvent.click(screen.getByLabelText("Halaman pertama"));
-    expect(replace).toHaveBeenCalledWith("/questions?page=0");
+    expect(replace).toHaveBeenCalledWith("/questions");
   });
 
   it("merender 4 kartu metrik statistik dan menyaring saat diklik", () => {

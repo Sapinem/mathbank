@@ -32,9 +32,6 @@ import type { ViewMode } from "@/components/questions/view-mode-toggle";
 import type { PublicQuestion } from "@/lib/services/question-service";
 import { excerpt, stripImages, flattenMathForList } from "@/lib/math/excerpt";
 
-export { excerpt, stripImages, flattenMathForList } from "@/lib/math/excerpt";
-
-export { formatGradeBadge } from "@/lib/display/labels";
 import { formatGradeBadge } from "@/lib/display/labels";
 
 /** Label jenjang yang terbaca untuk tooltip/aria: angka jadi "Kelas N",
@@ -153,8 +150,7 @@ export function FlagIndicator({ className }: { className?: string }) {
  *  "Siap" SENGAJA dirender sebagai titik netral kecil (•) tanpa teks/badge berlebih
  *  sesuai DESIGN.md §134, agar dapat dibedakan dari status yang belum termuat,
  *  sementara status yang butuh tindakan (Draf/Telaah) tampil lebih menonjol.
- *  `compact` — di mobile mode list, label ringkas agar teks soal mendapat
- *  ruang ≥ 180px pada layar 360px. */
+ */
 /**
  * Indikator status soal pada kartu (icon-only dengan tooltip dan aria-label).
  *
@@ -162,12 +158,7 @@ export function FlagIndicator({ className }: { className?: string }) {
  * Status tampil murni berupa ikon Lucide ukuran compact size-6 (ikon size-3.5),
  * seragam dengan QuestionTypeIcon, tanpa memakan ruang teks batang soal.
  */
-export function StatusIndicator({
-  status,
-}: {
-  status: string;
-  compact?: boolean;
-}) {
+export function StatusIndicator({ status }: { status: string }) {
   const label = STATUS_LABELS[status] ?? status;
 
   return (
@@ -278,6 +269,13 @@ function QuestionCardInner({
           </label>
         )}
 
+        {/* 1b. Indikator Flag Soal (di luar tautan untuk menjaga semantik HTML valid) */}
+        {q.isFlagged && (
+          <div className="shrink-0 flex items-center">
+            <FlagIndicator />
+          </div>
+        )}
+
         {/* 2. Batang Soal KaTeX & Tautan Utama — Langsung di Kiri, Mengambil Ruang Utama */}
         <Link
           href={href}
@@ -289,7 +287,6 @@ function QuestionCardInner({
                 Wacana
               </span>
             )}
-            {q.isFlagged && <FlagIndicator />}
             <div className="min-w-0 flex-1 truncate text-base text-foreground/90 font-normal">
               <MathContent
                 content={excerpt(flattenMathForList(q.contentMarkdown), 180)}
@@ -350,7 +347,7 @@ function QuestionCardInner({
 
         {/* 6. Status Soal di Paling Ujung Kanan */}
         <div className="flex shrink-0 items-center justify-end min-w-[36px] sm:min-w-[48px]">
-          <StatusIndicator status={q.status} compact />
+          <StatusIndicator status={q.status} />
         </div>
       </div>
     );
