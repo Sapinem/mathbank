@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { questionListStatsSchema } from "@/lib/contracts/question";
 
 /**
  * Metadata OpenAPI per operasi (Fase B).
@@ -315,15 +316,7 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     response: z.object({
       items: z.array(questionSchema),
       total: z.number().int(),
-      stats: z
-        .object({
-          total: z.number().int(),
-          ready: z.number().int(),
-          review: z.number().int(),
-          draft: z.number().int(),
-          flagged: z.number().int(),
-        })
-        .optional(),
+      stats: questionListStatsSchema.optional(),
     }),
     notes: ["Filter array menerima pengulangan (`?grade=g10&grade=g11`) atau CSV (`?grade=g10,g11`)."],
   },

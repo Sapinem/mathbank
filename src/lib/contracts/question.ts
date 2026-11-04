@@ -642,6 +642,17 @@ export type CreateQuestionInput = Omit<z.infer<typeof createQuestionSchema>, "so
 };
 export type UpdateQuestionInput = z.infer<typeof updateQuestionSchema>;
 export type ListQuestionsQuery = z.infer<typeof listQuestionsQuerySchema>;
+
+/** Skema ringkasan statistik status bank soal (Omni-List). */
+export const questionListStatsSchema = z.object({
+  total: z.number().int(),
+  ready: z.number().int(),
+  review: z.number().int(),
+  draft: z.number().int(),
+  flagged: z.number().int(),
+});
+
+export type QuestionListStats = z.infer<typeof questionListStatsSchema>;
 export type OptionInput = z.infer<typeof optionInputSchema>;
 export type AnswerKey = z.infer<typeof answerKeySchema>;
 export type ChangeStatusInput = z.infer<typeof changeStatusSchema>;

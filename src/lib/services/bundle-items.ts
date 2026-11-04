@@ -138,25 +138,18 @@ export async function updateBundleItemSlot(
   actor: Actor,
   /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
   expectedVersion?: number | "*",
-): Promise<BundleItemRow> {
+): Promise<BundleItemRow & { bundleVersion: number }> {
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(bundle, actor);
   if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
-
-  const [row] = await db
-    .select({ id: bundleItems.id })
-    .from(bundleItems)
-    .where(and(eq(bundleItems.id, itemId), eq(bundleItems.bundleId, bundleId)))
-    .limit(1);
-  if (!row) throw new NotFoundError("Item paket tidak ditemukan.");
 
   return await db.transaction(async (tx) => {
     const touched = await tx
       .update(bundles)
       .set({ updatedAt: new Date() })
       .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
-      .returning({ id: bundles.id });
+      .returning({ id: bundles.id, version: bundles.version });
     if (touched.length === 0) {
       await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
     }
@@ -176,7 +169,10 @@ export async function updateBundleItemSlot(
       throw new NotFoundError("Item paket tidak ditemukan.");
     }
 
-    return updated;
+    return {
+      ...updated,
+      bundleVersion: touched[0]!.version,
+    };
   });
 }
 

@@ -37,6 +37,7 @@ WITH question_grade_agg AS (
   FROM bundle_items bi
   JOIN bundles b ON bi.bundle_id = b.id
   WHERE b.deleted_at IS NULL
+    AND b.status <> 'archived'
     AND b.grade IS NOT NULL
     AND b.grade <> ''
     AND b.grade <> 'umum'

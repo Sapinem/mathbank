@@ -16,7 +16,8 @@ import {
   canSeeAnswerKey,
   type QuestionOptionView,
 } from "@/lib/db/projections/question";
-import type { ListQuestionsQuery, AnswerKey } from "@/lib/contracts/question";
+import type { ListQuestionsQuery, AnswerKey, QuestionListStats } from "@/lib/contracts/question";
+export type { QuestionListStats } from "@/lib/contracts/question";
 
 /**
  * Baca soal (M14 — pecahan `question-service.ts`).
@@ -331,14 +332,6 @@ export async function getQuestionInternal(
   return { ...row, options };
 }
 
-export interface QuestionListStats {
-  total: number;
-  ready: number;
-  review: number;
-  draft: number;
-  flagged: number;
-}
-
 /** Daftar soal dengan filter & paginasi (proyeksi aman, S3). */
 export async function listQuestions(
   query: ListQuestionsQuery,
@@ -346,8 +339,8 @@ export async function listQuestions(
 ): Promise<{ items: PublicQuestion[]; total: number; stats?: QuestionListStats }> {
   // Impor dinamis menghindari lingkaran modul: buildQuestionFilter memakai
   // tipe/utilitas yang sama tanpa saling mengimpor modul ini.
-  const { buildQuestionFilter } = await import("@/lib/question/filters");
-  const { where: finalWhere, byRelevance } = await buildQuestionFilter(query);
+  const { buildQuestionFilter, buildFilterFrom } = await import("@/lib/question/filters");
+  const { where: finalWhere, byRelevance, resolvedTopicIds } = await buildQuestionFilter(query);
 
   // Mode semantik: urutkan berdasar jarak embedding (HNSW) bila query dapat
   // di-embed. Bila service embedding mati / tak ada hasil, JATUH ke trigram.
@@ -382,7 +375,7 @@ export async function listQuestions(
         .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
         .from(questions);
 
-  const buildCountQuery = () =>
+  const buildStatsQuery = () =>
     semanticWhere
       ? db
           .select({
@@ -404,15 +397,24 @@ export async function listQuestions(
           })
           .from(questions);
 
+  const buildSimpleCountQuery = () =>
+    semanticWhere
+      ? db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(questions)
+          .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
+      : db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(questions);
+
   const hasStatusOrFlagFilter = query.status !== undefined || query.flagged !== undefined;
 
   let statsWhere = combined;
   if (hasStatusOrFlagFilter) {
-    const { where: baseFilter } = await buildQuestionFilter({
-      ...query,
-      status: undefined,
-      flagged: undefined,
-    });
+    const { where: baseFilter } = buildFilterFrom(
+      { ...query, status: undefined, flagged: undefined },
+      { resolvedTopicIds },
+    );
     statsWhere = semanticWhere
       ? baseFilter
         ? and(baseFilter, semanticWhere)
@@ -421,12 +423,16 @@ export async function listQuestions(
   }
 
   const [filteredCountRes, statsCountRes] = await Promise.all([
-    buildCountQuery().where(combined),
-    hasStatusOrFlagFilter ? buildCountQuery().where(statsWhere) : Promise.resolve(null),
+    hasStatusOrFlagFilter
+      ? buildSimpleCountQuery().where(combined)
+      : buildStatsQuery().where(combined),
+    hasStatusOrFlagFilter ? buildStatsQuery().where(statsWhere) : Promise.resolve(null),
   ]);
 
   const count = Number(filteredCountRes?.[0]?.count ?? 0);
-  const statsSource = statsCountRes?.[0] ?? filteredCountRes?.[0];
+  const statsSource = (statsCountRes?.[0] ?? filteredCountRes?.[0]) as
+    | { count?: number; ready?: number; review?: number; draft?: number; flagged?: number }
+    | undefined;
   const stats = {
     total: Number(statsSource?.count ?? 0),
     ready: Number(statsSource?.ready ?? 0),

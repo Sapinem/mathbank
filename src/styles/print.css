@@ -544,7 +544,6 @@
 
   /* Elemen konten cetak dinaikkan di atas kisi dan tanda air */
   .print-header,
-  .bundle-print-kop,
   .print-instruction,
   .print-item,
   .print-sheet-answerkey,
@@ -554,10 +553,11 @@
     z-index: 2 !important;
   }
 
-  /* Kop resmi naskah hanya di halaman pertama */
+  /* Kop resmi naskah hanya di halaman pertama (KTD3: z-index 20 menutupi fixed running header di halaman 1) */
   .bundle-print-kop {
     display: block !important;
     position: relative !important;
+    z-index: 20 !important;
     margin-bottom: 12px !important;
     background: #ffffff !important;
     break-after: avoid;
@@ -590,6 +590,13 @@
     right: 0 !important;
     z-index: 10 !important;
     background: #ffffff !important;
+  }
+
+  /* Nomor halaman dinamis paged media untuk footer cetak */
+  .print-page-counter::after {
+    content: counter(page);
+    color: #ffffff !important;
+    font-weight: 900;
   }
 
   /* Warna dikunci hitam-putih pada butir soal agar hemat tinta & konsisten. */

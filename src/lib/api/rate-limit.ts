@@ -54,6 +54,11 @@ interface Bucket {
  */
 export class MemoryStore implements RateLimitStore {
   private buckets = new Map<string, Bucket>();
+  private readonly maxCapacity: number;
+
+  constructor(maxCapacity = 2000) {
+    this.maxCapacity = maxCapacity;
+  }
 
   async take(
     key: string,
@@ -70,7 +75,13 @@ export class MemoryStore implements RateLimitStore {
     const refilled = Math.min(capacity, prev.tokens + elapsedSec * refillPerSec);
 
     // LRU: buang key lama agar penambahan menempatkannya di akhir iterasi Map
-    this.buckets.delete(key);
+    const existed = this.buckets.delete(key);
+
+    // Bounded capacity: jika penambahan kunci baru mencapai maxCapacity, buang kunci tertua O(1)
+    if (!existed && this.buckets.size >= this.maxCapacity) {
+      const oldestKey = this.buckets.keys().next().value;
+      if (oldestKey !== undefined) this.buckets.delete(oldestKey);
+    }
 
     if (refilled < 1) {
       const deficit = 1 - refilled;
@@ -85,7 +96,8 @@ export class MemoryStore implements RateLimitStore {
   }
 
   /** Buang bucket yang sudah penuh kembali atau melebihi kapasitas maksimum. */
-  prune(now: number, maxCapacity = 2000): void {
+  prune(now: number, maxCapacity?: number): void {
+    const limit = maxCapacity ?? this.maxCapacity;
     for (const [key, b] of this.buckets) {
       // Anggap kedaluwarsa bila lama tak aktif (> 1 jam) atau token sudah penuh kembali
       const isFull =
@@ -97,9 +109,9 @@ export class MemoryStore implements RateLimitStore {
       }
     }
     // Jika masih melebihi kapasitas maksimum, buang entri tertua (LRU/FIFO)
-    if (this.buckets.size > maxCapacity) {
+    if (this.buckets.size > limit) {
       for (const key of this.buckets.keys()) {
-        if (this.buckets.size <= maxCapacity) break;
+        if (this.buckets.size <= limit) break;
         this.buckets.delete(key);
       }
     }

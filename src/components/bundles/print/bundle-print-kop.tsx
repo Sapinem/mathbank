@@ -52,33 +52,52 @@ export function BundlePrintKop({
         {/* Sisi Kiri: Logo Resmi Langsung di Paling Kiri */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           {/* Logo / Brand Institusi */}
-          {institutionName && institutionName.toLowerCase() !== "math my id" ? (
-            <div className="flex flex-col justify-center">
-              <span className="font-bold text-xs sm:text-sm text-[var(--paper-navy,#002b66)] uppercase leading-tight">
-                {institutionName.toUpperCase()}
-              </span>
-              {tagline && (
-                <span className="text-[10px] text-gray-600 font-normal leading-tight">
-                  {tagline}
+          <div className="flex items-center gap-2">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={institutionName || "Logo Institusi"}
+                className="h-7 sm:h-8 w-auto object-contain shrink-0"
+                onError={onLogoError}
+                style={{
+                  height: "28px",
+                  maxHeight: "28px",
+                  width: "auto",
+                  printColorAdjust: "exact",
+                  WebkitPrintColorAdjust: "exact",
+                }}
+              />
+            ) : (!institutionName || institutionName.toLowerCase() === "math my id") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src="/brand/logo-text-lite.png"
+                alt="Math My ID"
+                className="h-7 sm:h-8 w-auto object-contain shrink-0"
+                onError={onLogoError}
+                style={{
+                  height: "28px",
+                  maxHeight: "28px",
+                  width: "auto",
+                  printColorAdjust: "exact",
+                  WebkitPrintColorAdjust: "exact",
+                }}
+              />
+            ) : null}
+
+            {institutionName && institutionName.toLowerCase() !== "math my id" && (
+              <div className="flex flex-col justify-center">
+                <span className="font-bold text-xs sm:text-sm text-[var(--paper-navy,#002b66)] uppercase leading-tight">
+                  {institutionName.toUpperCase()}
                 </span>
-              )}
-            </div>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={logoUrl || "/brand/logo-text-lite.png"}
-              alt="Math My ID"
-              className="h-7 sm:h-8 w-auto object-contain shrink-0"
-              onError={onLogoError}
-              style={{
-                height: "28px",
-                maxHeight: "28px",
-                width: "auto",
-                printColorAdjust: "exact",
-                WebkitPrintColorAdjust: "exact",
-              }}
-            />
-          )}
+                {tagline && (
+                  <span className="text-[10px] text-gray-600 font-normal leading-tight">
+                    {tagline}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Garis Vertikal Pemisah */}
           <div className="h-7 sm:h-8 w-[1.5px] bg-slate-200 shrink-0" />

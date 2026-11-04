@@ -106,7 +106,7 @@ export function BundlePrintFooter({
               style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
             />
 
-            {/* Teks Nomor Halaman */}
+            {/* Teks Nomor Halaman di Layar */}
             <text
               x="103"
               y="25"
@@ -115,10 +115,17 @@ export function BundlePrintFooter({
               fontWeight="900"
               fontFamily="system-ui, -apple-system, sans-serif"
               textAnchor="middle"
+              className="print:hidden"
             >
               {pageNumber}
             </text>
           </svg>
+
+          {/* Nomor Halaman Dinamis saat Cetak Fisik/PDF (CSS Paged Media Counter) */}
+          <div
+            className="hidden print:flex absolute right-4 sm:right-5 top-0 bottom-0 items-center justify-center font-black text-white text-base font-sans select-none pointer-events-none print-page-counter"
+            aria-hidden="true"
+          />
         </div>
       </div>
     </footer>

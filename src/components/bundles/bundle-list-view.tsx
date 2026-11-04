@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -57,6 +57,7 @@ import {
   TopicCoverageChip,
 } from "@/components/bundles/bundle-enrichment";
 import { cn } from "@/lib/utils";
+import { useDebouncedSearchParam } from "@/lib/hooks/use-debounced-search-param";
 import { StatusIcon } from "@/components/questions/question-status-badge";
 import {
   useBundlesPage,
@@ -131,28 +132,7 @@ export function BundleListView() {
   const page = Number.isInteger(pageParam) && pageParam >= 0 ? pageParam : 0;
 
   // Local state untuk input search yang ter-debounce 300 ms ke URL
-  const [search, setSearch] = useState(qParam);
-  const [prevQ, setPrevQ] = useState(qParam);
-
-  // Sinkronisasi render-pass saat URL search param berubah secara eksternal (mis. tombol reset)
-  if (prevQ !== qParam) {
-    setPrevQ(qParam);
-    setSearch(qParam);
-  }
-
-  // Debounce: update URL search parameter setelah jeda ketik 300 ms
-  useEffect(() => {
-    const trimmed = search.trim();
-    if (trimmed === qParam) return;
-    const t = setTimeout(() => {
-      const next = new URLSearchParams(searchParams.toString());
-      if (trimmed) next.set("q", trimmed);
-      else next.delete("q");
-      next.delete("page");
-      router.replace(`/bundles${next.toString() ? `?${next.toString()}` : ""}`, { scroll: false });
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search, qParam, searchParams, router]);
+  const [search, setSearch] = useDebouncedSearchParam("/bundles", "q", 300);
 
   /** Helper untuk memperbarui satu parameter URL */
   function setParam(key: string, value: string | null) {

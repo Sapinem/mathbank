@@ -20,6 +20,7 @@ export const PATCH = wrapRoute({
   params: paramsSchema,
   body: updateBundleItemSlotSchema,
   ifMatch: true,
+  etagFrom: (res: { bundleVersion?: number }) => res.bundleVersion,
   handler: async ({ params, body, actor, expectedVersion }) => {
     const updated = await updateBundleItemSlot(
       params.id,

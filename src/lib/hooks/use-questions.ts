@@ -5,7 +5,9 @@ import type {
   ListQuestionsQuery,
   CreateQuestionInput,
   UpdateQuestionInput,
+  QuestionListStats,
 } from "@/lib/contracts/question";
+export type { QuestionListStats } from "@/lib/contracts/question";
 import type { PublicQuestion } from "@/lib/services/question-service";
 import type { QuestionStatus } from "@/lib/fsm/question-fsm";
 
@@ -32,14 +34,6 @@ export const questionKeys = {
   list: (filter: Partial<ListQuestionsQuery>) => ["questions", "list", filter] as const,
   detail: (id: string) => ["questions", "detail", id] as const,
 };
-
-export interface QuestionListStats {
-  total: number;
-  ready: number;
-  review: number;
-  draft: number;
-  flagged: number;
-}
 
 export interface QuestionListResult {
   items: PublicQuestion[];

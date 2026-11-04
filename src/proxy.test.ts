@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { proxy } from "./proxy";
 
 describe("proxy middleware", () => {
-  it("mengalihkan HTTP ke HTTPS dengan status 301 untuk host kanonikal b.iyo.my.id", () => {
+  it("mengalihkan HTTP ke HTTPS dengan status 308 (preservasi metode mutasi) untuk host kanonikal b.iyo.my.id", () => {
     const req = new NextRequest("http://b.iyo.my.id/questions?page=2", {
       headers: {
         host: "b.iyo.my.id",
@@ -12,8 +12,23 @@ describe("proxy middleware", () => {
     });
 
     const res = proxy(req);
-    expect(res.status).toBe(301);
+    expect(res.status).toBe(308);
     expect(res.headers.get("location")).toBe("https://b.iyo.my.id/questions?page=2");
+  });
+
+  it("mencegah open redirect pada pathname protocol-relative (mis. //attacker.com)", () => {
+    const req = new NextRequest("http://b.iyo.my.id//attacker.com/steal", {
+      headers: {
+        host: "b.iyo.my.id",
+        "x-forwarded-proto": "http",
+      },
+    });
+
+    const res = proxy(req);
+    expect(res.status).toBe(308);
+    const location = res.headers.get("location") || "";
+    expect(location.startsWith("https://b.iyo.my.id/")).toBe(true);
+    expect(new URL(location).hostname).toBe("b.iyo.my.id");
   });
 
   it("tidak mengalihkan bila request sudah HTTPS", () => {
@@ -75,8 +90,11 @@ describe("proxy middleware", () => {
 
     const res = proxy(req);
     expect(res.status).toBe(200);
-    // Request headers passed to NextResponse.next should not contain inbound CSP headers
-    const forwardedHeaders = res.headers;
-    expect(forwardedHeaders.get("content-security-policy")).toBeNull();
+    // Request headers yang diteruskan ke downstream oleh NextResponse.next tidak boleh memuat header CSP kiriman klien
+    expect(res.headers.get("x-middleware-request-content-security-policy")).toBeNull();
+    expect(res.headers.get("x-middleware-request-content-security-policy-report-only")).toBeNull();
+    expect(res.headers.get("x-middleware-request-x-custom-header")).toBe("valid");
+    const overrideHeaders = res.headers.get("x-middleware-override-headers") || "";
+    expect(overrideHeaders.includes("content-security-policy")).toBe(false);
   });
 });

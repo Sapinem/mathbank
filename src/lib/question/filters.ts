@@ -103,6 +103,6 @@ export async function buildQuestionFilter(
 
   // ── Bangun kondisi (pure) ───────────────────────────────────
   const built = buildFilterFrom(query, { resolvedTopicIds });
-  if (tagMissing) return { where: sql`false`, byRelevance: built.byRelevance };
-  return built;
+  if (tagMissing) return { where: sql`false`, byRelevance: built.byRelevance, resolvedTopicIds };
+  return { ...built, resolvedTopicIds };
 }

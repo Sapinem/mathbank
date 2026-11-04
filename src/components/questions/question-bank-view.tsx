@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -21,6 +21,7 @@ import { modeClass, type ViewMode } from "@/components/questions/view-mode-toggl
 import { QuestionFilterDrawer } from "@/components/questions/question-filter-drawer";
 import { QuestionFilterBar } from "@/components/questions/question-filter-bar";
 import { ErrorState, EmptyState } from "@/components/ui/states";
+import { useDebouncedSearchParam } from "@/lib/hooks/use-debounced-search-param";
 import {
   Dialog,
   DialogContent,
@@ -123,31 +124,9 @@ export function QuestionBankView({
   const pageSize = [20, 50, 100].includes(limitParam) ? limitParam : DEFAULT_PAGE_SIZE;
   const page = Number(params.get("page") ?? "0");
 
-  const [search, setSearch] = useState(q ?? "");
-  const [prevQ, setPrevQ] = useState(q ?? "");
+  const [search, setSearch] = useDebouncedSearchParam("/questions", "q", 300);
   const [filtersOpen, setFiltersOpen] = useState(defaultFiltersOpen);
   const mode = (params.get("mode") as ViewMode) ?? "list";
-
-  // Sinkronisasi render-pass saat URL search param berubah secara eksternal (mis. tombol reset)
-  if (prevQ !== (q ?? "")) {
-    setPrevQ(q ?? "");
-    setSearch(q ?? "");
-  }
-
-  // Debounce live search 300 ms ke URL
-  useEffect(() => {
-    const trimmed = search.trim();
-    const currentQ = q ?? "";
-    if (trimmed === currentQ) return;
-    const t = setTimeout(() => {
-      const next = new URLSearchParams(params.toString());
-      if (trimmed) next.set("q", trimmed);
-      else next.delete("q");
-      next.delete("page");
-      router.replace(`/questions?${next.toString()}`);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [search, q, params, router]);
 
   // Seleksi massal
   const [selected, setSelected] = useState<Set<string>>(new Set());

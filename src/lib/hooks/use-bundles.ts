@@ -287,13 +287,19 @@ export function useUpdateBundleItemSlot(bundleId: string, defaultVersion?: numbe
       version?: number | "*";
     }) => {
       const { itemId, patch, version } = input;
-      return api<BundleItemView["item"]>(`/api/bundles/${bundleId}/items/${itemId}`, {
+      return api<BundleItemView["item"] & { bundleVersion?: number }>(`/api/bundles/${bundleId}/items/${itemId}`, {
         method: "PATCH",
         body: JSON.stringify(patch),
         ifMatch: version ?? defaultVersion ?? "*",
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.bundleVersion) {
+        qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(bundleId), (old) => {
+          if (!old) return old;
+          return { ...old, version: data.bundleVersion! };
+        });
+      }
       qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
       qc.invalidateQueries({ queryKey: bundleKeys.all });
     },

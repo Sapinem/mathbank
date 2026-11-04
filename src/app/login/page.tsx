@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FieldGroup, Field } from "@/components/ui/field-group";
 import { cn } from "@/lib/utils";
 import { DEMO_USERS, DEMO_PASSWORD, type DemoUser } from "@/lib/auth/demo-users";
 
@@ -179,53 +180,49 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor="login-email" className="text-sm font-medium">
-                  Email
-                </label>
-                <Input
-                  ref={emailInputRef}
-                  id="login-email"
-                  type="email"
-                  required
-                  autoComplete="username"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setActiveKey(null);
-                  }}
-                  placeholder="nama@sekolah.sch.id"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="login-password" className="text-sm font-medium">
-                  Kata sandi
-                </label>
-                <div className="relative">
+              <FieldGroup>
+                <Field label="Email" htmlFor="login-email">
                   <Input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
+                    ref={emailInputRef}
+                    id="login-email"
+                    type="email"
                     required
-                    autoComplete="current-password"
-                    value={password}
+                    autoComplete="username"
+                    value={email}
                     onChange={(e) => {
-                      setPassword(e.target.value);
+                      setEmail(e.target.value);
                       setActiveKey(null);
                     }}
-                    placeholder="••••••••"
-                    className="pr-10"
+                    placeholder="nama@sekolah.sch.id"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                    className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </div>
+                </Field>
+
+                <Field label="Kata sandi" htmlFor="login-password">
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setActiveKey(null);
+                      }}
+                      placeholder="••••••••"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                      className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </Field>
+              </FieldGroup>
 
               {error && (
                 <div

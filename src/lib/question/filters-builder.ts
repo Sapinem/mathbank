@@ -62,6 +62,8 @@ export interface BuiltFilter {
   where: SQL | undefined;
   /** Bila true, urutkan berdasar relevansi teks (bukan createdAt). */
   byRelevance: boolean;
+  /** Daftar ID topik yang telah teresolusi (termasuk keturunan). */
+  resolvedTopicIds?: string[];
 }
 
 /**

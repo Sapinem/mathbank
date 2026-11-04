@@ -240,6 +240,22 @@ describe("getQuestion & listQuestions", () => {
     expect(res.stats?.ready).toBeGreaterThanOrEqual(0);
     expect(res.stats?.review).toBeGreaterThanOrEqual(0);
   });
+
+  it("listQuestions dengan filter status mempertahankan stats global (dual-count branch)", async () => {
+    await createQuestion(baseInput({ contentMarkdown: "Soal Draft 1" }), teacher);
+    await createQuestion(baseInput({ contentMarkdown: "Soal Draft 2" }), teacher);
+    const resFiltered = await listQuestions({
+      status: "draft",
+      includeDeleted: false,
+      mode: "text",
+      limit: 10,
+      offset: 0,
+    });
+    expect(resFiltered.total).toBe(2);
+    expect(resFiltered.stats).toBeDefined();
+    expect(resFiltered.stats?.total).toBe(2);
+    expect(resFiltered.stats?.draft).toBe(2);
+  });
 });
 
 describe("updateQuestion", () => {

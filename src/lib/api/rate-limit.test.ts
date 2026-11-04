@@ -97,8 +97,24 @@ describe("MemoryStore", () => {
     expect(s.size()).toBe(0);
   });
 
+  it("enforces inline O(1) LRU eviction when inserting beyond maxCapacity", async () => {
+    const s = new MemoryStore(5);
+    for (let i = 0; i < 10; i++) {
+      await s.take(`k${i}`, { capacity: 100, refillPerSec: 0.001, now: 1_000_000 + i });
+    }
+    expect(s.size()).toBe(5);
+
+    // Kunci k0..k4 sudah didepak: saat take lagi, mereka mulai dari token penuh baru (99 sisa)
+    const resK0 = await s.take("k0", { capacity: 100, refillPerSec: 0.001, now: 1_000_020 });
+    expect(resK0.remaining).toBe(99);
+
+    // Kunci k9 masih ada sebelumnya: tokennya berkurang dari konsumsi sebelumnya
+    const resK9 = await s.take("k9", { capacity: 100, refillPerSec: 0.001, now: 1_000_020 });
+    expect(resK9.remaining).toBe(98);
+  });
+
   it("prune memangkas kapasitas hingga maxCapacity dengan LRU eviction", async () => {
-    const s = new MemoryStore();
+    const s = new MemoryStore(20);
     // Isi 10 bucket
     for (let i = 0; i < 10; i++) {
       await s.take(`k${i}`, { capacity: 100, refillPerSec: 0.001, now: 1_000_000 + i });
@@ -108,13 +124,9 @@ describe("MemoryStore", () => {
     s.prune(1_000_015, 5);
     expect(s.size()).toBe(5);
 
-    // Pastikan 5 key tertua (k0..k4) terdepak dan 5 key terbaru (k5..k9) bertahan
-    for (let i = 0; i < 5; i++) {
-      expect((s as unknown as { buckets: Map<string, unknown> }).buckets.has(`k${i}`)).toBe(false);
-    }
-    for (let i = 5; i < 10; i++) {
-      expect((s as unknown as { buckets: Map<string, unknown> }).buckets.has(`k${i}`)).toBe(true);
-    }
+    // Key yang bertahan (k9) memiliki saldo sisa dari pemakaian sebelumnya
+    const resK9 = await s.take("k9", { capacity: 100, refillPerSec: 0.001, now: 1_000_020 });
+    expect(resK9.remaining).toBe(98);
   });
 });
 

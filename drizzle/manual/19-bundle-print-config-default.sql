@@ -1,15 +1,15 @@
--- Penyelarasan default print_config & backfill untuk bundel yang belum memiliki explanationPlacement/answerSpaceCm
+-- Penyelarasan default print_config & backfill untuk bundel yang belum memiliki explanationPlacement/answerSpaceCm/backgroundWatermark
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'bundles' AND column_name = 'print_config'
   ) THEN
-    EXECUTE '
-      ALTER TABLE "bundles" ALTER COLUMN "print_config" SET DEFAULT ''{"institutionName":"Math My ID","twoColumnLayout":true,"includeAnswerKey":false,"showQuestionNumber":true,"pageSize":"A4","explanationPlacement":"none","answerSpaceCm":4}''::jsonb;
+    EXECUTE $sql$
+      ALTER TABLE "bundles" ALTER COLUMN "print_config" SET DEFAULT '{"institutionName":"Math My ID","twoColumnLayout":true,"includeAnswerKey":false,"showQuestionNumber":true,"pageSize":"A4","explanationPlacement":"none","answerSpaceCm":3,"backgroundGrid":false,"backgroundWatermark":true,"columnBreaks":[],"brandColor":"#0158ca"}'::jsonb;
       UPDATE "bundles"
-         SET "print_config" = "print_config" || ''{"explanationPlacement":"none","answerSpaceCm":4}''::jsonb
-       WHERE NOT ("print_config" ? ''explanationPlacement'');
-    ';
+         SET "print_config" = "print_config" || '{"backgroundGrid":false,"backgroundWatermark":true,"columnBreaks":[],"brandColor":"#0158ca"}'::jsonb
+       WHERE NOT ("print_config" ? 'backgroundWatermark');
+    $sql$;
   END IF;
 END $$;
