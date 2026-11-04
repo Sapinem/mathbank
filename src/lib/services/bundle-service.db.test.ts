@@ -38,10 +38,12 @@ async function clean() {
   const { db } = await import("@/lib/db");
   const { bundles, bundleItems } = await import("@/lib/db/schema/bundle");
   const { questions } = await import("@/lib/db/schema/question");
-  await db.delete(bundleItems);
-  await db.delete(bundles);
-  await db.update(questions).set({ parentId: null });
-  await db.delete(questions);
+  await db.transaction(async (tx) => {
+    await tx.delete(bundleItems);
+    await tx.delete(bundles);
+    await tx.update(questions).set({ parentId: null });
+    await tx.delete(questions);
+  });
 }
 
 async function mkQuestion(content = "Soal contoh $1+1$?", withKey = true) {

@@ -20,15 +20,17 @@ SET grade = bdg.grade
 FROM bundle_dominant_grade bdg
 WHERE b.id = bdg.bundle_id
   AND bdg.rn = 1
-  AND b.grade = 'umum';
+  AND b.grade = 'umum'
+  AND b.status <> 'archived'
+  AND b.deleted_at IS NULL;
 
 -- 3. Untuk bundle yang tersisa dengan 'umum', netralkan ke NULL
-UPDATE bundles SET grade = NULL WHERE grade = 'umum';
+UPDATE bundles SET grade = NULL WHERE grade = 'umum' AND status <> 'archived' AND deleted_at IS NULL;
 
 -- 4. Netralkan questions.grade yang 'umum' ke NULL
 UPDATE questions SET grade = NULL WHERE grade = 'umum';
 
--- 5. Hitung agregat grade per soal dari bundles secara cepat (CTE batch join)
+-- 5. Hitung agregat grade per soal dari bundles secara cepat (direct update dari CTE agregat tanpa self-join)
 WITH question_grade_agg AS (
   SELECT
     bi.question_id,
@@ -45,12 +47,17 @@ WITH question_grade_agg AS (
 )
 UPDATE questions q
 SET
-  grades = COALESCE(qga.bundle_grades, CASE WHEN q.grade IS NOT NULL THEN ARRAY[q.grade]::varchar[] ELSE ARRAY[]::varchar[] END),
+  grades = qga.bundle_grades,
   grade = COALESCE(qga.first_grade, q.grade)
-FROM questions q_orig
-LEFT JOIN question_grade_agg qga ON qga.question_id = q_orig.id
-WHERE q.id = q_orig.id
+FROM question_grade_agg qga
+WHERE q.id = qga.question_id
   AND (
-    q.grades IS DISTINCT FROM COALESCE(qga.bundle_grades, CASE WHEN q.grade IS NOT NULL THEN ARRAY[q.grade]::varchar[] ELSE ARRAY[]::varchar[] END)
+    q.grades IS DISTINCT FROM qga.bundle_grades
     OR q.grade IS DISTINCT FROM COALESCE(qga.first_grade, q.grade)
   );
+
+-- 6. Untuk soal mandiri yang tidak tergabung dalam bundle aktif, pastikan grades terisi dari grade tunggal
+UPDATE questions
+SET grades = ARRAY[grade]::varchar[]
+WHERE grade IS NOT NULL
+  AND (grades IS NULL OR grades = '{}'::varchar[]);
