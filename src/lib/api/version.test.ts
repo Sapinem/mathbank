@@ -87,6 +87,10 @@ describe("assertVersionMatches", () => {
     expect(() => assertVersionMatches(3, "*")).not.toThrow();
   });
 
+  it("lolos saat versi yang diharapkan undefined (tanpa prakondisi)", () => {
+    expect(() => assertVersionMatches(3, undefined)).not.toThrow();
+  });
+
   it("melempar 412 yang MEMBAWA versi terkini", () => {
     try {
       assertVersionMatches(5, 3);

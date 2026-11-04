@@ -460,6 +460,35 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
     expect(calls).toBe(1);
   });
 
+  it("ADR-0028: key sama pada alias /api/v1/* dan rute kanonikal /api/* menghasilkan replay yang sama", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      authz: { kind: "authenticated" },
+      idempotent: true,
+      body: z.object({ n: z.number() }),
+      handler: async ({ body }) => ({ n: body.n, calls: ++calls }),
+    });
+    const headers = { "idempotency-key": "k-alias", "content-type": "application/json" };
+    const body = JSON.stringify({ n: 42 });
+
+    // Permintaan pertama pada alias /api/v1/ingest/upload
+    const first = await handler(
+      req("http://localhost/api/v1/ingest/upload", { method: "POST", headers, body }),
+    );
+    expect(first.status).toBe(200);
+    expect(calls).toBe(1);
+
+    // Retry pada rute kanonikal /api/ingest/upload dengan key dan payload sama
+    const second = await handler(
+      req("http://localhost/api/ingest/upload", { method: "POST", headers, body }),
+    );
+    expect(second.status).toBe(200);
+    expect(second.headers.get("idempotent-replay")).toBe("true");
+    expect(second.headers.get("idempotency-key")).toBe("k-alias");
+    expect(calls).toBe(1); // handler tidak dipanggil ulang
+    expect(await first.json()).toEqual(await second.json());
+  });
+
   it("tanpa header key → tak ada efek samping idempotensi", async () => {
     let calls = 0;
     const handler = wrapRoute({

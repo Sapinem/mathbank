@@ -48,6 +48,8 @@ export default defineConfig({
         "src/lib/ai/client.ts",
         "src/lib/ai/enrich.ts",
         "src/lib/mcp/policy.ts",
+        "src/lib/math/excerpt.ts",
+        "src/lib/display/bundle-labels.ts",
         "src/lib/export/xml-escape.ts",
         "src/lib/export/latex-to-moodle.ts",
         "src/lib/export/moodle-map.ts",

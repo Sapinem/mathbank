@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   MemoryStore,
   checkRateLimit,
+  checkRateLimitBounded,
   rateLimitKey,
   setStore,
   RateLimitError,
@@ -146,5 +147,41 @@ describe("IMAGE_POLICY (PERF-03)", () => {
     for (let i = 0; i < 50; i++) {
       expect((await checkRateLimit("media:serve:ip", IMAGE_POLICY, t)).allowed).toBe(true);
     }
+  });
+});
+
+describe("checkRateLimitBounded", () => {
+  beforeEach(() => {
+    setStore(new MemoryStore());
+  });
+
+  it("mengembalikan hasil normal saat store merespons dalam batas waktu", async () => {
+    const res = await checkRateLimitBounded("probe:test", P, 500);
+    expect(res.allowed).toBe(true);
+    expect(res.remaining).toBe(P.capacity - 1);
+  });
+
+  it("fail-open (allowed: true) saat store mengalami timeout", async () => {
+    const slowStore = {
+      take: () => new Promise<never>(() => {}), // tidak pernah selesai
+    };
+    setStore(slowStore as never);
+
+    const res = await checkRateLimitBounded("probe:timeout", P, 50);
+    expect(res.allowed).toBe(true);
+    expect(res.remaining).toBe(P.capacity);
+    expect(res.retryAfterMs).toBe(0);
+  });
+
+  it("fail-open saat store melempar error tak terduga", async () => {
+    const brokenStore = {
+      take: () => Promise.reject(new Error("DB pool exhausted")),
+    };
+    setStore(brokenStore as never);
+
+    const res = await checkRateLimitBounded("probe:err", P, 500);
+    expect(res.allowed).toBe(true);
+    expect(res.remaining).toBe(P.capacity);
+    expect(res.retryAfterMs).toBe(0);
   });
 });

@@ -8,6 +8,7 @@ import type {
   BundleOrigin,
   BundleValidation,
 } from "@/lib/services/bundle-service";
+import type { BundleItem } from "@/lib/db/schema/bundle";
 import type { UpdateBundleItemSlotContract } from "@/lib/contracts/bundle";
 import { api } from "@/lib/api/fetcher";
 
@@ -82,6 +83,11 @@ export interface BundlesListFilter {
   q?: string;
   limit?: number;
   offset?: number;
+  /**
+   * `false` menunda fetch sampai datanya benar-benar dibutuhkan (mis. dialog
+   * yang masih tertutup). Default `true`.
+   */
+  enabled?: boolean;
 }
 
 /** Parameter halaman untuk {@link useBundlesPage}. */
@@ -97,6 +103,7 @@ export function useBundles(filter?: BundlesListFilter) {
   if (filter?.offset != null) qs.set("offset", String(filter.offset));
   const query = qs.toString();
   return useQuery({
+    enabled: filter?.enabled ?? true,
     queryKey: query
       ? [...bundleKeys.all, filter]
       : bundleKeys.all,
@@ -252,9 +259,14 @@ export function useDuplicateBundle() {
 export function useAddBundleItem(bundleId: string, defaultVersion?: number | "*") {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { questionId: string; role?: "question" | "stimulus"; version?: number | "*" }) => {
+    mutationFn: (input: {
+      questionId: string;
+      role?: "question" | "stimulus";
+      sectionName?: string | null;
+      version?: number | "*";
+    }) => {
       const { version, ...body } = input;
-      return api<{ id: string; bundleVersion?: number }>(`/api/bundles/${bundleId}/items`, {
+      return api<BundleItem & { bundleVersion?: number }>(`/api/bundles/${bundleId}/items`, {
         method: "POST",
         body: JSON.stringify(body),
         ifMatch: version ?? defaultVersion ?? "*",

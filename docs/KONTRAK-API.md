@@ -294,7 +294,7 @@ itu, dua penyunting bersamaan saling menimpa tanpa jejak.
 - `If-Match: *` diterima — berarti "apa pun versinya"; berguna untuk klien yang
   memang tidak peduli isi sebelumnya. `W/"3"` **ditolak**: RFC 9110 §13.1.1
   mensyaratkan perbandingan kuat untuk `If-Match`.
-- **21 operasi** menuntut `If-Match` (kolom *Versi* di §4). Dikecualikan:
+- **22 operasi** menuntut `If-Match` (kolom *Versi* di §4). Dikecualikan:
   `DELETE /api/mcp` (tak menyentuh baris) dan `PATCH /api/settings` (singleton).
 - **4 GET** memancarkan `ETag`: `questions/{id}`, `bundles/{id}`, `topics/{id}`,
   `media/{shortId}`.
@@ -314,12 +314,12 @@ tidak — perbedaan itu tidak memberi manfaat dan menyesatkan klien.
 | `/api/ingest/{upload,queue,commit}` | **kanonik** |
 | `/api/v1/ingest/{upload,queue,commit}` | **alias deprecated**, berakhir **2027-01-25** (90 hari) |
 
-Alias mendelegasikan ke handler kanonik yang sama (bukan salinan), lalu menambahkan:
+Alias mendelegasikan ke handler kanonik yang sama (bukan salinan), lalu menambahkan header RFC 9745:
 
 ```http
-Deprecation: true
+Deprecation: @1793059200
 Sunset: Mon, 25 Jan 2027 00:00:00 GMT
-Link: </api/ingest>; rel="successor-version"
+Link: </api/ingest/upload>; rel="successor-version"
 ```
 
 Setelah 2027-01-25 alias dihapus tanpa pengganti. **Jangan menambah prefix versi
