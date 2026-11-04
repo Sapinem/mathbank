@@ -49,7 +49,18 @@ describe("print.css - Fase 4 (A4: tidak meluber)", () => {
 
   it("geometri kertas efisien mathmyid.cls diterapkan pada margin @page", () => {
     const css = printCss();
-    expect(css).toContain("margin: 0.9cm 0 1.2cm 1cm");
+    expect(css).toContain("margin: 1.8cm 0 1.6cm 1cm");
+  });
+
+  it("header bagian cetak mencegah putus halaman yatim di dasar kolom", () => {
+    const css = printCss();
+    expect(css).toMatch(/\.print-section-header\s*\{[^}]*break-after:\s*avoid/);
+  });
+
+  it("running header dan footer ditempatkan di gutter margin aman", () => {
+    const css = printCss();
+    expect(css).toMatch(/\.print-running-header\s*\{[^}]*top:\s*-1\.3cm/);
+    expect(css).toMatch(/\.print-running-footer\s*\{[^}]*bottom:\s*-1\.2cm/);
   });
 
   it("gutter nomor soal diperlebar ke 28px dengan perataan kanan", () => {

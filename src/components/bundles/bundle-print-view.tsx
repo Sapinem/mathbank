@@ -762,7 +762,7 @@ export function BundlePrintView({
               : "print-single-column flex flex-col gap-5",
           )}
         >
-          {items.map((it) => {
+          {items.map((it, idx) => {
             if (it.item.role === "stimulus") {
               return (
                 <li key={it.item.id} className="print-question print-stimulus list-none">
@@ -780,17 +780,21 @@ export function BundlePrintView({
             const correct = itemCorrectLabels(it);
             const showNumber = config.showQuestionNumber !== false;
             const qId = it.item.questionId ?? it.question.id;
+            const isSectionStart = Boolean(it.item.sectionName && it.item.sectionName !== items[idx - 1]?.item.sectionName);
             const isForceColumn = isTwoColumn && effectiveColumnBreaks.includes(qId);
             return (
               <Fragment key={it.item.id}>
-                {it.item.sectionName && (
-                  <li className="print-section-header list-none font-bold text-xs uppercase tracking-wider text-slate-700 pt-2 pb-1 border-b border-slate-300 col-span-full">
+                {isSectionStart && (
+                  <li
+                    data-break={isForceColumn ? "force-column" : undefined}
+                    className="print-section-header list-none font-bold text-xs uppercase tracking-wider text-slate-700 pt-2 pb-1 border-b border-slate-300 col-span-full"
+                  >
                     {it.item.sectionName}
                   </li>
                 )}
                 <li
                   data-first-item={num === 1 ? "true" : undefined}
-                  data-break={isForceColumn ? "force-column" : undefined}
+                  data-break={isForceColumn && !isSectionStart ? "force-column" : undefined}
                   className="print-question print-item flex gap-2"
                 >
                   {showNumber && (

@@ -11,8 +11,8 @@
 /* ══════════ PAGE (A4 portrait, mathmyid.cls publishing geometry) ══════════ */
 @page {
   size: A4 portrait;
-  /* Geometri penerbitan mathmyid.cls (Axiom): atas 0.9cm, kanan 0 (bleed), bawah 1.2cm, kiri 1cm */
-  margin: 0.9cm 0 1.2cm 1cm;
+  /* Geometri penerbitan mathmyid.cls (Axiom): atas 1.8cm, kanan 0 (bleed), bawah 1.6cm, kiri 1cm */
+  margin: 1.8cm 0 1.6cm 1cm;
 }
 
 .worksheet {
@@ -275,8 +275,9 @@
   @page {
     size: A4 portrait;
     /* Margin kanan diatur 0 agar kanvas cetak membentang sampai ujung fisik kanan kertas tanpa terpotong clip-rect area halaman.
-       Jarak teks konten di sebelah kanan tetap dijaga 1cm via padding-right pada .print-sheet. */
-    margin: 1.2cm 0 1.2cm 1cm;
+       Jarak teks konten di sebelah kanan tetap dijaga 1cm via padding-right pada .print-sheet.
+       Margin vertikal 1.8cm atas dan 1.6cm bawah menyisakan ruang gutter aman untuk fixed running header dan footer. */
+    margin: 1.8cm 0 1.6cm 1cm;
   }
 
   /* Kunci paksa dokumen cetak ke color-scheme: light agar peramban (Chromium)
@@ -547,7 +548,6 @@
   .print-instruction,
   .print-item,
   .print-stimulus,
-  .print-section-header,
   .print-sheet-answerkey,
   .print-sheet-explanation,
   .print-sheet-answers {
@@ -555,11 +555,20 @@
     z-index: 2 !important;
   }
 
+  .print-section-header {
+    display: block !important;
+    position: relative !important;
+    z-index: 2 !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
   /* Kop resmi naskah hanya di halaman pertama (KTD3: z-index 20 menutupi fixed running header di halaman 1) */
   .bundle-print-kop {
     display: block !important;
     position: relative !important;
     z-index: 20 !important;
+    margin-top: -1.3cm !important;
     margin-bottom: 12px !important;
     background: #ffffff !important;
     break-after: avoid;
@@ -573,11 +582,11 @@
     object-fit: contain !important;
   }
 
-  /* Running header & footer DOM di cetak (KTD3: elemen fixed berulang pada paged media) */
+  /* Running header & footer DOM di cetak (KTD3: elemen fixed berulang pada paged media di dalam gutter margin) */
   .print-running-header {
     display: flex !important;
     position: fixed !important;
-    top: 0 !important;
+    top: -1.3cm !important;
     left: 1cm !important;
     right: 0 !important;
     z-index: 10 !important;
@@ -587,7 +596,7 @@
   .print-running-footer {
     display: flex !important;
     position: fixed !important;
-    bottom: 0 !important;
+    bottom: -1.2cm !important;
     left: 1cm !important;
     right: 0 !important;
     z-index: 10 !important;
