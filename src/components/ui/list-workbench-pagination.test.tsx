@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { ListWorkbenchPagination } from "./list-workbench-pagination";
 
 describe("ListWorkbenchPagination", () => {
-  it("merender null jika total adalah 0 atau totalPages <= 1", () => {
+  it("merender null jika total adalah 0", () => {
     const { container: c1 } = render(
       <ListWorkbenchPagination
         page={0}
@@ -14,17 +14,29 @@ describe("ListWorkbenchPagination", () => {
       />,
     );
     expect(c1.firstChild).toBeNull();
+  });
 
-    const { container: c2 } = render(
+  it("tetap merender toolbar saat totalPages <= 1 agar pengguna bisa mengubah ukuran baris", () => {
+    const onPageSizeChange = vi.fn();
+    render(
       <ListWorkbenchPagination
         page={0}
-        pageSize={20}
-        total={15}
+        pageSize={50}
+        total={25}
         onPageChange={vi.fn()}
-        onPageSizeChange={vi.fn()}
+        onPageSizeChange={onPageSizeChange}
       />,
     );
-    expect(c2.firstChild).toBeNull();
+    expect(screen.getByText("Menampilkan")).toBeInTheDocument();
+    expect(screen.getByText("1–25")).toBeInTheDocument();
+    expect(screen.getByText("25")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sebelumnya" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Berikutnya" })).toBeDisabled();
+
+    // Pastikan tombol 20 baris bisa diklik untuk kembali ke mode halaman
+    const btn20 = screen.getByRole("button", { name: "Tampilkan 20 item per halaman" });
+    fireEvent.click(btn20);
+    expect(onPageSizeChange).toHaveBeenCalledWith(20);
   });
 
   it("merender jangkauan data dan opsi limit baris", () => {

@@ -144,7 +144,7 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
     const input = screen.getByPlaceholderText("Cari soal…");
     fireEvent.change(input, { target: { value: "   " } });
     fireEvent.submit(input.closest("form")!);
-    expect(replace).toHaveBeenCalledWith("/questions?");
+    expect(replace).toHaveBeenCalledWith("/questions");
   });
 
   it("tombol Reset muncul HANYA saat ada filter aktif", () => {
@@ -185,7 +185,7 @@ describe("QuestionBankView — pencarian & filter (URL = sumber kebenaran)", () 
     render(<QuestionBankView defaultFiltersOpen />);
     // "Semua" pertama = grup Status
     fireEvent.click(screen.getAllByLabelText("Semua")[0]);
-    expect(replace).toHaveBeenCalledWith("/questions?");
+    expect(replace).toHaveBeenCalledWith("/questions");
   });
 
   it("centang beberapa Kesulitan → multi-nilai di URL", () => {
@@ -271,10 +271,11 @@ describe("QuestionBankView — paginasi", () => {
     );
   });
 
-  it("menyembunyikan paginasi bila hanya 1 halaman", () => {
+  it("menonaktifkan navigasi paginasi bila hanya 1 halaman", () => {
     useQuestionsMock.mockReturnValue(dataState({ data: { items: [q("a")], total: 5 } }));
     render(<QuestionBankView />);
-    expect(screen.queryByText("Sebelumnya")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sebelumnya" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Berikutnya" })).toBeDisabled();
   });
 
   it("menampilkan nomor halaman & tombol navigasi", () => {

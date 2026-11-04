@@ -74,7 +74,7 @@ export function ListWorkbenchPagination({
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  if (total === 0 || totalPages <= 1) {
+  if (total === 0) {
     return null;
   }
 

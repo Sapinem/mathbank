@@ -66,6 +66,9 @@ export function BundleDetailView() {
     return <ErrorState title="Gagal memuat paket" description={(error as Error).message} />;
   if (!bundle) return null;
 
+  const withoutKeySet = new Set(validation?.withoutAnswerKey?.map((w) => w.questionId));
+  const questionItems = bundle.items.filter((it) => it.item.role !== "stimulus");
+
   return (
     <>
       <PageHeader
@@ -142,22 +145,24 @@ export function BundleDetailView() {
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="text-xs font-semibold text-foreground shrink-0">Butir:</span>
                     <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-                      {bundle.items.map((it, idx) => {
-                        const nomor = idx + 1;
-                        const hasNoKey = validation?.withoutAnswerKey?.some((w) => w.questionId === it.question.id);
+                      {bundle.items.map((it) => {
+                        const isStimulus = it.item.role === "stimulus";
+                        const qNum = isStimulus ? null : questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
+                        const nomorDisplay = it.item.itemNumber || (qNum ? String(qNum) : "W");
+                        const hasNoKey = withoutKeySet.has(it.question.id);
                         return (
                           <a
                             key={it.item.id}
-                            href={`#item-${nomor}`}
+                            href={`#item-${it.item.id}`}
                             className={cn(
                               "relative flex size-7 shrink-0 items-center justify-center rounded-md border text-xs font-mono font-medium transition-colors hover:bg-muted active:scale-95",
                               hasNoKey
                                 ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
                                 : "border-border/60 bg-background text-foreground",
                             )}
-                            title={`Butir nomor ${nomor}${hasNoKey ? " (tanpa kunci)" : ""}`}
+                            title={`${isStimulus ? "Wacana" : `Soal #${qNum}`}${it.item.itemNumber ? ` (${it.item.itemNumber})` : ""}${hasNoKey ? " (tanpa kunci)" : ""}`}
                           >
-                            {nomor}
+                            {nomorDisplay}
                             {hasNoKey && (
                               <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-amber-500" />
                             )}
@@ -212,13 +217,14 @@ export function BundleDetailView() {
             ) : viewMode === "document" ? (
               /* MODE NASKAH (ARTIKEL TERPADU / DOKUMEN MENYATU ALAMI) */
               <Card className="rounded-xl border border-border/70 bg-card divide-y divide-border/40 shadow-xs overflow-hidden">
-                {bundle.items.map((it, idx) => {
-                  const nomor = idx + 1;
-                  const hasNoKey = validation?.withoutAnswerKey?.some((w) => w.questionId === it.question.id);
+                {bundle.items.map((it) => {
+                  const isStimulus = it.item.role === "stimulus";
+                  const qNum = isStimulus ? null : questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
+                  const hasNoKey = withoutKeySet.has(it.question.id);
                   return (
                     <div
                       key={it.item.id}
-                      id={`item-${nomor}`}
+                      id={`item-${it.item.id}`}
                       className={cn(
                         "group relative flex scroll-mt-20 gap-3 p-4 sm:p-5 transition-colors",
                         hasNoKey && "bg-amber-500/5",
@@ -229,7 +235,9 @@ export function BundleDetailView() {
                           ? it.item.itemNumber.endsWith(".")
                             ? it.item.itemNumber
                             : `${it.item.itemNumber}.`
-                          : `${nomor}.`}
+                          : isStimulus
+                            ? ""
+                            : `${qNum}.`}
                       </span>
                       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
                         <div className="text-base leading-relaxed text-foreground">
@@ -300,13 +308,14 @@ export function BundleDetailView() {
             ) : (
               /* MODE KARTU (BLOK MODULAR TERPISAH) */
               <div className="flex flex-col gap-4">
-                {bundle.items.map((it, idx) => {
-                  const nomor = idx + 1;
-                  const hasNoKey = validation?.withoutAnswerKey?.some((w) => w.questionId === it.question.id);
+                {bundle.items.map((it) => {
+                  const isStimulus = it.item.role === "stimulus";
+                  const qNum = isStimulus ? null : questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
+                  const hasNoKey = withoutKeySet.has(it.question.id);
                   return (
                     <div
                       key={it.item.id}
-                      id={`item-${nomor}`}
+                      id={`item-${it.item.id}`}
                       className={cn(
                         "flex scroll-mt-20 flex-col gap-3 rounded-xl border border-border/70 bg-card p-4 shadow-2xs transition-colors",
                         hasNoKey && "border-amber-500/40 bg-amber-500/5",
@@ -316,7 +325,9 @@ export function BundleDetailView() {
                       <div className="flex items-center justify-between border-b border-border/40 pb-2">
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-xs font-bold text-brand">
-                            Butir #{it.item.itemNumber || nomor}
+                            {isStimulus
+                              ? (it.item.itemNumber ? `Wacana #${it.item.itemNumber}` : "Wacana")
+                              : `Butir #${it.item.itemNumber || qNum}`}
                           </span>
                           {it.item.role === "stimulus" && (
                             <Badge variant="secondary" className="gap-1 border-info/30 bg-info/10 text-info text-[10px]">
@@ -431,7 +442,7 @@ export function BundleDetailView() {
                   </span>
                 </div>
 
-                {bundle.url && (
+                {bundle.url && (bundle.url.startsWith("http://") || bundle.url.startsWith("https://")) && (
                   <div className="pt-2 border-t border-border/30 flex flex-col gap-1">
                     <span className="text-muted-foreground">Tautan Sumber Web</span>
                     <a

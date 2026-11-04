@@ -650,7 +650,7 @@ function QuestionSourcesCard({
 
                 {/* Indikator titik slide bila > 1 naskah */}
                 {total > 1 && (
-                  <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/30">
+                  <div className="flex items-center justify-center gap-2.5 pt-2 border-t border-border/30">
                     {bundles.map((_, i) => (
                       <button
                         key={i}
@@ -658,7 +658,7 @@ function QuestionSourcesCard({
                         onClick={() => setIndex(i)}
                         aria-label={`Pindah ke naskah ${i + 1}`}
                         className={cn(
-                          "relative h-1.5 rounded-full transition-all after:absolute after:-inset-3.5 after:content-['']",
+                          "relative h-1.5 rounded-full transition-all after:absolute after:-inset-y-3.5 after:-inset-x-1 after:content-['']",
                           i === safeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",
                         )}
                       />

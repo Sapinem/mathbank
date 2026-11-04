@@ -114,14 +114,14 @@ function SortableRow({
       </button>
 
       {/* 2. Tombol Mikro-Langkah Naik/Turun (A11y & Keyboard) */}
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-1">
         <button
           type="button"
           onClick={() => onMoveStep(index, -1)}
           disabled={index === 0}
           aria-label={`Naikkan soal nomor ${nomor}`}
           title="Naikkan satu nomor"
-          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25 relative after:absolute after:-inset-2.5 after:content-['']"
+          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25 relative after:absolute after:-top-2.5 after:bottom-0 after:-inset-x-2.5 after:content-['']"
         >
           <ChevronUp className="size-3.5" />
         </button>
@@ -131,7 +131,7 @@ function SortableRow({
           disabled={index === totalItems - 1}
           aria-label={`Turunkan soal nomor ${nomor}`}
           title="Turunkan satu nomor"
-          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25 relative after:absolute after:-inset-2.5 after:content-['']"
+          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25 relative after:absolute after:top-0 after:-bottom-2.5 after:-inset-x-2.5 after:content-['']"
         >
           <ChevronDown className="size-3.5" />
         </button>

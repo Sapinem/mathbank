@@ -212,7 +212,7 @@ export function QuestionBankView({
     if (value) next.set(key, value);
     else next.delete(key);
     if (key !== "page") next.delete("page");
-    router.replace(`/questions?${next.toString()}`);
+    router.replace(`/questions${next.toString() ? `?${next.toString()}` : ""}`);
   }
 
   /** Perbarui banyak param sekaligus secara atomik (mencegah clobbering closure). */
