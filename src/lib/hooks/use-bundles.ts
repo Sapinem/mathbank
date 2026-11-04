@@ -169,7 +169,14 @@ export function useUpdateBundle(id: string, defaultVersion?: number | "*") {
   return useMutation({
     mutationFn: (args: (Record<string, unknown> & { version?: number | "*" }) | { patch: Record<string, unknown>; version?: number | "*" }) => {
       const isWrapped = "patch" in args && typeof args.patch === "object" && args.patch !== null;
-      const body = isWrapped ? args.patch : (() => { const { version: _v, ...rest } = args; return rest; })();
+      let body: Record<string, unknown>;
+      if (isWrapped) {
+        body = args.patch as Record<string, unknown>;
+      } else {
+        const copy = { ...args };
+        delete copy.version;
+        body = copy;
+      }
       const version = args.version ?? defaultVersion ?? "*";
       return api<BundleRow>(`/api/bundles/${id}`, {
         method: "PATCH",

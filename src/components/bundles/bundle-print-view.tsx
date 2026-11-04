@@ -5,23 +5,13 @@ import { useParams } from "next/navigation";
 import { Fragment, useState } from "react";
 import {
   ArrowLeft,
-  BookOpen,
-  GraduationCap,
   Printer,
-  Save,
   SlidersHorizontal,
   Maximize2,
   Minimize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { MathContent } from "@/components/math/math-content";
 import { readMatchingPayload } from "@/components/questions/matching-view";
@@ -38,6 +28,7 @@ import type { BundleItemView } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
 import { PrintWatermark } from "./print-watermark";
 import { BundlePrintKop } from "./print/bundle-print-kop";
+import { BundlePrintSettingsDrawer } from "./print/bundle-print-settings-drawer";
 import { BundlePrintHeader } from "./print/bundle-print-header";
 import { BundlePrintFooter } from "./print/bundle-print-footer";
 import { cn } from "@/lib/utils";
@@ -58,11 +49,11 @@ import { cn } from "@/lib/utils";
  *    (`--print-bundle-title`) agar tampil di Chromium (menggantikan `string-set` yang diabaikan Blink).
  */
 
-type ColumnMode = "1" | "2";
+export type ColumnMode = "1" | "2";
 /** Cara kunci jawaban disajikan. */
-type KeyMode = "hidden" | "inline" | "separate";
+export type KeyMode = "hidden" | "inline" | "separate";
 /** Cara pembahasan disajikan (Axiom 3-Way Mode). */
-type ExplanationMode = "none" | "inline" | "end";
+export type ExplanationMode = "none" | "inline" | "end";
 
 /**
  * Nilai `size` CSS untuk tiap `pageSize`. `null` = pakai `@page` bawaan
@@ -356,352 +347,39 @@ export function BundlePrintView({
       </div>
 
       {/* ── Sliding Panel (Sheet Drawer Kanan) ──────────────────── */}
-      <Sheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen} modal={false}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto flex flex-col p-0 no-print">
-          <SheetHeader className="p-4 border-b">
-            <SheetTitle className="flex items-center gap-2 text-base">
-              <SlidersHorizontal className="w-4 h-4 text-primary" /> Pengaturan Cetak
-            </SheetTitle>
-            <SheetDescription className="text-xs">
-              Sesuaikan tata letak dan isi naskah sebelum dicetak fisik atau disimpan ke PDF.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
-            {/* 1. Preset Cepat */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Preset Cepat
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="min-h-[44px] flex flex-col items-start p-2 h-auto text-left"
-                  onClick={applyStudentPreset}
-                >
-                  <span className="flex items-center gap-1 font-semibold text-xs text-foreground">
-                    <GraduationCap className="w-3.5 h-3.5 text-primary" /> Mode Siswa
-                  </span>
-                  <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                    Bersih, tanpa kunci & pembahasan
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="min-h-[44px] flex flex-col items-start p-2 h-auto text-left"
-                  disabled={!canShowKey && !canShowExplanation}
-                  onClick={applyTeacherPreset}
-                >
-                  <span className="flex items-center gap-1 font-semibold text-xs text-foreground">
-                    <BookOpen className="w-3.5 h-3.5 text-primary" /> Pedoman Guru
-                  </span>
-                  <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                    Kunci tebal & bahas di soal
-                  </span>
-                </Button>
-              </div>
-            </div>
-
-            {/* 2. Tata Letak Naskah & Opsi */}
-            <div className="flex flex-col gap-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Tata Letak & Kolom
-              </span>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium">Kolom Naskah</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={!isTwoColumn ? "default" : "outline"}
-                    onClick={() => setBodyColumns("1")}
-                    className="min-h-[44px]"
-                  >
-                    Naskah 1 kolom
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={isTwoColumn ? "default" : "outline"}
-                    onClick={() => setBodyColumns("2")}
-                    className="min-h-[44px]"
-                  >
-                    Naskah 2 kolom
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium">Kolom Pilihan Opsi (A–E)</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={columns === "1" ? "default" : "outline"}
-                    onClick={() => setColumns("1")}
-                    className="min-h-[44px]"
-                  >
-                    1 kolom
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={columns === "2" ? "default" : "outline"}
-                    onClick={() => setColumns("2")}
-                    className="min-h-[44px]"
-                  >
-                    2 kolom
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium">Latar Belakang Naskah</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={effectiveBackgroundWatermark ? "default" : "outline"}
-                    onClick={() => setBackgroundWatermarkOverride(!effectiveBackgroundWatermark)}
-                    className="min-h-[44px] text-xs px-2"
-                  >
-                    Tanda Air Logo
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={effectiveBackgroundGrid ? "default" : "outline"}
-                    onClick={() => setBackgroundGridOverride(!effectiveBackgroundGrid)}
-                    className="min-h-[44px] text-xs px-2"
-                  >
-                    Kertas Kotak (0,5 cm)
-                  </Button>
-                </div>
-                {effectiveBackgroundGrid && effectiveBackgroundWatermark ? (
-                  <span className="text-[11px] text-muted-foreground">
-                    Kombinasi: Kertas kotak membentang di atas tanda air logo.
-                  </span>
-                ) : !effectiveBackgroundGrid && !effectiveBackgroundWatermark ? (
-                  <span className="text-[11px] text-muted-foreground">
-                    Latar polos aktif tanpa kisi atau tanda air.
-                  </span>
-                ) : null}
-              </div>
-
-              {isTwoColumn && questionItems.length > 1 && (
-                <div className="flex flex-col gap-1.5 pt-1 border-t">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium">Lompat Kolom (Pindah ke Kolom 2)</span>
-                    <span className="text-[11px] text-muted-foreground font-semibold">
-                      {effectiveColumnBreaks.length} butir
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-normal">
-                    Pilih nomor butir soal yang dipaksa pindah ke kolom kedua untuk menyeimbangkan halaman.
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {questionItems.slice(1).map((q, idx) => {
-                      const num = idx + 2;
-                      const qId = q.item.questionId ?? q.question.id;
-                      const isBroken = effectiveColumnBreaks.includes(qId);
-                      return (
-                        <Button
-                          key={q.item.id}
-                          type="button"
-                          size="sm"
-                          variant={isBroken ? "default" : "outline"}
-                          onClick={() => toggleColumnBreak(qId)}
-                          className="min-h-[44px] min-w-[44px] px-2 text-xs font-semibold tabular-nums"
-                          aria-label={`Butir nomor ${num} ${isBroken ? "pindah kolom" : "normal"}`}
-                        >
-                          #{num}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex flex-col gap-1.5 pt-1 border-t">
-                <span className="text-xs font-medium">Warna Identitas Brand</span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {BRAND_PRESET_COLORS.map((bc) => (
-                    <Button
-                      key={bc.value}
-                      type="button"
-                      size="sm"
-                      variant={effectiveBrandColor === bc.value ? "default" : "outline"}
-                      onClick={() => setBrandColorOverride(bc.value)}
-                      className="min-h-[44px] text-xs px-1.5 sm:px-2 flex items-center justify-center gap-1.5"
-                    >
-                      <span
-                        className="size-3 rounded-full shrink-0 border"
-                        style={{ backgroundColor: bc.value }}
-                      />
-                      <span className="truncate">{bc.label.split(" ")[0]}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Ruang Coret-coretan Siswa */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Ruang Coret-coretan Siswa
-                </span>
-                <span className="text-xs font-bold text-primary tabular-nums">
-                  {effectiveAnswerSpaceCm} cm
-                </span>
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-normal">
-                Ruang coretan polos (tanpa border) di bawah tiap soal (PG, isian, esai). Otomatis ditiadakan bila pembahasan di bawah soal aktif.
-              </p>
-              <div className="grid grid-cols-5 gap-1.5">
-                {ANSWER_SPACE_OPTIONS.map((cm) => (
-                  <Button
-                    key={cm}
-                    type="button"
-                    size="sm"
-                    variant={effectiveAnswerSpaceCm === cm ? "default" : "outline"}
-                    onClick={() => setAnswerSpaceCmOverride(cm)}
-                    className="min-h-[44px] text-xs font-medium"
-                  >
-                    {cm === 0 ? "0cm" : `${cm}cm`}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. Kunci Jawaban & Pembahasan */}
-            <div className="flex flex-col gap-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Kunci Jawaban & Pembahasan
-              </span>
-
-              {/* Kunci Jawaban */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium">Pilihan Kunci</span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={effectiveKeyMode === "hidden" ? "default" : "outline"}
-                    onClick={() => setKeyModeOverride("hidden")}
-                    className="min-h-[44px] text-xs"
-                  >
-                    Sembunyikan
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={effectiveKeyMode === "inline" ? "default" : "outline"}
-                    disabled={!canShowKey}
-                    onClick={() => setKeyModeOverride("inline")}
-                    className="min-h-[44px] text-xs"
-                  >
-                    Tandai tebal
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={effectiveKeyMode === "separate" ? "default" : "outline"}
-                    disabled={!canShowKey}
-                    onClick={() => setKeyModeOverride("separate")}
-                    className="min-h-[44px] text-xs"
-                  >
-                    Lembar terpisah
-                  </Button>
-                </div>
-                {!canShowKey && (
-                  <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                    Peran Anda tidak berhak melihat kunci jawaban.
-                  </p>
-                )}
-              </div>
-
-              {/* Pembahasan */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium">Pilihan Pembahasan</span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={effectiveExplanationMode === "none" ? "default" : "outline"}
-                    disabled={!canShowExplanation}
-                    onClick={() =>
-                      setExplanationModeOverride(effectiveExplanationMode === "none" ? "end" : "none")
-                    }
-                    className="min-h-[44px] text-xs"
-                  >
-                    {effectiveExplanationMode === "none" ? "Tanpa pembahasan" : "Sembunyikan"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={effectiveExplanationMode === "inline" ? "default" : "outline"}
-                    disabled={!canShowExplanation}
-                    onClick={() => setExplanationModeOverride("inline")}
-                    className="min-h-[44px] text-xs"
-                  >
-                    Di bawah soal
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={effectiveExplanationMode === "end" ? "default" : "outline"}
-                    disabled={!canShowExplanation}
-                    onClick={() => setExplanationModeOverride("end")}
-                    className="min-h-[44px] text-xs"
-                  >
-                    Lembar akhir
-                  </Button>
-                </div>
-                {!canShowExplanation && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Tidak ada pembahasan tersedia untuk paket ini.
-                  </p>
-                )}
-              </div>
-
-              {/* Lembar Jawaban Siswa */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium">Lembar Jawaban Siswa</span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={includeAnswerSheet ? "default" : "outline"}
-                  onClick={() => setIncludeAnswerSheet((v) => !v)}
-                  className="min-h-[44px]"
-                >
-                  {includeAnswerSheet ? "Sertakan (di akhir)" : "Tanpa lembar jawaban"}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Panel: Aksi Simpan Baku ke DB */}
-          <div className="p-4 border-t bg-muted/40 flex flex-col gap-2 mt-auto">
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleSaveDefault}
-              disabled={isSaving}
-              className="min-h-[44px] w-full"
-            >
-              <Save data-icon="inline-start" /> {isSaving ? "Menyimpan…" : "Simpan sebagai Baku Paket Ini"}
-            </Button>
-            <p className="text-[10px] text-center text-muted-foreground">
-              Menyimpan preferensi tata letak ke database agar naskah selalu terbuka dengan pengaturan ini.
-            </p>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <BundlePrintSettingsDrawer
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        applyStudentPreset={applyStudentPreset}
+        applyTeacherPreset={applyTeacherPreset}
+        canShowKey={canShowKey}
+        canShowExplanation={canShowExplanation}
+        isTwoColumn={isTwoColumn}
+        setBodyColumns={setBodyColumns}
+        columns={columns}
+        setColumns={setColumns}
+        effectiveBackgroundWatermark={effectiveBackgroundWatermark}
+        setBackgroundWatermarkOverride={setBackgroundWatermarkOverride}
+        effectiveBackgroundGrid={effectiveBackgroundGrid}
+        setBackgroundGridOverride={setBackgroundGridOverride}
+        questionItems={questionItems}
+        effectiveColumnBreaks={effectiveColumnBreaks}
+        toggleColumnBreak={toggleColumnBreak}
+        effectiveBrandColor={effectiveBrandColor}
+        setBrandColorOverride={setBrandColorOverride}
+        brandPresetColors={BRAND_PRESET_COLORS}
+        effectiveAnswerSpaceCm={effectiveAnswerSpaceCm}
+        setAnswerSpaceCmOverride={setAnswerSpaceCmOverride}
+        answerSpaceOptions={ANSWER_SPACE_OPTIONS}
+        effectiveKeyMode={effectiveKeyMode}
+        setKeyModeOverride={setKeyModeOverride}
+        effectiveExplanationMode={effectiveExplanationMode}
+        setExplanationModeOverride={setExplanationModeOverride}
+        includeAnswerSheet={includeAnswerSheet}
+        setIncludeAnswerSheet={setIncludeAnswerSheet}
+        handleSaveDefault={handleSaveDefault}
+        isSaving={isSaving}
+      />
 
       {/* ── Naskah (yang dicetak) ───────────────────────────────── */}
       {/* Wrapper horizontal scroll: di mobile naskah mulai dari x=0 (kiri) dan bisa discroll ke kanan tanpa terpotong di kiri */}

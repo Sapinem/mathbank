@@ -18,6 +18,7 @@ import {
 } from "@/lib/db/projections/question";
 import type { ListQuestionsQuery, AnswerKey, QuestionListStats } from "@/lib/contracts/question";
 export type { QuestionListStats } from "@/lib/contracts/question";
+import { fetchQuestionStatsAndTotal } from "./question-stats";
 
 /**
  * Baca soal (M14 — pecahan `question-service.ts`).
@@ -339,7 +340,7 @@ export async function listQuestions(
 ): Promise<{ items: PublicQuestion[]; total: number; stats?: QuestionListStats }> {
   // Impor dinamis menghindari lingkaran modul: buildQuestionFilter memakai
   // tipe/utilitas yang sama tanpa saling mengimpor modul ini.
-  const { buildQuestionFilter, buildFilterFrom } = await import("@/lib/question/filters");
+  const { buildQuestionFilter } = await import("@/lib/question/filters");
   const { where: finalWhere, byRelevance, resolvedTopicIds } = await buildQuestionFilter(query);
 
   // Mode semantik: urutkan berdasar jarak embedding (HNSW) bila query dapat
@@ -375,71 +376,12 @@ export async function listQuestions(
         .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
         .from(questions);
 
-  const buildStatsQuery = () =>
-    semanticWhere
-      ? db
-          .select({
-            count: sql<number>`count(*)::int`,
-            ready: sql<number>`count(*) filter (where ${questions.status} = 'ready')::int`,
-            review: sql<number>`count(*) filter (where ${questions.status} = 'review')::int`,
-            draft: sql<number>`count(*) filter (where ${questions.status} = 'draft')::int`,
-            flagged: sql<number>`count(*) filter (where ${questions.isFlagged} = true)::int`,
-          })
-          .from(questions)
-          .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
-      : db
-          .select({
-            count: sql<number>`count(*)::int`,
-            ready: sql<number>`count(*) filter (where ${questions.status} = 'ready')::int`,
-            review: sql<number>`count(*) filter (where ${questions.status} = 'review')::int`,
-            draft: sql<number>`count(*) filter (where ${questions.status} = 'draft')::int`,
-            flagged: sql<number>`count(*) filter (where ${questions.isFlagged} = true)::int`,
-          })
-          .from(questions);
-
-  const buildSimpleCountQuery = () =>
-    semanticWhere
-      ? db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(questions)
-          .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
-      : db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(questions);
-
-  const hasStatusOrFlagFilter = query.status !== undefined || query.flagged !== undefined;
-
-  let statsWhere = combined;
-  if (hasStatusOrFlagFilter) {
-    const { where: baseFilter } = buildFilterFrom(
-      { ...query, status: undefined, flagged: undefined },
-      { resolvedTopicIds },
-    );
-    statsWhere = semanticWhere
-      ? baseFilter
-        ? and(baseFilter, semanticWhere)
-        : semanticWhere
-      : baseFilter;
-  }
-
-  const [filteredCountRes, statsCountRes] = await Promise.all([
-    hasStatusOrFlagFilter
-      ? buildSimpleCountQuery().where(combined)
-      : buildStatsQuery().where(combined),
-    hasStatusOrFlagFilter ? buildStatsQuery().where(statsWhere) : Promise.resolve(null),
-  ]);
-
-  const count = Number(filteredCountRes?.[0]?.count ?? 0);
-  const statsSource = (statsCountRes?.[0] ?? filteredCountRes?.[0]) as
-    | { count?: number; ready?: number; review?: number; draft?: number; flagged?: number }
-    | undefined;
-  const stats = {
-    total: Number(statsSource?.count ?? 0),
-    ready: Number(statsSource?.ready ?? 0),
-    review: Number(statsSource?.review ?? 0),
-    draft: Number(statsSource?.draft ?? 0),
-    flagged: Number(statsSource?.flagged ?? 0),
-  };
+  const { total: count, stats } = await fetchQuestionStatsAndTotal({
+    query,
+    combinedWhere: combined,
+    semanticWhere,
+    resolvedTopicIds,
+  });
 
   // Urutkan: semantik (bila aktif) > relevansi trigram > terbaru dulu.
   const finalOrder: SQL[] =
