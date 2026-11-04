@@ -20,6 +20,19 @@ function printCss(): string {
   );
 }
 
+/**
+ * Potongan CSS mulai dari blok `@media print` saja.
+ *
+ * Tes lapisan cetak WAJIB memakai ini: aturan layar (`@media screen`) memakai
+ * nilai z-index yang sama, sehingga assertion pada seluruh berkas bisa hijau
+ * meski aturan cetaknya hilang.
+ */
+function printOnly(): string {
+  const css = printCss();
+  const start = css.indexOf("@media print");
+  return start < 0 ? "" : css.slice(start);
+}
+
 describe("print.css - Fase 4 (A4: tidak meluber)", () => {
   it("tidak ada lagi deklarasi overflow-x: visible di cetak", () => {
     // `overflow: visible` masih dipakai di tempat yang memang harus mengalir
@@ -49,7 +62,7 @@ describe("print.css - Fase 4 (A4: tidak meluber)", () => {
 
   it("geometri kertas efisien mathmyid.cls diterapkan pada margin @page", () => {
     const css = printCss();
-    expect(css).toContain("margin: 1.8cm 0 1.6cm 1cm");
+    expect(css).toContain("margin: 1.8cm 0.6cm 1.6cm 1cm");
   });
 
   it("header bagian cetak mencegah putus halaman yatim di dasar kolom", () => {
@@ -102,12 +115,20 @@ describe("print.css - Fase 4 (A4: tidak meluber)", () => {
     expect(css).toContain("print-color-adjust: exact");
   });
 
-  it("susunan stacking context 3-lapisan: watermark (z:0) -> grid (z:1) -> teks/konten (z:2)", () => {
+  it("susunan stacking context 3-lapisan berlaku DI DALAM @media print", () => {
+    // Hanya blok cetak yang diperiksa: nilai layar tidak membuktikan apa pun
+    // tentang PDF/hasil cetak.
+    const print = printOnly();
+    expect(print).not.toBe("");
+    expect(print).toContain(".worksheet-grid::before");
+    expect(print).toMatch(/\.worksheet-watermark-container\s*\{[^}]*z-index:\s*var\(--print-layer-watermark\)/);
+    expect(print).toMatch(/\.worksheet\.worksheet-grid::before\s*\{[^}]*z-index:\s*var\(--print-layer-grid\)/);
+    expect(print).toMatch(/\.print-item[^}]*z-index:\s*var\(--print-layer-content\)/);
+  });
+
+  it("header bagian cetak melintasi seluruh kolom naskah 2-kolom", () => {
     const css = printCss();
-    expect(css).toContain(".worksheet-grid::before");
-    expect(css).toMatch(/\.worksheet-watermark-container\s*\{[^}]*z-index:\s*0/);
-    expect(css).toMatch(/\.worksheet\.worksheet-grid::before\s*\{[^}]*z-index:\s*1/);
-    expect(css).toMatch(/\.header,\s*\.instruction[^}]*z-index:\s*2/);
+    expect(css).toMatch(/\.print-section-header\s*\{[^}]*column-span:\s*all/);
   });
 
   it("lompat kolom paksa (data-break=force-column) dideklarasikan pada print-columns", () => {

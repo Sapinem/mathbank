@@ -11,8 +11,10 @@
 /* ══════════ PAGE (A4 portrait, mathmyid.cls publishing geometry) ══════════ */
 @page {
   size: A4 portrait;
-  /* Geometri penerbitan mathmyid.cls (Axiom): atas 1.8cm, kanan 0 (bleed), bawah 1.6cm, kiri 1cm */
-  margin: 1.8cm 0 1.6cm 1cm;
+  /* Geometri penerbitan mathmyid.cls (Axiom): atas 1.8cm, kanan 0.6cm
+     (area cetak aman printer), bawah 1.6cm, kiri 1cm. Watermark tetap
+     "bleed" lewat offset negatif, bukan margin 0. */
+  margin: 1.8cm 0.6cm 1.6cm 1cm;
 }
 
 .worksheet {
@@ -22,6 +24,13 @@
   --paper-muted: #4b5563;
   --paper-navy: #002b66;
   --paper-gold: #f59e0b;
+
+  /* Token lapisan cetak (CONSTRAINTS #8: dilarang z-index manual). */
+  --print-layer-watermark: 0;
+  --print-layer-grid: 1;
+  --print-layer-content: 2;
+  --print-layer-running: 10;
+  --print-layer-kop: 20;
 
   font-family: 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
   font-size: 10.5pt;
@@ -68,7 +77,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    z-index: 1;
+    z-index: var(--print-layer-grid);
     background-image: repeating-linear-gradient(
       to right,
       transparent 0,
@@ -97,7 +106,7 @@
     max-width: none;
     pointer-events: none;
     user-select: none;
-    z-index: 0;
+    z-index: var(--print-layer-watermark);
     opacity: 0.12;
   }
 
@@ -117,7 +126,7 @@
   .print-sheet-explanation,
   .print-sheet-answers {
     position: relative;
-    z-index: 2;
+    z-index: var(--print-layer-content);
   }
 
   /* Running header disembunyikan pada pratinjau layar gulir kontinu */
@@ -373,10 +382,12 @@
 
   /* Relaksasi Butir Pertama (Axiom R5):
      Butir pertama berada tepat di bawah Kop (yang memiliki column-span / margin).
-     Jika diberi break-inside: avoid kaku, soal pertama yang agak panjang
+     Jika diberi break-inside: avoid kaku, soal/stimulus pertama yang agak panjang
      akan terlempar ke halaman 2 dan meninggalkan halaman 1 bolong hanya berisi Kop. */
   .print-item:first-child,
-  .print-item[data-first-item="true"] {
+  .print-item[data-first-item="true"],
+  .print-stimulus:first-child,
+  .print-stimulus[data-first-item="true"] {
     break-inside: auto;
     page-break-inside: auto;
   }
@@ -391,9 +402,9 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Blok yang tidak boleh terbelah antar-halaman */
+  /* Blok yang tidak boleh terbelah antar-halaman (kecuali first-item) */
   .print-options,
-  .print-stimulus {
+  .print-stimulus:not([data-first-item="true"]) {
     break-inside: avoid;
     page-break-inside: avoid;
   }
@@ -491,7 +502,7 @@
     width: 100% !important;
     height: 100% !important;
     pointer-events: none !important;
-    z-index: 1 !important;
+    z-index: var(--print-layer-grid) !important;
     background-image: repeating-linear-gradient(
       to right,
       transparent 0,
@@ -521,7 +532,8 @@
     display: block !important;
     position: fixed !important;
     bottom: 0 !important;
-    right: 0 !important;
+    /* Bleed ke margin kanan 0.6cm tanpa memotong footer bernomor. */
+    right: -0.6cm !important;
     top: auto !important;
     left: auto !important;
     transform: none !important;
@@ -529,7 +541,7 @@
     height: auto !important;
     max-width: none !important;
     opacity: 0.12 !important;
-    z-index: 0 !important;
+    z-index: var(--print-layer-watermark) !important;
     pointer-events: none !important;
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
@@ -552,22 +564,23 @@
   .print-sheet-explanation,
   .print-sheet-answers {
     position: relative !important;
-    z-index: 2 !important;
+    z-index: var(--print-layer-content) !important;
   }
 
   .print-section-header {
     display: block !important;
     position: relative !important;
-    z-index: 2 !important;
+    z-index: var(--print-layer-content) !important;
     break-after: avoid !important;
     page-break-after: avoid !important;
+    column-span: all !important;
   }
 
   /* Kop resmi naskah hanya di halaman pertama (KTD3: z-index 20 menutupi fixed running header di halaman 1) */
   .bundle-print-kop {
     display: block !important;
     position: relative !important;
-    z-index: 20 !important;
+    z-index: var(--print-layer-kop) !important;
     margin-top: -1.3cm !important;
     margin-bottom: 12px !important;
     background: #ffffff !important;
@@ -589,7 +602,7 @@
     top: -1.3cm !important;
     left: 1cm !important;
     right: 0 !important;
-    z-index: 10 !important;
+    z-index: var(--print-layer-running) !important;
     background: #ffffff !important;
   }
 
@@ -599,7 +612,7 @@
     bottom: -1.2cm !important;
     left: 1cm !important;
     right: 0 !important;
-    z-index: 10 !important;
+    z-index: var(--print-layer-running) !important;
     background: #ffffff !important;
   }
 

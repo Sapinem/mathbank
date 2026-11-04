@@ -49,11 +49,8 @@ import { cn } from "@/lib/utils";
  *    (`--print-bundle-title`) agar tampil di Chromium (menggantikan `string-set` yang diabaikan Blink).
  */
 
-export type ColumnMode = "1" | "2";
-/** Cara kunci jawaban disajikan. */
-export type KeyMode = "hidden" | "inline" | "separate";
-/** Cara pembahasan disajikan (Axiom 3-Way Mode). */
-export type ExplanationMode = "none" | "inline" | "end";
+import type { ColumnMode, KeyMode, ExplanationMode } from "./print/types";
+export type { ColumnMode, KeyMode, ExplanationMode };
 
 /**
  * Nilai `size` CSS untuk tiap `pageSize`. `null` = pakai `@page` bawaan
@@ -87,6 +84,17 @@ function explanationOf(item: BundleItemView): string | null {
   const exp = key.explanation ?? (key as Record<string, unknown>).explanationMarkdown;
   if (typeof exp === "string" && exp.trim().length > 0) return exp.trim();
   return null;
+}
+
+/**
+ * Label nomor butir yang dipakai SEMUA daftar cetak (naskah, kunci, pembahasan,
+ * lembar jawaban). Nomor kustom dari Slot Inspector ("1a", "Wacana 1") harus
+ * muncul identik di keempatnya; kalau tidak, kunci bisa dibaca ke butir salah.
+ */
+function labelOf(item: BundleItemView, ordinal: number): string {
+  const custom = item.item.itemNumber;
+  if (!custom) return `${ordinal}.`;
+  return custom.endsWith(".") ? custom : `${custom}.`;
 }
 
 export function BundlePrintView({
@@ -441,25 +449,38 @@ export function BundlePrintView({
           )}
         >
           {items.map((it, idx) => {
+            const isSectionStart = Boolean(it.item.sectionName && it.item.sectionName !== items[idx - 1]?.item.sectionName);
+            const qId = it.item.questionId ?? it.question.id;
+            const isForceColumn = isTwoColumn && effectiveColumnBreaks.includes(qId);
+
             if (it.item.role === "stimulus") {
               return (
-                <li key={it.item.id} className="print-question print-stimulus list-none">
-                  <div className="rounded border-l-4 border-gray-300 bg-gray-50 p-3 text-sm">
-                    <MathContent content={it.question.contentMarkdown} />
-                  </div>
-                </li>
+                <Fragment key={it.item.id}>
+                  {isSectionStart && (
+                    <li
+                      data-break={isForceColumn ? "force-column" : undefined}
+                      className="print-section-header list-none font-bold text-xs uppercase tracking-wider text-slate-700 pt-2 pb-1 border-b border-slate-300 col-span-full"
+                    >
+                      {it.item.sectionName}
+                    </li>
+                  )}
+                  <li
+                    key={it.item.id}
+                    data-first-item={idx === 0 ? "true" : undefined}
+                    className="print-question print-stimulus list-none"
+                  >
+                    <div className="rounded border-l-4 border-gray-300 bg-gray-50 p-3 text-sm">
+                      <MathContent content={it.question.contentMarkdown} />
+                    </div>
+                  </li>
+                </Fragment>
               );
             }
             // Nomor urut soal (1..n) atau nomor butir kustom (misal "1a", "1b")
             const num = questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
-            const displayNumber = it.item.itemNumber
-              ? (it.item.itemNumber.endsWith(".") ? it.item.itemNumber : `${it.item.itemNumber}.`)
-              : `${num}.`;
+            const displayNumber = labelOf(it, num);
             const correct = itemCorrectLabels(it);
             const showNumber = config.showQuestionNumber !== false;
-            const qId = it.item.questionId ?? it.question.id;
-            const isSectionStart = Boolean(it.item.sectionName && it.item.sectionName !== items[idx - 1]?.item.sectionName);
-            const isForceColumn = isTwoColumn && effectiveColumnBreaks.includes(qId);
             return (
               <Fragment key={it.item.id}>
                 {isSectionStart && (
@@ -647,7 +668,7 @@ export function BundlePrintView({
                     : (text ?? "-");
                 return (
                   <li key={it.item.id} className="flex gap-2 tabular-nums">
-                    <span className="w-6 text-right font-medium">{i + 1}.</span>
+                    <span className="w-6 text-right font-medium">{labelOf(it, i + 1)}</span>
                     <span>{shown}</span>
                   </li>
                 );
@@ -667,7 +688,7 @@ export function BundlePrintView({
                 return (
                   <li key={it.item.id} className="print-question flex gap-2 break-inside-avoid">
                     <span className="w-6 shrink-0 text-right font-medium tabular-nums">
-                      {i + 1}.
+                      {labelOf(it, i + 1)}
                     </span>
                     <div className="min-w-0 flex-1">
                       <MathContent content={explanation} />
@@ -689,7 +710,7 @@ export function BundlePrintView({
                 {questionItems.map((it, i) => (
                   <tr key={it.item.id} className="border-b">
                     <td className="w-10 border px-2 py-1.5 text-right font-medium tabular-nums">
-                      {i + 1}
+                      {labelOf(it, i + 1)}
                     </td>
                     <td className="border px-2 py-1.5">&nbsp;</td>
                   </tr>

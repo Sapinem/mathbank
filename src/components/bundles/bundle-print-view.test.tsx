@@ -154,10 +154,11 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
 
   it("Axiom R5: butir soal pertama ditandai data-first-item='true' untuk relaksasi pemotongan kolom", () => {
     render(<BundlePrintView />);
-    const firstItem = document.querySelector('[data-first-item="true"]');
-    expect(firstItem).not.toBeNull();
-    // Butir pertama bernomor 1
-    expect(firstItem?.textContent).toContain("1.");
+    const firstItems = document.querySelectorAll('[data-first-item="true"]');
+    expect(firstItems.length).toBeGreaterThanOrEqual(1);
+    // Stimulus pembuka di slot 0 maupun soal pertama bernomor 1 menerima relaksasi
+    expect(firstItems[0]?.textContent).toContain("Bacalah teks berikut.");
+    expect(firstItems[1]?.textContent).toContain("1.");
   });
 
   it("default kunci TERSEMBUNYI (peran tak boleh lihat pun oke)", () => {
@@ -406,6 +407,15 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
     expect(document.querySelector("ol.print-columns")).not.toBeNull();
   });
 
+  it("merender judul bagian (section header) meskipun butir pembuka bagian adalah stimulus", () => {
+    const b = bundle();
+    b.items[0]!.item.sectionName = "Bagian I: Literasi";
+    b.items[1]!.item.sectionName = "Bagian I: Literasi";
+    useBundleMock.mockReturnValue({ data: b, isPending: false, isError: false });
+    render(<BundlePrintView />);
+    expect(screen.getByText("Bagian I: Literasi")).toBeInTheDocument();
+  });
+
   it("tombol toggle Pas Layar mengubah kelas worksheet-fit-screen", () => {
     render(<BundlePrintView />);
     const toggleBtn = screen.getByRole("button", { name: /Pas Layar/i });
@@ -576,7 +586,9 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
     });
 
     render(<BundlePrintView />);
-    expect(screen.getByText("1a.")).toBeInTheDocument();
+    // Nomor kustom harus muncul di SEMUA daftar cetak (naskah, kunci,
+    // lembar jawaban) — bukan hanya di badan soal.
+    expect(screen.getAllByText("1a.").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Bagian A - Pilihan Ganda")).toBeInTheDocument();
   });
 });

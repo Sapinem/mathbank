@@ -15,7 +15,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
-import type { ColumnMode, KeyMode, ExplanationMode } from "../bundle-print-view";
+import type { ColumnMode, KeyMode, ExplanationMode } from "./types";
 
 export interface BundlePrintSettingsDrawerProps {
   open: boolean;
