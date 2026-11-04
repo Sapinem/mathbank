@@ -244,6 +244,7 @@ describe("getQuestion & listQuestions", () => {
   it("listQuestions dengan filter status mempertahankan stats global (dual-count branch)", async () => {
     await createQuestion(baseInput({ contentMarkdown: "Soal Draft 1" }), teacher);
     await createQuestion(baseInput({ contentMarkdown: "Soal Draft 2" }), teacher);
+    await createQuestion(baseInput({ contentMarkdown: "Soal Review 1", status: "review" }), teacher);
     const resFiltered = await listQuestions({
       status: "draft",
       includeDeleted: false,
@@ -253,8 +254,9 @@ describe("getQuestion & listQuestions", () => {
     });
     expect(resFiltered.total).toBe(2);
     expect(resFiltered.stats).toBeDefined();
-    expect(resFiltered.stats?.total).toBe(2);
+    expect(resFiltered.stats?.total).toBe(3);
     expect(resFiltered.stats?.draft).toBe(2);
+    expect(resFiltered.stats?.review).toBe(1);
   });
 });
 

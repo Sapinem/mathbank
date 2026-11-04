@@ -40,6 +40,7 @@ export const POST = wrapRoute({
   params: paramsSchema,
   body: postSchema,
   ifMatch: true,
+  etagFrom: (res: { bundleVersion?: number }) => res.bundleVersion,
   handler: async ({ params, body, actor, expectedVersion }) =>
     addItem(
       params.id,

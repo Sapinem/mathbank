@@ -231,13 +231,19 @@ export function useAddBundleItem(bundleId: string, defaultVersion?: number | "*"
   return useMutation({
     mutationFn: (input: { questionId: string; role?: "question" | "stimulus"; version?: number | "*" }) => {
       const { version, ...body } = input;
-      return api<unknown>(`/api/bundles/${bundleId}/items`, {
+      return api<{ id: string; bundleVersion?: number }>(`/api/bundles/${bundleId}/items`, {
         method: "POST",
         body: JSON.stringify(body),
         ifMatch: version ?? defaultVersion ?? "*",
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.bundleVersion) {
+        qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(bundleId), (old) => {
+          if (!old) return old;
+          return { ...old, version: data.bundleVersion! };
+        });
+      }
       qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
       qc.invalidateQueries({ queryKey: bundleKeys.all });
     },
@@ -294,12 +300,23 @@ export function useUpdateBundleItemSlot(bundleId: string, defaultVersion?: numbe
       });
     },
     onSuccess: (data) => {
-      if (data?.bundleVersion) {
-        qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(bundleId), (old) => {
-          if (!old) return old;
-          return { ...old, version: data.bundleVersion! };
+      qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(bundleId), (old) => {
+        if (!old) return old;
+        const newVersion = data?.bundleVersion ?? old.version;
+        const updatedItems = old.items.map((it) => {
+          if (it.item.id === data?.id) {
+            return {
+              ...it,
+              item: {
+                ...it.item,
+                ...data,
+              },
+            };
+          }
+          return it;
         });
-      }
+        return { ...old, version: newVersion, items: updatedItems };
+      });
       qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
       qc.invalidateQueries({ queryKey: bundleKeys.all });
     },

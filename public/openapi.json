@@ -4309,6 +4309,15 @@
         "responses": {
           "200": {
             "description": "Sukses.",
+            "headers": {
+              "ETag": {
+                "description": "Versi baris saat ini — kirim balik sebagai If-Match saat menyunting.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^\"\\d+\"$"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -4683,6 +4692,7 @@
           "enforcedIn": "src/lib/services/bundle-shared.ts:assertBundleWrite",
           "routeGate": "question:view",
           "ifMatch": true,
+          "etag": true,
           "source": "src/app/api (wrapRoute)"
         }
       },

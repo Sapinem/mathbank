@@ -92,6 +92,30 @@ describe("SlotInspectorDrawer", () => {
       },
       expect.any(Object),
     );
+
+    // Verifikasi callback onSuccess menutup drawer
+    const callbacks = mutateMock.mock.calls[0][1];
+    callbacks.onSuccess();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("menjalankan onError callback saat mutasi gagal", () => {
+    render(
+      <SlotInspectorDrawer
+        open={true}
+        onOpenChange={vi.fn()}
+        bundleId="b-456"
+        bundleVersion={1}
+        slotItem={mockSlotItem}
+        slotOrdinal={1}
+      />,
+    );
+
+    const saveButton = screen.getByRole("button", { name: /Simpan Perubahan/i });
+    fireEvent.click(saveButton);
+
+    const callbacks = mutateMock.mock.calls[0][1];
+    expect(() => callbacks.onError(new Error("Gagal menyimpan"))).not.toThrow();
   });
 
   it("mengirim null untuk field teks yang dikosongkan", () => {

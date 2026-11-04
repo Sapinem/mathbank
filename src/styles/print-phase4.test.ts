@@ -111,4 +111,10 @@ describe("print.css - Fase 4 (A4: tidak meluber)", () => {
     expect(css).toMatch(/\.worksheet-watermark-container\s*\{[^}]*bottom:\s*0/);
     expect(css).toMatch(/\.worksheet-watermark-container\s*\{[^}]*width:\s*90%/);
   });
+
+  it("penomoran halaman dinamis pada footer cetak didefinisikan dengan counter(page)", () => {
+    const css = printCss();
+    expect(css).toContain(".print-page-counter::after");
+    expect(css).toContain("content: counter(page)");
+  });
 });

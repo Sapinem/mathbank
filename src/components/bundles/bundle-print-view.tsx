@@ -249,7 +249,7 @@ export function BundlePrintView({
       )}
 
       {/* ── Bilah Atas Sticky (no-print) ────────────────────────── */}
-      <div className="no-print sticky top-0 z-30 flex items-center justify-between gap-2 sm:gap-3 border-b bg-background/95 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur shadow-xs">
+      <div className="no-print sticky top-0 z-10 flex items-center justify-between gap-2 sm:gap-3 border-b bg-background/95 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur shadow-xs">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Button
             variant="outline"

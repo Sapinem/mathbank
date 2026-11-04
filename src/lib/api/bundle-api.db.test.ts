@@ -235,10 +235,35 @@ describe("Alur API paket (L4)", () => {
     );
     expect(res.status).toBe(200);
     const body = await res.json();
+    expect(res.headers.get("etag")).toBe(`"${body.data.bundleVersion}"`);
     expect(body.data.itemNumber).toBe("No. 1");
     expect(body.data.role).toBe("stimulus");
     expect(body.data.sectionName).toBe("Bagian Esai");
     expect(body.data.notes).toBe("Catatan guru");
+
+    // Tanpa header If-Match -> 428 Precondition Required
+    const reqWithoutIfMatch = new Request(
+      `http://localhost:3000/api/bundles/${b.id}/items/${item.id}`,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ itemNumber: "No. 2" }),
+      },
+    );
+    const resNoIfMatch = await itemPATCH(reqWithoutIfMatch, itemCtx(b.id, item.id));
+    expect(resNoIfMatch.status).toBe(428);
+
+    // Stale If-Match -> 412 Precondition Failed
+    const resStale = await itemPATCH(
+      req(
+        "PATCH",
+        `/api/bundles/${b.id}/items/${item.id}`,
+        { itemNumber: "No. 2" },
+        { "if-match": '"9999"' },
+      ),
+      itemCtx(b.id, item.id),
+    );
+    expect(resStale.status).toBe(412);
   });
 });
 

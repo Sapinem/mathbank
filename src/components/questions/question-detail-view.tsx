@@ -658,7 +658,7 @@ function QuestionSourcesCard({
                         onClick={() => setIndex(i)}
                         aria-label={`Pindah ke naskah ${i + 1}`}
                         className={cn(
-                          "h-1.5 rounded-full transition-all",
+                          "relative h-1.5 rounded-full transition-all after:absolute after:-inset-3.5 after:content-['']",
                           i === safeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",
                         )}
                       />

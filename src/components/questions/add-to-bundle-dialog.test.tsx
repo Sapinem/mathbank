@@ -64,6 +64,40 @@ describe("AddToBundleDialog", () => {
     expect(mutateMock).not.toHaveBeenCalled();
   });
 
+  it("mengirim mutasi saat paket dipilih dan submit diklik", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <AddToBundleDialog
+        open={true}
+        onOpenChange={onOpenChange}
+        questionId="q-100"
+        initialBundleId="b-1"
+      />,
+    );
+
+    const submitBtn = screen.getByRole("button", { name: /Tambahkan ke Paket/i });
+    expect(submitBtn).toBeEnabled();
+    fireEvent.click(submitBtn);
+
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    expect(mutateMock).toHaveBeenCalledWith(
+      {
+        questionId: "q-100",
+        role: "question",
+      },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      }),
+    );
+
+    // Verifikasi callback onSuccess menutup modal dan menginvalidasi query
+    const callbacks = mutateMock.mock.calls[0][1];
+    callbacks.onSuccess();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(invalidateQueriesMock).toHaveBeenCalledTimes(1);
+  });
+
   it("menutup dialog saat tombol Batal diklik", () => {
     const onOpenChange = vi.fn();
     render(

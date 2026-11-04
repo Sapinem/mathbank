@@ -546,6 +546,8 @@
   .print-header,
   .print-instruction,
   .print-item,
+  .print-stimulus,
+  .print-section-header,
   .print-sheet-answerkey,
   .print-sheet-explanation,
   .print-sheet-answers {

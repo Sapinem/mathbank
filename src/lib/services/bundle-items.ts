@@ -35,7 +35,7 @@ export async function addItem(
   opts: { role?: BundleItemRole; sectionName?: string | null } = {},
   /** Versi paket yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
   expectedVersion?: number | "*",
-): Promise<BundleItemRow> {
+): Promise<BundleItemRow & { bundleVersion: number }> {
   const bundle = await getBundle(bundleId);
   if (!bundle) throw new NotFoundError("Paket tidak ditemukan.");
   assertBundleWrite(bundle, actor);
@@ -69,7 +69,7 @@ export async function addItem(
       .update(bundles)
       .set({ updatedAt: new Date() })
       .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
-      .returning({ id: bundles.id });
+      .returning({ id: bundles.id, version: bundles.version });
     if (touched.length === 0) {
       await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
     }
@@ -91,7 +91,10 @@ export async function addItem(
             sectionName: opts.sectionName ?? null,
           })
           .returning();
-        return inserted!;
+        return {
+          ...inserted!,
+          bundleVersion: touched[0]!.version,
+        };
       },
       "Soal sudah ada di paket ini.",
     );

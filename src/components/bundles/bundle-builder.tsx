@@ -121,7 +121,7 @@ function SortableRow({
           disabled={index === 0}
           aria-label={`Naikkan soal nomor ${nomor}`}
           title="Naikkan satu nomor"
-          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25"
+          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25 relative after:absolute after:-inset-2.5 after:content-['']"
         >
           <ChevronUp className="size-3.5" />
         </button>
@@ -131,7 +131,7 @@ function SortableRow({
           disabled={index === totalItems - 1}
           aria-label={`Turunkan soal nomor ${nomor}`}
           title="Turunkan satu nomor"
-          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25"
+          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25 relative after:absolute after:-inset-2.5 after:content-['']"
         >
           <ChevronDown className="size-3.5" />
         </button>

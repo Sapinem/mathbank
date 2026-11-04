@@ -175,7 +175,7 @@ export function BundleDetailView() {
                       aria-pressed={viewMode === "document"}
                       title="Mode Naskah (artikel mengalir)"
                       className={cn(
-                        "flex min-h-[32px] sm:min-h-[28px] items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                        "flex min-h-[44px] sm:min-h-[32px] items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
                         viewMode === "document"
                           ? "bg-background text-foreground shadow-2xs font-semibold"
                           : "text-muted-foreground hover:text-foreground",
@@ -190,7 +190,7 @@ export function BundleDetailView() {
                       aria-pressed={viewMode === "cards"}
                       title="Mode Kartu (blok terpisah)"
                       className={cn(
-                        "flex min-h-[32px] sm:min-h-[28px] items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                        "flex min-h-[44px] sm:min-h-[32px] items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
                         viewMode === "cards"
                           ? "bg-background text-foreground shadow-2xs font-semibold"
                           : "text-muted-foreground hover:text-foreground",
@@ -478,7 +478,7 @@ export function BundleDetailView() {
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tata Letak Naskah</span>
                   <span className="font-mono text-foreground">
-                    {bundle.printConfig?.twoColumnLayout ? "2 Kolom" : "1 Kolom"}
+                    {bundle.printConfig?.twoColumnLayout !== false ? "2 Kolom" : "1 Kolom"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">

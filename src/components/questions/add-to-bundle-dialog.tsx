@@ -28,17 +28,19 @@ interface AddToBundleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   questionId: string;
+  initialBundleId?: string;
 }
 
 export function AddToBundleDialog({
   open,
   onOpenChange,
   questionId,
+  initialBundleId = "",
 }: AddToBundleDialogProps) {
   const qc = useQueryClient();
   const { data: bundles = [], isPending: bundlesLoading } = useBundles({ status: "active", limit: 100 });
 
-  const [selectedBundleId, setSelectedBundleId] = useState("");
+  const [selectedBundleId, setSelectedBundleId] = useState(initialBundleId);
   const [role, setRole] = useState<"question" | "stimulus">("question");
 
   const selectedBundle = bundles.find((b) => b.id === selectedBundleId);
