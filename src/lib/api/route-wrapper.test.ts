@@ -324,6 +324,25 @@ describe("wrapRoute — rate limiting", () => {
     resolveActorMock.mockResolvedValue({ ...adminActor(), id: "u2" });
     expect((await handler(req())).status).toBe(200); // bucket u2 masih penuh
   });
+
+  it("presedensi lingkup rate-limit untuk rute kind 'service' menggunakan enforcedIn", async () => {
+    resolveActorMock.mockResolvedValue(adminActor());
+    const handlerService = wrapRoute({
+      authz: { kind: "service", enforcedIn: "test-service:bundle-write", routeGate: "question:view" },
+      rateLimit: { capacity: 1, refillPerSec: 1 },
+      handler: async () => ({ ok: true }),
+    });
+    const handlerRoute = wrapRoute({
+      authz: { kind: "route", permission: "question:view" },
+      rateLimit: { capacity: 1, refillPerSec: 1 },
+      handler: async () => ({ ok: true }),
+    });
+    // Request ke handlerService menghabiskan kuotanya
+    expect((await handlerService(req("http://localhost:3000/api/bundles/1/items"))).status).toBe(200);
+    expect((await handlerService(req("http://localhost:3000/api/bundles/1/items"))).status).toBe(429);
+    // Request ke handlerRoute tidak terpengaruh karena lingkup rate-limit terpisah
+    expect((await handlerRoute(req("http://localhost:3000/api/bundles/1/items"))).status).toBe(200);
+  });
 });
 
 describe("ok() — respons sukses manual", () => {

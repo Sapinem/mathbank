@@ -258,6 +258,23 @@ describe("getQuestion & listQuestions", () => {
     expect(resFiltered.stats?.draft).toBe(2);
     expect(resFiltered.stats?.review).toBe(1);
   });
+
+  it("listQuestions dengan filter flagged mempertahankan stats global (dual-count branch)", async () => {
+    await createQuestion(baseInput({ contentMarkdown: "Soal Flagged 1", isFlagged: true }), teacher);
+    await createQuestion(baseInput({ contentMarkdown: "Soal Normal 1", isFlagged: false }), teacher);
+    const res = await listQuestions({
+      flagged: true,
+      includeDeleted: false,
+      mode: "text",
+      limit: 10,
+      offset: 0,
+    });
+    expect(res.total).toBe(1);
+    expect(res.items[0]!.contentMarkdown).toBe("Soal Flagged 1");
+    expect(res.stats).toBeDefined();
+    expect(res.stats?.total).toBe(2);
+    expect(res.stats?.flagged).toBe(1);
+  });
 });
 
 describe("updateQuestion", () => {

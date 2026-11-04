@@ -106,6 +106,16 @@ describe("BundleListView — URL-driven state & Workbench Pagination", () => {
     expect(replace).toHaveBeenCalledWith(expect.stringContaining("mode=list"), { scroll: false });
   });
 
+  it("merender tampilan tabel saat parameter mode bernilai list", () => {
+    currentSearch = "mode=list";
+    render(<BundleListView />);
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.getByText("Judul Naskah")).toBeInTheDocument();
+    expect(screen.getByText("Penilaian Akhir Semester 1")).toBeInTheDocument();
+    expect(screen.getByText("Status")).toBeInTheDocument();
+    expect(screen.getByText("Aksi")).toBeInTheDocument();
+  });
+
   it("mendebounce pencarian judul dan memperbarui URL setelah jeda ketik 300ms", () => {
     render(<BundleListView />);
     const searchInput = screen.getByPlaceholderText("Cari judul naskah/tahun…");
