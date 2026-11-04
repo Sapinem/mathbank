@@ -45,6 +45,7 @@ export const PATCH = wrapRoute({
   params: paramsSchema,
   body: updateBundleSchema,
   ifMatch: true,
+  etagFrom: (b: { version: number }) => b.version,
   handler: async ({ params, body, actor, expectedVersion }) =>
     updateBundle(params.id, body, actor, expectedVersion),
 });

@@ -106,7 +106,7 @@ export function BundlePrintView({
   const params = useParams<{ id: string }>();
   const bundleId = params.id;
   const { data: bundle, isPending, isError, error } = useBundle(bundleId);
-  const updateBundle = useUpdateBundle(bundleId);
+  const updateBundle = useUpdateBundle(bundleId, bundle?.version);
   const [isSaving, setIsSaving] = useState(false);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(initialSettingsOpen ?? false);

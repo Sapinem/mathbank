@@ -62,8 +62,9 @@ export const PUT = wrapRoute({
   params: paramsSchema,
   body: putSchema,
   ifMatch: true,
+  etagFrom: (res: { bundleVersion?: number }) => res.bundleVersion,
   handler: async ({ params, body, actor, expectedVersion }) => {
-    await reorderItems(params.id, body.itemIds, actor, expectedVersion);
-    return { ok: true };
+    const res = await reorderItems(params.id, body.itemIds, actor, expectedVersion);
+    return { ok: true, bundleVersion: res.bundleVersion };
   },
 });

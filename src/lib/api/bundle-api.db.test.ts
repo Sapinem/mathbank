@@ -27,7 +27,7 @@ const { GET: oneGET, PATCH: onePATCH, DELETE: oneDELETE } = await import(
 const { POST: itemsPOST, PUT: itemsPUT } = await import(
   "@/app/api/bundles/[id]/items/route"
 );
-const { PATCH: itemPATCH } = await import(
+const { PATCH: itemPATCH, DELETE: itemDELETE } = await import(
   "@/app/api/bundles/[id]/items/[itemId]/route"
 );
 const { GET: validateGET } = await import("@/app/api/bundles/[id]/validate/route");
@@ -202,8 +202,23 @@ describe("Alur API paket (L4)", () => {
       ctx(b.id),
     );
     expect(res.status).toBe(200);
+    const putJson = await res.json();
+    expect(res.headers.get("etag")).toBe(`"${putJson.data.bundleVersion}"`);
+    expect(putJson.data.bundleVersion).toBeGreaterThan(0);
     const detail = (await (await oneGET(req("GET", `/api/bundles/${b.id}`), ctx(b.id))).json()).data;
     expect(detail.items.map((i: { item: { id: string } }) => i.item.id)).toEqual([i2.id, i1.id]);
+
+    // Uji DELETE /api/bundles/[id]/items/[itemId] mengembalikan bundleVersion dan memancarkan ETag
+    const delRes = await itemDELETE(
+      req("DELETE", `/api/bundles/${b.id}/items/${i2.id}`, undefined, {
+        "if-match": `"${await versionNow()}"`,
+      }),
+      itemCtx(b.id, i2.id),
+    );
+    expect(delRes.status).toBe(200);
+    const delJson = await delRes.json();
+    expect(delRes.headers.get("etag")).toBe(`"${delJson.data.bundleVersion}"`);
+    expect(delJson.data.ok).toBe(true);
   });
 
   it("PATCH slot item mengubah metadata", async () => {

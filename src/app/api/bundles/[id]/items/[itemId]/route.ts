@@ -18,6 +18,7 @@ export const PATCH = wrapRoute({
     routeGate: "question:view",
   },
   params: paramsSchema,
+  query: emptyQuerySchema,
   body: updateBundleItemSlotSchema,
   ifMatch: true,
   etagFrom: (res: { bundleVersion?: number }) => res.bundleVersion,
@@ -44,8 +45,9 @@ export const DELETE = wrapRoute({
   params: paramsSchema,
   query: emptyQuerySchema,
   ifMatch: true,
+  etagFrom: (res: { bundleVersion?: number }) => res.bundleVersion,
   handler: async ({ params, actor, expectedVersion }) => {
-    await removeItem(params.id, params.itemId, actor, expectedVersion);
-    return { ok: true };
+    const res = await removeItem(params.id, params.itemId, actor, expectedVersion);
+    return { ok: true, bundleVersion: res.bundleVersion };
   },
 });

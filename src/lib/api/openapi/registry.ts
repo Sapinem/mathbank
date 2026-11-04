@@ -60,6 +60,10 @@ export interface ManualOperationDoc {
 const iso = z.string().describe("Timestamp ISO-8601 (UTC).");
 const uuid = z.string().uuid();
 const okSchema = z.object({ ok: z.literal(true) });
+const okWithBundleVersionSchema = z.object({
+  ok: z.literal(true),
+  bundleVersion: z.number().int().optional(),
+});
 
 export const questionStatusSchema = z.enum(["draft", "review", "ready", "archived"]);
 
@@ -140,6 +144,7 @@ const bundleItemSchema = z.looseObject({
   sectionName: z.string().nullable(),
   itemNumber: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  bundleVersion: z.number().int().optional(),
 });
 
 /** Item paket + soal tertanam (proyeksi `listBundleItems`). */
@@ -401,7 +406,7 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
   "PUT /api/bundles/[id]/items": {
     summary: "Susun ulang urutan item (atomik)",
     tags: ["bundles"],
-    response: okSchema,
+    response: okWithBundleVersionSchema,
   },
   "PATCH /api/bundles/[id]/items/[itemId]": {
     summary: "Perbarui metadata slot item paket (nomor, peran, seksi, catatan)",
@@ -411,7 +416,7 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
   "DELETE /api/bundles/[id]/items/[itemId]": {
     summary: "Lepas soal dari paket",
     tags: ["bundles"],
-    response: okSchema,
+    response: okWithBundleVersionSchema,
   },
   "POST /api/bundles/[id]/duplicate": {
     summary: "Duplikasi paket",
