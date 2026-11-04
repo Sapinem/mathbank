@@ -1,6 +1,5 @@
 allowBuilds:
   esbuild: true
-  sharp: false
   unrs-resolver: false
 # M13 S8: buang paket deprecated `@esbuild-kit/esm-loader` (membawa esbuild@0.18.20
 # yang rentan, GHSA-67mh-4wv8-2f99). Drizzle-kit sendiri sudah memakai `tsx`;
