@@ -5932,16 +5932,8 @@
                       "institutionLogoUrl": {
                         "anyOf": [
                           {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uri"
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^\\/[^\\s]*$"
-                              }
-                            ]
+                            "type": "string",
+                            "pattern": "^(?:https?:\\/\\/|\\/(?!\\/))[^\\s]*$"
                           },
                           {
                             "type": "string",
@@ -7861,16 +7853,8 @@
                       "institutionLogoUrl": {
                         "anyOf": [
                           {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "format": "uri"
-                              },
-                              {
-                                "type": "string",
-                                "pattern": "^\\/[^\\s]*$"
-                              }
-                            ]
+                            "type": "string",
+                            "pattern": "^(?:https?:\\/\\/|\\/(?!\\/))[^\\s]*$"
                           },
                           {
                             "type": "string",
