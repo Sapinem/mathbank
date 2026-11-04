@@ -22,6 +22,8 @@
     "db:push": "node scripts/db-push-gate.mjs && tsx scripts/db-ensure-extensions.ts && drizzle-kit push && pnpm db:safety && pnpm db:verify",
     "db:studio": "drizzle-kit studio",
     "db:verify": "tsx scripts/db-verify.ts",
+    "db:backfill:grades": "tsx scripts/backfill-denormalize-grades.ts",
+    "db:backfill:hash": "tsx scripts/backfill-content-hash.ts",
     "metrics:snapshot": "tsx scripts/snapshot-metrics.ts",
     "theme:build": "tsx scripts/theme/build.ts",
     "theme:check": "tsx scripts/theme/check.ts",
