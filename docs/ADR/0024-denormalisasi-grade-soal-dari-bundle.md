@@ -38,13 +38,33 @@
    - Pertahankan `questions.grade` sebagai kolom nullable yang menyimpan jenjang primer/pertama demi kompatibilitas ke belakang.
 4. **Trigger Otomatis di Database:**
    - Pasang trigger `trg_bundle_items_sync_grades` pada `bundle_items` (AFTER INSERT, DELETE, UPDATE).
-   - Pasang trigger `trg_bundles_sync_grades` pada `bundles` (AFTER UPDATE OF grade, deleted_at).
+   - Pasang trigger `trg_bundles_sync_grades` pada `bundles` (AFTER UPDATE OF grade, deleted_at, status — `status` masuk sejak ADR-0025 agar paket yang diarsip tidak lagi menyumbang jenjang).
    - Trigger secara otomatis menghitung ulang array `grades` dan nilai `grade` pada butir soal setiap kali terjadi penambahan/penghapusan keanggotaan naskah atau perubahan jenjang naskah.
 5. **Kueri Filter Menggunakan Operator Array Overlap (`&&`):**
    - Filter `grade` di `filters-builder.ts` mencocokkan jenjang yang dicari terhadap array `questions.grades`.
    - Soal yang muncul di Kelas 8 dan Kelas 11 otomatis ditemukan oleh guru yang menyaring Kelas 8 maupun guru yang menyaring Kelas 11.
 
 ---
+
+## Pemilik Data (diklarifikasi 2026-11-06)
+
+Pertanyaan yang muncul saat audit: siapa yang berwenang menulis
+`questions.grades` — service atau trigger? Jawabannya **trigger**, dan service
+hanya menulis sekali di awal:
+
+| Jalur | Menulis `grades`? | Kapan |
+|---|---|---|
+| `createQuestion` (`question-write.ts:117`) | ya | saat baris dibuat, dari input guru |
+| `updateQuestion` / bulk / seed | **tidak** | — |
+| `sync_question_grades()` | ya | setiap keanggotaan naskah atau jenjang naskah berubah |
+
+Nilai dari `createQuestion` memang bisa berbeda dari hasil turunan naskah;
+itu disengaja — selama soal belum masuk naskah mana pun, belum ada sumber
+kebenaran lain. Begitu masuk, trigger menimpanya.
+
+**Bukti tanpa drift (2026-11-06):** dari 11.868 soal aktif, 0 baris yang
+`grades`-nya berbeda dari irisan jenjang naskah aktif, dan 0 baris yang
+`grade` skalar-nya berbeda dari elemen pertama array tersebut.
 
 ## Konsekuensi
 
