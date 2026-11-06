@@ -52,8 +52,15 @@ export async function runPruneOnce(now: number = Date.now()): Promise<void> {
     s.lastRunAt = now;
     s.lastError = null;
   } catch (err) {
-    // Best-effort: catat sekali, jangan pernah melempar ke pemanggil.
+    // Best-effort: jangan pernah melempar ke pemanggil, TAPI jangan diam.
+    // Tanpa log, kegagalan prune hanya terlihat sebagai tabel TTL yang tumbuh.
     s.lastError = err instanceof Error ? err.message : String(err);
+    const { log } = await import("@/lib/telemetry/logger");
+    log.error({
+      msg: "prune TTL gagal — tabel idempotency/rate-limit bisa tumbuh",
+      code: "TELEMETRY_PRUNE_FAILED",
+      err,
+    });
   }
 }
 
