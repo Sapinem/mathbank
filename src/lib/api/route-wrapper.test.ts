@@ -324,6 +324,25 @@ describe("wrapRoute — rate limiting", () => {
     resolveActorMock.mockResolvedValue({ ...adminActor(), id: "u2" });
     expect((await handler(req())).status).toBe(200); // bucket u2 masih penuh
   });
+
+  it("presedensi lingkup rate-limit untuk rute kind 'service' menggunakan enforcedIn", async () => {
+    resolveActorMock.mockResolvedValue(adminActor());
+    const handlerService = wrapRoute({
+      authz: { kind: "service", enforcedIn: "test-service:bundle-write", routeGate: "question:view" },
+      rateLimit: { capacity: 1, refillPerSec: 1 },
+      handler: async () => ({ ok: true }),
+    });
+    const handlerRoute = wrapRoute({
+      authz: { kind: "route", permission: "question:view" },
+      rateLimit: { capacity: 1, refillPerSec: 1 },
+      handler: async () => ({ ok: true }),
+    });
+    // Request ke handlerService menghabiskan kuotanya
+    expect((await handlerService(req("http://localhost:3000/api/bundles/1/items"))).status).toBe(200);
+    expect((await handlerService(req("http://localhost:3000/api/bundles/1/items"))).status).toBe(429);
+    // Request ke handlerRoute tidak terpengaruh karena lingkup rate-limit terpisah
+    expect((await handlerRoute(req("http://localhost:3000/api/bundles/1/items"))).status).toBe(200);
+  });
 });
 
 describe("ok() — respons sukses manual", () => {
@@ -371,7 +390,24 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
     const r2 = await handler(req("http://localhost/api/x", { headers: h }));
     expect(calls).toBe(1); // handler hanya sekali
     expect(r2.headers.get("idempotent-replay")).toBe("true");
+    expect(r2.headers.get("idempotency-key")).toBe("k-1");
     expect(await r1.json()).toEqual(await r2.json());
+  });
+
+  it("replay menyertakan header ETag dan Idempotency-Key", async () => {
+    const handler = wrapRoute({
+      authz: { kind: "authenticated" },
+      idempotent: true,
+      etagFrom: (data: { version: number }) => data.version,
+      handler: async () => ({ version: 4 }),
+    });
+    const h = { "idempotency-key": "k-etag" };
+    const r1 = await handler(req("http://localhost/api/x", { headers: h }));
+    expect(r1.headers.get("etag")).toBe('"4"');
+    const r2 = await handler(req("http://localhost/api/x", { headers: h }));
+    expect(r2.headers.get("idempotent-replay")).toBe("true");
+    expect(r2.headers.get("idempotency-key")).toBe("k-etag");
+    expect(r2.headers.get("etag")).toBe('"4"');
   });
 
   it("key berbeda → handler jalan lagi", async () => {
@@ -422,6 +458,35 @@ describe("#4 — Idempotency-Key (anti double-submit)", () => {
     expect(second.headers.get("idempotent-replay")).toBe("true");
     expect(await first.json()).toEqual(await second.json());
     expect(calls).toBe(1);
+  });
+
+  it("ADR-0028: key sama pada alias /api/v1/* dan rute kanonikal /api/* menghasilkan replay yang sama", async () => {
+    let calls = 0;
+    const handler = wrapRoute({
+      authz: { kind: "authenticated" },
+      idempotent: true,
+      body: z.object({ n: z.number() }),
+      handler: async ({ body }) => ({ n: body.n, calls: ++calls }),
+    });
+    const headers = { "idempotency-key": "k-alias", "content-type": "application/json" };
+    const body = JSON.stringify({ n: 42 });
+
+    // Permintaan pertama pada alias /api/v1/ingest/upload
+    const first = await handler(
+      req("http://localhost/api/v1/ingest/upload", { method: "POST", headers, body }),
+    );
+    expect(first.status).toBe(200);
+    expect(calls).toBe(1);
+
+    // Retry pada rute kanonikal /api/ingest/upload dengan key dan payload sama
+    const second = await handler(
+      req("http://localhost/api/ingest/upload", { method: "POST", headers, body }),
+    );
+    expect(second.status).toBe(200);
+    expect(second.headers.get("idempotent-replay")).toBe("true");
+    expect(second.headers.get("idempotency-key")).toBe("k-alias");
+    expect(calls).toBe(1); // handler tidak dipanggil ulang
+    expect(await first.json()).toEqual(await second.json());
   });
 
   it("tanpa header key → tak ada efek samping idempotensi", async () => {

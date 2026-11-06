@@ -36,6 +36,7 @@ vi.mock("@/lib/hooks/use-questions", () => ({
 }));
 vi.mock("@/lib/hooks/use-reference", () => ({
   useTopics: () => ({ data: [] }),
+  useTags: () => ({ data: [] }),
   useSources: () => ({ data: [] }),
   useGrades: () => ({ data: [] }),
 }));

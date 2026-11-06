@@ -25,111 +25,14 @@ import {
   STATUS_LABELS,
   TYPE_LABELS,
 } from "@/lib/display/labels";
+import { StatusIcon } from "@/components/questions/question-status-badge";
 import { CognitiveBadge, DifficultyBadge } from "@/components/questions/rubric-badge";
 import { StimulusCard } from "@/components/questions/stimulus-card";
 import type { ViewMode } from "@/components/questions/view-mode-toggle";
 import type { PublicQuestion } from "@/lib/services/question-service";
+import { excerpt, stripImages, flattenMathForList } from "@/lib/math/excerpt";
 
-/**
- * Kutipan singkat konten yang aman terhadap rumus KaTeX/LaTeX.
- * Tidak akan pernah memotong di tengah delimiter \(...\), \[...\], $...$, atau $$...$$.
- */
-export function excerpt(md: string, max = 140): string {
-  const clean = md.replace(/[#*`]/g, "").replace(/\r?\n+/g, " ").trim();
-  if (clean.length <= max) return clean;
-
-  const mathRegex = /(\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$|\\\([\s\S]*?\\\)|\$[^$\n]+\$)/g;
-  let result = "";
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = mathRegex.exec(clean)) !== null) {
-    const textBefore = clean.slice(lastIndex, match.index);
-    if (textBefore) {
-      if (result.length + textBefore.length >= max) {
-        const remaining = max - result.length;
-        result += textBefore.slice(0, Math.max(0, remaining)).trimEnd() + "…";
-        return result;
-      }
-      result += textBefore;
-    }
-
-    const mathToken = match[0];
-    if (result.length + mathToken.length > max) {
-      if (result.length > 0) {
-        return result.trimEnd() + "…";
-      }
-      // Jika soal diawali rumus panjang, sertakan rumus pertama utuh lalu elipsis
-      return mathToken + "…";
-    }
-
-    result += mathToken;
-    lastIndex = mathRegex.lastIndex;
-  }
-
-  const remainingText = clean.slice(lastIndex);
-  if (remainingText) {
-    if (result.length + remainingText.length > max) {
-      const remaining = max - result.length;
-      result += remainingText.slice(0, Math.max(0, remaining)).trimEnd() + "…";
-      return result;
-    }
-    result += remainingText;
-  }
-
-  return result.length > max ? result.slice(0, max) + "…" : result;
-}
-
-/**
- * Ratakan lingkungan rumus multi-baris (matrix, cases, aligned, \\)
- * agar menjadi datar/inline pada baris ikhtisar mode list.
- */
-export function flattenMathForList(text: string): string {
-  return text
-    .replace(/\\begin\{(?:matrix|pmatrix|bmatrix|cases|aligned|array)\}/g, "")
-    .replace(/\\end\{(?:matrix|pmatrix|bmatrix|cases|aligned|array)\}/g, "")
-    .replace(/\\\\/g, ",\\; ");
-}
-
-/** Format jenjang kelas ringkas: "10", "11W", "11L", "SMP 08", "SD 04", dsb. */
-export function formatGradeBadge(grade: string): string {
-  const g = grade.trim();
-  const lower = g.toLowerCase();
-
-  // SMP (7, 8, 9) -> "07", "08", "09" (hanya angka 2 digit tanpa teks 'SMP')
-  if (lower.startsWith("smp")) {
-    const num = lower.replace("smp", "").replace(/[^0-9]/g, "");
-    return num ? num.padStart(2, "0") : g.toUpperCase();
-  }
-  if (["7", "8", "9"].includes(lower)) {
-    return `0${lower}`;
-  }
-
-  // SD (1 s/d 6) -> "01" s/d "06" (hanya angka 2 digit tanpa teks 'SD')
-  if (lower.startsWith("sd")) {
-    const num = lower.replace("sd", "").replace(/[^0-9]/g, "");
-    return num ? num.padStart(2, "0") : g.toUpperCase();
-  }
-  if (["1", "2", "3", "4", "5", "6"].includes(lower)) {
-    return `0${lower}`;
-  }
-
-  // SMA Wajib / Lanjut
-  if (lower === "11w" || lower === "sma-11w") return "11W";
-  if (lower === "11l" || lower === "sma-11l") return "11L";
-  if (lower === "12w" || lower === "sma-12w") return "12W";
-  if (lower === "12l" || lower === "sma-12l") return "12L";
-
-  // SMA Standar / Ujian
-  if (lower === "10" || lower === "sma-10") return "10";
-  if (lower === "11") return "11";
-  if (lower === "12") return "12";
-  if (lower === "utbk") return "UTBK";
-  if (lower === "mandiri") return "MDR";
-  if (lower === "umum") return "UMUM";
-
-  return g.toUpperCase();
-}
+import { formatGradeBadge } from "@/lib/display/labels";
 
 /** Label jenjang yang terbaca untuk tooltip/aria: angka jadi "Kelas N",
  *  kode lain (11W, UTBK, UMUM, …) memakai awalan "Jenjang". */
@@ -144,12 +47,19 @@ function gradeLabel(grade: string): string {
  *  berisi label jenjang lengkap. */
 export function GradeMarker({
   grade,
+  grades,
   className,
 }: {
-  grade: string;
+  grade?: string | null;
+  grades?: string[] | null;
   className?: string;
 }) {
-  const label = gradeLabel(grade);
+  const rawList = grades?.length ? grades : grade ? [grade] : [];
+  const list = rawList.filter((g) => g && g.toLowerCase() !== "umum");
+  if (list.length === 0) return null;
+
+  const display = list.map(formatGradeBadge).join(" · ");
+  const label = list.map(gradeLabel).join(", ");
   return (
     <Tooltip>
       <TooltipTrigger
@@ -158,12 +68,12 @@ export function GradeMarker({
             type="button"
             aria-label={label}
             className={cn(
-              "inline-flex shrink-0 cursor-help items-center justify-center gap-1 rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground/90 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand",
+              "inline-flex h-6 shrink-0 cursor-help items-center justify-center gap-1 rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-foreground/90 transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand",
               className,
             )}
           >
             <GraduationCap className="size-3.5" aria-hidden="true" />
-            {formatGradeBadge(grade)}
+            {display}
           </button>
         }
       />
@@ -198,7 +108,7 @@ export function QuestionTypeIcon({ type }: { type: string }) {
           <button
             type="button"
             aria-label={label}
-            className="flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border border-border/70 bg-muted/40 text-muted-foreground transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand pointer-coarse:min-h-[44px] pointer-coarse:min-w-[44px]"
+            className="relative flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border border-border/70 bg-muted/40 text-muted-foreground transition-colors hover:border-brand/40 hover:bg-brand/10 hover:text-brand focus-visible:ring-1 focus-visible:ring-brand after:absolute after:-inset-2 after:content-['']"
           >
             <Icon className="size-3.5" />
           </button>
@@ -211,57 +121,77 @@ export function QuestionTypeIcon({ type }: { type: string }) {
   );
 }
 
-/** Indikator status alur soal (Draf/Telaah/Arsip/…) dengan dot semantik.
- *  "Siap" SENGAJA tidak dirender sama sekali: Siap adalah kondisi normal/
- *  default soal, sehingga kartu yang bersih berarti sudah Siap — hanya
- *  status yang butuh tindakan atau perhatian yang tampil sebagai penanda.
- *  `compact` — di mobile mode list, label ringkas agar teks soal mendapat
- *  ruang ≥ 180px pada layar 360px. */
-export function StatusIndicator({
-  status,
-  compact = false,
-}: {
-  status: string;
-  compact?: boolean;
-}) {
-  // Siap = default: tanpa penanda eksplisit (tanpa dot, tanpa teks, tanpa
-  // elemen tersembunyi) di tampilan kartu/baris soal.
-  if (status === "ready") return null;
-
-  const label = STATUS_LABELS[status] ?? status;
-  // Label ringkas untuk mode compact: "Perlu Telaah" (12 karakter) dipersingkat
-  // jadi "Telaah" agar status tetap terbaca di layar sempit tanpa hanya mengandalkan
-  // warna titik. Trade-off: chip ringkas ini ~25–30px lebih lebar daripada titik saja,
-  // sehingga ruang batang di layar 360px berkurang sebesar itu — harga yang dibayar
-  // agar makna status tidak hanya dari warna (WCAG 1.4.1). aria-label tetap label penuh.
-  const shortLabel = STATUS_SHORT_LABELS[status] ?? label;
-  let dotColor = "bg-muted-foreground";
-  if (status === "draft") dotColor = "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]";
-  else if (status === "review") dotColor = "bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.5)]";
-
+/** Indikator penanda bendera (soal ditandai untuk ditinjau) dengan tooltip interaktif dan border konsisten. */
+export function FlagIndicator({ className }: { className?: string }) {
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border tabular-nums",
-        compact ? "px-1.5 py-0.5 text-[11px] font-medium" : "px-2.5 py-0.5 text-[11px] font-medium",
-        status === "draft" && "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-        status === "review" && "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
-        !["draft", "review"].includes(status) && "border-border bg-muted text-muted-foreground",
-      )}
-      aria-label={compact ? label : undefined}
-    >
-      <span className={cn("size-1.5 rounded-full", dotColor)} />
-      <span>{compact ? shortLabel : label}</span>
-    </span>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Ditandai"
+            className={cn(
+              "relative flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border border-gold/40 bg-gold/10 text-gold transition-colors hover:bg-gold/20 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-brand after:absolute after:-inset-2 after:content-['']",
+              className,
+            )}
+          >
+            <Flag className="size-3.5 fill-gold/20 text-gold" aria-hidden="true" />
+          </button>
+        }
+      />
+      <TooltipContent>
+        <span className="text-xs font-medium">Ditandai untuk ditinjau</span>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
-/** Label status ringkas untuk mode compact (lihat komentar di StatusIndicator). */
-const STATUS_SHORT_LABELS: Record<string, string> = {
-  draft: "Draf",
-  review: "Telaah",
-  archived: "Arsip",
-};
+/** Indikator status alur soal (Draf/Telaah/Arsip/…) dengan dot semantik.
+ *  "Siap" SENGAJA dirender sebagai titik netral kecil (•) tanpa teks/badge berlebih
+ *  sesuai DESIGN.md §134, agar dapat dibedakan dari status yang belum termuat,
+ *  sementara status yang butuh tindakan (Draf/Telaah) tampil lebih menonjol.
+ */
+/**
+ * Indikator status soal pada kartu (icon-only dengan tooltip dan aria-label).
+ *
+ * Sesuai arahan pengguna ("icon aja jangan ada tulisan draft"):
+ * Status tampil murni berupa ikon Lucide ukuran compact size-6 (ikon size-3.5),
+ * seragam dengan QuestionTypeIcon, tanpa memakan ruang teks batang soal.
+ */
+export function StatusIndicator({ status }: { status: string }) {
+  const label = STATUS_LABELS[status] ?? status;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            className={cn(
+              "relative flex size-6 shrink-0 cursor-help items-center justify-center rounded-md border transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-brand after:absolute after:-inset-2 after:content-['']",
+              status === "ready" &&
+                "border-success/30 bg-success/10 text-success hover:bg-success/20",
+              status === "draft" &&
+                "border-border/80 bg-muted/60 text-muted-foreground",
+              status === "review" &&
+                "border-gold/40 bg-gold/15 text-gold-fg",
+              status === "archived" &&
+                "border-error/40 bg-error/10 text-error line-through",
+              !["draft", "review", "ready", "archived"].includes(status) &&
+                "border-border bg-muted text-muted-foreground",
+            )}
+            aria-label={`Status: ${label}`}
+          >
+            <StatusIcon status={status} className="size-3.5" aria-hidden="true" />
+          </button>
+        }
+      />
+      <TooltipContent>
+        <span className="text-xs font-medium">Status: {label}</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 /**
  * Kutipan batang singkat untuk nama aksesibel — hanya batang soal
@@ -291,64 +221,62 @@ function QuestionCardInner({
   selected,
   onToggleSelect,
   mode = "list",
+  isSelectionMode = false,
 }: {
   question: PublicQuestion;
   href: string;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
   mode?: ViewMode;
+  isSelectionMode?: boolean;
 }) {
   const q = question;
   const isCardLayout = mode === "grid" || mode === "masonry";
+  const primaryTopic = q.topics?.find((t) => t.isPrimary) ?? q.topics?.[0];
+  const topicName = primaryTopic?.name;
+
+  function handleCardClick(e: React.MouseEvent) {
+    if (!onToggleSelect) return;
+    if (e.ctrlKey || e.metaKey || isSelectionMode) {
+      e.preventDefault();
+      e.stopPropagation();
+      onToggleSelect(q.id);
+    }
+  }
 
   // ================= MODE LIST (LINEAR LIST ROW) =================
   if (!isCardLayout) {
     return (
       <div
         className={cn(
-          "group relative flex h-11 max-h-11 items-center gap-2 px-3 transition-colors hover:bg-muted/30 cursor-pointer overflow-hidden",
+          "group relative flex min-h-11 py-1 items-center gap-2 px-3 transition-colors hover:bg-muted/30 cursor-pointer overflow-hidden",
           selected && "bg-brand/5 border-l-2 border-l-brand",
         )}
       >
         {/* 1. Checkbox Seleksi — area sentuh ≥ 44px (CRIT-03).
-            Kompromi tampilan compact (bukan display:none): kotak hanya
-            terlihat saat hover/focus baris, saat kartu terpilih, atau
-            selalu di layar sentuh (tanpa hover). Input tetap di DOM
-            dengan aria-label "Pilih soal: <kutipan>" sehingga keyboard
-            dan screen reader tidak kehilangan fungsi seleksi massal. */}
+            Di mode list, checklist ditampilkan selalu (tampil aktif, bukan hanya saat hover). */}
         {onToggleSelect && (
           <label
-            className={cn(
-              "flex min-h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100",
-              selected && "opacity-100",
-            )}
+            className="flex min-h-[44px] min-w-[28px] sm:min-w-[32px] shrink-0 cursor-pointer items-center justify-center pointer-coarse:min-w-[44px]"
           >
             <input
               type="checkbox"
               checked={selected}
               onChange={() => onToggleSelect(q.id)}
               aria-label={selectLabel(q)}
-              className="size-4 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
+              className="size-3.5 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
             />
           </label>
         )}
 
-        {/* 2. Ikon Tipe Soal (Paling Kiri) */}
-        <QuestionTypeIcon type={q.questionType} />
-
-        {/* 3. Penanda Jenjang: ikon graduation-cap + angka (mis. 10) */}
-        <GradeMarker grade={q.grade} />
-
-        {/* 4. Taksonomi: Kognitif & Kesulitan — disembunyikan di mobile (<md) agar teks soal punya ruang lega */}
-        <CognitiveBadge level={q.cognitiveLevel} className="hidden md:inline-flex pointer-coarse:min-h-[44px]" />
-        <DifficultyBadge level={q.difficulty} className="hidden md:inline-flex pointer-coarse:min-h-[44px]" />
-
-        {/* Indikator Flag */}
+        {/* 1b. Indikator Flag Soal (di luar tautan untuk menjaga semantik HTML valid) */}
         {q.isFlagged && (
-          <Flag className="size-3.5 text-gold shrink-0" role="img" aria-label="Ditandai" />
+          <div className="shrink-0 flex items-center">
+            <FlagIndicator />
+          </div>
         )}
 
-        {/* 5. Batang Soal KaTeX & Tautan Utama (Satu elemen link untuk seluruh baris konten) */}
+        {/* 2. Batang Soal KaTeX & Tautan Utama — Langsung di Kiri, Mengambil Ruang Utama */}
         <Link
           href={href}
           className="flex-1 min-w-0 px-2 self-stretch flex items-center justify-between gap-2 group-hover:text-foreground"
@@ -359,17 +287,43 @@ function QuestionCardInner({
                 Wacana
               </span>
             )}
-            <div className="min-w-0 flex-1 truncate text-xs text-foreground/90 font-normal">
+            <div className="min-w-0 flex-1 truncate text-base text-foreground/90 font-normal">
               <MathContent
                 content={excerpt(flattenMathForList(q.contentMarkdown), 180)}
                 noScroll
-                className="inline truncate max-w-full text-xs text-foreground/90 font-normal"
+                className="inline truncate max-w-full text-base text-foreground/90 font-normal"
               />
             </div>
           </div>
-
-          <ArrowUpRight className="size-4 opacity-30 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground" />
         </Link>
+
+        {/* 3. Topik Utama — Kolom Tetap Terkunci (hidden di mobile <sm) */}
+        <div className="hidden sm:flex shrink-0 w-[130px] lg:w-[150px] items-center gap-1.5 overflow-hidden">
+          {topicName ? (
+            <>
+              <span className="size-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
+              <span className="truncate text-xs font-semibold text-foreground/80" title={topicName}>
+                {topicName}
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground/30 font-mono pl-3" aria-label="Tanpa topik">
+              -
+            </span>
+          )}
+        </div>
+
+        {/* 4. Penanda Jenjang & Tipe Soal — Kluster Sejajar */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <QuestionTypeIcon type={q.questionType} />
+          <GradeMarker grade={q.grade} grades={q.grades} />
+        </div>
+
+        {/* 5. Taksonomi: Kognitif & Kesulitan — disembunyikan di mobile (<md) */}
+        <div className="hidden md:flex shrink-0 items-center gap-1.5">
+          <CognitiveBadge level={q.cognitiveLevel} />
+          <DifficultyBadge level={q.difficulty} />
+        </div>
 
         {/* Dukungan Stimulus Induk & A11y */}
         {q.parent && (
@@ -391,8 +345,10 @@ function QuestionCardInner({
           </div>
         )}
 
-        {/* 6. Status Soal di Paling Kanan — compact di mobile agar teks soal leluasa */}
-        <StatusIndicator status={q.status} compact />
+        {/* 6. Status Soal di Paling Ujung Kanan */}
+        <div className="flex shrink-0 items-center justify-end min-w-[36px] sm:min-w-[48px]">
+          <StatusIndicator status={q.status} />
+        </div>
       </div>
     );
   }
@@ -400,101 +356,87 @@ function QuestionCardInner({
   // ================= MODE GRID & MASONRY (BENTO CARD) =================
   return (
     <article
+      data-selected={selected ? "true" : undefined}
       className={cn(
         "group relative flex flex-col justify-between rounded-xl border border-border/70 bg-card/60 p-3 transition-all duration-150",
         "hover:border-border hover:bg-card hover:shadow-xs",
         "dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
         mode === "grid" && "min-h-[280px]",
-        selected && "border-brand/70 bg-brand/5 ring-1 ring-brand/30",
+        selected && "border-brand ring-2 ring-brand/40 bg-brand/5 shadow-xs",
       )}
     >
       <div className="flex flex-col gap-2">
-        {/* TOP BAR KARTU */}
-        <div className="flex items-center justify-between border-b border-border/50 pb-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <QuestionTypeIcon type={q.questionType} />
-            <GradeMarker grade={q.grade} />
-            <CognitiveBadge level={q.cognitiveLevel} className="pointer-coarse:min-h-[44px]" />
-            <DifficultyBadge level={q.difficulty} className="pointer-coarse:min-h-[44px]" />
-            {q.isFlagged && (
-              <Flag className="size-3.5 text-gold shrink-0" role="img" aria-label="Ditandai" />
-            )}
+        {/* TOP BAR KARTU: TOPIK KIRI, IKON METADATA KANAN (TANPA CEKLIS) */}
+        <div className="flex items-center justify-between gap-2 border-b border-border/50 pb-2">
+          {/* Kiri: Topik Utama */}
+          <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+            <span className="size-1.5 shrink-0 rounded-full bg-brand" aria-hidden="true" />
+            <span className="truncate text-xs font-semibold text-foreground" title={topicName}>
+              {topicName ?? "Tanpa Topik"}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Kanan: Ikon Metadata */}
+          <div className="flex shrink-0 items-center gap-1.5">
+            <GradeMarker grade={q.grade} grades={q.grades} />
+            <QuestionTypeIcon type={q.questionType} />
+            <CognitiveBadge level={q.cognitiveLevel} />
+            <DifficultyBadge level={q.difficulty} />
+            {q.isFlagged && <FlagIndicator />}
             <StatusIndicator status={q.status} />
-            {/* Checkbox pojok kartu — kompromi yang sama seperti mode list:
-                bukan display:none (fungsi seleksi massal & aria-label
-                "Pilih soal: <kutipan>" dipertahankan), hanya terlihat
-                saat hover/focus kartu, saat terpilih, atau di layar
-                sentuh. */}
-            {onToggleSelect && (
-              <label
-                className={cn(
-                  "flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100",
-                  selected && "opacity-100",
-                )}
-              >
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  onChange={() => onToggleSelect(q.id)}
-                  aria-label={selectLabel(q)}
-                  className="size-4 rounded border-border accent-[var(--mb-brand)] cursor-pointer"
-                />
-              </label>
-            )}
           </div>
         </div>
 
         {/* WACANA STIMULUS (JIKA ADA) */}
         {q.parent && (
-          <StimulusCard content={q.parent.contentMarkdown} className="text-xs" />
+          <StimulusCard content={q.parent.contentMarkdown} className="text-sm" />
         )}
 
         {/* KONTEN UTAMA SOAL & OPSI PILIHAN GANDA (SATU KESATUAN ALUR NASKAH) */}
-        <Link href={href} className="block group-hover:text-foreground">
+        <Link href={href} onClick={handleCardClick} className="block group-hover:text-foreground">
           {mode === "grid" ? (
-            <div className="relative max-h-[220px] overflow-hidden">
+            <div className="relative max-h-[300px] overflow-hidden">
               <MathContent
-                content={excerpt(q.contentMarkdown, 240)}
+                content={excerpt(stripImages(q.contentMarkdown), 240)}
                 noScroll
-                className="text-xs leading-relaxed text-foreground overflow-hidden"
+                className="text-base leading-relaxed text-foreground overflow-hidden"
               />
 
-              {/* OPSI PILIHAN GANDA (MENYATU DIDALAM AREA KARTU NASKAH) */}
+              {/* OPSI PILIHAN GANDA (MENYATU DIDALAM AREA KARTU NASKAH — SETARA TEXT-BASE) */}
               {(q.options?.length ?? 0) > 0 && (
-                <div className="mt-2.5 flex flex-col gap-1.5 border-t border-border/40 pt-2 text-xs">
+                <div className="mt-3 flex flex-col gap-1.5 border-t border-border/40 pt-2.5 text-base">
                   {(q.options ?? []).map((o) => (
                     <div
                       key={o.id}
                       className={cn(
-                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0",
-                        o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
+                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0 text-base rounded-md px-1.5 py-0.5",
+                        o.isCorrect
+                          ? "bg-success/8 border border-success/20 text-foreground font-medium"
+                          : "text-muted-foreground",
                       )}
                     >
                       <span className={cn(o.isCorrect ? "text-success" : "")}>
                         <strong
                           className={cn(
-                            "font-mono font-semibold shrink-0",
+                            "font-mono font-semibold shrink-0 text-base",
                             o.isCorrect
-                              ? "text-success text-emerald-600 dark:text-emerald-400"
+                              ? "text-success text-emerald-600 dark:text-emerald-400 font-bold"
                               : "text-foreground/70",
                           )}
                         >
                           {o.label}.
                         </strong>
                       </span>
-                      <div className="min-w-0 flex-1 truncate">
+                      <div className="min-w-0 flex-1 truncate text-base">
                         <MathContent
                           content={o.contentMarkdown}
                           noScroll
-                          className="inline truncate max-w-full text-xs"
+                          className="inline truncate max-w-full text-base"
                         />
                       </div>
                       {o.isCorrect && (
                         <span
-                          className="inline-flex items-center text-[12px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
+                          className="inline-flex items-center text-sm font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
                           title="Kunci Jawaban"
                         >
                           ✓
@@ -506,47 +448,49 @@ function QuestionCardInner({
               )}
 
               {/* Gradien fade-out lembut di batas bawah jika ruang kartu tidak mencukupi */}
-              <span className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-card to-transparent" aria-hidden="true" />
+              <span className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-card via-card/70 to-transparent" aria-hidden="true" />
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
               <MathContent
                 content={q.contentMarkdown}
                 noScroll
-                className="text-xs leading-relaxed text-foreground overflow-hidden max-h-[380px]"
+                className="text-base leading-relaxed text-foreground overflow-hidden max-h-[440px]"
               />
               {(q.options?.length ?? 0) > 0 && (
-                <div className="mt-1 flex flex-col gap-1.5 border-t border-border/40 pt-2 text-xs">
+                <div className="mt-2.5 flex flex-col gap-1.5 border-t border-border/40 pt-2.5 text-base">
                   {(q.options ?? []).map((o) => (
                     <div
                       key={o.id}
                       className={cn(
-                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0",
-                        o.isCorrect ? "text-foreground font-medium" : "text-muted-foreground",
+                        "flex items-center gap-2 leading-relaxed transition-colors min-w-0 text-base rounded-md px-1.5 py-0.5",
+                        o.isCorrect
+                          ? "bg-success/8 border border-success/20 text-foreground font-medium"
+                          : "text-muted-foreground",
                       )}
                     >
                       <span className={cn(o.isCorrect ? "text-success" : "")}>
                         <strong
                           className={cn(
-                            "font-mono font-semibold shrink-0",
+                            "font-mono font-semibold shrink-0 text-base",
                             o.isCorrect
-                              ? "text-success text-emerald-600 dark:text-emerald-400"
+                              ? "text-success text-emerald-600 dark:text-emerald-400 font-bold"
                               : "text-foreground/70",
                           )}
                         >
                           {o.label}.
                         </strong>
                       </span>
-                      <div className="min-w-0 flex-1 truncate">
+                      <div className="min-w-0 flex-1 truncate text-base">
                         <MathContent
                           content={o.contentMarkdown}
                           noScroll
-                          className="inline truncate max-w-full text-xs"
+                          className="inline truncate max-w-full text-base"
                         />
                       </div>
                       {o.isCorrect && (
                         <span
-                          className="inline-flex items-center text-[12px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
+                          className="inline-flex items-center text-sm font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
                           title="Kunci Jawaban"
                         >
                           ✓
@@ -569,7 +513,10 @@ function QuestionCardInner({
         <Link
           href={href}
           aria-label={openLabel(q)}
-          className="inline-flex min-h-[44px] items-center gap-1 hover:text-foreground shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          className="inline-flex min-h-[44px] items-center gap-1 hover:text-foreground shrink-0 text-brand font-medium"
         >
           Buka <ArrowUpRight className="size-3.5" />
         </Link>
@@ -602,6 +549,7 @@ function areCardPropsEqual(
     selected?: boolean;
     onToggleSelect?: (id: string) => void;
     mode?: ViewMode;
+    isSelectionMode?: boolean;
   },
   next: {
     question: PublicQuestion;
@@ -609,13 +557,15 @@ function areCardPropsEqual(
     selected?: boolean;
     onToggleSelect?: (id: string) => void;
     mode?: ViewMode;
+    isSelectionMode?: boolean;
   },
 ): boolean {
   return (
     prev.question === next.question &&
     prev.href === next.href &&
     prev.mode === next.mode &&
-    prev.selected === next.selected
+    prev.selected === next.selected &&
+    prev.isSelectionMode === next.isSelectionMode
   );
 }
 

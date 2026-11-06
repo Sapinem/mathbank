@@ -53,7 +53,15 @@ function escapeHtml(s: string): string {
 
 /** Inline markdown ringan: **tebal**, *miring*, `kode`, dan baris baru. */
 function renderText(text: string): string {
-  return escapeHtml(text)
+  // Normalisasi baris kosong berlebihan:
+  // 1. Ganti CRLF / CR -> LF.
+  // 2. Runtunan 3+ baris baru (termasuk baris dengan spasi/tab) diciutkan menjadi
+  //    maksimal 2 baris baru (\n\n = jeda paragraf biasa).
+  const collapsed = text
+    .replace(/\r\n|\r/g, "\n")
+    .replace(/\n[ \t]*(?:\n[ \t]*)+/g, "\n\n");
+
+  return escapeHtml(collapsed)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, '<code class="font-mono text-xs bg-transparent px-1 py-0.5 rounded">$1</code>')

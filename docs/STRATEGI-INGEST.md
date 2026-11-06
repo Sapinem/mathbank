@@ -101,9 +101,9 @@ rawHtml
 ### 4.3 Endpoint (L4) — **dua wajah**
 | Endpoint | Auth | Untuk |
 |---|---|---|
-| `POST /api/v1/ingest/upload` | **machine** | Kirim artikel (JSON `{url,title,rawHtml,source}`) → antrean |
-| `GET /api/v1/ingest/queue` | session | Lihat antrean (UI) |
-| `POST /api/v1/ingest/commit` | **machine** | Proses antrean → soal draft |
+| `POST /api/ingest/upload` | **machine** | Kirim artikel (JSON `{url,title,rawHtml,source}`) → antrean |
+| `GET /api/ingest/queue` | session | Lihat antrean (UI) |
+| `POST /api/ingest/commit` | **machine** | Proses antrean → soal draft |
 | `GET /api/ingest/sources` | session | Daftar sumber korpus |
 
 ### 4.4 Halaman Ingest & Integrasi (aktifkan dari tersembunyi)

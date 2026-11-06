@@ -1,4 +1,4 @@
-import { uuidPk } from "./_columns";
+import { uuidPk, versionColumn } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -49,6 +49,7 @@ export const mediaAssets = pgTable(
     }),
     sourceOrigin: mediaOriginEnum("source_origin").default("manual_upload").notNull(),
     uploadedById: text("uploaded_by_id"),
+    version: versionColumn(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

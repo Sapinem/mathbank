@@ -1,8 +1,10 @@
 # MILESTONE — MathBank (Rencana Eksekusi)
 
 > **Dokumen ini menjawab:** *Urutan pembangunan MathBank — apa dulu, apa kemudian, kapan selesai?*
-> **Status:** 🟢 aktif — M0–M3 ✅ · M4a–M4d ✅ · M5–M8 ✅ (MVP) · **M9 ✅ · M10 ✅ · M11 ✅ · M12 siap dikerjakan**.
-> **Versi:** 2.2 · **Tanggal:** 2026-09-30
+> **Status:** 🟢 aktif — M0–M3 ✅ · M4a–M4d ✅ · M5–M8 ✅ (MVP) · M9 ✅ · M10 ✅ · M11 ✅ · M16 ✅.
+> M12/M13/M14 **sudah ada implementasinya di kode** tetapi statusnya belum diaudit kelengkapan (lihat catatan di baris masing-masing).
+> Angka volume & kelengkapan pedagogis TIDAK ditulis di sini — lihat snapshot terbaru: `docs/SNAPSHOT-METRIK-2026-11-07.md`.
+> **Versi:** 2.3 · **Tanggal:** 2026-11-07
 > **Rujukan:** `PRD.md` (ruang lingkup), `DESAIN-PER-LAPISAN-MATHBANK.md` (L1–L9), `PETA-DOKUMEN.md`, `KEAMANAN.md`, `CATATAN-PUTUSAN.md`.
 
 ---
@@ -48,14 +50,14 @@ Tiga fase: **MVP** (M1–M8) → **Lanjut** (M9–M12) → **Operasional/Hardeni
 | M9 | Ingest Korpus (parsing data sumber) | ✅ | M8 | ✅ M9-1/2/2b/2c/3 selesai (korpus HTML, bukan PDF) |
 | M10 | AI Enrichment & Embedding | ✅ | M9 | **TUNTAS** — client·embedding·enkripsi·enrich·semantik·UI Pengaturan·UI enrich di halaman soal |
 | M11 | MCP (agen/otomasi) | 🟡 | M10 | ✅ **TUNTAS** |
-| M12 | Ekspor Moodle | 🟢 | M8 | ⬜ |
+| M12 | Ekspor Moodle | 🟢 | M8 | 🟡 **implementasi ada** — `src/lib/export/moodle-xml.ts`, `latex-to-moodle.ts`, `gitsync.ts`, `GET /api/bundles/[id]/export/moodle`, tes DB; belum diaudit terhadap Moodle XML v4/v5 |
 
 ### Fase 3 — Operasional & Hardening (BARU di v2.0)
 
 | M | Nama | Prioritas | Dependensi | Status |
 |---|------|-----------|------------|:------:|
-| M13 | **Keamanan lanjutan (S4–S9)** | 🟠 | M4 | ⬜ |
-| M14 | **Kualitas kode & tes (utang)** | 🟠 | M4 | ⬜ |
+| M13 | **Keamanan lanjutan (S4–S9)** | 🟠 | M4 | 🟡 **implementasi ada** — store rate-limit PG, CSP (SVG + `next.config`), pembersihan header di `proxy.ts`, pre-commit secret scan, uji authz per-resource; belum ada audit STRIDE menyeluruh |
+| M14 | **Kualitas kode & tes (utang)** | 🟠 | M4 | 🟡 **ambang coverage aktif** (90/80/88/92 di `vitest.config.mts`), 1.539 unit + 330 DB; utang tersisa: beberapa fungsi service > 300 baris |
 | M15 | **UI/UX polish & responsif penuh** | 🟡 | M4 | ⬜ |
 | M16 | **Observabilitas & operasional** | ✅ | M8 | ✅ |
 | M17 | **Dokumentasi final & rilis 1.0** | 🟡 | M13–M16 | ⬜ |
@@ -193,7 +195,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [x] Hook `useQuestions`, `useReference` (React Query)
 - [x] Responsif (filter → Sheet di mobile); e2e daftar/pencarian/KaTeX
 
-### M4c — Editor & Detail ⬜ *(fokus berikutnya)*
+### M4c — Editor & Detail 🟡 *(inti selesai; 4 item lanjutan di bawah)*
 - [x] Rute `/questions/new` + `/questions/[id]` ✅
 - [x] Form soal manual + pratinjau KaTeX langsung ✅
 - [x] Opsi A–E, tandai kunci (tunggal/multi), `distractor_rationale` ✅ (tambah/hapus/urut = penyempurnaan lanjutan)
@@ -207,7 +209,7 @@ Pekerjaan fondasi/hardening yang tak terikat satu milestone:
 - [x] e2e: buat → simpan → lihat → kirim telaah → hapus ✅
 - 📄 **RENCANA-SOAL.md** — dibuat ✅
 
-### M4d — Telaah & Pengaturan ⬜
+### M4d — Telaah & Pengaturan ✅
 - [x] Halaman **Telaah**: tab *perlu telaah* / *ditandai*; aksi ubah status + flag ✅
 - [x] Alur ulasan (reviewer): setujui → `ready`, tolak → `draft` + catatan ✅
 - [x] Halaman **Pengaturan**: bagian umum (org, default) ✅; bagian AI menyusul M10

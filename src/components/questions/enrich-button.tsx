@@ -37,13 +37,21 @@ export function EnrichButton({ questionId }: { questionId: string }) {
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={run} disabled={enrich.isPending}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={run}
+        disabled={enrich.isPending}
+        className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3"
+        aria-label="Enrich dengan AI"
+        title="Enrich dengan AI"
+      >
         {enrich.isPending ? (
           <Loader2 data-icon="inline-start" className="animate-spin" />
         ) : (
           <Sparkles data-icon="inline-start" />
         )}
-        Enrich dengan AI
+        <span className="hidden sm:inline">Enrich dengan AI</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -54,7 +62,7 @@ export function EnrichButton({ questionId }: { questionId: string }) {
             </DialogTitle>
             <DialogDescription>
               Usulan metadata dari AI. Nilai sudah <strong>diterapkan</strong> ke
-              soal dan statusnya naik ke <strong>Telaah</strong> — periksa & sesuaikan
+              soal dan statusnya naik ke <strong>Telaah</strong> - periksa & sesuaikan
               sebelum menandai Siap. Jawaban tidak diubah.
             </DialogDescription>
           </DialogHeader>

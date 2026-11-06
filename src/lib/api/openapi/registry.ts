@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { questionListStatsSchema } from "@/lib/contracts/question";
 
 /**
  * Metadata OpenAPI per operasi (Fase B).
@@ -41,6 +42,8 @@ export interface ManualOperationDoc {
   security: "none" | "bearer" | "delegated";
   /** Parameter path/query (route non-wrap tidak punya skema Zod di route). */
   parameters?: readonly Record<string, unknown>[];
+  /** Tandai operasi usang (mis. alias yang akan dimatikan). */
+  deprecated?: boolean;
   /**
    * Label kolom "Izin" di tabel KONTRAK-API bila `security` tidak cukup
    * menggambarkan pagar sebenarnya (mis. token opsional). Hanya memengaruhi
@@ -57,6 +60,10 @@ export interface ManualOperationDoc {
 const iso = z.string().describe("Timestamp ISO-8601 (UTC).");
 const uuid = z.string().uuid();
 const okSchema = z.object({ ok: z.literal(true) });
+const okWithBundleVersionSchema = z.object({
+  ok: z.literal(true),
+  bundleVersion: z.number().int().optional(),
+});
 
 export const questionStatusSchema = z.enum(["draft", "review", "ready", "archived"]);
 
@@ -101,6 +108,7 @@ export const questionSchema = z.looseObject({
   lastReviewedAt: iso.nullable(),
   deletedAt: iso.nullable(),
   createdAt: iso,
+  version: z.number().int(),
   updatedAt: iso,
   options: z.array(optionSchema),
   answerKey: z.record(z.string(), z.unknown()).optional().describe("Hanya viewer berwenang."),
@@ -112,6 +120,7 @@ const bundleSchema = z.looseObject({
   bundleType: z.enum(["source", "exam"]),
   origin: z.enum(["ingest", "manual"]).nullable(),
   sourceId: uuid.nullable(),
+  url: z.string().nullable().optional(),
   eventId: uuid.nullable(),
   year: z.number().int().nullable(),
   grade: z.string().nullable(),
@@ -121,6 +130,7 @@ const bundleSchema = z.looseObject({
   status: questionStatusSchema,
   createdById: z.string().nullable(),
   createdAt: iso,
+  version: z.number().int(),
   updatedAt: iso,
   itemCount: z.number().int().optional(),
 });
@@ -134,6 +144,7 @@ const bundleItemSchema = z.looseObject({
   sectionName: z.string().nullable(),
   itemNumber: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  bundleVersion: z.number().int().optional(),
 });
 
 /** Item paket + soal tertanam (proyeksi `listBundleItems`). */
@@ -161,12 +172,14 @@ const topicSchema = z.looseObject({
   sortOrder: z.number().int(),
   usageCount: z.number().int(),
   isActive: z.boolean(),
+  version: z.number().int(),
 });
 
 const tagSchema = z.looseObject({
   id: uuid,
   name: z.string(),
   usageCount: z.number().int(),
+  version: z.number().int(),
 });
 
 const sourceSchema = z.looseObject({
@@ -180,6 +193,7 @@ const sourceSchema = z.looseObject({
   city: z.string().nullable(),
   isActive: z.boolean(),
   usageCount: z.number().int(),
+  version: z.number().int(),
 });
 
 const eventSchema = z.looseObject({
@@ -190,6 +204,7 @@ const eventSchema = z.looseObject({
   subtests: z.array(z.string()),
   aliases: z.array(z.string()).optional(),
   isActive: z.boolean(),
+  version: z.number().int(),
 });
 
 const gradeSchema = z.looseObject({
@@ -212,6 +227,7 @@ const galleryRowSchema = z.looseObject({
   fileSize: z.number().int(),
   sourceOrigin: z.string().nullable(),
   createdAt: iso,
+  version: z.number().int(),
 });
 
 const mediaAssetSchema = z.looseObject({
@@ -226,10 +242,12 @@ const mediaAssetSchema = z.looseObject({
   fileSize: z.number().int(),
   sourceOrigin: z.string().nullable(),
   createdAt: iso,
+  version: z.number().int(),
 });
 
 const agentKeySchema = z.looseObject({
   id: z.string(),
+  version: z.number().int(),
   name: z.string().nullable(),
   prefix: z.string().nullable(),
   enabled: z.boolean(),
@@ -300,8 +318,18 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
   "GET /api/questions": {
     summary: "Daftar soal (filter + paginasi)",
     tags: ["questions"],
-    response: z.object({ items: z.array(questionSchema), total: z.number().int() }),
-    notes: ["Filter array menerima pengulangan (`?grade=g10&grade=g11`) atau CSV (`?grade=g10,g11`)."],
+    response: z.object({
+      items: z.array(questionSchema),
+      total: z
+        .number()
+        .int()
+        .describe("Jumlah hasil SETELAH filter status/flagged diterapkan."),
+      stats: questionListStatsSchema.optional(),
+    }),
+    notes: [
+      "Filter array menerima pengulangan (`?grade=g10&grade=g11`) atau CSV (`?grade=g10,g11`).",
+      "`data.total` = jumlah hasil terfilter; `data.stats.total` = seluruh soal aktif TANPA filter (untuk chip ringkasan). Keduanya berbeda saat filter aktif.",
+    ],
   },
   "POST /api/questions": {
     summary: "Buat soal baru",
@@ -362,12 +390,12 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     response: bundleDetailSchema,
   },
   "PATCH /api/bundles/[id]": {
-    summary: "Ubah metadata paket",
+    summary: "Ubah metadata atau status arsip paket",
     tags: ["bundles"],
     response: bundleSchema,
   },
   "DELETE /api/bundles/[id]": {
-    summary: "Arsipkan paket (hapus lunak)",
+    summary: "Hapus paket (soft-delete)",
     tags: ["bundles"],
     response: okSchema,
   },
@@ -384,12 +412,17 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
   "PUT /api/bundles/[id]/items": {
     summary: "Susun ulang urutan item (atomik)",
     tags: ["bundles"],
-    response: okSchema,
+    response: okWithBundleVersionSchema,
+  },
+  "PATCH /api/bundles/[id]/items/[itemId]": {
+    summary: "Perbarui metadata slot item paket (nomor, peran, seksi, catatan)",
+    tags: ["bundles"],
+    response: bundleItemSchema,
   },
   "DELETE /api/bundles/[id]/items/[itemId]": {
     summary: "Lepas soal dari paket",
     tags: ["bundles"],
-    response: okSchema,
+    response: okWithBundleVersionSchema,
   },
   "POST /api/bundles/[id]/duplicate": {
     summary: "Duplikasi paket",
@@ -579,18 +612,18 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     tags: ["ai"],
     response: z.object({ items: z.array(settingsItemSchema) }),
   },
-  "POST /api/v1/ingest/upload": {
+  "POST /api/ingest/upload": {
     summary: "Unggah naskah ke antrean ingest",
     tags: ["ingest"],
     response: z.object({ id: uuid, status: z.enum(["pending", "processing", "completed", "failed", "skipped"]), deduped: z.boolean() }),
   },
-  "GET /api/v1/ingest/queue": {
+  "GET /api/ingest/queue": {
     summary: "Antrean ingest + ringkasan status",
     tags: ["ingest"],
     response: z.object({ items: z.array(queueItemSchema), counts: z.record(z.string(), z.number()) }),
     notes: ["Izin khusus `ingest:queue:read` — `question:view` tertutup untuk peran `machine`."],
   },
-  "POST /api/v1/ingest/commit": {
+  "POST /api/ingest/commit": {
     summary: "Commit antrean → soal draft",
     tags: ["ingest"],
     response: z.looseObject({ summary: z.record(z.string(), z.unknown()), results: z.array(z.unknown()), eventsTagged: z.number().int(), unknownEvents: z.array(z.string()), eventsError: z.string().optional() }),
@@ -883,6 +916,39 @@ export const MANUAL_OPERATIONS: Readonly<Record<string, ManualOperationDoc>> = {
       "200": { description: "Respons Better Auth (JSON sesi / redirect / Set-Cookie)." },
       "3XX": { description: "Redirect OAuth / callback." },
       "4XX": { description: "Galat Better Auth (mis. kredensial salah)." },
+    },
+  },
+  "POST /api/v1/ingest/upload": {
+    summary: "Alias deprecated: unggah naskah ke antrean",
+    description: "DEPRECATED — pakai POST /api/ingest/upload. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
+    tags: ["ingest"],
+    security: "bearer",
+    deprecated: true,
+    responses: {
+      "201": { description: "Sama dengan jalur kanonik." },
+      "4XX": { description: "Sama dengan jalur kanonik." },
+    },
+  },
+  "GET /api/v1/ingest/queue": {
+    summary: "Alias deprecated: antrean ingest + ringkasan status",
+    description: "DEPRECATED — pakai GET /api/ingest/queue. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
+    tags: ["ingest"],
+    security: "bearer",
+    deprecated: true,
+    responses: {
+      "200": { description: "Sama dengan jalur kanonik." },
+      "4XX": { description: "Sama dengan jalur kanonik." },
+    },
+  },
+  "POST /api/v1/ingest/commit": {
+    summary: "Alias deprecated: commit antrean menjadi soal draft",
+    description: "DEPRECATED — pakai POST /api/ingest/commit. Perilaku identik dengan jalur kanonik (handler yang sama), ditambah header Deprecation/Sunset. Alias berakhir 2027-01-25 (ADR-0028).",
+    tags: ["ingest"],
+    security: "bearer",
+    deprecated: true,
+    responses: {
+      "200": { description: "Sama dengan jalur kanonik." },
+      "4XX": { description: "Sama dengan jalur kanonik." },
     },
   },
 };

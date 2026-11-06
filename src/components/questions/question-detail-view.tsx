@@ -3,7 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
+  ArrowLeft,
+  Check,
   Pencil,
   Trash2,
   AlertTriangle,
@@ -12,10 +15,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Sliders,
-  Image as ImageIcon,
+  SendHorizontal,
+  FileText,
+  ListPlus,
+  ExternalLink,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { EnrichButton } from "@/components/questions/enrich-button";
+import { AddToBundleDialog } from "@/components/questions/add-to-bundle-dialog";
 import { MathContent } from "@/components/math/math-content";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,10 +44,6 @@ import {
 import { TYPE_LABELS } from "@/lib/display/labels";
 import { CognitiveBadge, DifficultyBadge } from "@/components/questions/rubric-badge";
 import { QuestionStatusBadge } from "@/components/questions/question-status-badge";
-import {
-  QuestionMediaGallery,
-  extractMediaShortIds,
-} from "@/components/questions/question-image";
 import { TopicTagList } from "@/components/questions/topic-tag";
 import { StimulusCard } from "@/components/questions/stimulus-card";
 import {
@@ -51,11 +54,12 @@ import { MatchingView, readMatchingPayload } from "@/components/questions/matchi
 import {
   GradeMarker,
   QuestionTypeIcon,
+  FlagIndicator,
 } from "@/components/questions/question-card";
 import { cn } from "@/lib/utils";
 
 /**
- * Halaman detail soal (M4c) — lihat + edit + ubah status (FSM) + hapus.
+ * Halaman detail soal (M4c) - lihat + edit + ubah status (FSM) + hapus.
  *
  * Format naskah dokumen matematika terpadu (soal + opsi menyatu),
  * bukan format CBT terpisah. Pembahasan KaTeX terstruktur di bawahnya.
@@ -67,7 +71,7 @@ export function QuestionDetailView() {
 
   const { data: q, isLoading, isError, error } = useQuestion(id);
   const del = useDeleteQuestion();
-  const changeStatus = useChangeQuestionStatus(id);
+  const changeStatus = useChangeQuestionStatus(id, q?.version);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedSolutionIdx, setSelectedSolutionIdx] = useState(0);
@@ -95,31 +99,58 @@ export function QuestionDetailView() {
         description={TYPE_LABELS[q.questionType] ?? q.questionType}
         actions={
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href="/questions" />}
+              nativeButton={false}
+              className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3"
+              aria-label="Kembali ke Bank Soal"
+              title="Kembali ke Bank Soal"
+            >
+              <ArrowLeft data-icon="inline-start" />
+              <span className="hidden sm:inline">Bank Soal</span>
+            </Button>
             <EnrichButton questionId={id} />
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                changeStatus.mutate("review");
+                changeStatus.mutate("review", {
+                  onSuccess: () => toast.success("Soal dikirim untuk telaah."),
+                  onError: (e) =>
+                    toast.error("Gagal mengirim telaah", {
+                      description: (e as Error).message,
+                    }),
+                });
               }}
               disabled={
                 changeStatus.isPending || q.status === "review" || q.status === "ready"
               }
+              className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3"
+              aria-label="Kirim Telaah"
+              title="Kirim Telaah"
             >
-              Kirim Telaah
+              <SendHorizontal data-icon="inline-start" />
+              <span className="hidden sm:inline">Kirim Telaah</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               render={<Link href={`/questions/${id}/edit`} />}
               nativeButton={false}
+              className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3"
+              aria-label="Sunting soal"
+              title="Sunting soal"
             >
-              <Pencil data-icon="inline-start" /> Sunting
+              <Pencil data-icon="inline-start" />
+              <span className="hidden sm:inline">Sunting</span>
             </Button>
             <Button
               variant="destructive"
               size="icon-sm"
               aria-label="Hapus soal"
+              title="Hapus soal"
               onClick={() => setConfirmDelete(true)}
               className="min-h-[44px] min-w-[44px]"
             >
@@ -129,7 +160,7 @@ export function QuestionDetailView() {
         }
       />
 
-      <div className="p-4 sm:p-6 max-w-7xl w-full">
+      <div className="p-4 sm:p-6 max-w-7xl w-full mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* KOLOM KIRI (UTAMA: LEMBAR SOAL & PEMBAHASAN) (~68%) */}
           <div className="lg:col-span-8 flex flex-col gap-6">
@@ -138,15 +169,11 @@ export function QuestionDetailView() {
               <CardHeader className="border-b border-border/40 pb-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <QuestionStatusBadge status={q.status} />
-                    <GradeMarker grade={q.grade} />
+                    <QuestionStatusBadge status={q.status} showReady />
+                    <GradeMarker grade={q.grade} grades={q.grades} />
                     <DifficultyBadge level={q.difficulty} />
                     <CognitiveBadge level={q.cognitiveLevel} />
-                    {q.isFlagged && (
-                      <Badge variant="outline" className="border-gold/40 bg-gold/15 text-gold-fg">
-                        <AlertTriangle data-icon="inline-start" /> Ditandai
-                      </Badge>
-                    )}
+                    {q.isFlagged && <FlagIndicator />}
                   </div>
                   <QuestionTypeIcon type={q.questionType} />
                 </div>
@@ -158,7 +185,7 @@ export function QuestionDetailView() {
                   <StimulusCard content={q.parent.contentMarkdown} className="text-sm" />
                 )}
 
-                {/* Batang Soal (Stem) — Font 17px di Desktop */}
+                {/* Batang Soal (Stem) - Font 17px di Desktop */}
                 <div className="text-base lg:text-[17px] lg:leading-[1.7] text-foreground">
                   <MathContent content={q.contentMarkdown} className="no-scrollbar" />
                 </div>
@@ -183,14 +210,14 @@ export function QuestionDetailView() {
                           key={o.id}
                           className={cn(
                             "flex items-start gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors",
-                            isKey ? "bg-emerald-500/5 dark:bg-emerald-950/20" : "",
+                            isKey ? "bg-success/8 border border-success/20" : "",
                           )}
                         >
                           <span
                             className={cn(
                               "font-mono font-semibold text-base lg:text-[17px] shrink-0",
                               isKey
-                                ? "text-success text-emerald-600 dark:text-emerald-400 font-bold"
+                                ? "text-success font-bold"
                                 : "text-foreground/70",
                             )}
                           >
@@ -205,12 +232,12 @@ export function QuestionDetailView() {
                             )}
                           </div>
                           {isKey && (
-                            <span
-                              className="inline-flex items-center text-base lg:text-[17px] font-bold text-success text-emerald-600 dark:text-emerald-400 shrink-0"
-                              title="Kunci Jawaban"
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 text-[10px] border-success/30 bg-success/10 text-success font-mono font-semibold"
                             >
-                              ✓
-                            </span>
+                              Kunci
+                            </Badge>
                           )}
                         </div>
                       );
@@ -219,36 +246,6 @@ export function QuestionDetailView() {
                 )}
               </CardContent>
             </Card>
-
-            {/* KARTU LAMPIRAN GAMBAR (ACT-08) — hanya bila ada aset / shortcode */}
-            {(() => {
-              const media = q.media ?? [];
-              const inlineIds = extractMediaShortIds(q.contentMarkdown);
-              if (media.length === 0 && inlineIds.length === 0) return null;
-              return (
-                <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
-                  <CardHeader className="border-b border-border/40 pb-3">
-                    <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                      <ImageIcon aria-hidden className="size-4 shrink-0 text-primary" />
-                      Lampiran Gambar
-                      <span className="font-mono text-xs font-normal text-muted-foreground">
-                        {media.length} aset
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <QuestionMediaGallery
-                      media={media}
-                      emptyHint={
-                        inlineIds.length > 0
-                          ? `Naskah memuat ${inlineIds.length} rujukan gambar (${inlineIds.join(", ")}) yang tampil di dalam teks, tetapi belum ada aset tertaut di question_media.`
-                          : undefined
-                      }
-                    />
-                  </CardContent>
-                </Card>
-              );
-            })()}
 
             {/* KARTU KUNCI & PEMBAHASAN */}
             {(() => {
@@ -284,8 +281,9 @@ export function QuestionDetailView() {
                     {key && (correctLabels.length > 0 || key.text) && (
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <span className="text-muted-foreground">Kunci Jawaban:</span>
-                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                          {correctLabels.join(", ") || key.text} ✓
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success/10 px-2 py-0.5 font-mono text-xs font-bold text-success">
+                          <Check className="size-3.5 stroke-[2.5]" aria-hidden="true" />
+                          {correctLabels.join(", ") || key.text}
                         </span>
                       </div>
                     )}
@@ -323,7 +321,7 @@ export function QuestionDetailView() {
                       </div>
                     )}
 
-                    {/* Pembahasan Detail — Font 20px di Desktop */}
+                    {/* Pembahasan Detail - Font 20px di Desktop */}
                     {activeSol?.contentMarkdown ? (
                       <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/20 p-4">
                         <div className="flex items-center justify-between">
@@ -390,22 +388,20 @@ export function QuestionDetailView() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-4 text-xs">
-                {/* Baris Status hanya tampil bila bukan Siap: Siap adalah
-                    kondisi default, jadi baris berlabel ini pun tidak
-                    menampilkan penanda Siap eksplisit. */}
-                {q.status !== "ready" && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Status</span>
-                    <QuestionStatusBadge status={q.status} />
-                  </div>
-                )}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Status</span>
+                  <QuestionStatusBadge status={q.status} showReady />
+                </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tipe Soal</span>
-                  <QuestionTypeIcon type={q.questionType} />
+                  <div className="flex items-center gap-1.5 font-medium text-foreground">
+                    <QuestionTypeIcon type={q.questionType} />
+                    <span>{TYPE_LABELS[q.questionType] ?? q.questionType}</span>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Jenjang Kelas</span>
-                  <GradeMarker grade={q.grade} />
+                  <GradeMarker grade={q.grade} grades={q.grades} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Tingkat Kesulitan</span>
@@ -416,7 +412,7 @@ export function QuestionDetailView() {
                   <CognitiveBadge level={q.cognitiveLevel} />
                 </div>
 
-                {/* Topik (ACT-09) — klik untuk menyaring Bank Soal */}
+                {/* Topik (ACT-09) - klik untuk menyaring Bank Soal */}
                 <div className="flex flex-col gap-1.5 border-t border-border/30 pt-2">
                   <span className="text-muted-foreground">Topik</span>
                   <TopicTagList
@@ -459,7 +455,7 @@ export function QuestionDetailView() {
             </Card>
 
             {/* KARTU ASAL-USUL (ADR-0014: dari BUNDLE/naskah, bukan per-butir) */}
-            <QuestionSourcesCard bundles={q.bundles} />
+            <QuestionSourcesCard bundles={q.bundles} questionId={q.id} />
           </div>
         </div>
       </div>
@@ -481,9 +477,19 @@ export function QuestionDetailView() {
               variant="destructive"
               disabled={del.isPending}
               onClick={() => {
-                del.mutate(id, {
-                  onSuccess: () => router.push("/questions"),
-                });
+                del.mutate(
+                  { id, version: q.version },
+                  {
+                    onSuccess: () => {
+                      toast.success("Soal berhasil dihapus.");
+                      router.push("/questions");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal menghapus soal", {
+                        description: (e as Error).message,
+                      }),
+                  },
+                );
               }}
             >
               Hapus
@@ -498,11 +504,12 @@ export function QuestionDetailView() {
 /**
  * Kartu Asal-Usul & Sumber (Slide Carousel bila > 1).
  *
- * Catatan CONSTRAINTS #6: Tanpa useMemo/useCallback.
- * Tanpa tautan asli sesuai instruksi pengguna.
+ * Menghubungkan butir soal ke naskah paket (ADR-0014) dengan tautan langsung,
+ * penanda peran naskah (Soal vs Wacana), dan tombol aksi cepat "Masukkan ke Paket".
  */
 function QuestionSourcesCard({
   bundles = [],
+  questionId,
 }: {
   bundles?: Array<{
     id: string;
@@ -514,131 +521,163 @@ function QuestionSourcesCard({
     sourceLabel?: string | null;
     sourceKind?: string | null;
     itemNumber?: string | null;
+    role?: "question" | "stimulus";
+    sectionName?: string | null;
   }>;
+  questionId: string;
 }) {
   const [index, setIndex] = useState(0);
+  const [addToBundleOpen, setAddToBundleOpen] = useState(false);
   const total = bundles.length;
 
-  if (total === 0) {
-    return (
+  return (
+    <>
       <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
         <CardHeader className="border-b border-border/40 pb-3">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <BookOpen className="size-4 text-primary shrink-0" />
-            Asal-Usul
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <BookOpen className="size-4 text-primary shrink-0" />
+              <span>Asal-Usul Naskah {total > 0 && `(${total})`}</span>
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddToBundleOpen(true)}
+              className="min-h-[32px] h-8 px-2 text-xs gap-1"
+              title="Masukkan soal ini ke salah satu paket ujian"
+            >
+              <ListPlus className="size-3.5" />
+              <span>+ Paket</span>
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="pt-4 text-xs text-muted-foreground">
-          Butir ini belum masuk naskah mana pun.
-        </CardContent>
-      </Card>
-    );
-  }
+        {total === 0 ? (
+          <CardContent className="pt-4 text-xs text-muted-foreground flex flex-col gap-2">
+            <p>Butir ini berstatus mandiri — belum dimasukkan ke dalam paket ujian mana pun.</p>
+          </CardContent>
+        ) : (
+          (() => {
+            const safeIndex = index < total ? index : 0;
+            const current = bundles[safeIndex] ?? bundles[0];
+            const isStimulus = current?.role === "stimulus";
 
-  // Jaga index aman bila daftar bundle berubah
-  const safeIndex = index < total ? index : 0;
-  const current = bundles[safeIndex] ?? bundles[0];
-
-  return (
-    <Card className="rounded-xl border border-border/80 bg-card shadow-xs">
-      <CardHeader className="border-b border-border/40 pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <BookOpen className="size-4 text-primary shrink-0" />
-            Asal-Usul
-          </CardTitle>
-          {total > 1 && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="min-h-[44px] min-w-[44px]"
-                aria-label="Naskah sebelumnya"
-                onClick={() => setIndex((prev) => (prev > 0 ? prev - 1 : total - 1))}
-              >
-                <ChevronLeft className="size-3.5" />
-              </Button>
-              <span className="font-mono font-medium text-[11px]">
-                {safeIndex + 1}/{total}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="min-h-[44px] min-w-[44px]"
-                aria-label="Naskah berikutnya"
-                onClick={() => setIndex((prev) => (prev < total - 1 ? prev + 1 : 0))}
-              >
-                <ChevronRight className="size-3.5" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2.5 pt-4 text-xs">
-        <div>
-          <span className="text-muted-foreground block text-[11px] uppercase tracking-wider font-semibold">
-            Judul / Dokumen
-          </span>
-          <span className="font-medium text-foreground text-sm leading-snug">
-            {current?.title || "Tanpa judul"}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
-          <div>
-            <span className="text-muted-foreground block text-[11px]">Jenis</span>
-            <span className="font-mono text-foreground capitalize">
-              {current?.sourceKind || "—"}
-            </span>
-          </div>
-          <div>
-            <span className="text-muted-foreground block text-[11px]">Tahun</span>
-            <span className="font-mono text-foreground">
-              {current?.year ?? "—"}
-            </span>
-          </div>
-        </div>
-
-        {current?.sourceLabel && (
-          <div className="pt-1 border-t border-border/30">
-            <span className="text-muted-foreground block text-[11px]">Sumber</span>
-            <span className="text-foreground">{current.sourceLabel}</span>
-          </div>
-        )}
-
-        {current?.itemNumber && (
-          <div className="pt-1 border-t border-border/30">
-            <span className="text-muted-foreground block text-[11px]">Nomor Butir</span>
-            <span className="font-mono text-foreground">{current.itemNumber}</span>
-          </div>
-        )}
-
-        {current?.bundleType && (
-          <div className="pt-1 border-t border-border/30">
-            <span className="text-muted-foreground block text-[11px]">Jenis naskah</span>
-            <p className="text-muted-foreground capitalize leading-relaxed">{current.bundleType}</p>
-          </div>
-        )}
-
-        {/* Indikator titik slide bila > 1 naskah */}
-        {total > 1 && (
-          <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/30">
-            {bundles.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setIndex(i)}
-                aria-label={`Pindah ke naskah ${i + 1}`}
-                className={cn(
-                  "h-1.5 rounded-full transition-all",
-                  i === safeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",
+            return (
+              <CardContent className="flex flex-col gap-2.5 pt-4 text-xs">
+                {total > 1 && (
+                  <div className="flex items-center justify-between border-b border-border/30 pb-2 text-xs text-muted-foreground">
+                    <span className="font-mono text-[11px]">
+                      Naskah {safeIndex + 1} dari {total}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7"
+                        aria-label="Naskah sebelumnya"
+                        onClick={() => setIndex((prev) => (prev > 0 ? prev - 1 : total - 1))}
+                      >
+                        <ChevronLeft className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7"
+                        aria-label="Naskah berikutnya"
+                        onClick={() => setIndex((prev) => (prev < total - 1 ? prev + 1 : 0))}
+                      >
+                        <ChevronRight className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
                 )}
-              />
-            ))}
-          </div>
+
+                <div>
+                  <span className="text-muted-foreground block text-[11px] uppercase tracking-wider font-semibold">
+                    Judul Naskah
+                  </span>
+                  <Link
+                    href={`/bundles/${current?.id}`}
+                    className="font-medium text-primary hover:underline text-sm leading-snug inline-flex items-center gap-1 pt-0.5"
+                  >
+                    <span>{current?.title || "Tanpa judul"}</span>
+                    <ExternalLink className="size-3 shrink-0" />
+                  </Link>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {isStimulus ? (
+                    <Badge variant="secondary" className="gap-1 border-info/30 bg-info/10 text-info text-[10px]">
+                      <BookOpen className="size-3" /> Wacana / Stimulus
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="gap-1 text-[10px]">
+                      <FileText className="size-3" /> Soal
+                    </Badge>
+                  )}
+                  {current?.itemNumber && (
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      No. {current.itemNumber}
+                    </Badge>
+                  )}
+                  {current?.sectionName && (
+                    <Badge variant="outline" className="border-border/80 text-[10px] text-muted-foreground">
+                      {current.sectionName}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/30">
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Tipe Naskah</span>
+                    <span className="font-mono text-foreground capitalize">
+                      {current?.bundleType === "exam" ? "Ujian" : current?.bundleType || "-"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[11px]">Tahun</span>
+                    <span className="font-mono text-foreground">
+                      {current?.year ?? "-"}
+                    </span>
+                  </div>
+                </div>
+
+                {current?.sourceLabel && (
+                  <div className="pt-1 border-t border-border/30">
+                    <span className="text-muted-foreground block text-[11px]">Asal Sumber</span>
+                    <span className="text-foreground">{current.sourceLabel}</span>
+                  </div>
+                )}
+
+                {/* Indikator titik slide bila > 1 naskah */}
+                {total > 1 && (
+                  <div className="flex items-center justify-center gap-2.5 pt-2 border-t border-border/30">
+                    {bundles.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setIndex(i)}
+                        aria-label={`Pindah ke naskah ${i + 1}`}
+                        className={cn(
+                          "relative h-1.5 rounded-full transition-all after:absolute after:-inset-y-3.5 after:-inset-x-1 after:content-['']",
+                          i === safeIndex ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30",
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            );
+          })()
         )}
-      </CardContent>
-    </Card>
+      </Card>
+
+      <AddToBundleDialog
+        open={addToBundleOpen}
+        onOpenChange={setAddToBundleOpen}
+        questionId={questionId}
+      />
+    </>
   );
 }
+
 

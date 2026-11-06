@@ -10,8 +10,8 @@ import type { GradeRow } from "./shared";
 
 /**
  * Daftar jenjang/kelas aktif (referensi baca-saja) — sumber tunggal untuk
- * editor & filter. Format selaras QBank (`curriculum.yaml`): `id` = nomor kelas
- * / kode ("1".."12", "11w", "utbk", "umum"), `label` = "Kelas N SD/SMP/SMA".
+ * editor & filter: `id` = nomor kelas / kode ("1".."12", "utbk", "mandiri", "umum"),
+ * `label` = "Kelas N SD/SMP/SMA".
  */
 export async function listGrades(): Promise<GradeRow[]> {
   return db

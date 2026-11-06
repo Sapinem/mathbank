@@ -1,4 +1,4 @@
-import { uuidPk } from "./_columns";
+import { uuidPk, versionColumn } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -31,6 +31,7 @@ export const topics = pgTable(
     sortOrder: integer("sort_order").default(0).notNull(),
     usageCount: integer("usage_count").default(0).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
+    version: versionColumn(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -90,6 +91,7 @@ export const tags = pgTable(
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description"),
     usageCount: integer("usage_count").default(0).notNull(),
+    version: versionColumn(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

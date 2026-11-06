@@ -1,6 +1,5 @@
 allowBuilds:
   esbuild: true
-  sharp: false
   unrs-resolver: false
 # M13 S8: buang paket deprecated `@esbuild-kit/esm-loader` (membawa esbuild@0.18.20
 # yang rentan, GHSA-67mh-4wv8-2f99). Drizzle-kit sendiri sudah memakai `tsx`;
@@ -30,3 +29,15 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-x64-msvc@16.3.7'
   - eslint-config-next@16.3.7
   - next@16.3.7
+  - '@better-auth/api-key@1.7.14'
+  - '@better-auth/core@1.7.14'
+  - '@better-auth/drizzle-adapter@1.7.14'
+  - '@better-auth/kysely-adapter@1.7.14'
+  - '@better-auth/memory-adapter@1.7.14'
+  - '@better-auth/mongo-adapter@1.7.14'
+  - '@better-auth/prisma-adapter@1.7.14'
+  - '@better-auth/telemetry@1.7.14'
+  - better-auth@1.7.14
+  - '@shadcn/registry@0.2.1'
+  - lucide-react@1.62.0
+  - shadcn@4.23.0

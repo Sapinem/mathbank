@@ -16,7 +16,9 @@ import {
   canSeeAnswerKey,
   type QuestionOptionView,
 } from "@/lib/db/projections/question";
-import type { ListQuestionsQuery, AnswerKey } from "@/lib/contracts/question";
+import type { ListQuestionsQuery, AnswerKey, QuestionListStats } from "@/lib/contracts/question";
+export type { QuestionListStats } from "@/lib/contracts/question";
+import { fetchQuestionStatsAndTotal } from "./question-stats";
 
 /**
  * Baca soal (M14 — pecahan `question-service.ts`).
@@ -111,6 +113,10 @@ export interface QuestionBundleView {
   sourceKind: string | null;
   /** Nomor butir di dalam naskah (`bundle_items.item_number`). */
   itemNumber: string | null;
+  /** Peran butir dalam naskah: scored question atau wacana/stimulus bersama. */
+  role: "question" | "stimulus";
+  /** Seksi naskah (mis. "Bagian A"). */
+  sectionName: string | null;
   status: string;
 }
 
@@ -164,6 +170,8 @@ export async function getQuestion(
         sourceLabel: sources.label,
         sourceKind: sources.kind,
         itemNumber: bundleItems.itemNumber,
+        role: bundleItems.role,
+        sectionName: bundleItems.sectionName,
         status: bundles.status,
       })
       .from(bundleItems)
@@ -329,11 +337,11 @@ export async function getQuestionInternal(
 export async function listQuestions(
   query: ListQuestionsQuery,
   viewer?: Actor,
-): Promise<{ items: PublicQuestion[]; total: number }> {
+): Promise<{ items: PublicQuestion[]; total: number; stats?: QuestionListStats }> {
   // Impor dinamis menghindari lingkaran modul: buildQuestionFilter memakai
   // tipe/utilitas yang sama tanpa saling mengimpor modul ini.
   const { buildQuestionFilter } = await import("@/lib/question/filters");
-  const { where: finalWhere, byRelevance } = await buildQuestionFilter(query);
+  const { where: finalWhere, byRelevance, resolvedTopicIds } = await buildQuestionFilter(query);
 
   // Mode semantik: urutkan berdasar jarak embedding (HNSW) bila query dapat
   // di-embed. Bila service embedding mati / tak ada hasil, JATUH ke trigram.
@@ -368,16 +376,12 @@ export async function listQuestions(
         .select(questionColumns({ withAnswerKey: viewer ? canSeeAnswerKey(viewer) : false }))
         .from(questions);
 
-  const countQuery = semanticWhere
-    ? db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(questions)
-        .leftJoin(questionEmbeddings, eq(questions.id, questionEmbeddings.questionId))
-    : db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(questions);
-
-  const [{ count }] = await countQuery.where(combined);
+  const { total: count, stats } = await fetchQuestionStatsAndTotal({
+    query,
+    combinedWhere: combined,
+    semanticWhere,
+    resolvedTopicIds,
+  });
 
   // Urutkan: semantik (bila aktif) > relevansi trigram > terbaru dulu.
   const finalOrder: SQL[] =
@@ -396,7 +400,7 @@ export async function listQuestions(
     .offset(query.offset);
 
   const items = await attachOptions(rows, viewer ? canSeeAnswerKey(viewer) : false);
-  return { items, total: count };
+  return { items, total: count, stats };
 }
 
 /**
@@ -413,13 +417,43 @@ async function attachOptions(
   const parentIds = [
     ...new Set(rows.map((r) => r.parentId).filter((v): v is string => !!v)),
   ];
+  const questionIds = rows.map((r) => r.id);
+
+  const [parents, qTopics] = await Promise.all([
+    parentIds.length > 0
+      ? db
+          .select({ id: questions.id, contentMarkdown: questions.contentMarkdown })
+          .from(questions)
+          .where(inArray(questions.id, parentIds))
+      : Promise.resolve([]),
+    questionIds.length > 0
+      ? db
+          .select({
+            questionId: questionTopics.questionId,
+            id: topics.id,
+            name: topics.name,
+            level: topics.level,
+            isPrimary: questionTopics.isPrimary,
+          })
+          .from(questionTopics)
+          .innerJoin(topics, eq(questionTopics.topicId, topics.id))
+          .where(inArray(questionTopics.questionId, questionIds))
+      : Promise.resolve([]),
+  ]);
+
   const parentMap = new Map<string, { id: string; contentMarkdown: string }>();
-  if (parentIds.length > 0) {
-    const parents = await db
-      .select({ id: questions.id, contentMarkdown: questions.contentMarkdown })
-      .from(questions)
-      .where(inArray(questions.id, parentIds));
-    for (const p of parents) parentMap.set(p.id, p);
+  for (const p of parents) parentMap.set(p.id, p);
+
+  const topicMap = new Map<string, QuestionTopicView[]>();
+  for (const qt of qTopics) {
+    const list = topicMap.get(qt.questionId) ?? [];
+    list.push({
+      id: qt.id,
+      name: qt.name,
+      level: Number(qt.level),
+      isPrimary: qt.isPrimary,
+    });
+    topicMap.set(qt.questionId, list);
   }
 
   return rows.map((r) => {
@@ -435,6 +469,7 @@ async function attachOptions(
         { withAnswerKey, createdAt: r.createdAt, updatedAt: r.updatedAt },
       ),
       parent: r.parentId ? (parentMap.get(r.parentId) ?? null) : null,
+      topics: topicMap.get(r.id) ?? [],
     } as PublicQuestion;
   });
 }

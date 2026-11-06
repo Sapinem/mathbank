@@ -31,6 +31,17 @@ const INBOUND_CSP_HEADERS = [
 ];
 
 export function proxy(request: NextRequest): NextResponse {
+  // Alihkan otomatis HTTP ke HTTPS untuk domain publik produksi (anti open-redirect & preservasi metode mutasi via 308)
+  const proto = request.headers.get("x-forwarded-proto");
+  const host = request.headers.get("host") || "";
+  const isCanonicalProdHost = host === "b.iyo.my.id" || host.startsWith("b.iyo.my.id:");
+  if (proto === "http" && isCanonicalProdHost) {
+    const url = new URL("https://b.iyo.my.id");
+    url.pathname = request.nextUrl.pathname;
+    url.search = request.nextUrl.search;
+    return NextResponse.redirect(url, 308);
+  }
+
   const requestHeaders = new Headers(request.headers);
   // Buang CSP kiriman klien — kita tak mempercayai header ini dari luar.
   for (const h of INBOUND_CSP_HEADERS) requestHeaders.delete(h);

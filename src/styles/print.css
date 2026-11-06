@@ -1,5 +1,5 @@
 /*
- * Gaya cetak (M8) — naskah paket soal.
+ * Gaya cetak (M8) - naskah paket soal.
  *
  * Prinsip (lihat docs/RENCANA-EKSPOR.md):
  *  - Opsi A: cetak lewat browser (`window.print()`), TANPA dependency baru.
@@ -8,20 +8,36 @@
  *  - Naskah = `.print-sheet`; hanya ini yang tampil saat mencetak.
  */
 
-/* ══════════ PAGE (A4 portrait, UX-DR2, MAT-40) ══════════ */
+/* ══════════ PAGE (A4 portrait, mathmyid.cls publishing geometry) ══════════ */
 @page {
   size: A4 portrait;
-  /* MAT-40: margin 15mm sesuai standar mutu cetak Math My Id. */
-  margin: 15mm;
+  /* Geometri penerbitan mathmyid.cls (Axiom): atas 1.9cm, kanan 0.6cm,
+     bawah 1.8cm, kiri 1cm. Watermark tetap "bleed" lewat offset negatif,
+     bukan margin 0.
+     Running header/footer digeser negatif 1.3cm/1.2cm ke dalam margin, jadi
+     sisa jarak ke tepi fisik = margin - offset = 0.6cm di atas dan bawah —
+     sama dengan margin kanan. Di bawah 0.42cm (area tak tercetak printer
+     laser umum) badge nomor halaman mulai terpotong di kertas. */
+  margin: 1.9cm 0.6cm 1.8cm 1cm;
 }
 
 .worksheet {
   --paper-ink: #111111;
-  --paper-green: #0b6b3a;
-  --paper-muted: #333333;
+  --paper-brand: var(--mb-brand, #0158ca);
+  --paper-accent: var(--mb-accent, #d5ac1e);
+  --paper-muted: #4b5563;
+  --paper-navy: #002b66;
+  --paper-gold: #f59e0b;
+
+  /* Token lapisan cetak (CONSTRAINTS #8: dilarang z-index manual). */
+  --print-layer-watermark: 0;
+  --print-layer-grid: 1;
+  --print-layer-content: 2;
+  --print-layer-running: 10;
+  --print-layer-kop: 20;
 
   font-family: 'Helvetica Neue', Arial, 'Liberation Sans', sans-serif;
-  font-size: 10pt;
+  font-size: 10.5pt;
   line-height: 1.42;
   color: var(--paper-ink);
   background: #ffffff;
@@ -29,9 +45,138 @@
   widows: 3;
 }
 
+/* ══════════ SCREEN ONLY: PREVIEW LEMBAR A4 FISIK ══════════ */
+@media screen {
+  .worksheet {
+    position: relative;
+    overflow: hidden;
+    width: 210mm;
+    min-width: 210mm;
+    max-width: 210mm;
+    min-height: 297mm;
+    padding: 0.9cm 1cm 1.2cm 1cm;
+    box-sizing: border-box;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.15);
+  }
+
+  .worksheet.worksheet-fit-screen {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    padding: 1rem !important;
+    box-shadow: none !important;
+  }
+
+  /* Susunan Lapisan Stacking Context (Layar):
+     Lapisan 1: Watermark (z-index: 0)
+     Lapisan 2: Kisi Kotak 0,5 cm via ::before (z-index: 1)
+     Lapisan 3: Teks Konten & KaTeX (z-index: 2) */
+  .worksheet.worksheet-grid {
+    position: relative;
+  }
+
+  .worksheet.worksheet-grid::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: var(--print-layer-grid);
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(0.5cm - 0.25pt),
+      rgba(0, 0, 0, 0.08) calc(0.5cm - 0.25pt),
+      rgba(0, 0, 0, 0.08) 0.5cm
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(0.5cm - 0.25pt),
+      rgba(0, 0, 0, 0.08) calc(0.5cm - 0.25pt),
+      rgba(0, 0, 0, 0.08) 0.5cm
+    );
+  }
+
+  /* Tanda air (watermark) logo institusi pada pratinjau layar:
+     Ditempatkan di pojok kanan bawah mentok sampai ujung kanan kertas
+     proporsional ~90% lebar */
+  .worksheet-watermark-container {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 90%;
+    height: auto;
+    max-width: none;
+    pointer-events: none;
+    user-select: none;
+    z-index: var(--print-layer-watermark);
+    opacity: 0.12;
+  }
+
+  .worksheet-watermark-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .header,
+  .instruction,
+  .bundle-print-kop,
+  .bundle-print-footer,
+  .print-columns,
+  .print-single-column,
+  .print-sheet-answerkey,
+  .print-sheet-explanation,
+  .print-sheet-answers {
+    position: relative;
+    z-index: var(--print-layer-content);
+  }
+
+  /* Running header disembunyikan pada pratinjau layar gulir kontinu */
+  .print-running-header {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .worksheet.worksheet-fit-screen .print-columns {
+    column-count: 1 !important;
+  }
+
+  /* Di layar HP, watermark diposisikan fixed di pojok kanan bawah layar ponsel
+     agar langsung tampak di viewport saat pengguna membaca soal */
+  .worksheet-watermark-container {
+    position: fixed !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    width: 75vw !important;
+    height: auto !important;
+    max-width: 320px !important;
+    opacity: 0.12 !important;
+  }
+}
+
+/* ══════════ BODY: COLUMNS (Tata letak naskah statis & Font Adaptif) ══════════ */
+.worksheet .print-columns {
+  column-count: 2;
+  column-gap: 9mm;
+  column-rule: 1px solid var(--mb-border-subtle, #e5e5e5);
+  margin-top: 12px;
+  font-size: 10.5pt;
+  line-height: 1.4;
+}
+
+.worksheet .print-single-column {
+  column-count: 1;
+  margin-top: 12px;
+  font-size: 12pt;
+  line-height: 1.45;
+}
+
 /* ══════════ HEADER BLOCK (UX-DR1) ══════════ */
 .header {
-  border: 1px solid var(--paper-green);
+  border: 1.5px solid var(--paper-brand);
   border-radius: 6px;
   padding: 8px 11px 7px 11px;
   break-after: avoid;
@@ -51,7 +196,7 @@
 }
 
 .logo {
-  background: var(--paper-green);
+  background: var(--paper-brand);
   color: #ffffff;
   padding: 5px 8px;
   border-radius: 4px;
@@ -79,7 +224,7 @@
 .title {
   font-size: 18pt;
   font-weight: 800;
-  color: var(--paper-green);
+  color: var(--paper-brand);
   letter-spacing: 0.6px;
   line-height: 1;
   text-align: right;
@@ -87,7 +232,7 @@
 
 .headerRule {
   border: 0;
-  border-top: 2.5px solid var(--paper-green);
+  border-top: 2.5px solid var(--paper-brand);
   margin: 7px 0 6px 0;
 }
 
@@ -120,7 +265,8 @@
 
 /* ══════════ INSTRUCTION CALLOUT (UX-DR1) ══════════ */
 .instruction {
-  border: 1px solid var(--paper-green);
+  border: 1px solid var(--paper-brand);
+  background-color: rgba(1, 88, 202, 0.04);
   border-radius: 6px;
   padding: 6px 11px;
   margin-top: 8px;
@@ -133,46 +279,64 @@
 /* ══════════ BODY: TWO COLUMNS (UX-DR1) ══════════ */
 /* ⚠️ Kelas `.print-*` SENGAJA hanya didefinisikan di dalam `@media print`
    (lihat bawah). Berkas ini diimpor TANPA layer, sedangkan utility Tailwind
-   berada di `@layer utilities` — aturan unlayered selalu menang, sehingga
+   berada di `@layer utilities` - aturan unlayered selalu menang, sehingga
    `.print-columns { column-count: 2 }` di scope global membatalkan
    `columns-1` di layar dan memaksa 2 kolom pada ponsel (regresi mobile-first). */
 /* Hanya berlaku saat mencetak. */
 @media print {
-  /* Ukuran & margin halaman A4 (Publishing Engine V2 — W3C CSS Paged Media Level 3) */
+  /* Ukuran & margin halaman A4 (Geometri penerbitan mathmyid.cls - Axiom) */
   @page {
     size: A4 portrait;
-    margin: 20mm 15mm 20mm 15mm;
-
-    /* Running Header: Nama paket naskah (halaman 2+) */
-    @top-right {
-      content: string(bundleTitle);
-      font-size: 8.5pt;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      color: #555555;
-    }
-
-    /* Running Footer: Nomor halaman otomatis */
-    @bottom-right {
-      content: "Halaman " counter(page) " dari " counter(pages);
-      font-size: 8.5pt;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      color: #555555;
-    }
+    /* Margin kanan diatur 0 agar kanvas cetak membentang sampai ujung fisik kanan kertas tanpa terpotong clip-rect area halaman.
+       Jarak teks konten di sebelah kanan tetap dijaga 1cm via padding-right pada .print-sheet.
+       Margin vertikal 1.8cm atas dan 1.6cm bawah menyisakan ruang gutter aman untuk fixed running header dan footer. */
+    margin: 1.8cm 0 1.6cm 1cm;
   }
 
-  /* Supresi Kop di Halaman Pertama: Halaman 1 memuat Kop Institusi secara bersih */
-  @page :first {
-    @top-right {
-      content: none;
-    }
+  /* Kunci paksa dokumen cetak ke color-scheme: light agar peramban (Chromium)
+     tidak mencetak kanvas gelap / margin hitam saat pengguna berada dalam Dark Mode. */
+  :root,
+  html,
+  html.dark,
+  body,
+  body.dark {
+    color-scheme: light !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
   }
 
-  /* Netralkan tinggi terkurung shell (h-svh/overflow) agar dokumen mengalir penuh. */
+  /* Netralkan tinggi terkurung shell (h-svh/overflow) agar dokumen mengalir penuh tanpa terpotong 1 halaman. */
   html,
   body {
     height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     overflow: visible !important;
-    background: #fff !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  /* Netralkan seluruh pembungkus shell aplikasi (SidebarProvider, SidebarInset, scroll area, page root)
+     yang memakai h-svh / overflow-hidden agar browser tidak memotong cetakan menjadi 1 halaman saja. */
+  [data-app-shell],
+  [data-slot="sidebar-wrapper"],
+  #konten-utama,
+  [data-slot="sidebar-inset"],
+  [data-app-scroll],
+  .print-page-root,
+  .print-scroll-wrapper {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+    position: static !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
 
   /* Sembunyikan shell + kontrol yang tak perlu dicetak. */
@@ -180,44 +344,71 @@
   nav,
   aside,
   header:not(.print-header),
-  button:not(.print-keep) {
+  button:not(.print-keep),
+  [data-slot="sidebar"],
+  [data-slot="sidebar-gap"],
+  [data-slot="sheet-overlay"],
+  [data-slot="sheet-content"] {
     display: none !important;
   }
 
-  /* Layout 2-kolom seimbang */
+  /* Layout 2-kolom seimbang + font adaptif */
   .print-columns {
     column-count: 2;
     column-gap: 9mm;
     column-rule: 1px solid var(--mb-border-subtle, #e5e5e5);
     margin-top: 12px;
+    font-size: 10.5pt !important;
+    line-height: 1.4 !important;
   }
 
-  /* Layout 1-kolom (fallback) */
+  /* Layout 1-kolom (fallback) + font adaptif */
   .print-single-column {
     column-count: 1;
     margin-top: 12px;
+    font-size: 12pt !important;
+    line-height: 1.45 !important;
   }
 
-  /* Butir soal — anti-potong + gutter nomor 2-digit */
+  /* Butir soal - anti-potong + gutter nomor 2-digit */
   .print-item {
     break-inside: avoid;
     page-break-inside: avoid;
-    padding-left: 24px;
+    padding-left: 28px;
     position: relative;
     margin-bottom: 12px;
+  }
+
+  /* Lompat kolom paksa (Axiom force-column) pada tata letak 2-kolom */
+  .print-columns .print-item[data-break="force-column"] {
+    break-before: column;
+  }
+
+  /* Relaksasi Butir Pertama (Axiom R5):
+     Butir pertama berada tepat di bawah Kop (yang memiliki column-span / margin).
+     Jika diberi break-inside: avoid kaku, soal/stimulus pertama yang agak panjang
+     akan terlempar ke halaman 2 dan meninggalkan halaman 1 bolong hanya berisi Kop. */
+  .print-item:first-child,
+  .print-item[data-first-item="true"],
+  .print-stimulus:first-child,
+  .print-stimulus[data-first-item="true"] {
+    break-inside: auto;
+    page-break-inside: auto;
   }
 
   /* Nomor soal absolut (menempel di gutter kiri) */
   .print-item-number {
     position: absolute;
     left: 0;
+    width: 22px;
+    text-align: right;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
 
-  /* Blok yang tidak boleh terbelah antar-halaman */
+  /* Blok yang tidak boleh terbelah antar-halaman (kecuali first-item) */
   .print-options,
-  .print-stimulus {
+  .print-stimulus:not([data-first-item="true"]) {
     break-inside: avoid;
     page-break-inside: avoid;
   }
@@ -228,20 +419,16 @@
     break-after: avoid;
     page-break-after: avoid;
   }
-  .print-bundle-title,
-  .title {
-    string-set: bundleTitle content();
-  }
   .print-instruction {
     break-after: avoid;
     page-break-after: avoid;
   }
 
-  /* Fase 4 — KaTeX di cetak: JANGAN `overflow-x: visible` lagi. Di kertas
+  /* Fase 4 - KaTeX di cetak: JANGAN `overflow-x: visible` lagi. Di kertas
      tidak ada gulir horizontal, jadi rumus yang meluber akan menimpa kolom
      sebelah (2 kolom ≈ 85 mm) atau keluar halaman A4. Rumus kini dikurung
      di dalam kolomnya (`hidden` + `overflow-wrap`): konten yang benar-benar
-     lebih lebar dari kolom terpotong di tepi kolom, bukan meluber — dengan
+     lebih lebar dari kolom terpotong di tepi kolom, bukan meluber - dengan
      catatan jujur bahwa KaTeX sendiri tidak me-reflow rumus panjang menjadi
      beberapa baris, jadi rumus display yang sangat panjang tetap berisiko
      terpotong dan perlu diperiksa pada PDF nyata (lihat laporan Fase 4). */
@@ -255,13 +442,13 @@
     max-width: 100%;
   }
 
-  /* Fase 4 — KaTeX inline di cetak juga dikurung (sebelumnya `auto`,
+  /* Fase 4 - KaTeX inline di cetak juga dikurung (sebelumnya `auto`,
      yang sama-sama tidak ada gunanya di kertas). */
   .katex-inline {
     overflow-x: hidden !important;
   }
 
-  /* Fase 4 — gambar cetak diskalakan ke lebar kolom/halaman (sebelumnya
+  /* Fase 4 - gambar cetak diskalakan ke lebar kolom/halaman (sebelumnya
      tidak ada aturan img khusus cetak; `max-h-96` layar tetap berlaku
      lewat class, tapi lebar kini dijamin tidak meluber). */
   .print-sheet img {
@@ -269,7 +456,7 @@
     height: auto !important;
   }
 
-  /* Fase 4 — sel tabel cetak (termasuk tabel matriks) boleh memecah kata
+  /* Fase 4 - sel tabel cetak (termasuk tabel matriks) boleh memecah kata
      panjang supaya tabel tidak mendorong kolom keluar halaman. */
   .print-sheet table {
     max-width: 100%;
@@ -286,20 +473,188 @@
     height: auto !important;
   }
 
-  /* Naskah mengalir bebas. */
-  .print-sheet {
+  /* Naskah mengalir bebas di paged media. */
+  .print-sheet,
+  .worksheet {
     display: block !important;
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    max-width: none !important;
+    padding-right: 1cm !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    box-shadow: none !important;
     color: #000 !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
   }
 
-  /* Warna dikunci hitam-putih agar hemat tinta & konsisten. */
-  .print-sheet * {
+  /* Susunan Lapisan Stacking Context (Cetak Fisik/PDF):
+     Lapisan 1: Watermark (z-index: 0)
+     Lapisan 2: Kisi Kotak 0,5 cm via ::before (z-index: 1)
+     Lapisan 3: Teks Konten & KaTeX (z-index: 2) */
+  .worksheet.worksheet-grid::before {
+    content: "" !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+    z-index: var(--print-layer-grid) !important;
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(0.5cm - 0.25pt),
+      rgba(0, 0, 0, 0.12) calc(0.5cm - 0.25pt),
+      rgba(0, 0, 0, 0.12) 0.5cm
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(0.5cm - 0.25pt),
+      rgba(0, 0, 0, 0.12) calc(0.5cm - 0.25pt),
+      rgba(0, 0, 0, 0.12) 0.5cm
+    ) !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Tanda air (watermark) logo institusi saat mencetak fisik/PDF:
+     - Menggunakan elemen inline SVG di DOM agar selalu dicetak di semua peramban termasuk HP/mobile
+       (yang biasanya mematikan opsi cetak gambar latar).
+     - position: fixed di pojok kanan bawah agar berulang di SETIAP halaman fisik cetak.
+     - width: 90% (sekitar 189mm) proporsional sesuai naskah.
+     - margin-right @page bernilai 0 sehingga kotak menempel mentok sampai ke pinggir fisik kertas tanpa batas putih.
+     - bottom: 0 menempel pada batas bawah konten, bebas dari kebocoran/fragmentasi ke halaman berikutnya. */
+  .worksheet-watermark-container {
+    display: block !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    /* Bleed ke margin kanan 0.6cm tanpa memotong footer bernomor. */
+    right: -0.6cm !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 90% !important;
+    height: auto !important;
+    max-width: none !important;
+    opacity: 0.12 !important;
+    z-index: var(--print-layer-watermark) !important;
+    pointer-events: none !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .worksheet-watermark-svg {
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Elemen konten cetak dinaikkan di atas kisi dan tanda air */
+  .print-header,
+  .print-instruction,
+  .print-item,
+  .print-stimulus,
+  .print-sheet-answerkey,
+  .print-sheet-explanation,
+  .print-sheet-answers {
+    position: relative !important;
+    z-index: var(--print-layer-content) !important;
+  }
+
+  .print-section-header {
+    display: block !important;
+    position: relative !important;
+    z-index: var(--print-layer-content) !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+    column-span: all !important;
+  }
+
+  /* Kop resmi naskah hanya di halaman pertama (KTD3: z-index 20 menutupi fixed running header di halaman 1) */
+  .bundle-print-kop {
+    display: block !important;
+    position: relative !important;
+    z-index: var(--print-layer-kop) !important;
+    margin-top: -1.3cm !important;
+    margin-bottom: 12px !important;
+    background: #ffffff !important;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .bundle-print-kop img {
+    height: 32px !important;
+    max-height: 32px !important;
+    width: auto !important;
+    object-fit: contain !important;
+  }
+
+  /* Running header & footer DOM di cetak (KTD3: elemen fixed berulang pada paged media di dalam gutter margin) */
+  .print-running-header {
+    display: flex !important;
+    position: fixed !important;
+    top: -1.3cm !important;
+    left: 1cm !important;
+    right: 0 !important;
+    z-index: var(--print-layer-running) !important;
+    background: #ffffff !important;
+  }
+
+  .print-running-footer {
+    display: flex !important;
+    position: fixed !important;
+    bottom: -1.2cm !important;
+    left: 1cm !important;
+    right: 0 !important;
+    z-index: var(--print-layer-running) !important;
+    background: #ffffff !important;
+  }
+
+  /* Nomor halaman dinamis paged media untuk footer cetak */
+  .print-page-counter::after {
+    content: counter(page);
+    color: #ffffff !important;
+    font-weight: 900;
+  }
+
+  /* Warna dikunci hitam-putih pada butir soal agar hemat tinta & konsisten. */
+  .print-columns,
+  .print-columns *,
+  .print-single-column,
+  .print-single-column *,
+  .print-sheet-answerkey *,
+  .print-sheet-explanation *,
+  .print-sheet-answers * {
     color: #000 !important;
     background: transparent !important;
     box-shadow: none !important;
+  }
+
+  /* Pengecualian elemen branding kop resmi Math My ID agar warna navy & emas tetap terjaga */
+  .bundle-print-kop {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .bundle-print-kop [class*="bg-"] {
+    background-color: var(--paper-navy, #002b66) !important;
+    color: #ffffff !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .bundle-print-kop h1 {
+    color: var(--paper-navy, #002b66) !important;
   }
 
   /* Jangan pisahkan soal antar halaman bila bisa dihindari. */
@@ -308,8 +663,8 @@
     page-break-inside: avoid;
   }
 
-  /* MAT-40: KaTeX inline terisolasi — tidak meluap di kertas A4.
-     Fase 4: `hidden`, bukan `auto` — di kertas tidak ada gulir, jadi
+  /* MAT-40: KaTeX inline terisolasi - tidak meluap di kertas A4.
+     Fase 4: `hidden`, bukan `auto` - di kertas tidak ada gulir, jadi
      `auto` sama dengan membiarkan luapan; lihat aturan Fase 4 di atas. */
   .katex-inline {
     display: inline-block;
@@ -319,9 +674,17 @@
     scrollbar-width: thin;
   }
 
-  /* MAT-40: lembar kunci jawaban & pembahasan terpisah mulai di halaman baru. */
-  .print-sheet-answerkey,
-  .print-sheet-explanation,
+  /* MAT-40: lembar kunci jawaban & pembahasan terpisah mulai di halaman baru */
+  .print-sheet-answerkey {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .print-sheet-explanation {
+    break-before: page;
+    page-break-before: always;
+  }
+
   .print-sheet-answers {
     break-before: page;
     page-break-before: always;

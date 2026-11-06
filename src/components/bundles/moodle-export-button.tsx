@@ -66,13 +66,20 @@ export function MoodleExportButton({ bundleId }: { bundleId: string }) {
 
   return (
     <>
-      <Button variant="outline" onClick={exportMoodle} disabled={busy}>
+      <Button
+        variant="outline"
+        onClick={exportMoodle}
+        disabled={busy}
+        className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3"
+        aria-label="Ekspor ke GitSync"
+        title="Ekspor ke GitSync"
+      >
         {busy ? (
           <Loader2 data-icon="inline-start" className="animate-spin" />
         ) : (
           <FolderGit2 data-icon="inline-start" />
         )}
-        Ekspor ke GitSync
+        <span className="hidden sm:inline">Ekspor ke GitSync</span>
       </Button>
 
       {/* Berhasil */}

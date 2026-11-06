@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   STATUS_LABELS,
+  STATUS_SHORT_LABELS,
+  STATUS_ICONS,
+  getStatusIcon,
   TYPE_LABELS,
   COGNITIVE_LABELS,
   DIFFICULTY_LABELS,
@@ -13,6 +16,22 @@ describe("labels", () => {
     expect(Object.keys(STATUS_LABELS).sort()).toEqual(
       ["archived", "draft", "ready", "review"].sort(),
     );
+  });
+
+  it("punya ikon resmi untuk semua status FSM", () => {
+    expect(Object.keys(STATUS_ICONS).sort()).toEqual(
+      ["archived", "draft", "ready", "review"].sort(),
+    );
+    expect(getStatusIcon("draft")).toBeDefined();
+    expect(getStatusIcon("review")).toBeDefined();
+    expect(getStatusIcon("ready")).toBeDefined();
+    expect(getStatusIcon("archived")).toBeDefined();
+    expect(getStatusIcon("unknown")).toBeDefined();
+  });
+
+  it("punya label ringkas untuk semua status", () => {
+    expect(STATUS_SHORT_LABELS.review).toBe("Telaah");
+    expect(STATUS_SHORT_LABELS.draft).toBe("Draf");
   });
 
   it("punya 11 label tipe soal", () => {

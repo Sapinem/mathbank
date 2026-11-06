@@ -227,12 +227,53 @@ describe("getQuestion & listQuestions", () => {
     expect(await getQuestion(crypto.randomUUID())).toBeNull();
   });
 
-  it("listQuestions mengembalikan item + total", async () => {
-    await createQuestion(baseInput({ contentMarkdown: "Soal A" }), teacher);
+  it("listQuestions mengembalikan item + total + stats", async () => {
+    await createQuestion(baseInput({ contentMarkdown: "Soal A", isFlagged: true }), teacher);
     await createQuestion(baseInput({ contentMarkdown: "Soal B" }), teacher);
     const res = await listQuestions({ includeDeleted: false, mode: "text", limit: 10, offset: 0 });
     expect(res.total).toBeGreaterThanOrEqual(2);
     expect(res.items.length).toBeGreaterThanOrEqual(2);
+    expect(res.stats).toBeDefined();
+    expect(res.stats?.total).toBe(res.total);
+    expect(res.stats?.draft).toBeGreaterThanOrEqual(2);
+    expect(res.stats?.flagged).toBeGreaterThanOrEqual(1);
+    expect(res.stats?.ready).toBeGreaterThanOrEqual(0);
+    expect(res.stats?.review).toBeGreaterThanOrEqual(0);
+  });
+
+  it("listQuestions dengan filter status mempertahankan stats global (dual-count branch)", async () => {
+    await createQuestion(baseInput({ contentMarkdown: "Soal Draft 1" }), teacher);
+    await createQuestion(baseInput({ contentMarkdown: "Soal Draft 2" }), teacher);
+    await createQuestion(baseInput({ contentMarkdown: "Soal Review 1", status: "review" }), teacher);
+    const resFiltered = await listQuestions({
+      status: "draft",
+      includeDeleted: false,
+      mode: "text",
+      limit: 10,
+      offset: 0,
+    });
+    expect(resFiltered.total).toBe(2);
+    expect(resFiltered.stats).toBeDefined();
+    expect(resFiltered.stats?.total).toBe(3);
+    expect(resFiltered.stats?.draft).toBe(2);
+    expect(resFiltered.stats?.review).toBe(1);
+  });
+
+  it("listQuestions dengan filter flagged mempertahankan stats global (dual-count branch)", async () => {
+    await createQuestion(baseInput({ contentMarkdown: "Soal Flagged 1", isFlagged: true }), teacher);
+    await createQuestion(baseInput({ contentMarkdown: "Soal Normal 1", isFlagged: false }), teacher);
+    const res = await listQuestions({
+      flagged: true,
+      includeDeleted: false,
+      mode: "text",
+      limit: 10,
+      offset: 0,
+    });
+    expect(res.total).toBe(1);
+    expect(res.items[0]!.contentMarkdown).toBe("Soal Flagged 1");
+    expect(res.stats).toBeDefined();
+    expect(res.stats?.total).toBe(2);
+    expect(res.stats?.flagged).toBe(1);
   });
 });
 

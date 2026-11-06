@@ -1,4 +1,4 @@
-import { uuid } from "drizzle-orm/pg-core";
+import { integer, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 /**
@@ -17,4 +17,23 @@ export function uuidPk(name = "id") {
   return uuid(name)
     .primaryKey()
     .default(sql`uuidv7()`);
+}
+
+/**
+ * Kolom nomor revisi untuk konkurensi optimistik (ADR-0030).
+ *
+ * KENAPA integer, bukan `updated_at`: timestamp beresolusi mikrodetik bisa
+ * bernilai sama untuk dua UPDATE berurutan dalam satu transaksi, sehingga dua
+ * klien yang menulis bersamaan sama-sama lolos. Integer monoton tidak ambigu.
+ *
+ * KENAPA dinaikkan trigger, bukan kode aplikasi: satu UPDATE yang lupa
+ * menaikkan `version` membuat ETag basi selamanya, dan `If-Match` berubah dari
+ * proteksi menjadi jebakan. Trigger menutup SEMUA penulis — service, skrip
+ * seed, SQL manual.
+ *
+ * ⚠️ Jangan pernah mempercayai `version` dari klien. Trigger menimpa nilai apa
+ * pun yang dikirim dengan `OLD.version + 1`.
+ */
+export function versionColumn() {
+  return integer("version").default(1).notNull();
 }

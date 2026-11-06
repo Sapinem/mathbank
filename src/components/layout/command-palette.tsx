@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Plus, Package } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -48,6 +49,22 @@ export function CommandPalette({
       <CommandInput placeholder="Cari halaman…" />
       <CommandList>
         <CommandEmpty>Tidak ditemukan.</CommandEmpty>
+        <CommandGroup heading="Aksi Cepat">
+          <CommandItem
+            value="Aksi Cepat Buat Soal Baru"
+            onSelect={() => go("/questions/new")}
+          >
+            <Plus />
+            Buat Soal Baru
+          </CommandItem>
+          <CommandItem
+            value="Aksi Cepat Buat Paket Soal"
+            onSelect={() => go("/bundles?new=true")}
+          >
+            <Package />
+            Buat Paket Soal
+          </CommandItem>
+        </CommandGroup>
         {NAV_GROUPS.map((group) => {
           const items = group.items.filter((i) => !i.hidden);
           if (items.length === 0) return null;

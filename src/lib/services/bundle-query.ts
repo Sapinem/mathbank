@@ -11,7 +11,7 @@
  *
  * ⚠️ JANGAN impor file ini dari komponen klien (menarik `@/lib/db`).
  */
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ne, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions } from "@/lib/db/schema/question";
@@ -156,8 +156,13 @@ export async function listBundles(
   const conds = [isNull(bundles.deletedAt)];
   if (filter?.bundleType) conds.push(eq(bundles.bundleType, filter.bundleType));
   if (filter?.origin) conds.push(eq(bundles.origin, filter.origin));
-  if (filter?.status && filter.status !== "active") {
+  if (filter?.status === "archived") {
+    conds.push(eq(bundles.status, "archived"));
+  } else if (filter?.status && filter.status !== "active") {
     conds.push(eq(bundles.status, filter.status));
+  } else {
+    // default (atau status: "active"): hanya paket aktif (bukan arsip)
+    conds.push(ne(bundles.status, "archived"));
   }
   const q = filter?.q?.trim();
   if (q) {
@@ -336,14 +341,18 @@ export async function validateBundle(
 export async function isQuestionUsedInBundles(
   questionId: string,
 ): Promise<boolean> {
-  // T-M7-3: hanya paket AKTIF yang memblokir — paket terarsip tak boleh
+  // T-M7-3, ADR-0025: hanya paket AKTIF yang memblokir — paket terarsip tak boleh
   // menyandera soal (jika tidak, soal mustahil dihapus setelah paket diarsip).
   const [row] = await db
     .select({ id: bundleItems.id })
     .from(bundleItems)
     .innerJoin(bundles, eq(bundles.id, bundleItems.bundleId))
     .where(
-      and(eq(bundleItems.questionId, questionId), isNull(bundles.deletedAt)),
+      and(
+        eq(bundleItems.questionId, questionId),
+        isNull(bundles.deletedAt),
+        ne(bundles.status, "archived"),
+      ),
     )
     .limit(1);
   return Boolean(row);
@@ -362,6 +371,7 @@ export async function bundlesUsingQuestions(
       and(
         inArray(bundleItems.questionId, questionIds),
         isNull(bundles.deletedAt),
+        ne(bundles.status, "archived"),
       ),
     );
   return rows.map((r) => r.bundleId);

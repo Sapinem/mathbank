@@ -156,7 +156,9 @@ describe("AppShell", () => {
         <p>x</p>
       </AppShell>,
     );
-    expect(screen.getByText("Cari halaman…")).toBeInTheDocument();
+    const searchBtn = screen.getByText("Cari halaman…").closest("button");
+    expect(searchBtn).toBeInTheDocument();
+    expect(searchBtn).toHaveAccessibleName(/Cari halaman/i);
   });
 
   it("header berada di luar area gulir, sehingga tetap terlihat saat konten di-scroll", () => {

@@ -6,7 +6,7 @@ import type { Actor } from "@/lib/auth/actor";
  * Regresi otorisasi jalur INGEST (CONSTRAINT #35/#37) — lewat ROUTE, bukan service.
  *
  * Dua cacat hidup yang ditutup Fase A:
- *  1. `machine` ditolak 403 pada antreannya SENDIRI — `GET /api/v1/ingest/queue`
+ *  1. `machine` ditolak 403 pada antreannya SENDIRI — `GET /api/ingest/queue`
  *     memakai `question:view`, sedangkan `PERMISSIONS["question:view"].machine`
  *     bernilai `no`. Perbaikan: izin khusus `ingest:queue:read`.
  *  2. Melonggarkan `question:view` untuk machine akan membuka SELURUH bank soal
@@ -29,8 +29,8 @@ const machine: Actor = {
 let mockActor: Actor = machine;
 vi.mock("@/lib/auth/resolve", () => ({ resolveActor: async () => mockActor }));
 
-const { GET: queueGET } = await import("@/app/api/v1/ingest/queue/route");
-const { POST: uploadPOST } = await import("@/app/api/v1/ingest/upload/route");
+const { GET: queueGET } = await import("@/app/api/ingest/queue/route");
+const { POST: uploadPOST } = await import("@/app/api/ingest/upload/route");
 const { GET: questionsGET } = await import("@/app/api/questions/route");
 
 const TITLE_PREFIX = "Uji ingest-authz ";
@@ -64,18 +64,18 @@ afterAll(async () => {
 });
 
 describe("Otorisasi jalur ingest — peran `machine`", () => {
-  it("machine GET /api/v1/ingest/queue → 200 (antreannya sendiri)", async () => {
-    const res = await queueGET(req("GET", "/api/v1/ingest/queue?limit=5"));
+  it("machine GET /api/ingest/queue → 200 (antreannya sendiri)", async () => {
+    const res = await queueGET(req("GET", "/api/ingest/queue?limit=5"));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(Array.isArray(json.data.items)).toBe(true);
     expect(json.data.counts).toBeTypeOf("object");
   });
 
-  it("machine POST /api/v1/ingest/upload → 201 (menghasilkan draft)", async () => {
+  it("machine POST /api/ingest/upload → 201 (menghasilkan draft)", async () => {
     const article = uniqueArticle();
     const res = await uploadPOST(
-      req("POST", "/api/v1/ingest/upload", {
+      req("POST", "/api/ingest/upload", {
         title: article.title,
         source: "uji",
         rawContent: article.rawContent,

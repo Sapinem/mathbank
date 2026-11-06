@@ -18,6 +18,7 @@ export const GET = wrapRoute({
   authz: { kind: "route", permission: "question:view" },
   params: paramsSchema,
   query: emptyQuerySchema,
+  etagFrom: (q: { version: number }) => q.version,
   handler: async ({ params, actor }) => {
     const q = await getQuestion(params.id, { viewer: actor });
     if (!q) throw new NotFoundError("Soal tidak ditemukan.");
@@ -51,7 +52,9 @@ export const PATCH = wrapRoute({
   },
   params: paramsSchema,
   body: updateQuestionSchema,
-  handler: async ({ params, body, actor }) => updateQuestion(params.id, body, actor),
+  ifMatch: true,
+  handler: async ({ params, body, actor, expectedVersion }) =>
+    updateQuestion(params.id, body, actor, expectedVersion),
 });
 
 /**
@@ -68,8 +71,9 @@ export const DELETE = wrapRoute({
   },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ params, actor }) => {
-    await deleteQuestion(params.id, actor);
+  ifMatch: true,
+  handler: async ({ params, actor, expectedVersion }) => {
+    await deleteQuestion(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

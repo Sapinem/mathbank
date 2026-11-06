@@ -8,6 +8,8 @@ import type {
   BundleOrigin,
   BundleValidation,
 } from "@/lib/services/bundle-service";
+import type { BundleItem } from "@/lib/db/schema/bundle";
+import type { UpdateBundleItemSlotContract } from "@/lib/contracts/bundle";
 import { api } from "@/lib/api/fetcher";
 
 /**
@@ -79,13 +81,17 @@ export interface BundlesListFilter {
   status?: "active" | BundleRow["status"];
   /** Kata kunci judul/tahun. */
   q?: string;
+  limit?: number;
+  offset?: number;
+  /**
+   * `false` menunda fetch sampai datanya benar-benar dibutuhkan (mis. dialog
+   * yang masih tertutup). Default `true`.
+   */
+  enabled?: boolean;
 }
 
 /** Parameter halaman untuk {@link useBundlesPage}. */
-export interface BundlesPageParams extends BundlesListFilter {
-  limit?: number;
-  offset?: number;
-}
+export type BundlesPageParams = BundlesListFilter;
 
 export function useBundles(filter?: BundlesListFilter) {
   const qs = new URLSearchParams();
@@ -93,8 +99,11 @@ export function useBundles(filter?: BundlesListFilter) {
   if (filter?.origin) qs.set("origin", filter.origin);
   if (filter?.status) qs.set("status", filter.status);
   if (filter?.q) qs.set("q", filter.q);
+  if (filter?.limit != null) qs.set("limit", String(filter.limit));
+  if (filter?.offset != null) qs.set("offset", String(filter.offset));
   const query = qs.toString();
   return useQuery({
+    enabled: filter?.enabled ?? true,
     queryKey: query
       ? [...bundleKeys.all, filter]
       : bundleKeys.all,
@@ -162,16 +171,37 @@ export function useCreateBundle() {
   });
 }
 
-export function useUpdateBundle(id: string) {
+export function useUpdateBundle(id: string, defaultVersion?: number | "*") {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Record<string, unknown>) =>
-      api<BundleRow>(`/api/bundles/${id}`, {
+    mutationFn: (args: (Record<string, unknown> & { version?: number | "*" }) | { patch: Record<string, unknown>; version?: number | "*" }) => {
+      const isWrapped = "patch" in args && typeof args.patch === "object" && args.patch !== null;
+      let body: Record<string, unknown>;
+      if (isWrapped) {
+        body = args.patch as Record<string, unknown>;
+      } else {
+        const copy = { ...args };
+        delete copy.version;
+        body = copy;
+      }
+      const version = args.version ?? defaultVersion ?? "*";
+      return api<BundleRow>(`/api/bundles/${id}`, {
         method: "PATCH",
-        body: JSON.stringify(patch),
-      }),
-    onSuccess: () => {
+        body: JSON.stringify(body),
+        ifMatch: version,
+      });
+    },
+    onSuccess: (data) => {
+      if (data) {
+        qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(id), (old) => {
+          if (!old) return old;
+          return { ...old, ...data };
+        });
+      }
       qc.invalidateQueries({ queryKey: bundleKeys.all });
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(id) });
+    },
+    onError: () => {
       qc.invalidateQueries({ queryKey: bundleKeys.detail(id) });
     },
   });
@@ -180,9 +210,40 @@ export function useUpdateBundle(id: string) {
 export function useArchiveBundle() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) =>
-      api<{ ok: boolean }>(`/api/bundles/${id}`, { method: "DELETE" }),
+    mutationFn: (args: string | { id: string; version?: number | "*" }) => {
+      const id = typeof args === "string" ? args : args.id;
+      const version = typeof args === "object" ? args.version : undefined;
+      return api<BundleRow>(`/api/bundles/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "archived" }),
+        ifMatch: version ?? "*",
+      });
+    },
+    onSuccess: (_data, vars) => {
+      const id = typeof vars === "string" ? vars : vars.id;
+      qc.invalidateQueries({ queryKey: bundleKeys.all });
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(id) });
+    },
+    onError: (_err, vars) => {
+      const id = typeof vars === "string" ? vars : vars.id;
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(id) });
+    },
+  });
+}
+
+export function useDeleteBundle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: string | { id: string; version?: number | "*" }) => {
+      const id = typeof args === "string" ? args : args.id;
+      const version = typeof args === "object" ? args.version : undefined;
+      return api<{ ok: boolean }>(`/api/bundles/${id}`, {
+        method: "DELETE",
+        ifMatch: version ?? "*",
+      });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: bundleKeys.all }),
+    onError: () => qc.invalidateQueries({ queryKey: bundleKeys.all }),
   });
 }
 
@@ -195,37 +256,132 @@ export function useDuplicateBundle() {
   });
 }
 
-export function useAddBundleItem(bundleId: string) {
+export function useAddBundleItem(bundleId: string, defaultVersion?: number | "*") {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { questionId: string; role?: "question" | "stimulus" }) =>
-      api<unknown>(`/api/bundles/${bundleId}/items`, {
+    mutationFn: (input: {
+      questionId: string;
+      role?: "question" | "stimulus";
+      sectionName?: string | null;
+      version?: number | "*";
+    }) => {
+      const { version, ...body } = input;
+      return api<BundleItem & { bundleVersion?: number }>(`/api/bundles/${bundleId}/items`, {
         method: "POST",
-        body: JSON.stringify(input),
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) }),
+        body: JSON.stringify(body),
+        ifMatch: version ?? defaultVersion ?? "*",
+      });
+    },
+    onSuccess: (data) => {
+      if (data?.bundleVersion) {
+        qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(bundleId), (old) => {
+          if (!old) return old;
+          return { ...old, version: data.bundleVersion! };
+        });
+      }
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+      qc.invalidateQueries({ queryKey: bundleKeys.all });
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+    },
   });
 }
 
-export function useRemoveBundleItem(bundleId: string) {
+export function useRemoveBundleItem(bundleId: string, defaultVersion?: number | "*") {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (itemId: string) =>
-      api<{ ok: boolean }>(`/api/bundles/${bundleId}/items/${itemId}`, {
+    mutationFn: (args: string | { itemId: string; version?: number | "*" }) => {
+      const itemId = typeof args === "string" ? args : args.itemId;
+      const version = typeof args === "object" ? args.version : undefined;
+      return api<{ ok: boolean; bundleVersion?: number }>(`/api/bundles/${bundleId}/items/${itemId}`, {
         method: "DELETE",
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) }),
+        ifMatch: version ?? defaultVersion ?? "*",
+      });
+    },
+    onSuccess: (data) => {
+      if (data?.bundleVersion) {
+        qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(bundleId), (old) => {
+          if (!old) return old;
+          return { ...old, version: data.bundleVersion! };
+        });
+      }
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+      qc.invalidateQueries({ queryKey: bundleKeys.all });
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+    },
   });
 }
 
-export function useReorderBundleItems(bundleId: string) {
+export function useReorderBundleItems(bundleId: string, defaultVersion?: number | "*") {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (itemIds: string[]) =>
-      api<{ ok: boolean }>(`/api/bundles/${bundleId}/items`, {
+    mutationFn: (args: string[] | { itemIds: string[]; version?: number | "*" }) => {
+      const itemIds = Array.isArray(args) ? args : args.itemIds;
+      const version = !Array.isArray(args) ? args.version : undefined;
+      return api<{ ok: boolean; bundleVersion?: number }>(`/api/bundles/${bundleId}/items`, {
         method: "PUT",
         body: JSON.stringify({ itemIds }),
-      }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) }),
+        ifMatch: version ?? defaultVersion ?? "*",
+      });
+    },
+    onSuccess: (data) => {
+      if (data?.bundleVersion) {
+        qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(bundleId), (old) => {
+          if (!old) return old;
+          return { ...old, version: data.bundleVersion! };
+        });
+      }
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+      qc.invalidateQueries({ queryKey: bundleKeys.all });
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+    },
   });
 }
+
+export function useUpdateBundleItemSlot(bundleId: string, defaultVersion?: number | "*") {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      itemId: string;
+      patch: UpdateBundleItemSlotContract;
+      version?: number | "*";
+    }) => {
+      const { itemId, patch, version } = input;
+      return api<BundleItemView["item"] & { bundleVersion?: number }>(`/api/bundles/${bundleId}/items/${itemId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+        ifMatch: version ?? defaultVersion ?? "*",
+      });
+    },
+    onSuccess: (data) => {
+      qc.setQueryData<BundleDetail | undefined>(bundleKeys.detail(bundleId), (old) => {
+        if (!old) return old;
+        const newVersion = data?.bundleVersion ?? old.version;
+        const updatedItems = old.items.map((it) => {
+          if (it.item.id === data?.id) {
+            return {
+              ...it,
+              item: {
+                ...it.item,
+                ...data,
+              },
+            };
+          }
+          return it;
+        });
+        return { ...old, version: newVersion, items: updatedItems };
+      });
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+      qc.invalidateQueries({ queryKey: bundleKeys.all });
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: bundleKeys.detail(bundleId) });
+    },
+  });
+}
+

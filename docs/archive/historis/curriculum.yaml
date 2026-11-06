@@ -1,5 +1,7 @@
-# Acuan Kurikulum & Data Referensi Baku QBank
-# Single Source of Truth untuk Jenjang, Kesulitan, dan Taksonomi Bloom C1-C6
+# [ARSIP] Acuan Historis Awal Kurikulum (QBank)
+# ⚠️ File ini DIARSIPKAN. Seluruh taksonomi (grades, difficulty_levels, cognitive_levels)
+# kini 100% aktif dan dikelola di database PostgreSQL MathBank (ADR-0017).
+# File ini hanya disimpan sebagai arsip historis.
 
 grades:
   - id: "1"
@@ -68,53 +70,29 @@ grades:
     curriculum_phase: "Fase F"
     order_index: 11
     is_active: true
-  - id: "11w"
-    label: "Kelas 11 SMA (Wajib)"
-    level_group: "sma"
-    curriculum_phase: "Fase F"
-    order_index: 12
-    is_active: true
-  - id: "11l"
-    label: "Kelas 11 SMA (Lanjut)"
-    level_group: "sma"
-    curriculum_phase: "Fase F"
-    order_index: 13
-    is_active: true
   - id: "12"
     label: "Kelas 12 SMA"
     level_group: "sma"
     curriculum_phase: "Fase F"
-    order_index: 14
-    is_active: true
-  - id: "12w"
-    label: "Kelas 12 SMA (Wajib)"
-    level_group: "sma"
-    curriculum_phase: "Fase F"
-    order_index: 15
-    is_active: true
-  - id: "12l"
-    label: "Kelas 12 SMA (Lanjut)"
-    level_group: "sma"
-    curriculum_phase: "Fase F"
-    order_index: 16
+    order_index: 12
     is_active: true
   - id: "utbk"
     label: "UTBK / SNBT"
     level_group: "seleksi"
     curriculum_phase: null
-    order_index: 17
+    order_index: 13
     is_active: true
   - id: "mandiri"
     label: "Seleksi Mandiri PTN"
     level_group: "seleksi"
     curriculum_phase: null
-    order_index: 18
+    order_index: 14
     is_active: true
   - id: "umum"
     label: "Umum / Campuran"
     level_group: "lainnya"
     curriculum_phase: null
-    order_index: 19
+    order_index: 15
     is_active: true
 
 difficulties:

@@ -128,7 +128,8 @@ describe("commit (soal draft)", () => {
       JOIN sources s ON s.id = b.source_id
       WHERE bi.question_id = ${res.questionIds[0]}`;
     expect(b.bundle_type).toBe("source");
-    expect(b.grade).toBe("umum");
+    // ADR-0024: Grade yang tidak diketahui dibiarkan null (bukan pseudo-grade 'umum').
+    expect(b.grade).toBeNull();
     expect(b.kind).toBe("website");
   });
 

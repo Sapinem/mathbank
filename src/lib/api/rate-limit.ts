@@ -2,11 +2,11 @@
  * Rate limiting (L1/L4) — token bucket.
  *
  * Desain:
- *  - **Interface `RateLimitStore`** → implementasi in-memory (`MemoryStore`)
- *    sekarang; **siap-swap** ke Redis/Upstash nanti tanpa ubah pemakaian.
+ *  - **Interface `RateLimitStore`** (async) → `MemoryStore` untuk tes/dev tanpa
+ *    DB, `PgRateLimitStore` (`rate-limit-store-pg.ts`) untuk server (ADR-0029).
  *  - **Token bucket**: kapasitas `burst`, diisi ulang `refillPerSec` per detik.
- *  - **Per-instance** (in-memory): cukup untuk MVP satu instance. Saat
- *    multi-instance, ganti store ke Redis.
+ *  - **Bersama lintas instance**: store PG menyimpan bucket di tabel, sehingga
+ *    dua replika berbagi satu kuota dan restart tidak mengosongkannya.
  *
  * Prinsip: **nol dependensi** (janji "install saat perlu").
  *
@@ -32,18 +32,20 @@ export interface RateLimitStore {
   take(
     key: string,
     opts: { capacity: number; refillPerSec: number; now: number },
-  ): RateLimitResult;
+  ): Promise<RateLimitResult>;
 
   /** Bersihkan state kedaluwarsa (dipanggil berkala). */
-  prune?(now: number): void;
+  prune?(now: number): Promise<void> | void;
 
   /** Reset semua (untuk tes). */
-  clear?(): void;
+  clear?(): Promise<void> | void;
 }
 
 interface Bucket {
   tokens: number;
   updatedAt: number;
+  capacity?: number;
+  refillPerSec?: number;
 }
 
 /**
@@ -52,11 +54,16 @@ interface Bucket {
  */
 export class MemoryStore implements RateLimitStore {
   private buckets = new Map<string, Bucket>();
+  private readonly maxCapacity: number;
 
-  take(
+  constructor(maxCapacity = 2000) {
+    this.maxCapacity = maxCapacity;
+  }
+
+  async take(
     key: string,
     opts: { capacity: number; refillPerSec: number; now: number },
-  ): RateLimitResult {
+  ): Promise<RateLimitResult> {
     const { capacity, refillPerSec, now } = opts;
     const prev = this.buckets.get(key) ?? {
       tokens: capacity,
@@ -67,23 +74,46 @@ export class MemoryStore implements RateLimitStore {
     const elapsedSec = Math.max(0, (now - prev.updatedAt) / 1000);
     const refilled = Math.min(capacity, prev.tokens + elapsedSec * refillPerSec);
 
+    // LRU: buang key lama agar penambahan menempatkannya di akhir iterasi Map
+    const existed = this.buckets.delete(key);
+
+    // Bounded capacity: jika penambahan kunci baru mencapai maxCapacity, buang kunci tertua O(1)
+    if (!existed && this.buckets.size >= this.maxCapacity) {
+      const oldestKey = this.buckets.keys().next().value;
+      if (oldestKey !== undefined) this.buckets.delete(oldestKey);
+    }
+
     if (refilled < 1) {
       const deficit = 1 - refilled;
       const retryAfterMs = Math.ceil((deficit / refillPerSec) * 1000);
-      this.buckets.set(key, { tokens: refilled, updatedAt: now });
+      this.buckets.set(key, { tokens: refilled, updatedAt: now, capacity, refillPerSec });
       return { allowed: false, remaining: 0, retryAfterMs };
     }
 
     const tokens = refilled - 1;
-    this.buckets.set(key, { tokens, updatedAt: now });
+    this.buckets.set(key, { tokens, updatedAt: now, capacity, refillPerSec });
     return { allowed: true, remaining: Math.floor(tokens), retryAfterMs: 0 };
   }
 
-  /** Buang bucket yang sudah penuh kembali (tak perlu disimpan). */
-  prune(now: number): void {
+  /** Buang bucket yang sudah penuh kembali atau melebihi kapasitas maksimum. */
+  prune(now: number, maxCapacity?: number): void {
+    const limit = maxCapacity ?? this.maxCapacity;
     for (const [key, b] of this.buckets) {
-      // Anggap kedaluwarsa bila token penuh atau lama tak aktif (> 1 jam).
-      if (now - b.updatedAt > 3_600_000) this.buckets.delete(key);
+      // Anggap kedaluwarsa bila lama tak aktif (> 1 jam) atau token sudah penuh kembali
+      const isFull =
+        b.capacity !== undefined &&
+        b.refillPerSec !== undefined &&
+        b.tokens + Math.max(0, (now - b.updatedAt) / 1000) * b.refillPerSec >= b.capacity;
+      if (now - b.updatedAt > 3_600_000 || isFull) {
+        this.buckets.delete(key);
+      }
+    }
+    // Jika masih melebihi kapasitas maksimum, buang entri tertua (LRU/FIFO)
+    if (this.buckets.size > limit) {
+      for (const key of this.buckets.keys()) {
+        if (this.buckets.size <= limit) break;
+        this.buckets.delete(key);
+      }
     }
   }
 
@@ -156,16 +186,43 @@ export const HEALTH_POLICY: RateLimitPolicy = {
  * Cek & pakai token untuk `key`. Murni terhadap store terpasang.
  * @param now injeksi waktu (tes deterministik); default `Date.now()`.
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   policy: RateLimitPolicy = DEFAULT_POLICY,
   now: number = Date.now(),
-): RateLimitResult {
+): Promise<RateLimitResult> {
   return store.take(key, {
     capacity: policy.capacity,
     refillPerSec: policy.refillPerSec,
     now,
   });
+}
+
+/**
+ * `checkRateLimit` dengan tenggat. Dipakai probe kesehatan.
+ *
+ * Store bersama berbasis PostgreSQL (ADR-0029) berarti setiap probe menunggu
+ * satu round-trip DB. Saat pool jenuh, menunggu tanpa batas membuat probe
+ * menggantung melewati timeout load-balancer — orkestrator melihat probe "mati"
+ * lalu me-restart pod yang sebenarnya sehat. Karena itu: gagal cepat,
+ * fail-open (rate limit bukan pagar keamanan probe).
+ */
+export async function checkRateLimitBounded(
+  key: string,
+  policy: RateLimitPolicy = DEFAULT_POLICY,
+  timeoutMs = 1000,
+): Promise<RateLimitResult> {
+  try {
+    return await Promise.race([
+      checkRateLimit(key, policy),
+      new Promise<never>((_, reject) => {
+        const timer = setTimeout(() => reject(new Error("rate limit store timeout")), timeoutMs);
+        timer.unref?.();
+      }),
+    ]);
+  } catch {
+    return { allowed: true, remaining: policy.capacity, retryAfterMs: 0 };
+  }
 }
 
 /**

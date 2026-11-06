@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
@@ -8,6 +8,9 @@ import {
   ClipboardCheck,
   LogIn,
   Loader2,
+  Eye,
+  EyeOff,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +21,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FieldGroup, Field } from "@/components/ui/field-group";
+import { cn } from "@/lib/utils";
 import { DEMO_USERS, DEMO_PASSWORD, type DemoUser } from "@/lib/auth/demo-users";
 
 const ICONS: Record<string, typeof ShieldCheck> = {
@@ -39,12 +44,21 @@ const ICONS: Record<string, typeof ShieldCheck> = {
  */
 export default function LoginPage() {
   const router = useRouter();
+  const emailInputRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [demoAvailable, setDemoAvailable] = useState(false);
+
+  // Fokuskan otomatis pada perangkat ber-pointer halus (desktop)
+  useEffect(() => {
+    if (typeof window !== "undefined" && !window.matchMedia("(pointer: coarse)").matches) {
+      emailInputRef.current?.focus();
+    }
+  }, []);
 
   // Tampilkan pil demo hanya bila backend mengizinkan.
   useEffect(() => {
@@ -63,6 +77,13 @@ export default function LoginPage() {
     setEmail(u.email);
     setPassword(DEMO_PASSWORD);
     setError(null);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!busy && email && password) {
+      signIn();
+    }
   }
 
   async function signIn() {
@@ -101,131 +122,136 @@ export default function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="relative mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl border border-brand/30 bg-brand/10 text-brand shadow-xs dark:bg-brand/15">
-            {/* Kisi koordinat geometris halus */}
-            <svg
-              className="absolute inset-0 size-full text-brand/25 stroke-current"
-              viewBox="0 0 48 48"
-              fill="none"
-              aria-hidden="true"
-            >
-              <line x1="24" y1="6" x2="24" y2="42" strokeDasharray="2 2" strokeWidth="1" />
-              <line x1="6" y1="24" x2="42" y2="24" strokeDasharray="2 2" strokeWidth="1" />
-              <circle cx="24" cy="24" r="14" strokeDasharray="2 2" strokeWidth="0.75" />
-            </svg>
-            {/* Glif Sigma matematika presisi */}
-            <svg
-              className="relative size-5.5 fill-current"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path d="M5 4h14v2.5h-9.5l4.5 5.5-4.5 5.5H19V20H5v-2l5-6-5-6V4z" />
-            </svg>
+          <div className="relative mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl border border-brand/20 bg-card shadow-xs overflow-hidden p-1.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo resmi MathBank */}
+            <img
+              src="/icon.png"
+              alt="MathBank"
+              width={40}
+              height={40}
+              className="size-full object-contain"
+            />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Masuk ke MathBank</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Bank soal matematika — kurasi, susun, terbitkan.
+            Bank soal matematika - kurasi, susun, terbitkan.
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Log in ke akun Anda</CardTitle>
+            <CardTitle>Masuk ke akun Anda</CardTitle>
             <CardDescription>
-              Masukkan email di bawah ini untuk masuk ke akun Anda
+              Gunakan email institusi atau akun terdaftar.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {/* Pil user demo — klik untuk mengisi otomatis. */}
-            {demoAvailable && (
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Akun demo (klik untuk isi otomatis)
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {DEMO_USERS.map((u) => {
-                    const Icon = ICONS[u.key];
-                    const active = activeKey === u.key;
-                    return (
-                      <button
-                        key={u.key}
-                        type="button"
-                        onClick={() => pickDemo(u)}
-                        aria-pressed={active}
-                        title={u.description}
-                        className={
-                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-all active:scale-95 " +
-                          (active
-                            ? "border-brand bg-brand/10 text-brand"
-                            : "border-border text-muted-foreground hover:bg-accent hover:text-foreground")
-                        }
-                      >
-                        {Icon && <Icon className="size-3.5" />}
-                        {u.name.replace(" Demo", "")}
-                      </button>
-                    );
-                  })}
+          <CardContent>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {/* Pil user demo (klik untuk isi otomatis) */}
+              {demoAvailable && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Akun demo (klik untuk isi otomatis)
+                  </span>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    {DEMO_USERS.map((u) => {
+                      const Icon = ICONS[u.key];
+                      const active = activeKey === u.key;
+                      return (
+                        <button
+                          key={u.key}
+                          type="button"
+                          onClick={() => pickDemo(u)}
+                          aria-pressed={active}
+                          title={u.description}
+                          className={cn(
+                            "flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all active:scale-98",
+                            active
+                              ? "border-brand bg-brand/10 text-brand shadow-2xs font-semibold"
+                              : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+                          )}
+                        >
+                          {Icon && <Icon className="size-3.5 shrink-0" />}
+                          <span>{u.name.replace(" Demo", "")}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="login-email" className="text-sm font-medium">
-                Email
-              </label>
-              <Input
-                id="login-email"
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setActiveKey(null);
-                }}
-                placeholder="nama@sekolah.sch.id"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="login-password" className="text-sm font-medium">
-                Kata sandi
-              </label>
-              <Input
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setActiveKey(null);
-                }}
-                placeholder="••••••••"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive" role="alert">
-                {error}
-              </p>
-            )}
-
-            <Button
-              className="w-full"
-              disabled={busy || !email || !password}
-              onClick={signIn}
-            >
-              {busy ? (
-                <>
-                  <Loader2 className="animate-spin" data-icon="inline-start" />
-                  Masuk…
-                </>
-              ) : (
-                <>
-                  <LogIn data-icon="inline-start" />
-                  Masuk
-                </>
               )}
-            </Button>
+
+              <FieldGroup>
+                <Field label="Email" htmlFor="login-email">
+                  <Input
+                    ref={emailInputRef}
+                    id="login-email"
+                    type="email"
+                    required
+                    autoComplete="username"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setActiveKey(null);
+                    }}
+                    placeholder="nama@sekolah.sch.id"
+                  />
+                </Field>
+
+                <Field label="Kata sandi" htmlFor="login-password">
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setActiveKey(null);
+                      }}
+                      placeholder="••••••••"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                      className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </Field>
+              </FieldGroup>
+
+              {error && (
+                <div
+                  className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive"
+                  role="alert"
+                >
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                  <span className="leading-snug">{error}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full min-h-[44px]"
+                disabled={busy || !email || !password}
+              >
+                {busy ? (
+                  <>
+                    <Loader2 className="animate-spin" data-icon="inline-start" />
+                    Masuk…
+                  </>
+                ) : (
+                  <>
+                    <LogIn data-icon="inline-start" />
+                    Masuk
+                  </>
+                )}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

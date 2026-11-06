@@ -76,11 +76,15 @@ export function Header({ onOpenCommand }: { onOpenCommand: () => void }) {
         <Button
           variant="outline"
           onClick={onOpenCommand}
-          className="hidden gap-2 bg-muted/40 text-muted-foreground sm:inline-flex"
+          className="hidden sm:inline-flex w-52 lg:w-64 justify-between items-center h-8.5 px-2.5 rounded-lg border-border/80 bg-muted/30 hover:bg-muted/50 text-muted-foreground transition-colors"
         >
-          <Search data-icon="inline-start" />
-          <span>Cari halaman…</span>
-          <kbd className="rounded border border-border px-1 text-xs">⌘K</kbd>
+          <div className="flex items-center gap-2">
+            <Search data-icon="inline-start" className="size-3.5" />
+            <span className="text-xs">Cari halaman…</span>
+          </div>
+          <kbd className="font-mono text-[10px] font-semibold bg-muted/60 border border-border/80 px-1.5 py-0.5 rounded text-muted-foreground">
+            ⌘K
+          </kbd>
         </Button>
         {/* Mobile: ikon cari — touch target ≥ 44px (CONSTRAINT #11) */}
         <Button

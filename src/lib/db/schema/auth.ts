@@ -10,6 +10,7 @@ import {
   primaryKey,
 } from "drizzle-orm/pg-core";
 import { roleEnum } from "./_enums";
+import { versionColumn } from "./_columns";
 
 /**
  * Tabel auth (Better Auth) + multi-role.
@@ -97,6 +98,7 @@ export const apiKey = pgTable(
     lastRequest: timestamp("last_request", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    version: versionColumn(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     permissions: text("permissions"),
     metadata: text("metadata"),

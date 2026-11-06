@@ -9,8 +9,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 const useBundleMock = vi.fn();
+const useUpdateBundleMock = vi.fn();
 vi.mock("@/lib/hooks/use-bundles", () => ({
   useBundle: (id: string) => useBundleMock(id),
+  useUpdateBundle: (id: string) => useUpdateBundleMock(id),
 }));
 
 // KaTeX dipalsukan seperti tes cetak lain; yang diuji = label & kunci cetak.
@@ -108,7 +110,7 @@ beforeEach(() => {
   useBundleMock.mockReturnValue({ data: bundle(), isPending: false, isError: false });
 });
 
-describe("BundlePrintView — Fase 4 (penyatuan label dengan detail)", () => {
+describe("BundlePrintView - Fase 4 (penyatuan label dengan detail)", () => {
   it("label matching cetak SAMA dengan detail: premis A/B, respons 1/2", () => {
     const { container: detail } = render(
       <MatchingView payload={readMatchingPayload(MATCHING_PAYLOAD)} />,
@@ -129,6 +131,7 @@ describe("BundlePrintView — Fase 4 (penyatuan label dengan detail)", () => {
 
   it("kunci matching inline menampilkan LABEL respons, bukan ID mentah", () => {
     render(<BundlePrintView />);
+    fireEvent.click(screen.getByRole("button", { name: /Pengaturan Cetak/i }));
     fireEvent.click(screen.getByRole("button", { name: /Tandai tebal/i }));
     const sheet = document.querySelector(".print-sheet")!;
     // p1 → r2 berarti label "2"; p2 → r1 berarti label "1".
@@ -142,7 +145,7 @@ describe("BundlePrintView — Fase 4 (penyatuan label dengan detail)", () => {
   it("lembar kunci terpisah menampilkan pasangan label-ke-label", () => {
     render(<BundlePrintView />);
     // includeAnswerKey: true → mode default "separate".
-    const keySheet = screen.getByText("Kunci Jawaban").closest("section")!;
+    const keySheet = screen.getByRole("heading", { name: /Kunci Jawaban/i }).closest("section")!;
     expect(keySheet.textContent).toContain("A→2");
     expect(keySheet.textContent).toContain("B→1");
     expect(keySheet.textContent).not.toContain("r1");

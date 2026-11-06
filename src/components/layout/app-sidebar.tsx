@@ -55,8 +55,15 @@ export function AppSidebar() {
                   />
                 }
               >
-                <span className="grid aspect-square size-8 place-items-center rounded-lg bg-brand font-bold text-brand-fg">
-                  ∑
+                <span className="grid aspect-square size-8 place-items-center rounded-lg overflow-hidden shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- favicon/logo resmi statis */}
+                  <img
+                    src="/icon.png"
+                    alt=""
+                    width={32}
+                    height={32}
+                    className="size-8 object-contain"
+                  />
                 </span>
                 <span className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold tracking-tight">
@@ -107,7 +114,7 @@ export function AppSidebar() {
                         }
                         isActive={active}
                         tooltip={item.label}
-                        className="min-h-[44px]"
+                        className="min-h-[44px] relative data-active:text-brand data-active:font-semibold before:data-active:absolute before:data-active:left-0 before:data-active:top-2 before:data-active:bottom-2 before:data-active:w-0.5 before:data-active:rounded-r before:data-active:bg-brand"
                       >
                         <Icon />
                         <span>{item.label}</span>

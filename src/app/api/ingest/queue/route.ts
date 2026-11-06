@@ -3,7 +3,7 @@ import { ingestQueueQuerySchema } from "@/lib/contracts/ingest";
 import { listQueue, countByStatus } from "@/lib/ingest/queue";
 
 /**
- * GET /api/v1/ingest/queue — wajah MESIN + UI (M9-3).
+ * GET /api/ingest/queue — wajah MESIN + UI (M9-3).
  * Lihat antrean ingest (terbaru dulu) + ringkasan per status.
  */
 export const GET = wrapRoute({

@@ -33,12 +33,11 @@ describe("runPruneOnce", () => {
   it("memanggil prune() pada store rate-limit dan idempotensi", async () => {
     const ratePrune = vi.fn();
     const idemPrune = vi.fn();
-    setStore({ take: () => ({ allowed: true, remaining: 1, retryAfterMs: 0 }), prune: ratePrune });
+    setStore({ take: async () => ({ allowed: true, remaining: 1, retryAfterMs: 0 }), prune: ratePrune });
     setIdempotencyStore({
-      get: () => null,
-      save: () => {},
-      markInFlight: () => {},
-      forget: () => {},
+      claim: async () => ({ kind: "fresh" }),
+      remember: async () => {},
+      forget: async () => {},
       prune: idemPrune,
     });
 
@@ -50,13 +49,13 @@ describe("runPruneOnce", () => {
   });
 
   it("store tanpa prune() (kontrak opsional) tidak membuat gagal", async () => {
-    setStore({ take: () => ({ allowed: true, remaining: 1, retryAfterMs: 0 }) });
+    setStore({ take: async () => ({ allowed: true, remaining: 1, retryAfterMs: 0 }) });
     await expect(runPruneOnce(1)).resolves.toBeUndefined();
   });
 
   it("kegagalan prune ditelan (best-effort, tak menjatuhkan proses)", async () => {
     setStore({
-      take: () => ({ allowed: true, remaining: 1, retryAfterMs: 0 }),
+      take: async () => ({ allowed: true, remaining: 1, retryAfterMs: 0 }),
       prune: () => {
         throw new Error("boom");
       },

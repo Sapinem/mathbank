@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { KeyRound, Plus, Trash2, Loader2, Copy, Check, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,10 @@ export function AgentKeysCard() {
           setNewKey(res.key);
           setName("");
           setExpiresDays("90");
+          toast.success("API key agen berhasil dibuat.");
+        },
+        onError: (e) => {
+          toast.error("Gagal membuat kunci agen", { description: (e as Error).message });
         },
       },
     );
@@ -213,10 +218,23 @@ export function AgentKeysCard() {
             <Button
               variant="destructive"
               disabled={revoke.isPending}
-              onClick={() =>
-                revokeId &&
-                revoke.mutate(revokeId, { onSuccess: () => setRevokeId(null) })
-              }
+              onClick={() => {
+                if (!revokeId) return;
+                const targetKey = items.find((k) => k.id === revokeId);
+                revoke.mutate(
+                  { id: revokeId, version: targetKey?.version },
+                  {
+                    onSuccess: () => {
+                      setRevokeId(null);
+                      toast.success("Kunci agen berhasil dicabut.");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal mencabut kunci agen", {
+                        description: (e as Error).message,
+                      }),
+                  },
+                );
+              }}
             >
               {revoke.isPending && <Loader2 data-icon="inline-start" className="animate-spin" />}
               Cabut
