@@ -24,6 +24,7 @@
  */
 import { config } from "dotenv";
 import postgres from "postgres";
+import { questionContentHash } from "./lib/question-hash";
 
 config({ path: ".env" });
 
@@ -111,12 +112,24 @@ Pilih semua jawaban benar! Jawaban benar lebih dari satu.`;
     return;
   }
 
-  // Update questions
-  await sql`UPDATE questions SET content_markdown = ${q1NewContent}, updated_at = NOW() WHERE id = ${q1Id}`;
-  await sql`UPDATE questions SET content_markdown = ${q2NewContent}, updated_at = NOW() WHERE id = ${q2Id}`;
-  await sql`UPDATE questions SET content_markdown = ${q3NewContent}, updated_at = NOW() WHERE id = ${q3Id}`;
-  await sql`UPDATE questions SET content_markdown = ${q4NewContent}, updated_at = NOW() WHERE id = ${q4Id}`;
-  await sql`UPDATE questions SET content_markdown = ${q5NewContent}, updated_at = NOW() WHERE id = ${q5Id}`;
+  // Update questions — content_hash ikut dihitung ulang (ADR-0012 dedup key).
+  const contentFixes = [
+    { id: q1Id, content: q1NewContent },
+    { id: q2Id, content: q2NewContent },
+    { id: q3Id, content: q3NewContent },
+    { id: q4Id, content: q4NewContent },
+    { id: q5Id, content: q5NewContent },
+  ];
+  for (const fix of contentFixes) {
+    const [row] = await sql`SELECT data_payload FROM questions WHERE id = ${fix.id}`;
+    await sql`
+      UPDATE questions
+      SET content_markdown = ${fix.content},
+          content_hash = ${questionContentHash(fix.content, row?.data_payload)},
+          updated_at = NOW()
+      WHERE id = ${fix.id}
+    `;
+  }
 
   // Update question_media for q1, q2, q3
   if (twxyId) {

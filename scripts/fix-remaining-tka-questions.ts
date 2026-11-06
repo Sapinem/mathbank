@@ -5,6 +5,7 @@
  */
 import { config } from "dotenv";
 import postgres from "postgres";
+import { questionContentHash } from "./lib/question-hash";
 
 config({ path: ".env" });
 
@@ -32,6 +33,7 @@ async function main() {
     UPDATE questions
     SET content_markdown = '{{img:HIE2Ldeh}}',
         data_payload = ${sql.json(q1Payload)},
+        content_hash = ${questionContentHash("{{img:HIE2Ldeh}}", q1Payload)},
         updated_at = NOW()
     WHERE id = '01a1186e-09ac-7883-bc0b-4abd0813058e'
   `;
@@ -52,6 +54,7 @@ async function main() {
     UPDATE questions
     SET content_markdown = 'Nilai {{img:WyB8Bpt6}} adalah ....',
         data_payload = ${sql.json(q2Payload)},
+        content_hash = ${questionContentHash("Nilai {{img:WyB8Bpt6}} adalah ....", q2Payload)},
         updated_at = NOW()
     WHERE id = '01a1186e-1652-7e42-9125-32e928eabcfa'
   `;
@@ -73,6 +76,7 @@ async function main() {
     UPDATE questions
     SET content_markdown = '{{img:pMqL8DcF}}',
         data_payload = ${sql.json(q3Payload)},
+        content_hash = ${questionContentHash("{{img:pMqL8DcF}}", q3Payload)},
         updated_at = NOW()
     WHERE id = '01a1186e-0e18-77fc-9a18-c271b1803a22'
   `;
@@ -95,6 +99,7 @@ async function main() {
     UPDATE questions
     SET content_markdown = ${q4Stem},
         data_payload = ${sql.json(q4Payload)},
+        content_hash = ${questionContentHash(q4Stem, q4Payload)},
         updated_at = NOW()
     WHERE id = '01a1186e-0e92-72ab-a4c1-8b148e39acac'
   `;

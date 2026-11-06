@@ -16,6 +16,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { config } from "dotenv";
 import postgres from "postgres";
+import { questionContentHash } from "./lib/question-hash";
 
 config({ path: ".env" });
 
@@ -261,6 +262,7 @@ async function main() {
           UPDATE questions
           SET content_markdown = ${newStem},
               data_payload = ${newPayload ? JSON.stringify(newPayload) : null}::jsonb,
+              content_hash = ${questionContentHash(newStem, newPayload)},
               updated_at = NOW()
           WHERE id = ${q.id}
         `;
