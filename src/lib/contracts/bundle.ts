@@ -64,7 +64,12 @@ export const updateBundleSchema = z.object({
 export const listBundlesQuerySchema = z.object({
   bundleType: z.enum(["source", "exam"]).optional(),
   origin: z.enum(["ingest", "manual"]).optional(),
-  status: z.enum(["active", "draft", "review", "ready", "archived"]).optional(),
+  status: z
+    .enum(["active", "draft", "review", "ready", "archived"])
+    .optional()
+    .describe(
+      "Filter status. Tanpa nilai, daftar hanya memuat paket aktif; paket berstatus archived tidak ikut (ADR-0025).",
+    ),
   q: z.string().trim().max(120).optional(),
   /** API-05: paginasi — `limit` default 20 (max 100), `offset` default 0. */
   limit: z.coerce.number().int().min(1).max(100).optional(),
