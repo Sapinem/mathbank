@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import {
   ArrowLeft,
   Printer,
@@ -13,24 +13,18 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/states";
-import { MathContent } from "@/components/math/math-content";
-import { readMatchingPayload } from "@/components/questions/matching-view";
-import {
-  matchingKeySummary,
-  matchingResponseLabel,
-  premiseLabel,
-  responseLabel,
-} from "@/components/questions/matching-labels";
-import { readMatrixGridPayload } from "@/components/questions/matrix-grid-view";
-import { isOptionBased, correctLabelsOf } from "@/lib/contracts/question";
 import { useBundle, useUpdateBundle } from "@/lib/hooks/use-bundles";
-import type { BundleItemView } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
 import { getPrintTheme, DEFAULT_THEME_ID } from "@/lib/print/themes/registry";
 import { PrintWatermark } from "./print-watermark";
 import { BundlePrintSettingsDrawer } from "./print/bundle-print-settings-drawer";
 import { BundlePrintHeader } from "./print/bundle-print-header";
 import { BundlePrintFooter } from "./print/bundle-print-footer";
+import { PrintQuestionItem } from "./print/print-question-item";
+import { PrintAnswerKeySheet } from "./print/print-answer-key-sheet";
+import { PrintExplanationSheet } from "./print/print-explanation-sheet";
+import { PrintAnswerSheet } from "./print/print-answer-sheet";
+import { explanationOf } from "./print/item-helpers";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,6 +41,14 @@ import { cn } from "@/lib/utils";
  *    dan otomatis menyusut jika pembahasan di bawah soal aktif.
  *  - Running header judul naskah disuntikkan via CSS Custom Property
  *    (`--print-bundle-title`) agar tampil di Chromium (menggantikan `string-set` yang diabaikan Blink).
+ *
+ * Komposisi (sejak pemecahan 717 → 526 baris):
+ *  - berkas ini memegang STATE sesi cetak + bilah atas + kanvas naskah;
+ *  - satu butir soal → `print/print-question-item.tsx`;
+ *  - lembar kunci/pembahasan/jawaban → `print/print-*-sheet.tsx`;
+ *  - pembaca data soal → `print/item-helpers.ts`.
+ * Pembagian ini sengaja: komponen turunan tidak menerima setter, hanya nilai
+ * jadi, sehingga tidak ada dua tempat yang bisa mengubah state cetak.
  */
 
 import type { ColumnMode, KeyMode, ExplanationMode } from "./print/types";
@@ -71,31 +73,6 @@ const BRAND_PRESET_COLORS = [
   { label: "Hijau Zamrud", value: "#0b6b3a" },
   { label: "Hitam Formal", value: "#111111" },
 ] as const;
-
-/** Baca label opsi benar dari `answerKey` (bila ada). */
-function itemCorrectLabels(item: BundleItemView): string[] {
-  return correctLabelsOf(item.question.answerKey);
-}
-
-/** Baca teks pembahasan dari `answerKey` (bila ada). */
-function explanationOf(item: BundleItemView): string | null {
-  const key = item.question.answerKey;
-  if (!key) return null;
-  const exp = key.explanation ?? (key as Record<string, unknown>).explanationMarkdown;
-  if (typeof exp === "string" && exp.trim().length > 0) return exp.trim();
-  return null;
-}
-
-/**
- * Label nomor butir yang dipakai SEMUA daftar cetak (naskah, kunci, pembahasan,
- * lembar jawaban). Nomor kustom dari Slot Inspector ("1a", "Wacana 1") harus
- * muncul identik di keempatnya; kalau tidak, kunci bisa dibaca ke butir salah.
- */
-function labelOf(item: BundleItemView, ordinal: number): string {
-  const custom = item.item.itemNumber;
-  if (!custom) return `${ordinal}.`;
-  return custom.endsWith(".") ? custom : `${custom}.`;
-}
 
 export function BundlePrintView({
   initialSettingsOpen,
@@ -494,276 +471,42 @@ export function BundlePrintView({
           )}
         >
           {items.map((it, idx) => {
-            const isSectionStart = Boolean(it.item.sectionName && it.item.sectionName !== items[idx - 1]?.item.sectionName);
+            const isSectionStart = Boolean(
+              it.item.sectionName && it.item.sectionName !== items[idx - 1]?.item.sectionName,
+            );
             const qId = it.item.questionId ?? it.question.id;
             const isForceColumn = isTwoColumn && effectiveColumnBreaks.includes(qId);
-
-            if (it.item.role === "stimulus") {
-              return (
-                <Fragment key={it.item.id}>
-                  {isSectionStart && (
-                    <li
-                      data-break={isForceColumn ? "force-column" : undefined}
-                      className="print-section-header list-none font-bold text-xs uppercase tracking-wider text-slate-700 pt-2 pb-1 border-b border-slate-300 col-span-full"
-                    >
-                      {it.item.sectionName}
-                    </li>
-                  )}
-                  <li
-                    key={it.item.id}
-                    data-first-item={idx === 0 ? "true" : undefined}
-                    className="print-question print-stimulus list-none"
-                  >
-                    <div className="rounded border-l-4 border-gray-300 bg-gray-50 p-3 text-sm">
-                      <MathContent content={it.question.contentMarkdown} />
-                    </div>
-                  </li>
-                </Fragment>
-              );
-            }
-            // Nomor urut soal (1..n) atau nomor butir kustom (misal "1a", "1b")
-            const num = questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
-            const displayNumber = labelOf(it, num);
-            const correct = itemCorrectLabels(it);
-            const showNumber = config.showQuestionNumber !== false;
+            const ordinal =
+              it.item.role === "stimulus"
+                ? 0
+                : questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
             return (
-              <Fragment key={it.item.id}>
-                {isSectionStart && (
-                  <li
-                    data-break={isForceColumn ? "force-column" : undefined}
-                    className="print-section-header list-none font-bold text-xs uppercase tracking-wider text-slate-700 pt-2 pb-1 border-b border-slate-300 col-span-full"
-                  >
-                    {it.item.sectionName}
-                  </li>
-                )}
-                <li
-                  data-first-item={num === 1 ? "true" : undefined}
-                  data-break={isForceColumn && !isSectionStart ? "force-column" : undefined}
-                  className="print-question print-item flex gap-2"
-                >
-                  {showNumber && (
-                    <span className="print-item-number w-[22px] shrink-0 text-right font-medium tabular-nums">{displayNumber}</span>
-                  )}
-                <div className="min-w-0 flex-1">
-                  <MathContent content={it.question.contentMarkdown} />
-                  {isOptionBased(it.question.questionType as never) &&
-                    it.question.questionType !== "matrix_grid" &&
-                    it.question.questionType !== "matching" &&
-                    it.question.options.length > 0 && (
-                      <ul
-                        className={cn(
-                          "print-options mt-1.5 gap-1 text-sm",
-                          columns === "2"
-                            ? "grid grid-cols-2"
-                            : "flex flex-col",
-                        )}
-                      >
-                        {it.question.options.map((o) => {
-                          const isKey =
-                            effectiveKeyMode === "inline" && (o.isCorrect || correct.includes(o.label));
-                          return (
-                            <li key={o.id} className="flex gap-2 break-inside-avoid">
-                              <span className={isKey ? "font-bold" : "font-medium"}>
-                                {o.label}.
-                              </span>
-                              <span className={isKey ? "font-bold" : undefined}>
-                                <MathContent content={o.contentMarkdown} />
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-
-                  {/* Render khusus untuk soal matrix_grid (Tabel Pernyataan) */}
-                  {it.question.questionType === "matrix_grid" && (() => {
-                    const { labels, rows } = readMatrixGridPayload(it.question.dataPayload);
-                    if (rows.length === 0) return null;
-                    return (
-                      <div className="mt-2 overflow-x-auto break-inside-avoid">
-                        <table className="w-full border-collapse border border-gray-300 text-xs print:border-black">
-                          <thead>
-                            <tr className="bg-gray-100 print:bg-gray-200">
-                              <th className="w-8 border border-gray-300 p-1.5 text-center font-medium print:border-black">No.</th>
-                              <th className="border border-gray-300 p-1.5 text-left font-medium print:border-black">Pernyataan</th>
-                              {labels.map((l, li) => (
-                                <th key={li} className="w-16 border border-gray-300 p-1.5 text-center font-medium print:border-black">{l}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {rows.map((r, ri) => (
-                              <tr key={ri} className="border-t border-gray-200 print:border-black">
-                                <td className="border border-gray-300 p-1.5 text-center print:border-black">
-                                  {ri + 1}.
-                                </td>
-                                <td className="border border-gray-300 p-1.5 print:border-black">
-                                  <MathContent content={r.text} />
-                                </td>
-                                {labels.map((l, li) => {
-                                  const isSelected = effectiveKeyMode === "inline" && r.answer === l;
-                                  return (
-                                    <td key={li} className="border border-gray-300 p-1.5 text-center font-bold print:border-black">
-                                      {isSelected ? "✓" : "○"}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Render khusus untuk soal matching (Premis & Pilihan Respons) */}
-                  {it.question.questionType === "matching" && (() => {
-                    const { premises, responses } = readMatchingPayload(it.question.dataPayload);
-                    const matchingPairs = (it.question.answerKey as { matchingPairs?: Record<string, string> } | null)?.matchingPairs ?? {};
-                    if (premises.length === 0 && responses.length === 0) return null;
-                    return (
-                      <div className="mt-2 grid grid-cols-2 gap-4 text-xs break-inside-avoid">
-                        <div className="flex flex-col gap-1.5 border-r border-gray-200 pr-2 print:border-black">
-                          <span className="font-semibold text-gray-700 print:text-black">Premis / Pertanyaan:</span>
-                          {premises.map((p, pi) => {
-                            const keyLabel = matchingResponseLabel(matchingPairs, p.id, responses);
-                            return (
-                            <div key={p.id ?? pi} className="flex gap-1.5 rounded border border-gray-200 bg-gray-50 p-1 print:border-black print:bg-transparent">
-                              <span className="font-bold">{premiseLabel(pi)}.</span>
-                              <div className="flex-1">
-                                <MathContent content={p.contentMarkdown} />
-                                {effectiveKeyMode === "inline" && keyLabel && (
-                                  <span className="ml-1 text-[10px] font-bold text-brand print:text-black">
-                                    → {keyLabel}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            );
-                          })}
-                        </div>
-                        <div className="flex flex-col gap-1.5 pl-2">
-                          <span className="font-semibold text-gray-700 print:text-black">Pilihan Jawaban:</span>
-                          {responses.map((res, ri) => (
-                            <div key={res.id ?? ri} className="flex gap-1.5 rounded border border-gray-200 bg-gray-50 p-1 print:border-black print:bg-transparent">
-                              <span className="font-bold">{responseLabel(ri)}.</span>
-                              <div className="flex-1">
-                                <MathContent content={res.contentMarkdown} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Area ruang coret-coretan siswa - polos & bersih tanpa kotak/border di semua tipe soal (PG, isian, esai, matriks, matching) */}
-                  {effectiveExplanationMode !== "inline" && effectiveAnswerSpaceCm > 0 && (
-                    <div
-                      data-slot="scratch-space"
-                      className="w-full break-inside-avoid"
-                      style={{ height: `${effectiveAnswerSpaceCm}cm` }}
-                      aria-hidden="true"
-                    />
-                  )}
-
-                  {/* Pembahasan tepat di bawah soal (inline mode) */}
-                  {effectiveExplanationMode === "inline" && (() => {
-                    const exp = explanationOf(it);
-                    if (!exp) return null;
-                    return (
-                      <div className="mt-2.5 rounded border-l-2 border-brand bg-brand/5 p-2.5 text-xs text-foreground break-inside-avoid print:bg-transparent print:border-l print:text-black">
-                        <span className="mb-1 block font-bold text-brand print:text-black">
-                          Pembahasan:
-                        </span>
-                        <MathContent content={exp} />
-                      </div>
-                    );
-                  })()}
-                </div>
-              </li>
-            </Fragment>
-          );
-        })}
+              <PrintQuestionItem
+                key={it.item.id}
+                item={it}
+                ordinal={ordinal}
+                isFirst={idx === 0}
+                sectionName={isSectionStart ? (it.item.sectionName ?? null) : null}
+                forceColumn={isForceColumn}
+                showNumber={config.showQuestionNumber !== false}
+                optionColumns={columns}
+                keyMode={effectiveKeyMode}
+                explanationMode={effectiveExplanationMode}
+                answerSpaceCm={effectiveAnswerSpaceCm}
+              />
+            );
+          })}
         </ol>
 
-        {/* Lembar kunci jawaban terpisah */}
         {effectiveKeyMode === "separate" && canShowKey && (
-          <section className="print-sheet-answerkey mt-8 border-t pt-4">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Kunci Jawaban</h2>
-            <ol className="grid grid-cols-3 gap-x-8 gap-y-1 text-sm">
-              {questionItems.map((it, i) => {
-                const correct = itemCorrectLabels(it);
-                const text = it.question.answerKey?.text ?? null;
-                const matchingPayload =
-                  it.question.questionType === "matching"
-                    ? readMatchingPayload(it.question.dataPayload)
-                    : null;
-                const matchingShown = matchingPayload
-                  ? matchingKeySummary(
-                      (it.question.answerKey as { matchingPairs?: Record<string, string> } | null)?.matchingPairs,
-                      matchingPayload.premises,
-                      matchingPayload.responses,
-                    )
-                  : "";
-                const shown = matchingShown
-                  ? matchingShown
-                  : correct.length > 0
-                    ? correct.join(", ")
-                    : (text ?? "-");
-                return (
-                  <li key={it.item.id} className="flex gap-2 tabular-nums">
-                    <span className="w-6 text-right font-medium">{labelOf(it, i + 1)}</span>
-                    <span>{shown}</span>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
+          <PrintAnswerKeySheet items={questionItems} />
         )}
 
-        {/* Lembar pembahasan terpisah di akhir naskah (end mode) */}
         {effectiveExplanationMode === "end" && canShowExplanation && (
-          <section className="print-sheet-explanation mt-8 border-t pt-4">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Pembahasan</h2>
-            <ol className="flex flex-col gap-4 text-sm leading-relaxed">
-              {questionItems.map((it, i) => {
-                const explanation = explanationOf(it);
-                if (!explanation) return null;
-                return (
-                  <li key={it.item.id} className="print-question flex gap-2 break-inside-avoid">
-                    <span className="w-6 shrink-0 text-right font-medium tabular-nums">
-                      {labelOf(it, i + 1)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <MathContent content={explanation} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
+          <PrintExplanationSheet items={questionItems} />
         )}
 
-        {/* Lembar jawaban kosong */}
-        {includeAnswerSheet && (
-          <section className="print-sheet-answers mt-8 border-t pt-4">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Lembar Jawaban</h2>
-            <p className="mb-3 text-xs">Nama: ______________________  Kelas: ____________</p>
-            <table className="w-full border-collapse text-sm">
-              <tbody>
-                {questionItems.map((it, i) => (
-                  <tr key={it.item.id} className="border-b">
-                    <td className="w-10 border px-2 py-1.5 text-right font-medium tabular-nums">
-                      {labelOf(it, i + 1)}
-                    </td>
-                    <td className="border px-2 py-1.5">&nbsp;</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        )}
+        {includeAnswerSheet && <PrintAnswerSheet items={questionItems} />}
 
         {/* Seksi Tambahan Khusus Tema (Bila Ada) */}
         {activeTheme.ExtraSection && (
