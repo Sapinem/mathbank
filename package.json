@@ -24,6 +24,7 @@
     "db:verify": "tsx scripts/db-verify.ts",
     "db:backfill:grades": "tsx scripts/backfill-denormalize-grades.ts",
     "db:backfill:hash": "tsx scripts/backfill-content-hash.ts",
+    "db:backfill:answer-space": "tsx scripts/backfill-answer-space.ts",
     "metrics:snapshot": "tsx scripts/snapshot-metrics.ts",
     "theme:build": "tsx scripts/theme/build.ts",
     "theme:check": "tsx scripts/theme/check.ts",
