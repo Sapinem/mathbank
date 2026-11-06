@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { checkDbInvariants } from "@/lib/db/invariants";
 import { toInvariantsDto } from "@/lib/db/schema-expectations";
 import { PUBLIC_DB_DOWN_MESSAGE } from "@/lib/api/public-messages";
-import { checkRateLimit, rateLimitKey, HEALTH_POLICY } from "@/lib/api/rate-limit";
+import { checkRateLimitBounded, rateLimitKey, HEALTH_POLICY } from "@/lib/api/rate-limit";
 import { getClientIp } from "@/lib/api/client-ip";
 import { log } from "@/lib/telemetry/logger";
 
@@ -23,9 +23,12 @@ export async function GET(req: Request) {
   // Fase 3: sama seperti /api/health — di-rate-limit per IP (publik) karena
   // jalur ini menjalankan checkDbInvariants(). Tidak lewat wrapRoute karena
   // status sukses dinamis 200/503 (lihat komentar di health/route.ts).
-  const rl = await checkRateLimit(
+  // Tenggat 1 dtk: store PG yang menggantung tak boleh menahan probe sampai
+  // load-balancer menganggap pod mati (fail-open).
+  const rl = await checkRateLimitBounded(
     rateLimitKey(null, getClientIp(req), "api:ready"),
     HEALTH_POLICY,
+    1000,
   );
   if (!rl.allowed) {
     return NextResponse.json(

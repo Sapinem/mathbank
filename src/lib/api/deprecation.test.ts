@@ -5,7 +5,7 @@
  * menambahkan tiga header; status, body, dan header lain harus lolos apa adanya.
  */
 import { describe, expect, it } from "vitest";
-import { INGEST_CANONICAL, INGEST_V1_SUNSET, ingestV1Alias } from "./deprecation";
+import { INGEST_V1_DEPRECATED, INGEST_V1_SUNSET, ingestV1Alias } from "./deprecation";
 
 const canonical = async (): Promise<Response> =>
   new Response(JSON.stringify({ data: { ok: true } }), {
@@ -15,7 +15,9 @@ const canonical = async (): Promise<Response> =>
 
 describe("ingestV1Alias", () => {
   it("meneruskan status, body, dan header kanonik", async () => {
-    const res = await ingestV1Alias(canonical)(new Request("http://x/api/v1/ingest/upload"));
+    const res = await ingestV1Alias(canonical, "/api/ingest/upload")(
+      new Request("http://x/api/v1/ingest/upload"),
+    );
     expect(res.status).toBe(201);
     expect(res.headers.get("content-type")).toBe("application/json");
     expect(res.headers.get("cache-control")).toBe("no-store");
@@ -23,10 +25,15 @@ describe("ingestV1Alias", () => {
   });
 
   it("menambahkan Deprecation, Sunset, dan Link ke pengganti", async () => {
-    const res = await ingestV1Alias(canonical)(new Request("http://x/api/v1/ingest/upload"));
-    expect(res.headers.get("Deprecation")).toBe("true");
+    const res = await ingestV1Alias(canonical, "/api/ingest/upload")(
+      new Request("http://x/api/v1/ingest/upload"),
+    );
+    // RFC 9745 §2.1: nilai wajib Structured Field Date (`@<unix-seconds>`),
+    // bukan token draft `true`.
+    expect(res.headers.get("Deprecation")).toBe(INGEST_V1_DEPRECATED);
+    expect(res.headers.get("Deprecation")).toMatch(/^@\d+$/);
     expect(res.headers.get("Sunset")).toBe(INGEST_V1_SUNSET);
-    expect(res.headers.get("Link")).toBe(`<${INGEST_CANONICAL}>; rel="successor-version"`);
+    expect(res.headers.get("Link")).toBe('</api/ingest/upload>; rel="successor-version"');
   });
 
   it("meneruskan argumen kedua (params) ke handler kanonik", async () => {
@@ -36,7 +43,10 @@ describe("ingestV1Alias", () => {
       return new Response(null, { status: 204 });
     };
     const params = { params: Promise.resolve({ id: "abc" }) };
-    await ingestV1Alias(handler)(new Request("http://x/api/v1/ingest/queue"), params);
+    await ingestV1Alias(handler, "/api/ingest/queue")(
+      new Request("http://x/api/v1/ingest/queue"),
+      params,
+    );
     expect(seen[0]).toBe(params);
   });
 

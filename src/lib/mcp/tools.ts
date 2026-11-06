@@ -107,7 +107,8 @@ export function registerTools(server: McpServer, actor: Actor): void {
           // Skema REST menormalkan nilai tunggal → array sendiri (asArray).
           const query = listQuestionsQuerySchema.parse(args);
           const res = await listQuestions(query, actor);
-          return { items: res.items, total: res.total };
+          // Sertakan stats: agen perlu ukuran antrean telaah tanpa memaginasi.
+          return { items: res.items, total: res.total, stats: res.stats };
         }),
     );
 
@@ -218,7 +219,9 @@ export function registerTools(server: McpServer, actor: Actor): void {
           // ditutup adalah ketergantungan pada satu lapisan saja.
           await assertMcpForQuestion(actor, "question.flag", id);
           const updated = await setQuestionFlag(id, flagged, notes ?? null, actor, version);
-          return { id: updated.id, isFlagged: updated.isFlagged, version: updated.version };
+          // Kembalikan baris utuh (kontrak lama) + version; mempersempit ke tiga
+          // field membuat pembaca `status`/`contentMarkdown` menerima undefined.
+          return updated;
         }),
     );
   }

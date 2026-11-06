@@ -47,6 +47,12 @@ describe("buildFilterFrom — grade array overlap filter", () => {
     };
     const filter = buildFilterFrom(query);
     expect(filter.where).toBeDefined();
+    // Assertion harus memeriksa SQL hasil bangun, bukan sekadar "ada where":
+    // menghapus predikat grade akan tetap hijau bila hanya cek toBeDefined().
+    const queryObj = dialect.sqlToQuery(filter.where!);
+    expect(queryObj.sql).toContain("&&");
+    expect(queryObj.params).toContain("08");
+    expect(queryObj.params).toContain("11");
   });
 
   it("tidak menyertakan kondisi grade bila query grade kosong", () => {
@@ -58,5 +64,8 @@ describe("buildFilterFrom — grade array overlap filter", () => {
     };
     const filter = buildFilterFrom(query);
     expect(filter.where).toBeDefined();
+    const queryObj = dialect.sqlToQuery(filter.where!);
+    expect(queryObj.sql).not.toContain("&&");
+    expect(queryObj.params).not.toContain("08");
   });
 });

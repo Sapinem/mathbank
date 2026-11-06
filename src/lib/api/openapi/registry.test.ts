@@ -182,6 +182,12 @@ describe("buildOpenApi", () => {
       if (meta.authz === "public") {
         expect(security, label).toEqual([]);
       } else if (meta.authz === "manual") {
+        if (path.startsWith("/api/v1/")) {
+          // Alias deprecated mewarisi security kanoniknya (sesi + API key)
+          // karena ia mendelegasikan ke handler yang sama.
+          expect(security, label).toEqual([{ sessionCookie: [] }, { apiKey: [] }]);
+          continue;
+        }
         // `none` (probe/dev) dan `delegated` (Better Auth) tidak memakai
         // skema keamanan MathBank — pustaka menangani kredensialnya sendiri.
         expect(security, label).toEqual(meta.security === "bearer" ? [{ apiKey: [] }] : []);

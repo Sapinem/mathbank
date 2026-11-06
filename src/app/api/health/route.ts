@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { checkDbInvariants } from "@/lib/db/invariants";
 import { toInvariantsDto } from "@/lib/db/schema-expectations";
 import { PUBLIC_DB_DOWN_MESSAGE } from "@/lib/api/public-messages";
-import { checkRateLimit, rateLimitKey, HEALTH_POLICY } from "@/lib/api/rate-limit";
+import { checkRateLimitBounded, rateLimitKey, HEALTH_POLICY } from "@/lib/api/rate-limit";
 import { getClientIp } from "@/lib/api/client-ip";
 import { log } from "@/lib/telemetry/logger";
 
@@ -48,9 +48,12 @@ export async function GET(req: Request) {
   // (Tidak lewat wrapRoute: status sukses di sini dinamis 200/503, sedangkan
   // wrapRoute memakai satu status sukses tetap — mengubahnya akan merusak
   // kontrak monitoring.)
-  const rl = await checkRateLimit(
+  // Tenggat 1 dtk: store PG yang menggantung tak boleh menahan probe sampai
+  // load-balancer menganggap pod mati (fail-open).
+  const rl = await checkRateLimitBounded(
     rateLimitKey(null, getClientIp(req), "api:health"),
     HEALTH_POLICY,
+    1000,
   );
   if (!rl.allowed) {
     return NextResponse.json(

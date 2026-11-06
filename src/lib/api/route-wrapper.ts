@@ -190,8 +190,12 @@ export type NextRouteArgs = { params?: Promise<Record<string, string>> } | undef
  */
 function requestFingerprint(req: Request, rawBody: string): string {
   const url = new URL(req.url);
+  // Alias `/api/v1/*` berbagi ruang kunci idempotensi dengan jalur kanoniknya
+  // (ADR-0028). Tanpa normalisasi, retry yang berpindah jalur dianggap payload
+  // berbeda → 422 IDEMPOTENCY_KEY_REUSED, bukan replay.
+  const pathname = url.pathname.replace(/^\/api\/v1(?=\/)/, "/api");
   return createHash("sha256")
-    .update(`${req.method}\n${url.pathname}${url.search}\n${rawBody}`)
+    .update(`${req.method}\n${pathname}${url.search}\n${rawBody}`)
     .digest("hex");
 }
 

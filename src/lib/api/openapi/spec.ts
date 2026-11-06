@@ -351,6 +351,33 @@ export function buildOpenApi(input: BuildInput): BuildResult {
     ((paths[path] ??= {}) as Json)[route.method.toLowerCase()] = operation;
   }
 
+  // Alias deprecated (`/api/v1/...`) mewarisi kontrak kanoniknya: requestBody,
+  // security, dan responses harus sama persis dengan operasi yang didelegasikan,
+  // kalau tidak SDK yang dihasilkan kehilangan skema request selama masa transisi.
+  for (const [path, ops] of Object.entries(paths)) {
+    if (!path.startsWith("/api/v1/")) continue;
+    const canonicalOps = paths[path.replace(/^\/api\/v1/, "/api")] as
+      | Record<string, Json>
+      | undefined;
+    if (!canonicalOps) continue;
+    const aliasOps = ops as Record<string, Json>;
+    for (const [verb, aliasOp] of Object.entries(aliasOps)) {
+      const canonical = canonicalOps[verb];
+      if (!canonical) continue;
+      aliasOps[verb] = {
+        ...canonical,
+        operationId: aliasOp.operationId,
+        summary: aliasOp.summary,
+        description: aliasOp.description,
+        deprecated: true,
+        "x-mathbank": {
+          ...(canonical["x-mathbank"] as Json),
+          ...(aliasOp["x-mathbank"] as Json),
+        },
+      };
+    }
+  }
+
   const declaredKeys = new Set(input.routes.map((r) => `${r.method} ${r.path}`));
   for (const key of Object.keys(OPERATIONS)) {
     if (!declaredKeys.has(key)) problems.push(`${key}: ada di OPERATIONS tapi route-nya tidak ada`);

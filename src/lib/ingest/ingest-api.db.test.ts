@@ -113,9 +113,9 @@ describe("alur API ingest", () => {
     expect(alias.status).toBe(canonical.status);
     expect(await alias.json()).toEqual(await canonical.json());
 
-    expect(alias.headers.get("Deprecation")).toBe("true");
+    expect(alias.headers.get("Deprecation")).toMatch(/^@\d+$/);
     expect(alias.headers.get("Sunset")).toBe("Mon, 25 Jan 2027 00:00:00 GMT");
-    expect(alias.headers.get("Link")).toBe('</api/ingest>; rel="successor-version"');
+    expect(alias.headers.get("Link")).toBe('</api/ingest/queue>; rel="successor-version"');
   });
 
   it("commit → soal DRAFT dibuat; antrean selesai", async () => {

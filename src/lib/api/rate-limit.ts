@@ -199,6 +199,33 @@ export async function checkRateLimit(
 }
 
 /**
+ * `checkRateLimit` dengan tenggat. Dipakai probe kesehatan.
+ *
+ * Store bersama berbasis PostgreSQL (ADR-0029) berarti setiap probe menunggu
+ * satu round-trip DB. Saat pool jenuh, menunggu tanpa batas membuat probe
+ * menggantung melewati timeout load-balancer — orkestrator melihat probe "mati"
+ * lalu me-restart pod yang sebenarnya sehat. Karena itu: gagal cepat,
+ * fail-open (rate limit bukan pagar keamanan probe).
+ */
+export async function checkRateLimitBounded(
+  key: string,
+  policy: RateLimitPolicy = DEFAULT_POLICY,
+  timeoutMs = 1000,
+): Promise<RateLimitResult> {
+  try {
+    return await Promise.race([
+      checkRateLimit(key, policy),
+      new Promise<never>((_, reject) => {
+        const timer = setTimeout(() => reject(new Error("rate limit store timeout")), timeoutMs);
+        timer.unref?.();
+      }),
+    ]);
+  } catch {
+    return { allowed: true, remaining: policy.capacity, retryAfterMs: 0 };
+  }
+}
+
+/**
  * Bangun key dari identitas aktor + IP.
  * Prioritas: id aktor (stabil) → IP (fallback).
  */

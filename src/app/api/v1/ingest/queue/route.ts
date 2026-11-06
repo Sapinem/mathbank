@@ -8,4 +8,4 @@ import { ingestV1Alias } from "@/lib/api/deprecation";
  * kanonik dan menambahkan header Deprecation/Sunset (berakhir 2027-01-25).
  * Jangan tambahkan logika di sini.
  */
-export const GET = ingestV1Alias(canonicalHandler);
+export const GET = ingestV1Alias(canonicalHandler, "/api/ingest/queue");

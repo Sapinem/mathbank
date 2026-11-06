@@ -90,7 +90,11 @@ export class InvalidIfMatchError extends Error {
  * `UPDATE … WHERE version = ?` di transaksi (lihat `src/lib/db/optimistic.ts`),
  * karena baris bisa berubah di antara baca dan tulis.
  */
-export function assertVersionMatches(actual: number, expected: number | "*"): void {
-  if (expected === "*") return;
+export function assertVersionMatches(
+  actual: number,
+  expected: number | "*" | undefined,
+): void {
+  // `undefined` = klien tidak mengirim If-Match; tidak ada yang perlu dibandingkan.
+  if (expected === "*" || expected === undefined) return;
   if (actual !== expected) throw new PreconditionFailedError(undefined, actual);
 }

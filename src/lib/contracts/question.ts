@@ -466,7 +466,9 @@ export const createQuestionSchema = z.object({
   difficulty: z.number().int().min(1).max(5),
   cognitiveLevel: cognitiveLevelSchema,
   grade: z.string().max(20).nullable().optional(),
-  grades: z.array(z.string()).optional(),
+  // Batasi ke bentuk kolom (varchar(20)[]): tanpa ini, nilai panjang lolos Zod
+  // lalu Postgres melempar 22001 dan klien menerima 500, bukan 400.
+  grades: z.array(z.string().trim().min(1).max(20)).max(12).optional(),
   contentMarkdown: z.string().min(1),
   dataPayload: dataPayloadSchema,
   answerKey: answerKeySchema.default({}),
@@ -588,7 +590,11 @@ export const listQuestionsMcpInputShape = {
     .enum(["text", "semantic"])
     .default("text")
     .describe("Mode pencarian: text (tahan typo) atau semantic (mirip makna)"),
-  status: questionStatusSchema.optional().describe("Filter status"),
+  status: questionStatusSchema
+    .optional()
+    .describe(
+      "Filter status. Tanpa nilai, daftar hanya memuat soal aktif (draft/review/ready); soal berstatus archived tidak ikut (ADR-0025).",
+    ),
   questionType: z
     .union([questionTypeSchema, z.array(questionTypeSchema)])
     .optional()
@@ -645,7 +651,11 @@ export type ListQuestionsQuery = z.infer<typeof listQuestionsQuerySchema>;
 
 /** Skema ringkasan statistik status bank soal (Omni-List). */
 export const questionListStatsSchema = z.object({
-  total: z.number().int(),
+  /**
+   * Total seluruh soal aktif — SENGAJA mengabaikan filter `status`/`flagged`
+   * agar chip ringkasan stabil. Berbeda dari `data.total` yang terfilter.
+   */
+  total: z.number().int().describe("Total seluruh soal aktif (tanpa filter status/flagged)."),
   ready: z.number().int(),
   review: z.number().int(),
   draft: z.number().int(),

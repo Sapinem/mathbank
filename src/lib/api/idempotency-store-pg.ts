@@ -77,11 +77,23 @@ export class PgIdempotencyStore implements IdempotencyStore {
     fingerprint: string,
     ttlMs: number,
   ): Promise<void> {
+    // Upsert, bukan UPDATE: bila baris claim sudah di-prune (handler lebih lama
+    // dari TTL), UPDATE no-op dan replay hilang — retry berikutnya menjalankan
+    // mutasi untuk kedua kalinya. ON CONFLICT membuat barisnya kembali.
     await this.db.execute(sql`
-      UPDATE idempotency_keys
-      SET in_flight = false, status = ${status}, body = ${JSON.stringify(body ?? null)}::jsonb,
-          fingerprint = ${fingerprint}, expires_at = ${new Date(Date.now() + ttlMs).toISOString()}::timestamptz
-      WHERE key = ${key}
+      INSERT INTO idempotency_keys (key, fingerprint, in_flight, status, body, expires_at, created_at)
+      VALUES (
+        ${key}, ${fingerprint}, false, ${status},
+        ${JSON.stringify(body ?? null)}::jsonb,
+        ${new Date(Date.now() + ttlMs).toISOString()}::timestamptz,
+        now()
+      )
+      ON CONFLICT (key) DO UPDATE
+      SET in_flight = false,
+          status = EXCLUDED.status,
+          body = EXCLUDED.body,
+          fingerprint = EXCLUDED.fingerprint,
+          expires_at = EXCLUDED.expires_at
     `);
   }
 
