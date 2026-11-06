@@ -18433,7 +18433,8 @@
                         "total": {
                           "type": "integer",
                           "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
+                          "maximum": 9007199254740991,
+                          "description": "Jumlah hasil SETELAH filter status/flagged diterapkan."
                         },
                         "stats": {
                           "type": "object",
@@ -18680,7 +18681,8 @@
           "authz": "route",
           "permission": "question:view",
           "notes": [
-            "Filter array menerima pengulangan (`?grade=g10&grade=g11`) atau CSV (`?grade=g10,g11`)."
+            "Filter array menerima pengulangan (`?grade=g10&grade=g11`) atau CSV (`?grade=g10,g11`).",
+            "`data.total` = jumlah hasil terfilter; `data.stats.total` = seluruh soal aktif TANPA filter (untuk chip ringkasan). Keduanya berbeda saat filter aktif."
           ],
           "source": "src/app/api (wrapRoute)"
         }

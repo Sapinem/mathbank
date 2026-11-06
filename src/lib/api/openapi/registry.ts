@@ -320,10 +320,16 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     tags: ["questions"],
     response: z.object({
       items: z.array(questionSchema),
-      total: z.number().int(),
+      total: z
+        .number()
+        .int()
+        .describe("Jumlah hasil SETELAH filter status/flagged diterapkan."),
       stats: questionListStatsSchema.optional(),
     }),
-    notes: ["Filter array menerima pengulangan (`?grade=g10&grade=g11`) atau CSV (`?grade=g10,g11`)."],
+    notes: [
+      "Filter array menerima pengulangan (`?grade=g10&grade=g11`) atau CSV (`?grade=g10,g11`).",
+      "`data.total` = jumlah hasil terfilter; `data.stats.total` = seluruh soal aktif TANPA filter (untuk chip ringkasan). Keduanya berbeda saat filter aktif.",
+    ],
   },
   "POST /api/questions": {
     summary: "Buat soal baru",
