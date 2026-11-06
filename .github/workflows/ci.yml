@@ -61,15 +61,24 @@ jobs:
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: Ekstensi DB (pgvector, pg_trgm, pgcrypto)
+      # Service container hanya membuat POSTGRES_DB (mathbank_test). DB utama
+      # tetap diperlukan karena `pnpm db:migrate`/`db:verify` membaca
+      # DATABASE_URL — tanpa ini langkah migrasi gagal "database does not exist".
+      - name: Siapkan DB utama + ekstensi (pgvector, pg_trgm, pgcrypto)
         run: |
-          PGPASSWORD=mathbank_ci psql -h localhost -U mathbank -d mathbank_test \
-            -c "CREATE EXTENSION IF NOT EXISTS vector;" \
-            -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" \
-            -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+          PGPASSWORD=mathbank_ci createdb -h localhost -U mathbank mathbank
+          for db in mathbank mathbank_test; do
+            PGPASSWORD=mathbank_ci psql -h localhost -U mathbank -d "$db" \
+              -c "CREATE EXTENSION IF NOT EXISTS vector;" \
+              -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" \
+              -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+          done
 
-      - name: Migrasi skema (DB uji)
-        run: pnpm db:migrate
+      # Prosedur AGENTS.md §3: migrasi & verifikasi dijalankan di KEDUA DB.
+      - name: Migrasi skema (DB utama + uji)
+        run: |
+          pnpm db:migrate
+          DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 
       - name: Gate mutu (theme, penamaan, tsc, lint, coverage, build)
         run: pnpm check
@@ -77,6 +86,7 @@ jobs:
       - name: Verifikasi skema (zero drift + drizzle-kit check)
         run: |
           pnpm db:verify
+          DATABASE_URL="$TEST_DATABASE_URL" pnpm db:verify
           pnpm exec drizzle-kit check
 
       - name: Tes integrasi DB
