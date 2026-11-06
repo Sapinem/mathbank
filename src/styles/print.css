@@ -11,10 +11,14 @@
 /* ══════════ PAGE (A4 portrait, mathmyid.cls publishing geometry) ══════════ */
 @page {
   size: A4 portrait;
-  /* Geometri penerbitan mathmyid.cls (Axiom): atas 1.8cm, kanan 0.6cm
-     (area cetak aman printer), bawah 1.6cm, kiri 1cm. Watermark tetap
-     "bleed" lewat offset negatif, bukan margin 0. */
-  margin: 1.8cm 0.6cm 1.6cm 1cm;
+  /* Geometri penerbitan mathmyid.cls (Axiom): atas 1.9cm, kanan 0.6cm,
+     bawah 1.8cm, kiri 1cm. Watermark tetap "bleed" lewat offset negatif,
+     bukan margin 0.
+     Running header/footer digeser negatif 1.3cm/1.2cm ke dalam margin, jadi
+     sisa jarak ke tepi fisik = margin - offset = 0.6cm di atas dan bawah —
+     sama dengan margin kanan. Di bawah 0.42cm (area tak tercetak printer
+     laser umum) badge nomor halaman mulai terpotong di kertas. */
+  margin: 1.9cm 0.6cm 1.8cm 1cm;
 }
 
 .worksheet {

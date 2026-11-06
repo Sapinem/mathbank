@@ -62,7 +62,7 @@ describe("print.css - Fase 4 (A4: tidak meluber)", () => {
 
   it("geometri kertas efisien mathmyid.cls diterapkan pada margin @page", () => {
     const css = printCss();
-    expect(css).toContain("margin: 1.8cm 0.6cm 1.6cm 1cm");
+    expect(css).toContain("margin: 1.9cm 0.6cm 1.8cm 1cm");
   });
 
   it("header bagian cetak mencegah putus halaman yatim di dasar kolom", () => {
