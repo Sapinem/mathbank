@@ -136,8 +136,8 @@ export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResul
     // radio `id="pilihan_<soal>_<baris>_<kolom>"` (value 1=Benar, 2=Salah).
     // Tanpa cabang ini, 9 dari 30 soal (30%) HILANG — terbukti di
     // `sd-matematika-p1` (21 blok ber-`pil`, 9 tanpa).
-    const gridRows = parseTabelBenarSalah(block, slug);
-    if (gridRows.length > 0) {
+    const grid = parseTabelBenarSalah(block, slug);
+    if (grid.rows.length > 0) {
       const stemSource = extractStemSource(block);
       const stem = cleanHtml(lokalkanGambarTka(stripUi(stemSource), slug, globalIndeks)).text.trim();
       if (!stem) {
@@ -149,7 +149,7 @@ export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResul
           "Sumber TKA tanpa kunci di HTML (kunci di server) — perlu telaah",
         ], {
           type: "matrix_grid",
-          dataPayload: { labels: ["Benar", "Salah"], rows: gridRows },
+          dataPayload: { labels: grid.labels, rows: grid.rows },
         }),
       );
       continue;
@@ -210,12 +210,12 @@ export const pusmendikTkaAdapter: ArticleAdapter = (rawHtml, meta): SegmentResul
  * di-hardcode — supaya tahan variasi ("Ya"/"Tidak", "Sesuai"/"Tidak Sesuai").
  * `answer` selalu null (kunci tak ada di HTML).
  */
-function parseTabelBenarSalah(block: string, slug: string): { text: string; answer: null }[] {
+function parseTabelBenarSalah(block: string, slug: string): { labels: string[]; rows: { text: string; answer: null }[] } {
   // Hanya proses blok yang memakai id radio format B.
-  if (!/id="pilihan_\d+_1_1"/i.test(block)) return [];
+  if (!/id="pilihan_\d+_1_1"/i.test(block)) return { labels: [], rows: [] };
 
   const tbl = /<table[^>]*>([\s\S]*?)<\/table>/i.exec(block);
-  if (!tbl) return [];
+  if (!tbl) return { labels: [], rows: [] };
 
   const rows: { text: string; answer: null }[] = [];
   // Baris data: `<tr>` yang memuat `id="pilihan_<soal>_<baris>_…"`.
@@ -236,7 +236,16 @@ function parseTabelBenarSalah(block: string, slug: string): { text: string; answ
     }
     if (teks) rows.push({ text: teks, answer: null });
   }
-  return rows;
+
+  // Label kolom dari <thead> — JANGAN hardcode "Benar"/"Salah": sumber yang
+  // sama juga memakai "Ya"/"Tidak" dan "Sesuai"/"Tidak Sesuai". Sel pertama
+  // (#/penanda) dan kolom "Pernyataan" dibuang.
+  const thead = /<thead[^>]*>([\s\S]*?)<\/thead>/i.exec(tbl[1]!)?.[1] ?? "";
+  const labels = [...thead.matchAll(/<(?:td|th)\b[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)]
+    .map((m) => cleanHtml(m[1]!).text.trim())
+    .filter((t) => t.length > 0 && !/^#?$/.test(t) && !/pernyataan/i.test(t));
+
+  return { labels: labels.length >= 2 ? labels : ["Benar", "Salah"], rows };
 }
 
 /** Ambil bagian `div.isi-soal` sebelum pilihan opsi (radio/checkbox/tabel). */

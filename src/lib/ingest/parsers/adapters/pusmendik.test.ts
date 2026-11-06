@@ -136,3 +136,91 @@ describe("adapter pusmendik_tka (HTML)", () => {
     expect(r.items).toHaveLength(0);
   });
 });
+
+// ── Fixture: perilaku parser TKA yang sebelumnya tanpa bukti ──────────
+//
+// Empat cabang di `pusmendik-tka.ts` ditambahkan untuk menutup kehilangan
+// data nyata, tetapi tidak punya tes. Tanpa fixture, perubahan berikutnya di
+// parser bisa mengembalikan kehilangan itu tanpa ada yang gagal.
+
+const TKA_FORMAT_B = `
+<div class="soal-soal row" id="soal-no-3">
+  <div class="col-lg-6 cont-soal"><p>Pak Bondan memproduksi susu kedelai.</p></div>
+  <div class="col-lg-6 isi-soal">
+    <p>Tentukan Benar atau Salah untuk setiap pernyataan berikut!</p>
+    <table class="table table-bordered">
+      <thead><tr><td class="d-none">#</td><td>Pernyataan</td><td>Benar</td><td>Salah</td></tr></thead>
+      <tr>
+        <td>A.</td><td><p>Produksi 43 liter.</p></td>
+        <td><input id="pilihan_3_1_1" name="pilihan_3_1" type="radio" value="1"></td>
+        <td><input id="pilihan_3_1_2" name="pilihan_3_1" type="radio" value="2"></td>
+      </tr>
+      <tr>
+        <td>B.</td><td><p>Tiap botol besar 35/46 liter.</p></td>
+        <td><input id="pilihan_3_2_1" name="pilihan_3_2" type="radio" value="1"></td>
+        <td><input id="pilihan_3_2_2" name="pilihan_3_2" type="radio" value="2"></td>
+      </tr>
+    </table>
+  </div>
+</div>`;
+
+const TKA_FORMAT_B_YA_TIDAK = TKA_FORMAT_B
+  .replace("<td>Benar</td><td>Salah</td>", "<td>Ya</td><td>Tidak</td>");
+
+const TKA_GAMBAR = `
+<div class="soal-soal row" id="soal-no-1">
+  <div class="col-lg-6 cont-soal"></div>
+  <div class="col-lg-6 isi-soal">
+    <p><img src="/tka/cbt_images/aaa111.png" data-latex="2+3"></p>
+    <!-- PG -->
+    <table><tr>
+      <td><div class="radio"><input pil="a" name="pilihan1" type="radio"></div></td>
+      <td><p><img src="/tka/cbt_images/bbb222.png"></p></td>
+    </tr><tr>
+      <td><div class="radio"><input pil="b" name="pilihan1" type="radio"></div></td>
+      <td><p><img src="/tka/cbt_images/ccc333.png"></p></td>
+    </tr></table>
+  </div>
+</div>`;
+
+const TKA_TANPA_OPSI = `
+<div class="soal-soal row" id="soal-no-1">
+  <div class="col-lg-6 cont-soal"></div>
+  <div class="col-lg-6 isi-soal"><p>Soal tanpa pilihan sama sekali.</p></div>
+</div>`;
+
+describe("adapter pusmendik_tka — cabang yang menutup kehilangan data", () => {
+  it("FORMAT B: tabel Pernyataan|Benar|Salah → matrix_grid, bukan dilewati", () => {
+    const r = segmentArticle(TKA_FORMAT_B, { source: "pusmendik_tka" });
+    expect(r.items).toHaveLength(1);
+    const it = r.items[0]!;
+    expect(it.type).toBe("matrix_grid");
+    const payload = it.dataPayload as { labels: string[]; rows: { text: string }[] };
+    expect(payload.labels).toEqual(["Benar", "Salah"]);
+    expect(payload.rows).toHaveLength(2);
+    expect(payload.rows[0]!.text).toContain("Produksi 43 liter");
+  });
+
+  it("FORMAT B: label kolom diambil dari <thead>, bukan hardcode Benar/Salah", () => {
+    const r = segmentArticle(TKA_FORMAT_B_YA_TIDAK, { source: "pusmendik_tka" });
+    const payload = r.items[0]!.dataPayload as { labels: string[] };
+    expect(payload.labels).toEqual(["Ya", "Tidak"]);
+  });
+
+  it("slug jatuh ke URL saat judul \"Simulasi TKA\", dan gambar dipetakan berurutan", () => {
+    const r = segmentArticle(TKA_GAMBAR, {
+      source: "pusmendik_tka",
+      title: "Simulasi TKA",
+      url: "https://pusmendik.kemendikdasmen.go.id/tka/sd-matematika-p1.json",
+    });
+    const it = r.items[0]!;
+    expect(it.stem).toContain("corpus://pusmendik_tka/sd-matematika-p1-img-1.png");
+    expect(it.options[0]!.text).toContain("corpus://pusmendik_tka/sd-matematika-p1-img-2.png");
+  });
+
+  it("blok tanpa pil dan tanpa tabel Benar/Salah → dihitung skipped, bukan item rusak", () => {
+    const r = segmentArticle(TKA_TANPA_OPSI, { source: "pusmendik_tka" });
+    expect(r.items).toHaveLength(0);
+    expect(r.skipped).toBe(1);
+  });
+});
