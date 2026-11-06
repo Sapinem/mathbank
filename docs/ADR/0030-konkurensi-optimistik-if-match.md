@@ -37,7 +37,7 @@ revisi ke-3".
 | `topics` | `PATCH/DELETE /api/topics/{id}` |
 | `apikey` | `DELETE /api/system/agent-keys/{id}` |
 
-21 operasi. **Sengaja dikecualikan:** `DELETE /api/mcp` (tidak menyentuh baris) dan
+22 operasi. **Sengaja dikecualikan:** `DELETE /api/mcp` (tidak menyentuh baris) dan
 `PATCH /api/settings` (singleton — semantik "tulis terakhir menang" memang yang
 diinginkan untuk pengaturan admin). Pembuatan baris (`POST`) tidak butuh `If-Match`:
 tidak ada versi sebelumnya untuk dilindungi.
@@ -67,9 +67,17 @@ tidak ada versi sebelumnya untuk dilindungi.
 | Cocok | 200/204 | — |
 
 `GET` satu sumber daya memancarkan `ETag: "<version>"` dan menyertakan `version`
-di body. `If-Match: *` diterima (berarti "apa pun versinya"), tetapi `W/"3"`
-**ditolak**: RFC 9110 §13.1.1 mensyaratkan perbandingan kuat, dan menerima weak
-validator akan memberi rasa aman yang palsu.
+di body. `If-Match: *` diterima, tetapi **bukan berarti aman**: wildcard mematikan
+pemeriksaan versi sepenuhnya — ia berarti "timpa apa pun yang ada". Header tetap
+wajib hadir (428 bila tidak), namun predikat `WHERE version = ?` tidak dipasang.
+Karena itu `*` hanya sah untuk tindakan manusia yang sadar (mis. pengguna menekan
+"timpa perubahan orang lain"), bukan untuk klien mesin: tool MCP `update_question`
+dan `flag_question` **menolak** panggilan tanpa `version` dengan
+`PRECONDITION_REQUIRED` dan menyuruh agen memanggil `get_question` lebih dulu.
+Tanpa aturan ini, ADR-0030 hanya berlaku untuk HTTP dan bocor di jalur agen.
+
+`W/"3"` **ditolak**: RFC 9110 §13.1.1 mensyaratkan perbandingan kuat, dan
+menerima weak validator akan memberi rasa aman yang palsu.
 
 ### Alternatif yang ditolak
 
@@ -113,6 +121,12 @@ validator akan memberi rasa aman yang palsu.
 | `src/lib/api/version-if-match.db.test.ts` | **8/8** — 428 tanpa header, 412 basi, ETag↔version, dua penulis paralel → tepat satu 200 |
 | `pnpm test:db` | **306 lulus** (27 berkas) |
 | `pnpm openapi:check` | 76 operasi / 51 path; 21 operasi ber-`If-Match`, 4 ber-`ETag` |
+
+**Pembaruan 2026-11-06.** Angka pada tabel di atas adalah snapshot saat keputusan
+diambil. Setelah rute `PATCH /api/questions/{id}/flag` dan `/status` ikut ber-
+`If-Match`, `pnpm openapi:check` kini melaporkan **77 operasi / 51 path, 22 di
+antaranya ber-`If-Match` dan 9 memancarkan `ETag`**. Jumlah operasi pada tabel
+tabel berversi juga dikoreksi 21 → 22 (penjumlahan barisnya memang 22).
 
 **Catatan proses:** `pnpm typecheck` sempat melaporkan bersih padahal `etagFrom`
 menyimpulkan `TResult = unknown`. Penyebabnya sama seperti ADR-0029 —

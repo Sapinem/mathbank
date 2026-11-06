@@ -228,7 +228,11 @@ describe("POST /api/mcp — Fase 3 policy per-objek", () => {
 
   it("update_question soal MILIK SENDIRI lolos ke service", async () => {
     getQuestionInternal.mockResolvedValue({ authorId: "route-mcp-agent" });
-    const { payload, isError } = await callTool("update_question", { id: QID, contentMarkdown: "Baru." });
+    const { payload, isError } = await callTool("update_question", {
+      id: QID,
+      version: 1,
+      contentMarkdown: "Baru.",
+    });
     expect(isError).toBeFalsy();
     expect(payload.status).toBe("draft");
     expect(updateQuestion).toHaveBeenCalledTimes(1);
@@ -250,14 +254,22 @@ describe("POST /api/mcp — Fase 3 policy per-objek", () => {
     expect(updateQuestion).not.toHaveBeenCalled();
   });
 
+  it("update_question TANPA version ditolak (PRECONDITION_REQUIRED), service tak dipanggil", async () => {
+    getQuestionInternal.mockResolvedValue({ authorId: "route-mcp-agent" });
+    const { payload, isError } = await callTool("update_question", { id: QID, contentMarkdown: "Baru." });
+    expect(isError).toBe(true);
+    expect(payload.code).toBe("PRECONDITION_REQUIRED");
+    expect(updateQuestion).not.toHaveBeenCalled();
+  });
+
   it("flag_question: agent (flag=yes) boleh menandai soal siapa pun; teacher hanya miliknya", async () => {
     getQuestionInternal.mockResolvedValue({ authorId: "orang-lain" });
-    const agentCall = await callTool("flag_question", { id: QID, flagged: true });
+    const agentCall = await callTool("flag_question", { id: QID, version: 1, flagged: true });
     expect(agentCall.isError).toBeFalsy();
     expect(setQuestionFlag).toHaveBeenCalledTimes(1);
 
     mockActor = { id: "guru-1", name: "Guru", roles: ["teacher"], via: "apikey" };
-    const teacherCall = await callTool("flag_question", { id: QID, flagged: true });
+    const teacherCall = await callTool("flag_question", { id: QID, version: 1, flagged: true });
     expect(teacherCall.isError).toBe(true);
     expect(teacherCall.payload.code).toBe("FORBIDDEN");
     expect(setQuestionFlag).toHaveBeenCalledTimes(1); // tak bertambah

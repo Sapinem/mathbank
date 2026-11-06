@@ -35,6 +35,27 @@ function ok(data: unknown): CallToolResult {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
+/**
+ * ADR-0030 juga mengikat klien MESIN, bukan hanya HTTP.
+ *
+ * Tanpa `version`, service dipanggil dengan `undefined` dan predikat
+ * `WHERE version = ?` tidak dipasang — artinya agen menimpa suntingan guru
+ * tanpa jejak, persis kelas bug yang ADR-0030 tutup untuk route HTTP.
+ * Karena itu versi WAJIB: agen membaca dulu lewat `get_question`.
+ */
+function requireVersion(version: number | undefined): number {
+  if (version === undefined) {
+    throw Object.assign(
+      new Error(
+        "Parameter `version` wajib untuk mutasi soal (ADR-0030). " +
+          "Panggil `get_question` lebih dulu, lalu kirimkan `version` yang dikembalikan.",
+      ),
+      { code: "PRECONDITION_REQUIRED" },
+    );
+  }
+  return version;
+}
+
 /** Bungkus aksi supaya error jadi keluaran tool yang rapi, bukan crash. */
 async function guard(fn: () => Promise<unknown>): Promise<CallToolResult> {
   try {
@@ -170,10 +191,14 @@ export function registerTools(server: McpServer, actor: Actor): void {
       "update_question",
       {
         title: "Perbarui draf soal",
-        description: "Perbarui draf soal yang dibuat oleh agen ini sendiri (hanya draf milik sendiri).",
+        description:
+          "Perbarui draf soal yang dibuat oleh agen ini sendiri (hanya draf milik sendiri). " +
+          "`version` WAJIB: panggil `get_question` dulu dan kirimkan versi yang dikembalikan (ADR-0030).",
         inputSchema: {
           id: z.string().uuid(),
-          version: z.number().int().optional().describe("Versi soal untuk konkurensi optimistik (ADR-0030)"),
+          version: z.number().int().optional().describe(
+            "WAJIB. Versi soal untuk konkurensi optimistik (ADR-0030) — baca lewat get_question.",
+          ),
           contentMarkdown: z.string().min(1).optional(),
           difficulty: z.number().int().min(1).max(5).optional(),
           cognitiveLevel: z.enum(["remember", "understand", "apply", "analyze", "evaluate", "create"]).optional(),
@@ -189,7 +214,7 @@ export function registerTools(server: McpServer, actor: Actor): void {
         guard(async () => {
           // Fase 3: penegakan `own` di lapisan MCP, bukan hanya di service.
           await assertMcpForQuestion(actor, "question.edit", id);
-          const q = await updateQuestion(id, patch, actor, version);
+          const q = await updateQuestion(id, patch, actor, requireVersion(version));
           return { id: q.id, status: q.status, version: q.version };
         }),
     );
@@ -201,10 +226,14 @@ export function registerTools(server: McpServer, actor: Actor): void {
       "flag_question",
       {
         title: "Tandai masalah kualitas soal",
-        description: "Tandai soal yang memiliki masalah kualitas (KaTeX rusak, format tidak rapi, dsb) untuk ditinjau guru.",
+        description:
+          "Tandai soal yang memiliki masalah kualitas (KaTeX rusak, format tidak rapi, dsb) untuk ditinjau guru. " +
+          "`version` WAJIB: panggil `get_question` dulu dan kirimkan versi yang dikembalikan (ADR-0030).",
         inputSchema: {
           id: z.string().uuid(),
-          version: z.number().int().optional().describe("Versi soal untuk konkurensi optimistik (ADR-0030)"),
+          version: z.number().int().optional().describe(
+            "WAJIB. Versi soal untuk konkurensi optimistik (ADR-0030) — baca lewat get_question.",
+          ),
           flagged: z.boolean().default(true),
           notes: z.string().max(1000).optional(),
         },
@@ -218,7 +247,7 @@ export function registerTools(server: McpServer, actor: Actor): void {
           // teacher hanya soal sendiri. Perilaku flag TIDAK diubah, yang
           // ditutup adalah ketergantungan pada satu lapisan saja.
           await assertMcpForQuestion(actor, "question.flag", id);
-          const updated = await setQuestionFlag(id, flagged, notes ?? null, actor, version);
+          const updated = await setQuestionFlag(id, flagged, notes ?? null, actor, requireVersion(version));
           // Kembalikan baris utuh (kontrak lama) + version; mempersempit ke tiga
           // field membuat pembaca `status`/`contentMarkdown` menerima undefined.
           return updated;
