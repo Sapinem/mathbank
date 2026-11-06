@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { QuestionCard, QuestionTypeIcon, excerpt, flattenMathForList, stripImages, formatGradeBadge } from "./question-card";
+import { QuestionCard, QuestionTypeIcon } from "./question-card";
+import { excerpt, flattenMathForList, stripImages } from "@/lib/math/excerpt";
+import { formatGradeBadge } from "@/lib/display/labels";
 import type { PublicQuestion } from "@/lib/services/question-service";
 
 /** Soal uji minimal (hanya field yang dirender kartu). */

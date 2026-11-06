@@ -27,6 +27,33 @@ import { throwVersionedWriteMiss } from "./versioned";
 import { withUniqueGuard } from "@/lib/db/errors";
 import type { UpdateBundleItemSlotContract } from "@/lib/contracts/bundle";
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Sentuh versi paket di dalam transaksi (ADR-0030).
+ *
+ * Empat mutasi butir (tambah, hapus, ubah slot, susun ulang) memakai blok yang
+ * sama persis. Satu definisi menjaga urutan kunci tetap konsisten — urutan yang
+ * salah adalah sumber deadlock dan 412 palsu.
+ */
+async function touchBundleVersion(
+  tx: Tx,
+  bundleId: string,
+  expectedVersion: number | "*" | undefined,
+): Promise<number> {
+  const touched = await tx
+    .update(bundles)
+    .set({ updatedAt: new Date() })
+    .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
+    .returning({ id: bundles.id, version: bundles.version });
+  if (touched.length === 0) {
+    await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", {
+      dbOrTx: tx,
+    });
+  }
+  return touched[0]!.version;
+}
+
 /** Tambah soal ke paket (di akhir). Tolak duplikat. */
 export async function addItem(
   bundleId: string,
@@ -65,14 +92,7 @@ export async function addItem(
   // Urutan ini penting — bila versi sudah basi, tak ada item yatim yang
   // terlanjur masuk sebelum 412 dikembalikan.
   const row = await db.transaction(async (tx) => {
-    const touched = await tx
-      .update(bundles)
-      .set({ updatedAt: new Date() })
-      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
-      .returning({ id: bundles.id, version: bundles.version });
-    if (touched.length === 0) {
-      await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
-    }
+    const bundleVersion = await touchBundleVersion(tx, bundleId, expectedVersion);
 
     const [{ max }] = await tx
       .select({ max: sql<number>`COALESCE(MAX(order_index), 0)` })
@@ -93,7 +113,7 @@ export async function addItem(
           .returning();
         return {
           ...inserted!,
-          bundleVersion: touched[0]!.version,
+          bundleVersion,
         };
       },
       "Soal sudah ada di paket ini.",
@@ -121,16 +141,9 @@ export async function removeItem(
     .limit(1);
   if (!row) throw new NotFoundError("Item paket tidak ditemukan.");
   return await db.transaction(async (tx) => {
-    const touched = await tx
-      .update(bundles)
-      .set({ updatedAt: new Date() })
-      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
-      .returning({ id: bundles.id, version: bundles.version });
-    if (touched.length === 0) {
-      await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
-    }
+    const bundleVersion = await touchBundleVersion(tx, bundleId, expectedVersion);
     await tx.delete(bundleItems).where(eq(bundleItems.id, itemId));
-    return { bundleVersion: touched[0]!.version };
+    return { bundleVersion };
   });
 }
 
@@ -149,14 +162,7 @@ export async function updateBundleItemSlot(
   if (expectedVersion !== undefined) assertVersionMatches(bundle.version, expectedVersion);
 
   return await db.transaction(async (tx) => {
-    const touched = await tx
-      .update(bundles)
-      .set({ updatedAt: new Date() })
-      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
-      .returning({ id: bundles.id, version: bundles.version });
-    if (touched.length === 0) {
-      await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
-    }
+    const bundleVersion = await touchBundleVersion(tx, bundleId, expectedVersion);
 
     const [updated] = await tx
       .update(bundleItems)
@@ -175,7 +181,7 @@ export async function updateBundleItemSlot(
 
     return {
       ...updated,
-      bundleVersion: touched[0]!.version,
+      bundleVersion,
     };
   });
 }
@@ -217,14 +223,7 @@ export async function reorderItems(
   // **PERF-06:** satu pernyataan SQL `CASE` untuk seluruh item (batch), bukan
   // N `UPDATE` berurutan → menghilangkan latensi pulang-pergi per item.
   return await db.transaction(async (tx) => {
-    const touched = await tx
-      .update(bundles)
-      .set({ updatedAt: new Date() })
-      .where(versionPredicate(bundles, bundleId, expectedVersion ?? "*"))
-      .returning({ id: bundles.id, version: bundles.version });
-    if (touched.length === 0) {
-      await throwVersionedWriteMiss(bundles, bundleId, expectedVersion, "Paket tidak ditemukan.", { dbOrTx: tx });
-    }
+    const bundleVersion = await touchBundleVersion(tx, bundleId, expectedVersion);
 
     const cases = itemIds.map(
       (id, i) => sql`WHEN ${bundleItems.id} = ${id}::uuid THEN ${i + 1}::int`,
@@ -236,6 +235,6 @@ export async function reorderItems(
        WHERE ${bundleItems.bundleId} = ${bundleId}::uuid
          AND ${bundleItems.id} IN (${sql.join(inList, sql`, `)})
     `);
-    return { bundleVersion: touched[0]!.version };
+    return { bundleVersion };
   });
 }

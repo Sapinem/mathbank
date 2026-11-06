@@ -26,12 +26,12 @@ export async function throwVersionedWriteMiss(
   id: string,
   expected: number | "*" | undefined,
   notFoundMessage: string,
-  opts?: { scope?: SQL; idCol?: AnyPgColumn; dbOrTx?: unknown },
+  opts?: { scope?: SQL; idCol?: AnyPgColumn; dbOrTx?: Pick<typeof db, "select"> },
 ): Promise<never> {
   // Hanya lempar 412 bila klien meminta nomor versi eksplisit dan baris sebenarnya ada di DB.
   // Bila expected === '*' atau undefined, ketiadaan baris adalah 404 Not Found (RFC 9110).
   if (typeof expected === "number") {
-    const runner = (opts?.dbOrTx as typeof db) ?? db;
+    const runner = opts?.dbOrTx ?? db;
     const col = opts?.idCol ?? table.id;
     const cond = opts?.scope ? and(eq(col, id), opts.scope) : eq(col, id);
     const [row] = await runner

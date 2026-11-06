@@ -25,11 +25,7 @@ import {
 } from "@/lib/display/labels";
 import { StatusIcon } from "@/components/questions/question-status-badge";
 import type { FilterValues } from "./question-filter-drawer";
-import type {
-  TopicRow,
-  SourceRow,
-  GradeRow,
-} from "@/lib/hooks/use-reference";
+import type { TopicRow, SourceRow } from "@/lib/hooks/use-reference";
 import type { TagRow } from "@/lib/services/taxonomy/shared";
 
 interface QuestionFilterBarProps {
@@ -40,7 +36,6 @@ interface QuestionFilterBarProps {
   filters: FilterValues;
   topics: TopicRow[];
   tags?: TagRow[];
-  grades: GradeRow[];
   sources: SourceRow[];
   onRemoveTopic: (id: string) => void;
   onClearTag?: () => void;

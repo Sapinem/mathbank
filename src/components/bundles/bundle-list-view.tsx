@@ -66,26 +66,12 @@ import {
   useDuplicateBundle,
 } from "@/lib/hooks/use-bundles";
 import type { BundleRow, BundleType, BundleOrigin } from "@/lib/services/bundle-service";
+import { statusBadgeClass } from "@/lib/display/bundle-labels";
 
 const TYPE_LABELS: Record<BundleType, string> = {
   source: "Sumber",
   exam: "Ujian",
 };
-
-function statusBadgeClass(status: BundleRow["status"]): string {
-  switch (status) {
-    case "ready":
-      return "border-success/30 bg-success/10 text-success";
-    case "review":
-      return "border-gold/30 bg-gold/10 text-gold";
-    case "draft":
-      return "border-border bg-muted/60 text-muted-foreground";
-    case "archived":
-      return "border-border/60 bg-muted/30 text-muted-foreground/70";
-    default:
-      return "";
-  }
-}
 
 /**
  * Tab jenis paket — sinkron dengan URL `?type=`.
@@ -172,7 +158,17 @@ export function BundleListView() {
   const duplicate = useDuplicateBundle();
 
   // Dialog & local-only state
-  const [open, setOpen] = useState(searchParams.get("new") === "true");
+  // `?new=true` harus reaktif: aksi command palette bisa dijalankan saat
+  // pengguna SUDAH berada di /bundles, dan initializer useState tidak jalan
+  // lagi. URL adalah sumber kebenaran; menutup dialog juga membersihkan param.
+  const open = searchParams.get("new") === "true";
+  const setOpen = (next: boolean) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) params.set("new", "true");
+    else params.delete("new");
+    const qs = params.toString();
+    router.replace(`/bundles${qs ? `?${qs}` : ""}`, { scroll: false });
+  };
   const [title, setTitle] = useState("");
   const [type, setType] = useState<BundleType>(typeFilter !== "all" ? typeFilter : "exam");
   const [formErr, setFormErr] = useState<string | null>(null);

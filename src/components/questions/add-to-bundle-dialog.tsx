@@ -38,7 +38,13 @@ export function AddToBundleDialog({
   initialBundleId = "",
 }: AddToBundleDialogProps) {
   const qc = useQueryClient();
-  const { data: bundles = [], isPending: bundlesLoading } = useBundles({ status: "active", limit: 100 });
+  // Dialog ini selalu ter-mount di halaman detail; tanpa `enabled` setiap
+  // kunjungan menembak GET /api/bundles?limit=100 untuk dialog yang tertutup.
+  const { data: bundles = [], isPending: bundlesLoading } = useBundles({
+    status: "active",
+    limit: 100,
+    enabled: open,
+  });
 
   const [selectedBundleId, setSelectedBundleId] = useState(initialBundleId);
   const [role, setRole] = useState<"question" | "stimulus">("question");

@@ -24,6 +24,7 @@ import { ErrorState, LoadingState } from "@/components/ui/states";
 import { MathContent } from "@/components/math/math-content";
 import { useBundle, useBundleValidation } from "@/lib/hooks/use-bundles";
 import { cn } from "@/lib/utils";
+import { statusBadgeClass } from "@/lib/display/bundle-labels";
 import { StatusIcon } from "@/components/questions/question-status-badge";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -32,21 +33,6 @@ const STATUS_LABELS: Record<string, string> = {
   ready: "Siap",
   archived: "Arsip",
 };
-
-function statusBadgeClass(status: string): string {
-  switch (status) {
-    case "ready":
-      return "border-success/30 bg-success/10 text-success";
-    case "review":
-      return "border-gold/30 bg-gold/10 text-gold";
-    case "draft":
-      return "border-border bg-muted/60 text-muted-foreground";
-    case "archived":
-      return "border-border/60 bg-muted/30 text-muted-foreground/70";
-    default:
-      return "";
-  }
-}
 
 const ORIGIN_LABELS: Record<string, string> = {
   manual: "Manual",
