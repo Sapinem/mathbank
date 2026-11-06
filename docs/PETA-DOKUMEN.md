@@ -79,6 +79,7 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
 - `docs/PRD.md`: *Product Requirements Document* tingkat tinggi MathBank.
 - `docs/RUNBOOK.md`: Panduan operasional deployment, maintenance, dan disaster recovery server.
 - `docs/BACKUP-RECOVERY.md`: Strategi backup (cron harian 02:00, retensi 7 harian + arsip mingguan 30 hari), RPO/RTO, dan uji restore wajib.
+- `docs/RUNBOOK-ONE-SHOT.md`: **Runbook skrip data satu-kali** — daftar & urutan `drizzle/one-shot/*.sql`, prosedur backup → dry-run → apply → verifikasi per lingkungan, dan tabel tanda sudah-dijalankan.
 - `docs/RESTORE-RUNBOOK.md`: **Prosedur pemulihan langkah-demi-langkah** (perintah + ekspektasi keluaran) untuk insiden, termasuk cara menimpa DB produksi dengan aman, tabel nilai invarian yang harus cocok, troubleshooting, dan riwayat drill restore (ACT-07 / MAT-124).
 - `docs/KEAMANAN.md`: Protokol mitigasi kerentanan (anti-SSRF, sanitasi input KaTeX, auth guard).
 - `docs/AXIOM-VS-MATHBANK-COMPARISON.md`: 📋 **Komparasi Arsitektur Axiom vs MathBank** — pembanding skema `questions`/solutions/taxonomy/bundles/media, kapabilitas eksklusif MathBank, dan batas integrasi lintas repo (Axiom ≠ MathBank).
