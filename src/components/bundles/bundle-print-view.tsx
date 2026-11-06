@@ -26,8 +26,8 @@ import { isOptionBased, correctLabelsOf } from "@/lib/contracts/question";
 import { useBundle, useUpdateBundle } from "@/lib/hooks/use-bundles";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
+import { getPrintTheme, DEFAULT_THEME_ID } from "@/lib/print/themes/registry";
 import { PrintWatermark } from "./print-watermark";
-import { BundlePrintKop } from "./print/bundle-print-kop";
 import { BundlePrintSettingsDrawer } from "./print/bundle-print-settings-drawer";
 import { BundlePrintHeader } from "./print/bundle-print-header";
 import { BundlePrintFooter } from "./print/bundle-print-footer";
@@ -122,6 +122,8 @@ export function BundlePrintView({
   const [backgroundWatermarkOverride, setBackgroundWatermarkOverride] = useState<boolean | null>(null);
   const [columnBreaksOverride, setColumnBreaksOverride] = useState<string[] | null>(null);
   const [brandColorOverride, setBrandColorOverride] = useState<string | null>(null);
+  const [themeIdOverride, setThemeIdOverride] = useState<string | null>(null);
+  const [themeOptionsOverride, setThemeOptionsOverride] = useState<Record<string, Record<string, unknown>> | null>(null);
   const [logoFailed, setLogoFailed] = useState(false);
 
   if (isPending) return <LoadingState label="Menyiapkan naskah…" />;
@@ -154,6 +156,29 @@ export function BundlePrintView({
     columnBreaksOverride ?? (config.columnBreaks ?? []);
   const effectiveBrandColor: string =
     brandColorOverride ?? (config.brandColor ?? "#0158ca");
+  const effectiveThemeId: string =
+    themeIdOverride ?? (config.themeId || DEFAULT_THEME_ID);
+  const effectiveThemeOptions: Record<string, Record<string, unknown>> =
+    themeOptionsOverride ?? (config.themeOptions || {});
+  const activeTheme = getPrintTheme(effectiveThemeId);
+
+  const handleThemeChange = (newThemeId: string) => {
+    setThemeIdOverride(newThemeId);
+  };
+
+  const handleThemeOptionChange = (tId: string, key: string, value: unknown) => {
+    setThemeOptionsOverride((prev) => {
+      const current = prev ?? config.themeOptions ?? {};
+      const themeSpecific = current[tId] ?? {};
+      return {
+        ...current,
+        [tId]: {
+          ...themeSpecific,
+          [key]: value,
+        },
+      };
+    });
+  };
 
   const toggleColumnBreak = (questionId: string) => {
     setColumnBreaksOverride((prev) => {
@@ -211,6 +236,8 @@ export function BundlePrintView({
           backgroundWatermark: effectiveBackgroundWatermark,
           columnBreaks: effectiveColumnBreaks,
           brandColor: effectiveBrandColor,
+          themeId: effectiveThemeId,
+          themeOptions: effectiveThemeOptions,
         },
         version: bundle.version,
       });
@@ -358,6 +385,10 @@ export function BundlePrintView({
       <BundlePrintSettingsDrawer
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
+        activeThemeId={effectiveThemeId}
+        onThemeChange={handleThemeChange}
+        themeOptions={effectiveThemeOptions}
+        onThemeOptionChange={handleThemeOptionChange}
         applyStudentPreset={applyStudentPreset}
         applyTeacherPreset={applyTeacherPreset}
         canShowKey={canShowKey}
@@ -408,14 +439,25 @@ export function BundlePrintView({
         >
         {effectiveBackgroundWatermark && <PrintWatermark />}
 
-        {/* Running Header Halaman Lanjutan (Halaman 2+) */}
-        <BundlePrintHeader
-          title={bundle.title}
-          exerciseLabel="Latihan 1"
-        />
+        {/* Cover blok putih halaman 1 di cetak agar fixed running header tidak bocor ke halaman 1 */}
+        <div data-slot="print-page1-header-cover" className="print-page1-header-cover hidden print:block" aria-hidden="true" />
 
-        {/* Kop Resmi Naskah Halaman Pertama (Mockup kop.png) */}
-        <BundlePrintKop
+        {/* Running Header Halaman Lanjutan (Halaman 2+) */}
+        {activeTheme.Header ? (
+          <activeTheme.Header
+            title={bundle.title}
+            exerciseLabel="Latihan 1"
+            options={effectiveThemeOptions[activeTheme.id] ?? {}}
+          />
+        ) : (
+          <BundlePrintHeader
+            title={bundle.title}
+            exerciseLabel="Latihan 1"
+          />
+        )}
+
+        {/* Kop Resmi Naskah Halaman Pertama dari Tema Aktif */}
+        <activeTheme.Kop
           title={bundle.title}
           grade={bundle.grade}
           year={bundle.year}
@@ -426,9 +468,12 @@ export function BundlePrintView({
           tagline={tagline ?? undefined}
           logoUrl={config.institutionLogoUrl && !logoFailed ? config.institutionLogoUrl : undefined}
           onLogoError={() => setLogoFailed(true)}
+          options={effectiveThemeOptions[activeTheme.id] ?? {}}
+          instructions={instructions}
+          brandColor={effectiveBrandColor}
         />
 
-        {instructions && (
+        {activeTheme.id === "math-my-id" && instructions && (
           <div
             className="instruction print-instruction border rounded-md p-2.5 mb-4 text-xs italic"
             style={{
@@ -720,8 +765,24 @@ export function BundlePrintView({
           </section>
         )}
 
-        {/* Running Footer Semua Halaman (Mockup footer.png) */}
-        <BundlePrintFooter pageNumber={1} />
+        {/* Seksi Tambahan Khusus Tema (Bila Ada) */}
+        {activeTheme.ExtraSection && (
+          <activeTheme.ExtraSection
+            title={bundle.title}
+            institutionName={institution}
+            options={effectiveThemeOptions[activeTheme.id] ?? {}}
+          />
+        )}
+
+        {/* Running Footer Semua Halaman */}
+        {activeTheme.Footer ? (
+          <activeTheme.Footer
+            institutionName={institution}
+            options={effectiveThemeOptions[activeTheme.id] ?? {}}
+          />
+        ) : (
+          <BundlePrintFooter pageNumber={1} />
+        )}
         </div>
       </div>
     </div>

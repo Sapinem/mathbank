@@ -26,6 +26,8 @@ export const bundlePrintConfigSchema = z.object({
   brandColor: z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/, {
     message: "Warna harus berupa kode heksadesimal valid (misal: #0158ca)",
   }).optional(),
+  themeId: z.string().trim().min(1).max(64).optional(),
+  themeOptions: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
 });
 
 /** Field yang boleh diisi saat buat paket. */

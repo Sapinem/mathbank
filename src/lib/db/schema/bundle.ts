@@ -34,6 +34,8 @@ export interface BundlePrintConfig {
   columnBreaks?: string[];
   institutionLogoUrl?: string;
   brandColor?: string;
+  themeId?: string;
+  themeOptions?: Record<string, Record<string, unknown>>;
 }
 
 export const DEFAULT_BUNDLE_PRINT_CONFIG: BundlePrintConfig = {
@@ -48,6 +50,8 @@ export const DEFAULT_BUNDLE_PRINT_CONFIG: BundlePrintConfig = {
   backgroundWatermark: true,
   columnBreaks: [],
   brandColor: "#0158ca",
+  themeId: "math-my-id",
+  themeOptions: {},
 };
 
 /** bundles — paket/naskah soal. UTS/PAS = bundle_type 'exam' tanpa event. */

@@ -5,6 +5,7 @@ import {
   GraduationCap,
   BookOpen,
   Save,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,12 +15,17 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { getPrintTheme, listPrintThemes, DEFAULT_THEME_ID } from "@/lib/print/themes/registry";
 import type { BundleItemView } from "@/lib/hooks/use-bundles";
 import type { ColumnMode, KeyMode, ExplanationMode } from "./types";
 
 export interface BundlePrintSettingsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  activeThemeId?: string;
+  onThemeChange?: (themeId: string) => void;
+  themeOptions?: Record<string, Record<string, unknown>>;
+  onThemeOptionChange?: (themeId: string, key: string, value: unknown) => void;
   applyStudentPreset: () => void;
   applyTeacherPreset: () => void;
   canShowKey: boolean;
@@ -54,6 +60,10 @@ export interface BundlePrintSettingsDrawerProps {
 export function BundlePrintSettingsDrawer({
   open,
   onOpenChange,
+  activeThemeId,
+  onThemeChange,
+  themeOptions,
+  onThemeOptionChange,
   applyStudentPreset,
   applyTeacherPreset,
   canShowKey,
@@ -84,6 +94,11 @@ export function BundlePrintSettingsDrawer({
   handleSaveDefault,
   isSaving,
 }: BundlePrintSettingsDrawerProps) {
+  const effectiveThemeId = activeThemeId || DEFAULT_THEME_ID;
+  const activeTheme = getPrintTheme(effectiveThemeId);
+  const currentThemeOptions = themeOptions?.[effectiveThemeId] || {};
+  const themes = listPrintThemes();
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto flex flex-col p-0 no-print">
@@ -135,7 +150,48 @@ export function BundlePrintSettingsDrawer({
             </div>
           </div>
 
-          {/* 2. Tata Letak Naskah & Opsi */}
+          {/* 2. Tema Naskah Cetak */}
+          <div className="flex flex-col gap-2.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-primary" /> Tema Naskah Cetak
+            </span>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="print-theme-select" className="text-xs font-medium">
+                Pilih Format Bingkai & Kop
+              </label>
+              <select
+                id="print-theme-select"
+                aria-label="Pilih Format Bingkai & Kop"
+                value={effectiveThemeId}
+                onChange={(e) => onThemeChange?.(e.target.value)}
+                className="min-h-[44px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-medium shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+              >
+                {themes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                {activeTheme.description}
+              </p>
+            </div>
+
+            {/* Slot Kontrol Opsi Kustom Tema Aktif */}
+            {activeTheme.renderOptions && (
+              <div className="flex flex-col gap-1.5 mt-1" data-slot="theme-options-slot">
+                <span className="text-xs font-medium text-foreground">
+                  Opsi Khusus: {activeTheme.name}
+                </span>
+                {activeTheme.renderOptions({
+                  options: currentThemeOptions,
+                  onChange: (key, val) => onThemeOptionChange?.(activeTheme.id, key, val),
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 3. Tata Letak Naskah & Opsi */}
           <div className="flex flex-col gap-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Tata Letak & Kolom

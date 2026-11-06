@@ -591,4 +591,96 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
     expect(screen.getAllByText("1a.").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Bagian A - Pilihan Ganda")).toBeInTheDocument();
   });
+
+  describe("Sistem Tema Naskah Cetak (Print Themes)", () => {
+    it("naskah lama tanpa themeId otomatis merender tema standar math-my-id", () => {
+      useBundleMock.mockReturnValue({
+        data: bundle({
+          printConfig: {
+            institutionName: "Math My ID",
+            twoColumnLayout: true,
+          },
+        }),
+        isPending: false,
+        isError: false,
+      });
+
+      render(<BundlePrintView />);
+      expect(document.querySelector('[data-slot="bundle-print-kop"]')).toBeInTheDocument();
+      expect(document.querySelector('[data-slot="formal-exam-kop"]')).not.toBeInTheDocument();
+    });
+
+    it("merender tema formal-exam jika themeId disetel di printConfig", () => {
+      useBundleMock.mockReturnValue({
+        data: bundle({
+          printConfig: {
+            institutionName: "SMA Negeri 1 Jakarta",
+            themeId: "formal-exam",
+            themeOptions: {
+              "formal-exam": { showSupervisorSignature: true },
+            },
+          },
+        }),
+        isPending: false,
+        isError: false,
+      });
+
+      render(<BundlePrintView />);
+      expect(document.querySelector('[data-slot="formal-exam-kop"]')).toBeInTheDocument();
+      expect(screen.getAllByText("SMA Negeri 1 Jakarta").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Nomor Peserta")).toBeInTheDocument();
+      expect(document.querySelector('[data-slot="supervisor-signature"]')).toBeInTheDocument();
+    });
+
+    it("mengganti tema dan opsi secara dinamis di drawer lalu menyimpan baku", async () => {
+      useBundleMock.mockReturnValue({
+        data: bundle({
+          printConfig: {
+            institutionName: "SMA 1",
+            themeId: "math-my-id",
+          },
+        }),
+        isPending: false,
+        isError: false,
+      });
+
+      render(<BundlePrintView />);
+
+      // Awalnya tema standar aktif
+      expect(document.querySelector('[data-slot="bundle-print-kop"]')).toBeInTheDocument();
+
+      // Buka drawer pengaturan
+      openSettings();
+
+      // Pilih tema formal-exam dari dropdown
+      const select = screen.getByLabelText(/pilih format bingkai & kop/i);
+      fireEvent.change(select, { target: { value: "formal-exam" } });
+
+      // Tampilan kop naskah berganti secara instan
+      expect(document.querySelector('[data-slot="formal-exam-kop"]')).toBeInTheDocument();
+      expect(document.querySelector('[data-slot="bundle-print-kop"]')).not.toBeInTheDocument();
+
+      // Aktifkan tanda tangan pengawas di opsi tema
+      const toggleSign = screen.getByRole("button", { name: /sembunyikan tanda tangan/i });
+      fireEvent.click(toggleSign);
+      expect(document.querySelector('[data-slot="supervisor-signature"]')).toBeInTheDocument();
+
+      // Simpan pengaturan baku
+      const saveBtn = screen.getByRole("button", { name: /simpan sebagai baku/i });
+      fireEvent.click(saveBtn);
+
+      expect(mutateAsyncMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          printConfig: expect.objectContaining({
+            themeId: "formal-exam",
+            themeOptions: expect.objectContaining({
+              "formal-exam": expect.objectContaining({
+                showSupervisorSignature: true,
+              }),
+            }),
+          }),
+        })
+      );
+    });
+  });
 });
