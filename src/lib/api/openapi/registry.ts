@@ -628,6 +628,26 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     tags: ["ingest"],
     response: z.looseObject({ summary: z.record(z.string(), z.unknown()), results: z.array(z.unknown()), eventsTagged: z.number().int(), unknownEvents: z.array(z.string()), eventsError: z.string().optional() }),
   },
+  "POST /api/ingest/questions": {
+    summary: "Gateway Ingest Kanonik (Batch)",
+    tags: ["ingest"],
+    response: z.object({
+      bundleId: uuid,
+      totalReceived: z.number().int(),
+      created: z.number().int(),
+      linked: z.number().int(),
+      rejectedCount: z.number().int(),
+      failures: z.array(
+        z.object({
+          index: z.number().int(),
+          stemPreview: z.string(),
+          reason: z.string(),
+        }),
+      ),
+      questionIds: z.array(uuid),
+    }),
+    notes: ["Menerima batch soal JSON kanonik (maksimal 50 butir per batch)."],
+  },
   "GET /api/settings": {
     summary: "Baca pengaturan aplikasi",
     tags: ["system"],

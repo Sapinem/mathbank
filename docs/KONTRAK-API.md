@@ -185,6 +185,7 @@ Validasi menambah `details`:
 | Method | Path | Izin | Versi | Ringkasan |
 |--------|------|:----:|:-----:|-----------|
 | `POST` | `/api/ingest/commit` | `question:create` | — | Commit antrean → soal draft |
+| `POST` | `/api/ingest/questions` | `question:create` | — | Gateway Ingest Kanonik (Batch) |
 | `GET` | `/api/ingest/queue` | `ingest:queue:read` | — | Antrean ingest + ringkasan status |
 | `POST` | `/api/ingest/upload` | `question:create` | — | Unggah naskah ke antrean ingest |
 | `POST` | `/api/v1/ingest/commit` | API key | — | Alias deprecated: commit antrean menjadi soal draft |
