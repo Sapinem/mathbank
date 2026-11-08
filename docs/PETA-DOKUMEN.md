@@ -65,6 +65,7 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
   - `docs/ADR/0028-cabut-prefix-v1-ingest.md`: ✅ (ingest pindah ke `/api/ingest/*`; `/api/v1/ingest/*` alias deprecated s.d. 2027-01-25)
   - `docs/ADR/0029-store-bersama-rate-limit-idempotensi.md`: ✅ (rate limit & idempotensi di PostgreSQL bersama; fail-open / fail-closed)
   - `docs/ADR/0030-konkurensi-optimistik-if-match.md`: ✅ (`version` + trigger `bump_version`; `ETag`/`If-Match` wajib pada 21 mutasi baris; 428/412)
+  - `docs/ADR/0031-kanonisasi-ingest-dan-depresiasi-queue-mentah.md`: ✅ (kanonisasi jalur ingest POST /api/ingest/questions, quality gate murni di core & pemindahan adapter sumber ke scripts/ingest/)
 - `docs/ARAHAN-4-PILAR-ARSITEKTUR-V2.md`: 📋 **Arahan 4 Pilar Arsitektur V2** — cetak biru integrasi empat pilar utama MathBank V2.
 - `public/openapi.json`: 🟢 **Spesifikasi OpenAPI 3.1 (artefak)** — DIHASILKAN oleh `pnpm openapi:generate` dari `route-inventory.ts` + deklarasi `wrapRoute` + `src/lib/api/openapi/registry.ts`; disajikan di `/openapi.json`. Jangan disunting tangan (ADR-0027).
 - `docs/bakeoff/`: Evaluasi kompetitif multi-kandidat arsitektur (Compound Engineering Bake-off):
@@ -109,6 +110,7 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
 - `docs/superpowers/plans/`: rencana implementasi lintas-alat (bukan audit produk).
   - `docs/superpowers/plans/2026-10-27-ollama-bge-m3-migration.md`: ✅ **Migrasi Layanan Embedding BGE-M3 ke Ollama** — rencana pemindahan backend embedding ke Ollama `:11434` (model `bge-m3`, dimensi 1024) beserta verifikasi paritas vektor dan pemutusan dependensi QBank.
 - `docs/plans/`: *Implementation Plans* terstruktur untuk perbaikan audit dan fitur baru.
+  - `docs/plans/2026-11-09-0051-refactor-ingest-quality-gate-decoupling-plan.md`: ✅ **Pemisahan Adapter Sumber dan Ingest Quality Gate (Plan)** — Pemisahan tanggung jawab arsitektural ingest: Core API sebagai Quality Gate kanonik murni (`POST /api/ingest/questions`) dan adapter sumber mandiri di `scripts/ingest/sources/`.
   - `docs/plans/2026-10-06-verifikasi-ingest-defantri.md`: Catatan Verifikasi uji coba ingest defantri via API M9 (5 percobaan) — mencatat kesesuaian data tersimpan vs sumber, idempotensi, dan 1 temuan cacat layout `name="radio"`.
   - `docs/plans/2026-10-06-temuan-variasi-layout-defantri.md`: Temuan audit variasi layout soal defantri (70 artikel benar-salah `qN`, 19 nama duplikat, 6 radio generik) + alasan perbaikan cepat dibatalkan (regresi 1.383 soal) & langkah berikutnya.
   - `docs/plans/2026-10-06-benar-salah-qn-defantri-belum-selesai.md`: Percobaan prioritas 1 (benar-salah `qN` → `matrix_grid`) **dibatalkan** karena regresi korpus 10.365→9.191; berisi klasifikasi 5 kelompok artikel, 2 akar masalah terverifikasi (stem di luar `<blockquote>`, `<ul>` bercampur), dan utang teknis.

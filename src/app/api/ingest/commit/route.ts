@@ -3,9 +3,11 @@ import { ingestCommitSchema } from "@/lib/contracts/ingest";
 import { listPending } from "@/lib/ingest/queue";
 import { commitIngestBatch } from "@/lib/ingest/commit-batch";
 import { ConflictError } from "@/lib/auth/guards";
+import { INGEST_RAW_DEPRECATION_HEADERS } from "@/lib/api/deprecation";
 
 /**
  * POST /api/ingest/commit — wajah MESIN (M9-3).
+ * DEPRECATED (ADR-0031): Gunakan POST /api/ingest/questions (jalur kanonik).
  * Proses antrean `pending` → soal **draft** (segmentasi + media + commit).
  *
  * Batas `limit` menjaga waktu respons; panggil berulang untuk melanjutkan.
@@ -23,6 +25,7 @@ export const POST = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
   body: ingestCommitSchema,
   idempotent: true,
+  headers: INGEST_RAW_DEPRECATION_HEADERS,
   handler: async ({ body, actor }) => {
     const { items, nonPending, totalPending } = await listPending(
       body.ids,

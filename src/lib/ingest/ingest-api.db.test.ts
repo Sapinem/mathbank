@@ -175,4 +175,20 @@ describe("alur API ingest", () => {
     expect(res.status).toBe(401);
     mockActor = { id: "ing-machine", name: "Mesin", roles: ["machine"], via: "apikey" };
   });
+
+  it("ADR-0031: upload & commit memancarkan header deprecation & sunset", async () => {
+    const uploadRes = await uploadPOST(req("POST", "/api/ingest/upload", {
+      title: "Uji Deprecate", source: "uji-api", rawContent: "<p>soal</p>", format: "html",
+    }));
+    expect(uploadRes.status).toBe(201);
+    expect(uploadRes.headers.get("Deprecation")).toBe("@1794182400");
+    expect(uploadRes.headers.get("Sunset")).toBe("Mon, 08 Feb 2027 00:00:00 GMT");
+    expect(uploadRes.headers.get("Link")).toContain("/api/ingest/questions");
+
+    const commitRes = await commitPOST(req("POST", "/api/ingest/commit", { limit: 10 }));
+    expect(commitRes.status).toBe(200);
+    expect(commitRes.headers.get("Deprecation")).toBe("@1794182400");
+    expect(commitRes.headers.get("Sunset")).toBe("Mon, 08 Feb 2027 00:00:00 GMT");
+    expect(commitRes.headers.get("Link")).toContain("/api/ingest/questions");
+  });
 });

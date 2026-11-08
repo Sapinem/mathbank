@@ -161,6 +161,8 @@ export interface RouteOptions<
    * Dipakai route GET satu-sumber-daya; daftar tidak punya ETag tunggal.
    */
   etagFrom?: (result: TResult) => number | undefined;
+  /** Header HTTP tambahan untuk respons sukses (mis. Deprecation, Sunset). */
+  headers?: Record<string, string>;
 }
 
 /** Bangun objek dari URLSearchParams → plain object untuk Zod. */
@@ -552,6 +554,11 @@ export function wrapRoute<
       // sebagai If-Match tanpa menebak dari body.
       const etagVersion = opts.etagFrom?.(data);
       if (etagVersion !== undefined) res.headers.set("ETag", etagOf(etagVersion));
+      if (opts.headers) {
+        for (const [k, v] of Object.entries(opts.headers)) {
+          res.headers.set(k, v);
+        }
+      }
       if (idemKey) {
         const actorKey = actor?.id ?? getClientIp(req) ?? "anon";
         try {

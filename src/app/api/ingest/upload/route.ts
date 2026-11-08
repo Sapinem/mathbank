@@ -1,9 +1,11 @@
 import { wrapRoute } from "@/lib/api/route-wrapper";
 import { ingestUploadSchema } from "@/lib/contracts/ingest";
 import { enqueue } from "@/lib/ingest/queue";
+import { INGEST_RAW_DEPRECATION_HEADERS } from "@/lib/api/deprecation";
 
 /**
  * POST /api/ingest/upload — wajah MESIN (M9-3).
+ * DEPRECATED (ADR-0031): Gunakan POST /api/ingest/questions (jalur kanonik).
  * Kirim satu artikel (HTML/JSON) → masuk antrean (`pending`).
  * Idempoten: artikel dengan isi sama tidak dibuat ulang.
  */
@@ -13,6 +15,7 @@ export const POST = wrapRoute({
   body: ingestUploadSchema,
   status: 201,
   idempotent: true,
+  headers: INGEST_RAW_DEPRECATION_HEADERS,
   handler: async ({ body }) => {
     const res = await enqueue({
       title: body.title,

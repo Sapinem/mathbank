@@ -19,6 +19,20 @@ export const INGEST_V1_SUNSET = "Mon, 25 Jan 2027 00:00:00 GMT";
  */
 export const INGEST_V1_DEPRECATED = "@1793059200"; // 2026-10-27T00:00:00Z
 
+/** Batas akhir endpoint ingest raw HTML lama — 90 hari sejak 2026-11-09 (ADR-0031). */
+export const INGEST_RAW_SUNSET = "Mon, 08 Feb 2027 00:00:00 GMT";
+
+/** Tanggal rute ingest raw HTML dinyatakan deprecated. */
+export const INGEST_RAW_DEPRECATED = "@1794182400"; // 2026-11-09T00:00:00Z
+
+export const INGEST_RAW_SUCCESSOR = "</api/ingest/questions>; rel=\"successor-version\"";
+
+export const INGEST_RAW_DEPRECATION_HEADERS = {
+  Deprecation: INGEST_RAW_DEPRECATED,
+  Sunset: INGEST_RAW_SUNSET,
+  Link: INGEST_RAW_SUCCESSOR,
+} as const;
+
 import type { NextRouteArgs } from "./route-wrapper";
 
 type RouteHandler = (req: Request, args?: NextRouteArgs) => Promise<Response>;
