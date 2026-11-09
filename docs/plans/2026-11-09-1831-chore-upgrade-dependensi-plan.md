@@ -492,3 +492,11 @@ Tidak ada perubahan skema, jadi **tidak ada migrasi DB** yang perlu dibalik pada
 - Bukti reproduksibilitas: spec `topik.spec.ts` (desktop) dijalankan ulang pada 1.65.0 dua kali → hasil identik **3 gagal / 1 lulus** dengan 4× `428`. Percobaan A/B ke 1.64.1 **tidak konklusif**: setelah downgrade, webServer Playwright gagal siap dalam 120 detik (`Timed out waiting 120000ms from config.webServer`) sebanyak 3 kali, sehingga pembanding tidak bisa dijalankan.
 - `pnpm install --frozen-lockfile` bersih; `pnpm peers check` tidak berubah; audit high 0.
 - **Status gate:** upgrade paketnya sendiri valid (Playwright menjalankan browser dan 68 tes lulus), tetapi gate e2e **merah karena utang suite lama**. Memperbaiki 49 tes itu adalah pekerjaan tersendiri (tambah `If-Match`, longgarkan rate limit untuk e2e, perbarui locator) dan tidak boleh disamarkan sebagai bagian dari upgrade dependensi.
+
+### Gelombang 5 — 2026-11-10
+
+- `tailwindcss` + `@tailwindcss/postcss` 4.3.3 → **4.3.5**; `@tanstack/react-query` 5.105.0 → **5.107.1**; `lucide-react` 1.62.0 → **1.70.0**; `@dnd-kit/react` 0.5.1 → **0.5.3**; `cn` 0.5.0 → **0.5.2**; `@types/node` 26.6.5 → **26.6.6**.
+- Dipakai `pnpm update` (bukan `pnpm add`), sehingga klasifikasi dependencies/devDependencies **tidak berubah**. Efek sampingnya: pnpm menaikkan batas bawah range di `package.json` (`^4` → `^4.3.5`, `^5.105.0` → `^5.107.1`, dst.) — semantik caret tetap, hanya minimumnya naik.
+- `lucide-react` 1.62 → 1.70 tidak memutus satu pun ikon: `pnpm typecheck` lolos tanpa perubahan kode.
+- Gate: `theme:check` **34/34** pasangan kontras, `typecheck` ✓, `test` **153 berkas / 1580 tes** ✓, `build` ✓. `pnpm install --frozen-lockfile` bersih; audit high 0.
+- **Kegagalan sementara yang bukan akibat upgrade:** gate pertama melaporkan 4 tes gagal di `bundle-print-icons.test.tsx`. Saat diperiksa, berkas tes & komponennya baru ditulis pukul 04:44–04:45 WIB oleh pekerjaan lain di branch yang sama (commit `ac1e2c3`), tepat saat suite berjalan. Setelah pohon stabil, berkas itu lulus 8/8 dan suite penuh hijau. Pelajaran: jangan menilai gate saat ada commit lain yang sedang mendarat.
