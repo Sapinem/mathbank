@@ -275,7 +275,20 @@ Jangan lakukan B tanpa menjalankan seluruh lint pada semua berkas.
 ### Gelombang 8 — Higiene & dokumentasi
 
 1. `docs/KEAMANAN.md` §S8: klaim "`pnpm audit` 0" sudah basi — perbarui dengan hasil akhir.
-2. `pnpm-workspace.yaml` → `minimumReleaseAgeExclude`: entri `next@16.3.7`, `@next/*@16.3.7`, `better-auth*@1.7.14`, `lucide-react@1.62.0` menjadi basi. Ganti dengan versi baru. Tidak ada `minimumReleaseAge` eksplisit saat ini, tetapi `pnpm config get` yang kosong **bukan** jaminan — perlakukan allowlist ini sebagai aktif.
+2. `pnpm-workspace.yaml` → `minimumReleaseAgeExclude`: **bersihkan entri basi**. Kebijakan usia rilis pnpm 11 ternyata aktif (terbukti saat bump `@vitejs/plugin-react@6.3.0`, yang otomatis ditambahkan ke allowlist). Aturan pembersihan: hapus entri **hanya bila versi yang di-pin sudah tidak lagi ter-resolve** di lockfile; entri untuk versi yang masih terpasang harus dipertahankan sampai paket itu naik versi atau melewati ambang usia, karena menghapusnya bisa membuat `pnpm install` gagal.
+
+   Status per 2026-11-09 (setelah Gelombang 4b):
+
+   | Entri | Versi ter-resolve | Tindakan di Gelombang 8 |
+   |---|---|---|
+   | `next@16.3.7`, `eslint-config-next@16.3.7`, `@next/*@16.3.7` (10 baris) | 16.4.5 | **hapus** — basi |
+   | `better-auth@1.7.14`, `@better-auth/*@1.7.14` (11 baris) | 1.7.18 | **hapus** — basi |
+   | `lucide-react@1.62.0` | 1.62.0 | pertahankan sampai Gelombang 5 menaikkannya; hapus setelah itu |
+   | `shadcn@4.23.0`, `@shadcn/registry@0.2.1` | masih versi yang sama | pertahankan — belum ada bump |
+   | `@vitejs/plugin-react@6.3.0` | 6.3.0 | pertahankan sampai melewati ambang usia |
+
+   Verifikasi: `pnpm install` (tanpa `--frozen-lockfile`) harus sukses setelah pembersihan, lalu `pnpm install --frozen-lockfile` harus bersih dan `pnpm audit --audit-level=high` tetap exit 0. Bila pnpm menolak resolusi, entri yang dihapus belum basi — kembalikan.
+
 3. Jangan menyentuh `overrides.braces` + `patchedDependencies` (`GHSA-vfj7-8cjw-p6xm` belum ada rilis 3.0.4) dan `drizzle-kit>@esbuild-kit/esm-loader`.
 4. `CHANGELOG.md`: tambahkan satu bagian naratif untuk upgrade ini. Repo memelihara changelog manual (47 bagian sebelumnya); upgrade dependensi besar tanpa catatan akan menghilangkan konteks keputusan.
 5. `docs/PETA-DOKUMEN.md:4`: pastikan baris "Terakhir Diperbarui" mencerminkan tanggal penutupan upgrade. Baris ini sudah diperbarui ke 9 November 2026 saat revisi rencana; perbarui lagi bila penutupan terjadi di tanggal lain.
@@ -325,7 +338,7 @@ docker build -t mathbank:deps-upgrade .
 | 3 | Ambang coverage bergeser (vitest 5.1) | sedang | rendah | jangan turunkan ambang |
 | 4 | Patch Next mengubah cache/`use cache` | rendah | sedang | build + smoke dev |
 | 5 | Regresi auth (better-auth patch) | rendah | tinggi | tes auth + login manual |
-| 6 | `minimumReleaseAgeExclude` basi; `pnpm update` menolak versi baru bila kebijakan aktif | tinggi | rendah | perbarui allowlist di gelombang 8; bila perlu set `minimumReleaseAge=0` sementara. `pnpm config get` yang kosong **bukan** jaminan kebijakan tidak aktif |
+| 6 | `minimumReleaseAgeExclude` basi; `pnpm update` menolak versi baru bila kebijakan aktif | tinggi | rendah | bersihkan allowlist di gelombang 8 (aturan: hapus hanya entri yang versinya sudah tidak ter-resolve); bila perlu set `minimumReleaseAge=0` sementara. Kebijakan **terbukti aktif** — `pnpm config get` yang kosong bukan jaminan |
 | 7 | `node:24-slim` < 24.15 untuk jsdom 31 | rendah | sedang | cek `node -v` di image; pin `node:24.15-slim` bila perlu |
 | 8 | Override `minimatch` 11 memecah plugin lint | sedang | rendah | gelombang terpisah + lint penuh |
 | 9 | `pnpm add` tanpa `-D` memindahkan devDependency ke `dependencies` | tinggi bila salah ketik | rendah | semua perintah memakai `-D` eksplisit; periksa `git diff package.json` setiap gelombang |
