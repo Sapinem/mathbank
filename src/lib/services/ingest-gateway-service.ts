@@ -2,7 +2,6 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { sources } from "@/lib/db/schema/source";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
-import { questions } from "@/lib/db/schema/question";
 import type { Actor } from "@/lib/auth/actor";
 import { ConflictError } from "@/lib/auth/guards";
 import { validateKatexContract } from "@/lib/ai/enrich";
@@ -144,7 +143,6 @@ function extractOptionTexts(item: CanonicalQuestionItem): string[] {
  */
 export function evaluateCanonicalItemQuality(
   item: CanonicalQuestionItem,
-  index: number,
 ): { ok: boolean; reason?: string } {
   if (!item.stem || !item.stem.trim()) {
     return { ok: false, reason: "Stem/teks soal tidak boleh kosong" };
@@ -277,7 +275,7 @@ export async function ingestCanonicalBatch(
   for (let i = 0; i < input.items.length; i++) {
     const it = input.items[i]!;
     const itemIndex = it.ref?.index !== undefined ? it.ref.index : i;
-    const quality = evaluateCanonicalItemQuality(it, itemIndex);
+    const quality = evaluateCanonicalItemQuality(it);
 
     if (!quality.ok) {
       failures.push({

@@ -2,8 +2,11 @@ import type { Actor } from "@/lib/auth/actor";
 import type {
   CanonicalIngestBatchInput,
   CanonicalQuestionItem,
-  CanonicalIngestReport,
 } from "@/lib/contracts/ingest-canonical";
+import type {
+  QuestionDataPayload,
+  AnswerKeyPayload,
+} from "@/lib/validations/question-payload";
 import { buildQuestionPayload } from "@/lib/ingest/parsers/types";
 import type { ParsedItem } from "@/lib/ingest/parsers/types";
 import { IngestClient } from "./client";
@@ -24,8 +27,8 @@ export function parsedItemToCanonical(it: ParsedItem): CanonicalQuestionItem {
   return {
     type: it.type,
     stem: it.stem,
-    dataPayload: built.dataPayload as any,
-    answerKey: built.answerKey as any,
+    dataPayload: built.dataPayload as unknown as QuestionDataPayload,
+    answerKey: built.answerKey as unknown as AnswerKeyPayload,
     difficulty: 3,
     explanation: it.explanation,
     warnings: [...(it.warnings || []), ...built.warnings],

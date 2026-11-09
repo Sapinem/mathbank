@@ -1,6 +1,6 @@
 # KONTRAK-API.md — Kontrak HTTP API MathBank
 
-> **Status:** ✅ berlaku — mencerminkan **51 route handler · 77 method** di `src/app/api` per 2026-10-28
+> **Status:** ✅ berlaku — mencerminkan **52 route handler · 78 method** di `src/app/api` per 2026-11-09
 > (`/api/auth/[...all]` menyumbang `GET`+`POST` lewat Better Auth). Angka hidup dicetak
 > `pnpm lint:authz`; jangan salin ke dokumen lain.
 > **Sumber kebenaran:** `src/lib/api/route-wrapper.ts` (envelope), `src/lib/contracts/*` (skema Zod).

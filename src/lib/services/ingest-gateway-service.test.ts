@@ -23,7 +23,7 @@ describe("evaluateCanonicalItemQuality (U2)", () => {
   };
 
   it("lolos untuk butir soal dengan KaTeX dan teks valid", () => {
-    const res = evaluateCanonicalItemQuality(baseValidItem, 0);
+    const res = evaluateCanonicalItemQuality(baseValidItem);
     expect(res.ok).toBe(true);
   });
 
@@ -32,7 +32,7 @@ describe("evaluateCanonicalItemQuality (U2)", () => {
       ...baseValidItem,
       stem: "Tentukan nilai dari $\\frac{1}{2$", // kurang kurung tutup
     };
-    const res = evaluateCanonicalItemQuality(invalidItem, 0);
+    const res = evaluateCanonicalItemQuality(invalidItem);
     expect(res.ok).toBe(false);
     if (!res.ok) {
       expect(res.reason).toContain("KaTeX");
@@ -50,7 +50,7 @@ describe("evaluateCanonicalItemQuality (U2)", () => {
         ],
       },
     };
-    const res = evaluateCanonicalItemQuality(invalidItem, 0);
+    const res = evaluateCanonicalItemQuality(invalidItem);
     expect(res.ok).toBe(false);
     if (!res.ok) {
       expect(res.reason).toContain("KaTeX");
@@ -65,7 +65,7 @@ describe("evaluateCanonicalItemQuality (U2)", () => {
         explanationMarkdown: "Rumus $x = \\frac{a}{b$", // rusak
       },
     };
-    const res = evaluateCanonicalItemQuality(invalidItem, 0);
+    const res = evaluateCanonicalItemQuality(invalidItem);
     expect(res.ok).toBe(false);
     if (!res.ok) {
       expect(res.reason).toContain("KaTeX");
