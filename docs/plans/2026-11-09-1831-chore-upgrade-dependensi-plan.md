@@ -426,3 +426,11 @@ Tidak ada perubahan skema, jadi **tidak ada migrasi DB** yang perlu dibalik pada
 - `package.json` tidak berubah; hanya `pnpm-lock.yaml` (+187/−92 baris) dan `pnpm-workspace.yaml`.
 - **Observasi:** `pnpm peers check` melaporkan `eslint-plugin-import`/`jsx-a11y`/`react` masih membatasi peer ESLint `<=9`, sedangkan proyek memakai ESLint 10.13. Ini kondisi lama dan tidak menghalangi `pnpm lint`; perlu dipantau di Gelombang 4a.
 - **Observasi:** pnpm 12.18.0 tersedia (terpasang 11.22.0) — upgrade toolchain major di luar rencana ini.
+
+### Gelombang 2 — 2026-11-09
+
+- Trio Next dinaikkan 16.4.3 → 16.4.5 dengan pin exact dipertahankan: `next`, `eslint-config-next`, `@next/eslint-plugin-next`.
+- `eslint-config-next@16.4.5` mendukung ESLint 10 (dikonfirmasi dari `node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md`).
+- Gate: `typecheck`, `lint`, `build` hijau; `pnpm install --frozen-lockfile` bersih.
+- Smoke dev (`next dev --turbopack -p 3100`): `/login` 200, `/` 307 → `/login`, `/questions` 307 → `/login`, `/api/health?probe=liveness` 200 `{"status":"ok"}`. `proxy.ts` berjalan (4–82 ms), tanpa error/warning; invarian DB OK saat startup.
+- Audit tidak berubah: 2 advisory (deepmerge low, minimatch moderate), high 0.
