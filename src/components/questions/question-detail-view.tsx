@@ -91,6 +91,12 @@ export function QuestionDetailView() {
 
   const key = q.answerKey;
   const correctLabels = key?.correct ?? [];
+  const mediaLookup = (q.media ?? []).reduce<
+    Record<string, { width?: number | null; height?: number | null }>
+  >((acc, m) => {
+    acc[m.shortId] = { width: m.width, height: m.height };
+    return acc;
+  }, {});
 
   return (
     <div className="flex flex-col gap-0">
@@ -187,7 +193,11 @@ export function QuestionDetailView() {
 
                 {/* Batang Soal (Stem) - Font 17px di Desktop */}
                 <div className="text-base lg:text-[17px] lg:leading-[1.7] text-foreground">
-                  <MathContent content={q.contentMarkdown} className="no-scrollbar" />
+                  <MathContent
+                    content={q.contentMarkdown}
+                    mediaLookup={mediaLookup}
+                    className="no-scrollbar"
+                  />
                 </div>
 
                 {/* Soal MATRIX GRID (benar-salah): pernyataan ada di dataPayload.rows */}
@@ -224,7 +234,11 @@ export function QuestionDetailView() {
                             {o.label}.
                           </span>
                           <div className="min-w-0 flex-1 text-base lg:text-[17px] lg:leading-[1.7]">
-                            <MathContent content={o.contentMarkdown} noScroll />
+                            <MathContent
+                              content={o.contentMarkdown}
+                              mediaLookup={mediaLookup}
+                              noScroll
+                            />
                             {o.distractorRationale && (
                               <p className="mt-1 text-xs text-muted-foreground">
                                 Pengecoh: {o.distractorRationale}
@@ -343,6 +357,7 @@ export function QuestionDetailView() {
                         <div className="text-base lg:text-[17px] lg:leading-[1.7] text-foreground whitespace-pre-wrap">
                           <MathContent
                             content={activeSol.contentMarkdown}
+                            mediaLookup={mediaLookup}
                             className="no-scrollbar"
                           />
                         </div>
