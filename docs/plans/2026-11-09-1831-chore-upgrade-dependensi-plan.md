@@ -442,3 +442,11 @@ Tidak ada perubahan skema, jadi **tidak ada migrasi DB** yang perlu dibalik pada
 - Smoke dev: `/login` 200; `POST /api/auth/sign-in/email` kredensial salah → 401 `INVALID_EMAIL_OR_PASSWORD`; `GET /api/auth/get-session` → 200 `null`; `GET /api/auth/me` → 200 dev-user (dev bypass); health 200. Log hanya `WARN User not found` yang memang diharapkan.
 - **Rate limit tidak terpicu di dev** karena Better Auth mengaktifkannya hanya saat `NODE_ENV=production` (`src/lib/auth/server.ts:68`). Cakupannya tetap terjaga lewat `src/lib/api/rate-limit.test.ts` dan `src/lib/api/stores-pg.db.test.ts` yang lulus di gate.
 - Audit tidak berubah: 2 advisory, high 0.
+
+### Gelombang 4a — 2026-11-09
+
+- `eslint` 10.13.0 → **10.14.0**, range menjadi `^10.14.0`.
+- Gate: `pnpm lint` exit 0; diulang dengan `eslint --no-cache .` untuk memastikan cache tidak menyembunyikan masalah — tetap exit 0.
+- `pnpm install --frozen-lockfile` bersih. Diff lockfile hanya mengganti kunci peer `eslint@10.13.0` → `10.14.0` (tanpa paket baru).
+- Audit tidak berubah: 2 advisory (`deepmerge` low, `minimatch` moderate), high 0.
+- **Peer ESLint masih belum tuntas:** `eslint-plugin-import@2.32.0`, `eslint-plugin-jsx-a11y@6.10.2`, dan `eslint-plugin-react@7.37.5` adalah versi **terbaru** di registry dan ketiganya belum menyatakan dukungan ESLint 10. Peringatan peer ini sudah ada sebelum Gelombang 4a (proyek memang sudah di ESLint 10.13) dan tidak menghalangi `pnpm lint`. Tidak ada tindakan yang bisa diambil selain menunggu rilis upstream.
