@@ -12,6 +12,9 @@ FROM node:24-slim AS deps
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# `patchedDependencies` di pnpm-workspace.yaml menunjuk berkas patch lokal;
+# tanpa ini `pnpm install` gagal ENOENT saat build image.
+COPY patches ./patches
 # `--ignore-scripts` melewati `prepare` (install git hooks) yang tak relevan di
 # image (tanpa .git). Skrip build Next tak butuh hook git.
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
