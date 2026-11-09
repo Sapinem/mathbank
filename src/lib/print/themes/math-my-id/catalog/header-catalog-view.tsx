@@ -99,8 +99,16 @@ export function HeaderCatalogView({
                 <div
                   key={code}
                   data-testid={`header-card-${code}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectHeader(code)}
-                  className={`group relative rounded-xl border p-3 flex flex-col gap-3 transition cursor-pointer shadow-lg ${
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectHeader(code);
+                    }
+                  }}
+                  className={`group relative rounded-xl border p-3 flex flex-col gap-3 transition cursor-pointer shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                     isActive
                       ? "bg-slate-900 border-amber-400 ring-2 ring-amber-400/40"
                       : "bg-slate-900/60 border-slate-800 hover:border-slate-600 hover:bg-slate-800/50"
@@ -126,22 +134,15 @@ export function HeaderCatalogView({
                       )}
                     </div>
 
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={isActive ? "default" : "outline"}
-                      className={`h-7 px-3 text-xs font-semibold ${
+                    <span
+                      className={`h-7 px-3 text-xs font-semibold rounded-md inline-flex items-center justify-center border transition ${
                         isActive
-                          ? "bg-amber-500 hover:bg-amber-400 text-slate-950"
-                          : "bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 group-hover:border-slate-500"
+                          ? "bg-amber-500 text-slate-950 border-amber-400"
+                          : "bg-slate-800 text-slate-200 border-slate-700 group-hover:border-slate-500"
                       }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectHeader(code);
-                      }}
                     >
                       {isActive ? "Gaya Terpilih" : "Gunakan Gaya Ini"}
-                    </Button>
+                    </span>
                   </div>
 
                   {/* Kanvas Pratinjau Strip Header */}

@@ -25,10 +25,11 @@ export function MathMyIdFooter({
 
   return (
     <footer
-      data-slot="math-my-id-footer"
+      data-slot="bundle-print-footer"
+      data-theme-footer="math-my-id"
       data-footer-code={footerCode}
       className={cn(
-        "math-my-id-footer print-running-footer w-full bg-white text-[#111111] select-none mt-auto",
+        "bundle-print-footer math-my-id-footer print-running-footer w-full bg-white text-[#111111] select-none mt-auto",
       )}
       style={{
         printColorAdjust: "exact",

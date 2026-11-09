@@ -1,17 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import {
-  ArrowLeft,
-  Printer,
-  SlidersHorizontal,
-  Maximize2,
-  Minimize2,
-} from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { useBundle, useUpdateBundle } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";

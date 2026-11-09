@@ -147,7 +147,7 @@ export const FOOTER_VARIANTS: Record<
   (props: FooterVariantProps) => ReactNode
 > = {
   // ── SERI F (F1 – F16): Clean Minimalist ──
-  F1: ({ pageNumber = 1, handle = "mathmyid" }) => (
+  F1: ({ pageNumber = 1, handle = "mathmyid", brand = "Math My ID" }) => (
     <div className="mmi-strip h-[30px] bg-white border-t border-slate-200 flex flex-col justify-between w-full select-none">
       <svg className="w-full h-[6px] block" viewBox="0 0 756 6" preserveAspectRatio="none" aria-hidden="true">
         <path d="M 0 1.5 L 555 1.5 L 564 5 L 756 5" fill="none" stroke="#072652" strokeWidth="1.6" />
@@ -156,7 +156,7 @@ export const FOOTER_VARIANTS: Record<
       <div className="flex items-center justify-between px-6 pb-1">
         <FiveSocials handle={handle} isWhiteText={false} hasGoldPipes={false} />
         <div className="flex items-center gap-2 text-[11px] shrink-0">
-          <span className="font-bold text-[#072652]">{handle}</span>
+          <span className="font-bold text-[#072652]">{brand}</span>
           <span className="text-[#f5b800] font-bold">|</span>
           <PageNum pageNumber={pageNumber} className="font-extrabold text-[#072652]" />
         </div>
@@ -164,7 +164,7 @@ export const FOOTER_VARIANTS: Record<
     </div>
   ),
 
-  F2: ({ pageNumber = 1, handle = "mathmyid" }) => (
+  F2: ({ pageNumber = 1, handle = "mathmyid", brand = "Math My ID" }) => (
     <div className="mmi-strip h-[30px] bg-white border-t border-slate-200 flex items-center justify-between pl-6 pr-0 w-full select-none">
       <FiveSocials handle={handle} isWhiteText={false} hasGoldPipes={false} />
       <div className="flex-1 mx-4 flex items-center min-w-4" aria-hidden="true">
@@ -172,7 +172,7 @@ export const FOOTER_VARIANTS: Record<
         <span className="w-1.5 h-1.5 rounded-full bg-[#072652] shrink-0" />
       </div>
       <div className="flex items-center h-full gap-2 shrink-0">
-        <span className="font-bold text-[#072652] text-[11px]">{handle}</span>
+        <span className="font-bold text-[#072652] text-[11px]">{brand}</span>
         <span className="text-[#f5b800] font-bold text-[11px]">|</span>
         <PageNum pageNumber={pageNumber} className="font-extrabold text-[#072652] text-[11px] mr-1" />
         <RightCornerWedge variant="gold-navy" />
@@ -180,7 +180,7 @@ export const FOOTER_VARIANTS: Record<
     </div>
   ),
 
-  F3: ({ pageNumber = 1, handle = "mathmyid" }) => (
+  F3: ({ pageNumber = 1, handle = "mathmyid", brand = "Math My ID" }) => (
     <div className="mmi-strip h-[30px] bg-white border-t border-slate-200 flex items-center justify-between pl-6 pr-0 w-full select-none">
       <FiveSocials handle={handle} isWhiteText={false} hasGoldPipes={false} />
       <div className="flex-1 mx-4 flex items-center min-w-4" aria-hidden="true">
@@ -188,7 +188,7 @@ export const FOOTER_VARIANTS: Record<
         <span className="w-1.5 h-1.5 rounded-full bg-[#f5b800] shrink-0" />
       </div>
       <div className="flex items-center h-full gap-2 shrink-0">
-        <span className="font-bold text-[#072652] text-[11px]">{handle}</span>
+        <span className="font-bold text-[#072652] text-[11px]">{brand}</span>
         <span className="text-[#f5b800] font-bold text-[11px]">|</span>
         <PageNum pageNumber={pageNumber} className="font-extrabold text-[#072652] text-[11px] mr-1" />
         <RightCornerWedge variant="triple-slash" />
@@ -196,7 +196,7 @@ export const FOOTER_VARIANTS: Record<
     </div>
   ),
 
-  F4: ({ pageNumber = 1, handle = "mathmyid" }) => (
+  F4: ({ pageNumber = 1, handle = "mathmyid", brand = "Math My ID" }) => (
     <div
       className="mmi-strip h-[30px] border-t border-slate-200 flex items-center justify-between pl-6 pr-0 w-full relative select-none"
       style={SOFT_BG_STYLE}
@@ -206,7 +206,7 @@ export const FOOTER_VARIANTS: Record<
         <FiveSocials handle={handle} isWhiteText={false} hasGoldPipes={false} />
       </div>
       <div className="flex items-center h-full gap-2 relative z-10 shrink-0">
-        <span className="font-bold text-[#072652] text-[11px]">{handle}</span>
+        <span className="font-bold text-[#072652] text-[11px]">{brand}</span>
         <span className="text-[#f5b800] font-bold text-[11px]">|</span>
         <PageNum pageNumber={pageNumber} className="font-extrabold text-[#072652] text-[11px] mr-1" />
         <RightCornerWedge variant="gold-navy" />

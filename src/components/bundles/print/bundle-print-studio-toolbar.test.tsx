@@ -22,7 +22,7 @@ describe("BundlePrintStudioToolbar", () => {
   it("merender judul naskah dan 3 tab studio utama (U5-T1)", () => {
     const { container } = render(<BundlePrintStudioToolbar {...defaultProps} />);
 
-    expect(screen.getByText("Ujian Matematika Semester 1")).toBeInTheDocument();
+    expect(screen.getByText(/Ujian Matematika Semester 1/)).toBeInTheDocument();
     expect(screen.getByTestId("tab-mode-a4")).toBeInTheDocument();
     expect(screen.getByTestId("tab-mode-catalog-header")).toBeInTheDocument();
     expect(screen.getByTestId("tab-mode-catalog-footer")).toBeInTheDocument();

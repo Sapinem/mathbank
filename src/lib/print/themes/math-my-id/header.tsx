@@ -28,10 +28,11 @@ export function MathMyIdHeader({
 
   return (
     <div
-      data-slot="math-my-id-header"
+      data-slot="bundle-print-header"
+      data-theme-header="math-my-id"
       data-header-code={headerCode}
       className={cn(
-        "math-my-id-header print-running-header w-full bg-white text-[#111111] select-none",
+        "bundle-print-header math-my-id-header print-running-header w-full bg-white text-[#111111] select-none",
       )}
       style={{
         printColorAdjust: "exact",
