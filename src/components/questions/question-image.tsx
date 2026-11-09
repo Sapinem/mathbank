@@ -31,7 +31,8 @@ export interface QuestionImageAsset {
 }
 
 /** Shortcode media di markdown — sinkron dengan `src/lib/media/shortcode.ts`. */
-const IMG_SHORTCODE = /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})\s*\}\}/g;
+const IMG_SHORTCODE =
+  /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})(?:\s*\|\s*(?:sm|md|lg|full))?\s*\}\}/g;
 
 /**
  * Ambil seluruh shortId gambar dari sebuah markdown.

@@ -43,6 +43,21 @@ describe("tokenizeMath — shortcode gambar", () => {
     expect(t.some((x) => x.kind === "img")).toBe(true);
   });
 
+  it("mengenali shortcode dengan modifier ukuran", () => {
+    const t = tokenizeMath("Diagram: {{img:a7Kx9mP2|sm}} dan grafik {{ img : b8Ly0nQ3 | full }}");
+    const imgs = t.filter((x) => x.kind === "img") as Array<{ kind: "img"; shortId: string; size?: string }>;
+    expect(imgs.length).toBe(2);
+    expect(imgs[0]).toMatchObject({ kind: "img", shortId: "a7Kx9mP2", size: "sm" });
+    expect(imgs[1]).toMatchObject({ kind: "img", shortId: "b8Ly0nQ3", size: "full" });
+  });
+
+  it("shortcode tanpa modifier tidak memiliki properti size yang terdefinisi", () => {
+    const t = tokenizeMath("{{img:a7Kx9mP2}}");
+    const img = t.find((x) => x.kind === "img") as { kind: "img"; shortId: string; size?: string };
+    expect(img.shortId).toBe("a7Kx9mP2");
+    expect(img.size).toBeUndefined();
+  });
+
   it("mengabaikan panjang short_id yang salah", () => {
     expect(tokenizeMath("{{img:abc}}").some((x) => x.kind === "img")).toBe(false);
     expect(tokenizeMath("{{img:a7Kx9mP2z}}").some((x) => x.kind === "img")).toBe(false);
