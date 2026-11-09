@@ -14,7 +14,7 @@ export const PATCH = wrapRoute({
   rateLimit: { capacity: 30, refillPerSec: 1 },
   authz: {
     kind: "service",
-    enforcedIn: "src/lib/services/question-write.ts:setQuestionFlag",
+    enforcedIn: "src/lib/services/question-flag.ts:setQuestionFlag",
   },
   params: paramsSchema,
   body: flagSchema,

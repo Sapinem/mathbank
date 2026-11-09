@@ -67,7 +67,7 @@ export const DELETE = wrapRoute({
   rateLimit: { capacity: 10, refillPerSec: 0.2 },
   authz: {
     kind: "service",
-    enforcedIn: "src/lib/services/question-write.ts:deleteQuestion",
+    enforcedIn: "src/lib/services/question-delete.ts:deleteQuestion",
   },
   params: paramsSchema,
   query: emptyQuerySchema,
