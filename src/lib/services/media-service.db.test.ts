@@ -58,6 +58,22 @@ describe("registerMediaAsset", () => {
     expect(a.reused).toBe(false);
   });
 
+  it("menyimpan dan membaca dimensi width & height", async () => {
+    const a = await registerMediaAsset({
+      relativePath: "aa/dims.png",
+      contentHash: "testhash-dims",
+      mimeType: "image/png",
+      fileSize: 1234,
+      width: 800,
+      height: 600,
+      role: "content",
+      orderIndex: 0,
+    });
+    const row = await findAssetByShortId(a.shortId);
+    expect(row?.width).toBe(800);
+    expect(row?.height).toBe(600);
+  });
+
   it("dedup: hash sama → baris & short_id sama", async () => {
     const first = await registerMediaAsset({
       relativePath: "aa/aaaa.png",

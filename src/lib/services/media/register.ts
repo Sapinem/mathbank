@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 import { mediaAssets, questionMedia } from "@/lib/db/schema/media";
 import { generateUniqueShortId } from "@/lib/media/short-id";
 import { mediaShortcode } from "@/lib/media/shortcode";
+import { getImageDimensions } from "@/lib/media/dimensions";
 import { storeImage } from "@/lib/ingest/media/store";
 import type {
   AssetHandle,
@@ -71,6 +72,8 @@ export async function registerMediaAsset(
       svgPath: isSvg ? input.relativePath : null,
       mimeType: input.mimeType,
       fileSize: input.fileSize,
+      width: input.width ?? null,
+      height: input.height ?? null,
       contentHash: input.contentHash,
       sourceOrigin: input.sourceOrigin ?? "web_ingest",
     })
@@ -135,11 +138,14 @@ export async function storeAndRegister(
   input: StoreAndRegisterInput,
 ): Promise<RegisterMediaResult> {
   const { relativePath } = await storeImage(rootDir, input.contentHash, input.mimeType, input.bytes);
+  const dims = getImageDimensions(input.bytes);
   return registerMediaAsset({
     relativePath,
     contentHash: input.contentHash,
     mimeType: input.mimeType,
     fileSize: input.bytes.length,
+    width: dims?.width ?? null,
+    height: dims?.height ?? null,
     role: "content",
     orderIndex: 0,
     altText: input.title ?? null,
@@ -161,19 +167,27 @@ export async function uploadMedia(
 ): Promise<UploadMediaResult> {
   const hash = createHash("sha256").update(file.bytes).digest("hex");
   const { relativePath } = await storeImage(rootDir, hash, file.mimeType, file.bytes);
+  const dims = getImageDimensions(file.bytes);
 
   const asset = await registerMediaAsset({
     relativePath,
     contentHash: hash,
     mimeType: file.mimeType,
     fileSize: file.bytes.length,
+    width: dims?.width ?? null,
+    height: dims?.height ?? null,
     role: "content",
     orderIndex: 0,
     altText: opts.title ?? file.fileName ?? null,
     sourceOrigin: opts.sourceOrigin ?? "manual_upload",
   });
 
-  return { ...asset, shortcode: mediaShortcode(asset.shortId) };
+  return {
+    ...asset,
+    shortcode: mediaShortcode(asset.shortId),
+    width: dims?.width ?? null,
+    height: dims?.height ?? null,
+  };
 }
 
 /**
