@@ -450,3 +450,12 @@ Tidak ada perubahan skema, jadi **tidak ada migrasi DB** yang perlu dibalik pada
 - `pnpm install --frozen-lockfile` bersih. Diff lockfile hanya mengganti kunci peer `eslint@10.13.0` → `10.14.0` (tanpa paket baru).
 - Audit tidak berubah: 2 advisory (`deepmerge` low, `minimatch` moderate), high 0.
 - **Peer ESLint masih belum tuntas:** `eslint-plugin-import@2.32.0`, `eslint-plugin-jsx-a11y@6.10.2`, dan `eslint-plugin-react@7.37.5` adalah versi **terbaru** di registry dan ketiganya belum menyatakan dukungan ESLint 10. Peringatan peer ini sudah ada sebelum Gelombang 4a (proyek memang sudah di ESLint 10.13) dan tidak menghalangi `pnpm lint`. Tidak ada tindakan yang bisa diambil selain menunggu rilis upstream.
+
+### Gelombang 4b — 2026-11-09
+
+- `vitest` 5.0.5 → **5.1.0**, `@vitest/coverage-v8` 5.0.5 → **5.1.0**, `@vitejs/plugin-react` 6.1.2 → **6.2.1**.
+- Gate: `pnpm test:coverage` exit 0 — 153 berkas / 1576 tes lulus, coverage **90.42% stmt · 82% branch · 91.82% func · 92.92% line**, identik dengan baseline Gelombang 0. Tidak ada ambang yang diturunkan dan tidak ada pergeseran instrumentasi.
+- `vite` tetap **8.3.6** lewat override Gelombang 1; `@vitejs/plugin-react@6.2.1` puas dengan peer `^8.0.0`.
+- `pnpm install --frozen-lockfile` bersih; `pnpm peers check` tidak menambah peringatan baru (hanya tiga plugin ESLint lama).
+- Audit tidak berubah: 2 advisory, high 0.
+- **Observasi:** `@vitejs/plugin-react@6.3.0` terbit 2026-11-09 06:12 UTC — beberapa jam sebelum gelombang ini dijalankan. Rencana menargetkan 6.2.1 (versi saat evaluasi) dan itu yang dipakai; 6.3.0 dapat dipertimbangkan sebagai bump terpisah setelah ada masa pakai. Peer range-nya sama (`vite ^8.0.0`).
