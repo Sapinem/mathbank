@@ -500,3 +500,18 @@ Tidak ada perubahan skema, jadi **tidak ada migrasi DB** yang perlu dibalik pada
 - `lucide-react` 1.62 → 1.70 tidak memutus satu pun ikon: `pnpm typecheck` lolos tanpa perubahan kode.
 - Gate: `theme:check` **34/34** pasangan kontras, `typecheck` ✓, `test` **153 berkas / 1580 tes** ✓, `build` ✓. `pnpm install --frozen-lockfile` bersih; audit high 0.
 - **Kegagalan sementara yang bukan akibat upgrade:** gate pertama melaporkan 4 tes gagal di `bundle-print-icons.test.tsx`. Saat diperiksa, berkas tes & komponennya baru ditulis pukul 04:44–04:45 WIB oleh pekerjaan lain di branch yang sama (commit `ac1e2c3`), tepat saat suite berjalan. Setelah pohon stabil, berkas itu lulus 8/8 dan suite penuh hijau. Pelajaran: jangan menilai gate saat ada commit lain yang sedang mendarat.
+
+### Gelombang 6 — 2026-11-10
+
+- **Prasyarat data terverifikasi di DB hidup** (bukan hanya skema Drizzle): `current_setting('TimeZone')` = `Asia/Jakarta` di DB utama dan DB uji; query `information_schema.columns` untuk `timestamp without time zone` / `date` / `time without time zone` mengembalikan **kosong** di kedua DB. Perubahan penentuan tipe parameter di postgres v4 netral di sini.
+- **Empat `sql.array()` diganti** menjadi parameter array langsung + cast: `ANY(${ids}::uuid[])` di `question-bulk.db.test.ts`, `ANY(${unik}::text[])` di `scripts/dev/check-image-question.ts`, dan dua di `scripts/dev/delete-error-rows.ts`. Catatan: `scripts/dev/` **gitignored**, jadi dua perbaikan itu hanya berlaku lokal dan tidak ikut ter-commit.
+- `postgres` 3.4.9 → **4.1.0** (range `^4.1.0`).
+- **Bug Docker pra-eksisting ditemukan dan diperbaiki:** `docker build` gagal `ENOENT '/app/patches/braces@3.0.3.patch'` karena stage `deps` tidak menyalin `patches/`, padahal `pnpm-workspace.yaml` memakai `patchedDependencies` sejak MAT-36 (2026-10-05). Ditambahkan `COPY patches ./patches`; image kini terbangun (12 menit).
+- Gate §7: `theme:check` 34/34 ✓, `lint:names` ✓, `lint:authz` ✓, `openapi:check` ✓, `typecheck` ✓, `test:coverage` **156 berkas / 1596 tes** dengan coverage 90.42/82/91.82/92.92 ✓, `build` ✓, `test:db` **29 berkas / 341 tes** ✓, `db:verify` dua DB ✓ (28 tabel/34 trigger/1 HNSW), `drizzle-kit check` ✓, `docker build` ✓.
+- **Satu gerbang merah: `pnpm lint`** — 4 error `jsx-a11y` di `src/lib/print/themes/math-my-id/catalog/{header,footer}-catalog-view.tsx`, berkas dari commit pekerjaan lain (`373aacf`, U4) yang mendarat saat gelombang berjalan. Berkas yang diubah gelombang ini lolos lint (`eslint --no-cache`: 0 error). Tidak diperbaiki di sini agar tidak menimpa pekerjaan yang sedang berjalan.
+- Smoke (6c):
+  - **Ingest kanonik** `POST /api/ingest/questions` → 200, `created: 1`, bundle + soal baru (dijalankan pada **DB uji** agar DB utama tidak tercemar).
+  - **Ingest jalur lama** `POST /api/ingest/upload` → 201 lalu `/api/ingest/commit` → 200 (`processed: 1`, `created: 0` — parser HTML menandai `skipped`; jalur tulis/transaksi tetap terlaksana).
+  - **Ekspor Moodle** `POST /api/bundles/:id/export/moodle` → 200, 4 soal, 9 berkas, commit GitSync `64ceabc` di `~/mathbank-export/2018-07-cara-menghitung-integral-nilai-mutlak` (efek samping nyata; hapus direktori itu bila tidak diinginkan). Percobaan pada bundle besar → 422 `EXPORT_BLOCKED` karena ada soal tanpa kunci, sesuai D4.
+  - **Cetak** `GET /bundles/:id/print` → 200, 69 KB HTML (perlu sesi login; 307 → `/login` tanpa cookie).
+  - **Gambar** `GET /img/hWJJakGA` → 200 `image/jpeg`, 88 KB.
