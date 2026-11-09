@@ -434,3 +434,11 @@ Tidak ada perubahan skema, jadi **tidak ada migrasi DB** yang perlu dibalik pada
 - Gate: `typecheck`, `lint`, `build` hijau; `pnpm install --frozen-lockfile` bersih.
 - Smoke dev (`next dev --turbopack -p 3100`): `/login` 200, `/` 307 → `/login`, `/questions` 307 → `/login`, `/api/health?probe=liveness` 200 `{"status":"ok"}`. `proxy.ts` berjalan (4–82 ms), tanpa error/warning; invarian DB OK saat startup.
 - Audit tidak berubah: 2 advisory (deepmerge low, minimatch moderate), high 0.
+
+### Gelombang 3 — 2026-11-09
+
+- Trio better-auth 1.7.14 → 1.7.18 (`better-auth`, `@better-auth/api-key`, `@better-auth/drizzle-adapter`), range `^1.7.18`.
+- Gate: `pnpm test` 153/1576, `pnpm test:db` 29/341, `pnpm build` sukses.
+- Smoke dev: `/login` 200; `POST /api/auth/sign-in/email` kredensial salah → 401 `INVALID_EMAIL_OR_PASSWORD`; `GET /api/auth/get-session` → 200 `null`; `GET /api/auth/me` → 200 dev-user (dev bypass); health 200. Log hanya `WARN User not found` yang memang diharapkan.
+- **Rate limit tidak terpicu di dev** karena Better Auth mengaktifkannya hanya saat `NODE_ENV=production` (`src/lib/auth/server.ts:68`). Cakupannya tetap terjaga lewat `src/lib/api/rate-limit.test.ts` dan `src/lib/api/stores-pg.db.test.ts` yang lulus di gate.
+- Audit tidak berubah: 2 advisory, high 0.
