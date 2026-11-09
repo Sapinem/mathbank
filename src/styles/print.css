@@ -448,12 +448,39 @@
     overflow-x: hidden !important;
   }
 
-  /* Fase 4 - gambar cetak diskalakan ke lebar kolom/halaman (sebelumnya
-     tidak ada aturan img khusus cetak; `max-h-96` layar tetap berlaku
-     lewat class, tapi lebar kini dijamin tidak meluber). */
+  /* Fase 4 & MAT-155 - gambar cetak diskalakan proporsional ke lebar kolom/halaman,
+     tinggi dibatasi maksimal 6.5cm agar tidak menelan satu kolom penuh naskah,
+     dan border kartu dihilangkan agar tampak bersih seperti buku teks resmi. */
   .print-sheet img {
     max-width: 100% !important;
+    max-height: 6.5cm !important;
     height: auto !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Elemen media-image berukuran full membentang 2 kolom penuh saat cetak */
+  .print-sheet [data-size="full"],
+  .print-sheet .img-full {
+    column-span: all !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 4mm auto !important;
+    text-align: center !important;
+  }
+
+  .print-sheet [data-size="full"] img {
+    max-height: 10cm !important;
+    max-width: 100% !important;
+  }
+
+  /* Gambar di dalam opsi jawaban (A, B, C, D) dibatasi lebih kompak */
+  .print-options img {
+    max-height: 3.2cm !important;
+    max-width: 90% !important;
+    margin: 1mm 0 !important;
   }
 
   /* Fase 4 - sel tabel cetak (termasuk tabel matriks) boleh memecah kata

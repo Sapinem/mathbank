@@ -55,6 +55,22 @@ describe("print.css - Fase 4 (A4: tidak meluber)", () => {
     expect(css).toMatch(/\.print-sheet img\s*\{[^}]*height:\s*auto/);
   });
 
+  it("gambar cetak diskalakan dengan batas tinggi maksimal 6.5cm dan tanpa border", () => {
+    const css = printCss();
+    expect(css).toMatch(/\.print-sheet img\s*\{[^}]*max-height:\s*6\.5cm/);
+    expect(css).toMatch(/\.print-sheet img\s*\{[^}]*border:\s*none/);
+  });
+
+  it("gambar dengan modifier full atau kelas img-full memiliki column-span all", () => {
+    const css = printCss();
+    expect(css).toMatch(/\[data-size="full"\][^}]*column-span:\s*all/);
+  });
+
+  it("gambar dalam opsi pilihan ganda dibatasi maksimal tinggi 3.2cm", () => {
+    const css = printCss();
+    expect(css).toMatch(/\.print-options img\s*\{[^}]*max-height:\s*3\.2cm/);
+  });
+
   it("sel tabel cetak boleh memecah kata panjang", () => {
     const css = printCss();
     expect(css).toContain("overflow-wrap: anywhere");
