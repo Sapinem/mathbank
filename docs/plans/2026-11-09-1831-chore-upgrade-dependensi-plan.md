@@ -473,3 +473,10 @@ Tidak ada perubahan skema, jadi **tidak ada migrasi DB** yang perlu dibalik pada
 - Audit tidak berubah: 2 advisory, high 0.
 - **Observasi:** `@vitejs/plugin-react@6.3.0` terbit 2026-11-09 06:12 UTC — beberapa jam sebelum gelombang ini dijalankan. Rencana menargetkan 6.2.1 (versi saat evaluasi) dan itu yang dipakai saat gelombang; **6.3.0 dinaikkan terpisah atas permintaan pemilik** (lihat catatan di bawah). Peer range keduanya sama (`vite ^8.0.0`).
 - **Bump terpisah `@vitejs/plugin-react` 6.2.1 → 6.3.0:** `pnpm test` 153/1576 lulus, `pnpm install --frozen-lockfile` bersih, `pnpm peers check` tidak berubah, audit high 0. **Efek samping kebijakan supply-chain:** pnpm 11 otomatis menambahkan `'@vitejs/plugin-react@6.3.0'` ke `minimumReleaseAgeExclude` di `pnpm-workspace.yaml` karena rilisnya masih di bawah ambang usia minimum. Entri itu sengaja dipertahankan agar build tetap deterministik; ia bisa dihapus setelah paket melewati ambang, seperti entri exclude lain yang sudah basi.
+
+### Gelombang 4c — 2026-11-09
+
+- `jsdom` 30.1.3 → **31.0.0** (major). Lockfile menyusut: **−16 paket** (`css-tree`, `@asamuzakjp/css-color`, `@asamuzakjp/dom-selector`, `@csstools/*`, `@bramus/specificity`, `bidi-js`, `mdn-data`), sesuai catatan rencana bahwa jsdom 31 mengganti mesin CSS/selector. `parse5` tetap ada (8.1.1) dan `entities` naik ke 9.0.0.
+- Gate: `pnpm test` exit 0 — 153 berkas / 1576 tes, termasuk satu-satunya assertion CSS (`src/components/math/math-content-layout.test.tsx:51`).
+- `pnpm install --frozen-lockfile` bersih; `pnpm peers check` tidak berubah; audit high 0.
+- **Engine Node terverifikasi empiris:** `docker run --rm node:24-slim node -v` → **v24.22.2**, memenuhi syarat jsdom 31 (`^22.22.2 || ^24.15.0 || >=26`). Tag `node:24-slim` mengambang ke rilis 24.x terbaru, jadi Dockerfile tidak perlu diubah — tetapi pin ke `node:24.22-slim` akan membuat build lebih reproducible bila diinginkan.
