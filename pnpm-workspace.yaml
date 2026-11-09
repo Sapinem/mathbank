@@ -47,3 +47,4 @@ minimumReleaseAgeExclude:
   - '@shadcn/registry@0.2.1'
   - lucide-react@1.62.0
   - shadcn@4.23.0
+  - '@vitejs/plugin-react@6.3.0'
