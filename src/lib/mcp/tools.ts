@@ -164,6 +164,7 @@ export function registerTools(server: McpServer, actor: Actor): void {
           difficulty: createQuestionSchema.shape.difficulty,
           cognitiveLevel: createQuestionSchema.shape.cognitiveLevel,
           grade: createQuestionSchema.shape.grade,
+          grades: createQuestionSchema.shape.grades,
           contentMarkdown: createQuestionSchema.shape.contentMarkdown,
           dataPayload: createQuestionSchema.shape.dataPayload.optional(),
           answerKey: createQuestionSchema.shape.answerKey.optional(),
@@ -203,6 +204,7 @@ export function registerTools(server: McpServer, actor: Actor): void {
           difficulty: z.number().int().min(1).max(5).optional(),
           cognitiveLevel: z.enum(["remember", "understand", "apply", "analyze", "evaluate", "create"]).optional(),
           grade: z.string().max(20).optional(),
+          grades: createQuestionSchema.shape.grades,
           topicIds: z.array(z.string().uuid()).optional(),
           tagIds: z.array(z.string().uuid()).optional(),
           options: createQuestionSchema.shape.options.optional(),
@@ -326,6 +328,9 @@ export function registerTools(server: McpServer, actor: Actor): void {
           "answer_key TIDAK diubah (rubrik ditambahkan, kunci tetap).",
         inputSchema: {
           questionId: z.string().uuid(),
+          version: z.number().int().optional().describe(
+            "Versi soal untuk konkurensi optimistik (ADR-0030) — baca lewat get_question.",
+          ),
           // SATU sumber kebenaran: enum kanonikal `@/lib/contracts/ai` (MAT-41),
           // bukan daftar terpisah yang bisa menyimpang dari HTTP API.
           fields: enrichFieldSchema
@@ -337,10 +342,10 @@ export function registerTools(server: McpServer, actor: Actor): void {
             ),
         },
       },
-      async ({ questionId, fields }) =>
+      async ({ questionId, version, fields }) =>
         guard(async () => {
           assertMcp(actor, "enrichment.run");
-          return await enrichQuestion(questionId, actor, fields);
+          return await enrichQuestion(questionId, actor, fields, undefined, version);
         }),
     );
 

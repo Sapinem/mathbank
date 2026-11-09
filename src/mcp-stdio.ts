@@ -13,7 +13,9 @@
  * CATATAN: stdout DIPAKAI protokol MCP — jangan `console.log` ke stdout.
  * Gunakan `console.error` untuk diagnostik (stderr).
  */
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
+config({ path: ".env" });
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createMcpServer } from "@/lib/mcp/server";
 import { actorFromStdioEnv } from "@/lib/mcp/actor";

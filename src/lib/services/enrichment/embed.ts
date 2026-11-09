@@ -29,7 +29,9 @@ export async function embedQuestions(
   /** Berapa soal ditandai mirip (near-dedup) selama embedding (ADR-0012). */
   nearFlagged: number;
 }> {
-  // Izin dicek **per-soal** (termasuk aturan `own`).
+  // L1: penegakan izin enrichment (admin, teacher, reviewer, agent, machine = yes).
+  assertCan(actor, "enrichment:run");
+
   // ADR-0019: hash embedding dibaca dari tabel `question_embeddings` via LEFT JOIN.
   const rows = await db
     .select({
@@ -48,13 +50,6 @@ export async function embedQuestions(
   let nearFlagged = 0;
 
   for (const q of rows) {
-    // Izin per-soal (own untuk teacher/reviewer).
-    try {
-      assertCan(actor, "question:edit", { ownerId: q.authorId });
-    } catch (e) {
-      results.push({ questionId: q.id, ok: false, error: e instanceof Error ? e.message : "ditolak" });
-      continue;
-    }
     const contentHash = sha256(q.contentMarkdown);
     if (!opts.force && q.embeddingContentHash === contentHash) {
       results.push({ questionId: q.id, ok: true, skipped: true });

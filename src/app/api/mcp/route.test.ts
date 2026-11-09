@@ -161,6 +161,7 @@ describe("POST /api/mcp — protokol & tool", () => {
           difficulty: 3,
           cognitiveLevel: "apply",
           grade: "SMA-11",
+          grades: ["SMA-11"],
           contentMarkdown: "Hitung $2+2$.",
           topicIds: [],
           answerKey: { type: "single", value: ["B"] },
@@ -174,8 +175,9 @@ describe("POST /api/mcp — protokol & tool", () => {
     expect(payload.status).toBe("draft");
     // Service dipanggil dengan status dipaksa draft.
     expect(createQuestion).toHaveBeenCalledTimes(1);
-    const arg = createQuestion.mock.calls[0]![0] as { status?: string };
+    const arg = createQuestion.mock.calls[0]![0] as { status?: string; grades?: string[] };
     expect(arg.status).toBe("draft");
+    expect(arg.grades).toEqual(["SMA-11"]);
   });
 
   it("tools/call search_questions memanggil service", async () => {
