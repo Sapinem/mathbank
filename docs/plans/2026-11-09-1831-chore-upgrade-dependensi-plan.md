@@ -321,7 +321,7 @@ docker build -t mathbank:deps-upgrade .
 | 4a | `pnpm lint` |
 | 4b | `pnpm test:coverage` |
 | 4c | `pnpm test` |
-| 4d | `pnpm e2e:manual` |
+| 4d | `pnpm e2e:manual` — **merah sejak sebelum upgrade** (utang suite vs ADR-0030/rate limit; lihat §14 Gelombang 4d) |
 | 5 | `pnpm theme:check`, `pnpm test`, `pnpm typecheck`, `pnpm build` |
 | 6 | seluruh §7 |
 | 7 (bila override) | `pnpm lint` penuh |
@@ -480,3 +480,15 @@ Tidak ada perubahan skema, jadi **tidak ada migrasi DB** yang perlu dibalik pada
 - Gate: `pnpm test` exit 0 — 153 berkas / 1576 tes, termasuk satu-satunya assertion CSS (`src/components/math/math-content-layout.test.tsx:51`).
 - `pnpm install --frozen-lockfile` bersih; `pnpm peers check` tidak berubah; audit high 0.
 - **Engine Node terverifikasi empiris:** `docker run --rm node:24-slim node -v` → **v24.22.2**, memenuhi syarat jsdom 31 (`^22.22.2 || ^24.15.0 || >=26`). Tag `node:24-slim` mengambang ke rilis 24.x terbaru, jadi Dockerfile tidak perlu diubah — tetapi pin ke `node:24.22-slim` akan membuat build lebih reproducible bila diinginkan.
+
+### Gelombang 4d — 2026-11-09
+
+- `@playwright/test` 1.64.1 → **1.65.0**; `playwright install chromium` mengunduh Chromium 1254 + ffmpeg 1013 (browser build baru, bukan sekadar paket npm).
+- **Gate `pnpm e2e:manual` GAGAL — dan penyebabnya bukan upgrade.** Hasil: **49 gagal · 68 lulus · 1 flaky · 10 skip** (20,2 menit, 2 proyek desktop+mobile).
+- Tiga akar masalah, semuanya drift suite terhadap perubahan aplikasi:
+  1. **`428 PRECONDITION_REQUIRED`** — ADR-0030 mewajibkan `If-Match` pada mutasi, ditegakkan 2026-11-06 (`54448f1`). `e2e-manual/` terakhir diperbarui **2026-10-24** dan berisi **0** kemunculan `If-Match`, sedangkan `src/` memakainya di 61 tempat. Spesifikasi mengirim PATCH/DELETE tanpa header → ditolak.
+  2. **536 respons `429 RATE_LIMITED`** pada `GET /api/questions/:id`. Kebijakan default `capacity: 60, refillPerSec: 1` (`src/lib/api/rate-limit.ts:152`); suite menembak rute itu ratusan kali dalam satu sesi dev, sehingga halaman detail gagal memuat dan elemen yang ditunggu tak pernah muncul.
+  3. **Label UI berubah** — `getByLabel("Nama topik")` tidak ada lagi di `src/`; hanya tersisa di spec.
+- Bukti reproduksibilitas: spec `topik.spec.ts` (desktop) dijalankan ulang pada 1.65.0 dua kali → hasil identik **3 gagal / 1 lulus** dengan 4× `428`. Percobaan A/B ke 1.64.1 **tidak konklusif**: setelah downgrade, webServer Playwright gagal siap dalam 120 detik (`Timed out waiting 120000ms from config.webServer`) sebanyak 3 kali, sehingga pembanding tidak bisa dijalankan.
+- `pnpm install --frozen-lockfile` bersih; `pnpm peers check` tidak berubah; audit high 0.
+- **Status gate:** upgrade paketnya sendiri valid (Playwright menjalankan browser dan 68 tes lulus), tetapi gate e2e **merah karena utang suite lama**. Memperbaiki 49 tes itu adalah pekerjaan tersendiri (tambah `If-Match`, longgarkan rate limit untuk e2e, perbarui locator) dan tidak boleh disamarkan sebagai bagian dari upgrade dependensi.
