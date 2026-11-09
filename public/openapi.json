@@ -15576,7 +15576,7 @@
         },
         "x-mathbank": {
           "authz": "service",
-          "enforcedIn": "src/lib/services/question-write.ts:setQuestionFlag",
+          "enforcedIn": "src/lib/services/question-flag.ts:setQuestionFlag",
           "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
@@ -15947,7 +15947,7 @@
         },
         "x-mathbank": {
           "authz": "service",
-          "enforcedIn": "src/lib/services/question-write.ts:hardDeleteQuestion",
+          "enforcedIn": "src/lib/services/question-delete.ts:hardDeleteQuestion",
           "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
@@ -17821,7 +17821,7 @@
         },
         "x-mathbank": {
           "authz": "service",
-          "enforcedIn": "src/lib/services/question-write.ts:deleteQuestion",
+          "enforcedIn": "src/lib/services/question-delete.ts:deleteQuestion",
           "ifMatch": true,
           "source": "src/app/api (wrapRoute)"
         }
