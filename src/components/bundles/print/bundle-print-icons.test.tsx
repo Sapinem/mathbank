@@ -9,9 +9,46 @@ import {
   DotMatrixOrnament,
   TechnicalKopBorder,
   SlantedHeaderStripes,
+  MathMyIdMiLogo,
+  MathMyIdMiLogoLight,
+  MathMyIdFullLogo,
+  MATH_MY_ID_COLORS,
 } from "./bundle-print-icons";
 
 describe("bundle-print-icons", () => {
+  it("mengekspor konstanta token warna resmi Math My ID", () => {
+    expect(MATH_MY_ID_COLORS.navy).toBe("#072652");
+    expect(MATH_MY_ID_COLORS.blue).toBe("#0047b3");
+    expect(MATH_MY_ID_COLORS.blueLight).toBe("#2b7fff");
+    expect(MATH_MY_ID_COLORS.gold).toBe("#f5b800");
+    expect(MATH_MY_ID_COLORS.goldDark).toBe("#d99b00");
+  });
+
+  it("merender MathMyIdMiLogo dengan viewBox 0 0 120 76 dan elemen SVG valid", () => {
+    const { container } = render(<MathMyIdMiLogo className="h-5 w-auto" />);
+    const svg = container.querySelector("svg");
+    expect(svg).toBeInTheDocument();
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 120 76");
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    expect(container.querySelectorAll("path").length).toBeGreaterThan(0);
+    expect(container.querySelector("circle")).toBeInTheDocument();
+  });
+
+  it("merender MathMyIdMiLogoLight untuk latar gelap", () => {
+    const { container } = render(<MathMyIdMiLogoLight className="h-5 w-auto" />);
+    const svg = container.querySelector("svg");
+    expect(svg).toBeInTheDocument();
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 120 76");
+  });
+
+  it("merender MathMyIdFullLogo dengan viewBox 50 120 1900 1850", () => {
+    const { container } = render(<MathMyIdFullLogo className="size-6" />);
+    const svg = container.querySelector("svg");
+    expect(svg).toBeInTheDocument();
+    expect(svg?.getAttribute("viewBox")).toBe("50 120 1900 1850");
+    expect(container.querySelectorAll("path").length).toBe(4);
+  });
+
   it("merender seluruh ikon media sosial dengan atribut svg yang valid", () => {
     const { container: yt } = render(<YouTubeIcon className="size-4 text-blue-900" />);
     expect(yt.querySelector("svg")).toBeInTheDocument();
