@@ -17,10 +17,14 @@ export type BundleItemRole = "question" | "stimulus";
 
 export interface BundleRow {
   id: string;
+  /** Nomor revisi (ADR-0030) — dipakai sebagai ETag / If-Match. */
+  version: number;
   title: string;
   bundleType: BundleType;
   origin: BundleOrigin;
   sourceId: string | null;
+  /** URL artikel/naskah spesifik (ADR-0014) — `sources.url` = situsnya. */
+  url: string | null;
   eventId: string | null;
   year: number | null;
   grade: string | null;
@@ -135,7 +139,7 @@ export interface CreateBundleInput {
   eventId?: string | null;
   year?: number | null;
   grade?: string | null;
-  durationMinutes?: number;
+  durationMinutes?: number | null;
   instructions?: string | null;
   printConfig?: BundlePrintConfig;
 }
@@ -148,7 +152,7 @@ export interface UpdateBundleInput {
   eventId?: string | null;
   year?: number | null;
   grade?: string | null;
-  durationMinutes?: number;
+  durationMinutes?: number | null;
   instructions?: string | null;
   printConfig?: BundlePrintConfig;
   status?: "draft" | "review" | "ready" | "archived";
@@ -170,10 +174,12 @@ export interface BundleValidation {
 export function bundleColumns() {
   return {
     id: bundles.id,
+    version: bundles.version,
     title: bundles.title,
     bundleType: bundles.bundleType,
     origin: bundles.origin,
     sourceId: bundles.sourceId,
+    url: bundles.url,
     eventId: bundles.eventId,
     year: bundles.year,
     grade: bundles.grade,

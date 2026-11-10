@@ -48,7 +48,7 @@ Dokumen ini memetakan **seluruh lapisan sistem**, bukan hanya DB:
 | **Guru/Editor** | Buat/edit soal, susun naskah, kurasi | UI (login Better Auth) |
 | **Admin** | Semua + kelola taksonomi, hard-delete, pengaturan, backup/restore | UI |
 | **Agen AI (MCP)** | Baca + tulis soal/aset (terbatas) | API key / MCP |
-| **Mesin (ingest)** | Kirim naskah/aset untuk diproses | API `/api/v1/ingest` + machine-auth |
+| **Mesin (ingest)** | Kirim naskah/aset untuk diproses | API `/api/ingest` + machine-auth |
 
 > **Temuan:** sudah ada `src/lib/auth-guards.ts` & `src/lib/question-permissions.ts` — otorisasi tak sepenuhnya seragam; perlu inventaris peran formal (Fase lanjut).
 
@@ -101,7 +101,7 @@ Dokumen ini memetakan **seluruh lapisan sistem**, bukan hanya DB:
 | Auth | `/api/auth/[...all]`, `/api/auth/change-password`, `/api/auth/quick-signin` |
 | MCP | `/api/mcp` |
 
-### 4.2 API mesin (ingest) — `/api/v1/ingest/*`
+### 4.2 API mesin (ingest) — `/api/ingest/*`
 | Endpoint | Fungsi |
 |----------|--------|
 | `/extract` | Ekstrak teks dari dokumen |
@@ -210,7 +210,7 @@ Dokumen ini memetakan **seluruh lapisan sistem**, bukan hanya DB:
 ## Alur End-to-End (contoh: impor naskah → paket)
 
 ```
-L1 Guru ──▶ L2 Ingest UI ──▶ L4 /api/v1/ingest/extract
+L1 Guru ──▶ L2 Ingest UI ──▶ L4 /api/ingest/extract
                                    │
                                    ▼
                             L5 ai-ingest-service

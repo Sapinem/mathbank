@@ -25,7 +25,9 @@ export function isProductionRuntime(env: EnvLike): boolean {
 }
 
 /** Domain produksi yang **selalu** dipercaya (independen lingkungan). */
-export const PRODUCTION_ORIGINS = ["https://b.iyo.my.id"];
+export const PRODUCTION_ORIGINS = [
+  "https://b.iyo.my.id",
+];
 
 /** Origin dev lokal baku (hanya dipakai di non-produksi). */
 export const LOCAL_DEV_ORIGINS = [

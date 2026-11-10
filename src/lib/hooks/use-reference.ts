@@ -1,18 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api/fetcher";
 
 /**
  * Hook data referensi (L3) — topik, sumber, event.
  * staleTime 30 menit (jarang berubah).
  */
-
-async function apiFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { "Content-Type": "application/json" } });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
-  return json.data as T;
-}
 
 /**
  * MAT-131B (Tahap A): `slug` **deprecated & opsional** pada topik.
@@ -24,19 +18,32 @@ export interface TopicRow {
   name: string;
   parentId: string | null;
   level: number;
+  usageCount?: number;
 }
 
 export interface SourceRow {
   id: string;
+  /** Nomor revisi (ADR-0030) — dikirim balik sebagai If-Match saat menyunting. */
+  version: number;
   kind: string;
   label: string;
 }
 
 export interface EventRow {
   id: string;
+  /** Nomor revisi (ADR-0030) — dikirim balik sebagai If-Match saat menyunting. */
+  version: number;
   name: string;
   shortname: string;
   category: string;
+}
+
+export interface TagRow {
+  id: string;
+  /** Nomor revisi (ADR-0030) — dikirim balik sebagai If-Match saat menyunting. */
+  version: number;
+  name: string;
+  usageCount: number;
 }
 
 export interface GradeRow {
@@ -52,13 +59,14 @@ export const referenceKeys = {
   sources: ["reference", "sources"] as const,
   events: ["reference", "events"] as const,
   grades: ["reference", "grades"] as const,
+  tags: ["reference", "tags"] as const,
 };
 
-/** Daftar jenjang/kelas (selaras QBank: id "1".."12","11w","utbk","umum"). */
+/** Daftar jenjang/kelas (id "1".."12", "utbk", "mandiri", "umum"). */
 export function useGrades() {
   return useQuery({
     queryKey: referenceKeys.grades,
-    queryFn: () => apiFetch<GradeRow[]>("/api/grades"),
+    queryFn: () => api<GradeRow[]>("/api/grades"),
     staleTime: 30 * 60_000,
   });
 }
@@ -66,7 +74,7 @@ export function useGrades() {
 export function useTopics() {
   return useQuery({
     queryKey: referenceKeys.topics,
-    queryFn: () => apiFetch<TopicRow[]>("/api/topics"),
+    queryFn: () => api<TopicRow[]>("/api/topics"),
     staleTime: 30 * 60_000,
   });
 }
@@ -74,7 +82,15 @@ export function useTopics() {
 export function useSources() {
   return useQuery({
     queryKey: referenceKeys.sources,
-    queryFn: () => apiFetch<SourceRow[]>("/api/sources"),
+    queryFn: () => api<SourceRow[]>("/api/sources"),
+    staleTime: 30 * 60_000,
+  });
+}
+
+export function useTags() {
+  return useQuery({
+    queryKey: referenceKeys.tags,
+    queryFn: () => api<TagRow[]>("/api/tags"),
     staleTime: 30 * 60_000,
   });
 }
@@ -82,7 +98,7 @@ export function useSources() {
 export function useEvents() {
   return useQuery({
     queryKey: referenceKeys.events,
-    queryFn: () => apiFetch<EventRow[]>("/api/events"),
+    queryFn: () => api<EventRow[]>("/api/events"),
     staleTime: 30 * 60_000,
   });
 }
@@ -100,7 +116,7 @@ export function useStimulusParents() {
   return useQuery({
     queryKey: ["reference", "stimulus-parents"],
     queryFn: async () => {
-      const res = await apiFetch<{ items: StimulusRow[] }>(
+      const res = await api<{ items: StimulusRow[] }>(
         "/api/questions?questionType=stimulus&limit=100",
       );
       return res.items ?? [];

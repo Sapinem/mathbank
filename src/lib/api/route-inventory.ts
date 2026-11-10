@@ -93,6 +93,14 @@ export const MANUAL_ROUTES: Readonly<Record<string, string>> = {
     "Delegasi Better Auth (toNextJsHandler) — menangani login/sesi/OAuth.",
   "POST /api/auth/[...all]":
     "Delegasi Better Auth (toNextJsHandler) — menangani login/sesi/OAuth.",
+  // Alias deprecated (ADR-0028): meneruskan ke handler kanonik /api/ingest/*,
+  // jadi otorisasi & skema tetap milik handler kanonik, bukan diduplikasi.
+  "POST /api/v1/ingest/upload":
+    "Alias deprecated /api/ingest/upload — mendelegasikan ke handler kanonik (ADR-0028).",
+  "GET /api/v1/ingest/queue":
+    "Alias deprecated /api/ingest/queue — mendelegasikan ke handler kanonik (ADR-0028).",
+  "POST /api/v1/ingest/commit":
+    "Alias deprecated /api/ingest/commit — mendelegasikan ke handler kanonik (ADR-0028).",
 };
 
 /**

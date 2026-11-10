@@ -12,6 +12,13 @@ import { listAgentKeys, createAgentKey } from "@/lib/services/agent-key-service"
 const createSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   expiresInDays: z.coerce.number().int().min(0).max(365).optional(),
+  preset: z
+    .enum(["read_only_guest", "read_only_full", "agent_full"])
+    .optional()
+    .default("read_only_guest")
+    .describe(
+      "Cakupan izin kunci: `read_only_guest` hanya baca tanpa kunci jawaban, `read_only_full` baca termasuk kunci jawaban, `agent_full` baca-tulis untuk agen MCP.",
+    ),
 });
 
 const emptyQuerySchema = z.object({}).optional();

@@ -18,6 +18,9 @@ import {
 import { questionTopics, questionTags, topics, tags } from "@/lib/db/schema/taxonomy";
 import type { Actor } from "@/lib/auth/actor";
 import { assertCan, NotFoundError } from "@/lib/auth/guards";
+import { assertVersionMatches } from "@/lib/api/version";
+import { throwVersionedWriteMiss } from "../versioned";
+import { versionPredicate } from "@/lib/db/optimistic";
 import { chatJson } from "@/lib/ai/client";
 import { getAiConfig, isAiReady } from "@/lib/ai/config";
 import {
@@ -54,6 +57,7 @@ export async function enrichQuestion(
   actor: Actor,
   fields: EnrichField[] = ALL_FIELDS,
   preloadedCtx?: { topicNames: string[]; tagNames: string[] },
+  expectedVersion?: number | "*",
 ): Promise<EnrichOutcome> {
   const [q] = await db
     .select({
@@ -64,6 +68,7 @@ export async function enrichQuestion(
       dataPayload: questions.dataPayload,
       status: questions.status,
       authorId: questions.authorId,
+      version: questions.version,
     })
     .from(questions)
     .where(and(eq(questions.id, questionId), isNull(questions.deletedAt)))
@@ -73,6 +78,9 @@ export async function enrichQuestion(
   // Izin per-soal DULU (fail-closed): jangan lakukan kerja AI sebelum lolos izin.
   // `own` untuk teacher/reviewer/agent (ownerId); admin = yes.
   assertCan(actor, "question:edit", { ownerId: q.authorId });
+
+  // Prakondisi versi sebelum komputasi AI (ADR-0030).
+  if (expectedVersion !== undefined) assertVersionMatches(q.version, expectedVersion);
 
   const cfg = await getAiConfig();
   if (!isAiReady(cfg)) {
@@ -165,7 +173,14 @@ export async function enrichQuestion(
     if (proposal.difficulty !== null) set.difficulty = proposal.difficulty;
     if (proposal.cognitiveLevel !== null) set.cognitiveLevel = proposal.cognitiveLevel;
     if (q.status === "draft") set.status = newStatus;
-    await tx.update(questions).set(set).where(eq(questions.id, questionId));
+    const rows = await tx
+      .update(questions)
+      .set(set)
+      .where(versionPredicate(questions, questionId, expectedVersion ?? "*"))
+      .returning({ id: questions.id });
+    if (rows.length === 0) {
+      await throwVersionedWriteMiss(questions, questionId, expectedVersion, "Soal tidak ditemukan.", { dbOrTx: tx });
+    }
 
     if (proposal.topics.length) {
       for (const name of proposal.topics) {

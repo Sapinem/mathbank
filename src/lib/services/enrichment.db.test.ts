@@ -299,9 +299,41 @@ describe("enrichment — kontrak pedagogi (MAT-41)", () => {
     const rows = await sql`SELECT name FROM tags WHERE lower(name) IN ('a b', 'a-b')`;
     expect(rows.length).toBe(2);
   });
+
+  it("ADR-0030: konkurensi optimistik (expectedVersion cocok sukses, tidak cocok ditolak)", async () => {
+    const id = await makeQuestion();
+    const [q] = await sql`SELECT version FROM questions WHERE id = ${id}`;
+    const v = Number(q.version);
+
+    // Versi salah -> PreconditionFailedError
+    await expect(enrichQuestion(id, guru, ["difficulty"], undefined, v + 10)).rejects.toThrow();
+
+    // Versi benar -> sukses
+    mockChatJson.mockResolvedValue({ ok: true, data: { difficulty: 5 } });
+    const r = await enrichQuestion(id, guru, ["difficulty"], undefined, v);
+    expect(r.ok).toBe(true);
+
+    const [updated] = await sql`SELECT version, difficulty FROM questions WHERE id = ${id}`;
+    expect(Number(updated.version)).toBe(v + 1);
+    expect(Number(updated.difficulty)).toBe(5);
+  });
 });
 
 describe("enrichment — embedQuestions", () => {
+  it("aktor tanpa izin enrichment:run ditolak", async () => {
+    const id = await makeQuestion();
+    await expect(embedQuestions([id], noone)).rejects.toThrow();
+  });
+
+  it("agent berhak melakukan embedding pada soal milik guru (enrichment:run)", async () => {
+    const id = await makeQuestion();
+    const agentActor: Actor = { id: "agent-embedder", name: "Agent", roles: ["agent"], via: "apikey" };
+    mockEmbedText.mockResolvedValue({ ok: true, vector: Array.from({ length: 1024 }, () => 0.05) });
+    const r = await embedQuestions([id], agentActor);
+    expect(r.ok).toBe(1);
+    expect(r.results[0].ok).toBe(true);
+  });
+
   it("menyimpan embedding + hash + model", async () => {
     const id = await makeQuestion();
     mockEmbedText.mockResolvedValue({ ok: true, vector: Array.from({ length: 1024 }, () => 0.01) });

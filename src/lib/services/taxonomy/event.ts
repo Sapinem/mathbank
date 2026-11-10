@@ -4,11 +4,13 @@
  *
  * ⚠️ JANGAN impor dari komponen klien (menarik `@/lib/db`).
  */
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema/event";
-import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
+import { assertCan, ConflictError } from "@/lib/auth/guards";
 import { withUniqueGuard } from "@/lib/db/errors";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { throwVersionedWriteMiss } from "../versioned";
 import { recordAudit } from "../audit";
 import type { Actor } from "@/lib/auth/actor";
 import { slugify, type EventInput, type EventRow } from "./shared";
@@ -16,6 +18,7 @@ import { slugify, type EventInput, type EventRow } from "./shared";
 /** Kolom event yang diproyeksikan. */
 const eventColumns = {
   id: events.id,
+  version: events.version,
   name: events.name,
   shortname: events.shortname,
   category: events.category,
@@ -67,6 +70,8 @@ export async function updateEvent(
   id: string,
   input: Partial<EventInput>,
   actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
 ): Promise<EventRow> {
   assertCan(actor, "reference:manage");
   const patch: Partial<typeof events.$inferInsert> = {};
@@ -78,9 +83,9 @@ export async function updateEvent(
   const [row] = await db
     .update(events)
     .set({ ...patch, updatedAt: new Date() })
-    .where(eq(events.id, id))
+    .where(versionPredicate(events, id, expectedVersion ?? "*"))
     .returning(eventColumns);
-  if (!row) throw new NotFoundError("Event tidak ditemukan.");
+  if (!row) return throwVersionedWriteMiss(events, id, expectedVersion, "Event tidak ditemukan.");
   await recordAudit({
     entityType: "event",
     entityId: row.id,
@@ -91,7 +96,12 @@ export async function updateEvent(
   return row;
 }
 
-export async function deleteEvent(id: string, actor: Actor): Promise<void> {
+export async function deleteEvent(
+  id: string,
+  actor: Actor,
+  /** Versi yang diharapkan (ADR-0030); `undefined` = tanpa prakondisi. */
+  expectedVersion?: number | "*",
+): Promise<void> {
   assertCan(actor, "reference:manage");
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -100,8 +110,13 @@ export async function deleteEvent(id: string, actor: Actor): Promise<void> {
   if (count > 0) {
     throw new ConflictError(`Event dipakai oleh ${count} soal. Lepas keterkaitannya dulu.`);
   }
-  const res = await db.delete(events).where(eq(events.id, id)).returning({ id: events.id });
-  if (res.length === 0) throw new NotFoundError("Event tidak ditemukan.");
+  const res = await db
+    .delete(events)
+    .where(versionPredicate(events, id, expectedVersion ?? "*"))
+    .returning({ id: events.id });
+  if (res.length === 0) {
+    return throwVersionedWriteMiss(events, id, expectedVersion, "Event tidak ditemukan.");
+  }
   await recordAudit({
     entityType: "event",
     entityId: id,

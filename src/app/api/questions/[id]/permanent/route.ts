@@ -19,12 +19,13 @@ export const DELETE = wrapRoute({
   rateLimit: { capacity: 5, refillPerSec: 0.1 },
   authz: {
     kind: "service",
-    enforcedIn: "src/lib/services/question-write.ts:hardDeleteQuestion",
+    enforcedIn: "src/lib/services/question-delete.ts:hardDeleteQuestion",
   },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ params, actor }) => {
-    await hardDeleteQuestion(params.id, actor);
+  ifMatch: true,
+  handler: async ({ params, actor, expectedVersion }) => {
+    await hardDeleteQuestion(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

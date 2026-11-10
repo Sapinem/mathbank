@@ -26,6 +26,7 @@ import {
 function makeTag(over: Partial<TagRow> = {}): TagRow {
   return {
     id: "tag-1",
+    version: 1,
     name: "HOTS",
     usageCount: 5,
     ...over,

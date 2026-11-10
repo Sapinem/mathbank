@@ -7,11 +7,14 @@
  * dan komponen klien — pelanggaran batas lapisan (AGENTS §9.1).
  */
 
+/** Modifier ukuran gambar opsional dari shortcode. */
+export type ImageSizeModifier = "sm" | "md" | "lg" | "full";
+
 /** Pisahkan teks menjadi potongan teks, rumus, gambar, & tabel. */
 export type Token =
   | { kind: "text"; value: string }
   | { kind: "math"; value: string; display: boolean }
-  | { kind: "img"; shortId: string }
+  | { kind: "img"; shortId: string; size?: ImageSizeModifier }
   | {
       /** Gambar markdown yang tidak bisa ditampilkan (mis. `corpus://`).
        * Hanya alt yang disimpan — URL sumber TIDAK PERNAH disimpan di token,
@@ -137,9 +140,10 @@ export function splitTableBlocks(input: string): Segment[] {
 }
 
 export function tokenizeMath(input: string): Token[] {
+  const normalized = input.replace(/\r\n|\r/g, "\n");
   const tokens: Token[] = [];
   // Blok tabel dipisah lebih dulu (sel boleh memuat rumus) — lihat splitTableBlocks.
-  for (const seg of splitTableBlocks(input)) {
+  for (const seg of splitTableBlocks(normalized)) {
     if (seg.kind === "table") {
       tokens.push(seg.token);
     } else {
@@ -202,18 +206,22 @@ function tokenizeMathText(input: string, tokens: Token[]): void {
  */
 function pushTextWithImages(tokens: Token[], text: string): void {
   if (!text) return;
-  // Satu pola gabungan: shortcode ATAU markdown gambar corpus://.
-  // Grup 1 = shortId shortcode, grup 2 = alt markdown corpus.
+  // Satu pola gabungan: shortcode (dengan modifier ukuran opsional) ATAU markdown gambar corpus://.
+  // Grup 1 = shortId shortcode, grup 2 = size modifier shortcode, grup 3 = alt markdown corpus.
   const combined =
-    /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})\s*\}\}|!\[([^\]]*)\]\(corpus:[^)]*(?:\)|$)/g;
+    /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})(?:\s*\|\s*(sm|md|lg|full))?\s*\}\}|!\[([^\]]*)\]\(corpus:[^)]*(?:\)|$)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = combined.exec(text)) !== null) {
     if (m.index > last) tokens.push({ kind: "text", value: text.slice(last, m.index) });
     if (m[1] !== undefined) {
-      tokens.push({ kind: "img", shortId: m[1] });
+      tokens.push({
+        kind: "img",
+        shortId: m[1],
+        ...(m[2] ? { size: m[2] as ImageSizeModifier } : {}),
+      });
     } else {
-      tokens.push({ kind: "unavailableImage", alt: (m[2] ?? "").trim() });
+      tokens.push({ kind: "unavailableImage", alt: (m[3] ?? "").trim() });
     }
     last = combined.lastIndex;
   }

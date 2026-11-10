@@ -1,6 +1,5 @@
 allowBuilds:
   esbuild: true
-  sharp: false
   unrs-resolver: false
 # M13 S8: buang paket deprecated `@esbuild-kit/esm-loader` (membawa esbuild@0.18.20
 # yang rentan, GHSA-67mh-4wv8-2f99). Drizzle-kit sendiri sudah memakai `tsx`;
@@ -12,6 +11,12 @@ overrides:
   # MAX_DEPTH=128 stack-exhaustion guard at code level, auditConfig acknowledges
   # the advisory as resolved. Mirrors mathcore commit f7239fb.
   braces: 3.0.3
+  # Gelombang 1 upgrade dependensi (2026-11-09): tutup GHSA vite (1 high,
+  # 3 moderate, 2 low; patched >=8.3.3). Vite adalah peer transitif —
+  # `pnpm update` tidak menyentuhnya.
+  # Catatan: deepmerge TIDAK di-override — 4.3.2 belum terbit (latest 4.3.1),
+  # jadi advisory low-nya belum bisa ditutup. Lihat rencana Gelombang 7.
+  vite: "^8.3.3"
 patchedDependencies:
   braces@3.0.3: patches/braces@3.0.3.patch
 auditConfig:
@@ -30,3 +35,16 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-x64-msvc@16.3.7'
   - eslint-config-next@16.3.7
   - next@16.3.7
+  - '@better-auth/api-key@1.7.14'
+  - '@better-auth/core@1.7.14'
+  - '@better-auth/drizzle-adapter@1.7.14'
+  - '@better-auth/kysely-adapter@1.7.14'
+  - '@better-auth/memory-adapter@1.7.14'
+  - '@better-auth/mongo-adapter@1.7.14'
+  - '@better-auth/prisma-adapter@1.7.14'
+  - '@better-auth/telemetry@1.7.14'
+  - better-auth@1.7.14
+  - '@shadcn/registry@0.2.1'
+  - lucide-react@1.62.0
+  - shadcn@4.23.0
+  - '@vitejs/plugin-react@6.3.0'

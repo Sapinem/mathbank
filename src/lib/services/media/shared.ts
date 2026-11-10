@@ -28,6 +28,8 @@ export interface RegisterMediaInput {
   contentHash: string;
   mimeType: string;
   fileSize: number;
+  width?: number | null;
+  height?: number | null;
   /** Peran gambar ini di soal. */
   role: MediaRole;
   /** Urutan kemunculan (0-based). */
@@ -68,6 +70,8 @@ export interface StoreAndRegisterInput {
 export interface UploadMediaResult extends RegisterMediaResult {
   /** `{{img:<shortId>}}` — siap ditempel ke markdown soal. */
   shortcode: string;
+  width?: number | null;
+  height?: number | null;
 }
 
 /** Kolom yang aman & berguna untuk daftar galeri. */
@@ -80,6 +84,8 @@ export const GALLERY_COLUMNS = {
   svgPath: mediaAssets.svgPath,
   mimeType: mediaAssets.mimeType,
   fileSize: mediaAssets.fileSize,
+  width: mediaAssets.width,
+  height: mediaAssets.height,
   sourceOrigin: mediaAssets.sourceOrigin,
   createdAt: mediaAssets.createdAt,
 } as const;

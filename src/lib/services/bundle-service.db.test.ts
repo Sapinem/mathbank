@@ -7,8 +7,10 @@ import {
   listBundles,
   updateBundle,
   archiveBundle,
+  deleteBundle,
   addItem,
   removeItem,
+  updateBundleItemSlot,
   reorderItems,
   listBundleItems,
   validateBundle,
@@ -16,6 +18,7 @@ import {
 } from "./bundle-service";
 import { createQuestion, deleteQuestion, getQuestionInternal } from "./question-service";
 import { ConflictError, NotFoundError, ForbiddenError } from "@/lib/auth/guards";
+import { PreconditionFailedError } from "@/lib/api/version";
 
 /**
  * Tes INTEGRASI paket soal (M7) — DB uji nyata.
@@ -35,10 +38,12 @@ async function clean() {
   const { db } = await import("@/lib/db");
   const { bundles, bundleItems } = await import("@/lib/db/schema/bundle");
   const { questions } = await import("@/lib/db/schema/question");
-  await db.delete(bundleItems);
-  await db.delete(bundles);
-  await db.update(questions).set({ parentId: null });
-  await db.delete(questions);
+  await db.transaction(async (tx) => {
+    await tx.delete(bundleItems);
+    await tx.delete(bundles);
+    await tx.update(questions).set({ parentId: null });
+    await tx.delete(questions);
+  });
 }
 
 async function mkQuestion(content = "Soal contoh $1+1$?", withKey = true) {
@@ -225,13 +230,49 @@ describe("createBundle / listBundles", () => {
     expect(copy.printConfig.twoColumnLayout).toBe(false);
   });
 
-  it("paket diarsip tak muncul di daftar", async () => {
+  it("paket diarsip tak muncul di daftar aktif, tapi bisa ditemukan dengan filter status archived", async () => {
     const b = await createBundle({ title: "Arsip", bundleType: "exam" }, admin);
     await archiveBundle(b.id, admin);
     const list = await listBundles(admin);
     expect(list.items.find((x) => x.id === b.id)).toBeUndefined();
-    // API-05: paket ter-soft-delete juga tak dihitung di `total`.
     expect(list.total).toBe(0);
+
+    // ADR-0025: paket terarsip berstatus 'archived', deletedAt tetap NULL, dan muncul di filter status 'archived'
+    const archivedList = await listBundles(admin, { status: "archived" });
+    expect(archivedList.items.find((x) => x.id === b.id)).toBeDefined();
+    expect(archivedList.total).toBe(1);
+
+    const row = await getBundle(b.id);
+    expect(row?.status).toBe("archived");
+
+    const [raw] = await sql`SELECT deleted_at FROM bundles WHERE id = ${b.id}`;
+    expect(raw.deleted_at).toBeNull();
+  });
+
+  it("archiveBundle memicu sync_question_grades dan mengeluarkan grade dari questions.grades", async () => {
+    const b = await createBundle({ title: "Paket Kelas 11", bundleType: "exam" }, admin);
+    await updateBundle(b.id, { grade: "11" }, admin);
+    const q = await mkQuestion("Soal Kelas 11");
+    await addItem(b.id, q.id, admin);
+
+    const [qBefore] = await sql`SELECT grades, grade FROM questions WHERE id = ${q.id}`;
+    expect(qBefore.grades).toEqual(["11"]);
+    expect(qBefore.grade).toBe("11");
+
+    await archiveBundle(b.id, admin);
+
+    const [qAfter] = await sql`SELECT grades, grade FROM questions WHERE id = ${q.id}`;
+    expect(qAfter.grades).toEqual([]);
+    expect(qAfter.grade).toBeNull();
+  });
+
+  it("ADR-0025: deleteBundle mengisi deletedAt (soft-delete)", async () => {
+    const b = await createBundle({ title: "Hapus", bundleType: "exam" }, admin);
+    await deleteBundle(b.id, admin);
+    const row = await getBundle(b.id);
+    expect(row).toBeNull();
+    const list = await listBundles(admin, { status: "archived" });
+    expect(list.items.find((x) => x.id === b.id)).toBeUndefined();
   });
 });
 
@@ -303,6 +344,63 @@ describe("item paket — urutan & jumlah", () => {
     const it = await addItem(b.id, q.id, admin);
     await removeItem(b.id, it.id, admin);
     expect((await listBundleItems(b.id)).length).toBe(0);
+  });
+
+  it("perbarui slot metadata (itemNumber, role, sectionName, notes)", async () => {
+    const b = await createBundle({ title: "Paket Slot Meta", bundleType: "exam" }, admin);
+    const q = await mkQuestion();
+    const it = await addItem(b.id, q.id, admin);
+
+    const updated = await updateBundleItemSlot(
+      b.id,
+      it.id,
+      {
+        itemNumber: "1a",
+        role: "stimulus",
+        sectionName: "Bagian I",
+        notes: "Wacana pengantar",
+      },
+      admin,
+    );
+
+    expect(updated.itemNumber).toBe("1a");
+    expect(updated.role).toBe("stimulus");
+    expect(updated.sectionName).toBe("Bagian I");
+    expect(updated.notes).toBe("Wacana pengantar");
+
+    const items = await listBundleItems(b.id);
+    expect(items[0]?.item.itemNumber).toBe("1a");
+    expect(items[0]?.item.role).toBe("stimulus");
+    expect(items[0]?.item.sectionName).toBe("Bagian I");
+    expect(items[0]?.item.notes).toBe("Wacana pengantar");
+  });
+
+  it("updateBundleItemSlot menolak paket tidak ada (404), item tidak ada (404), aktor tak berhak (403), dan versi basi (412)", async () => {
+    const b = await createBundle({ title: "Paket Slot Negatif", bundleType: "exam" }, admin);
+    const q = await mkQuestion();
+    const it = await addItem(b.id, q.id, admin);
+
+    const nonOwner: Actor = { id: "u-asing", name: "Asing", roles: ["teacher"], via: "session" };
+
+    // 1. Bundle tidak ada -> NotFoundError
+    await expect(
+      updateBundleItemSlot("00000000-0000-0000-0000-000000000000", it.id, { role: "stimulus" }, admin),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    // 2. Item tidak ada -> NotFoundError
+    await expect(
+      updateBundleItemSlot(b.id, "00000000-0000-0000-0000-000000000000", { role: "stimulus" }, admin),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    // 3. Aktor tidak berhak -> ForbiddenError
+    await expect(
+      updateBundleItemSlot(b.id, it.id, { role: "stimulus" }, nonOwner),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    // 4. Versi tidak cocok -> PreconditionFailedError
+    await expect(
+      updateBundleItemSlot(b.id, it.id, { role: "stimulus" }, admin, 9999),
+    ).rejects.toBeInstanceOf(PreconditionFailedError);
   });
 });
 

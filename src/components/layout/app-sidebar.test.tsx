@@ -58,4 +58,16 @@ describe("AppSidebar — Responsif & Navigasi", () => {
     );
     expect(screen.queryByLabelText("Tutup sidebar")).toBeNull();
   });
+
+  it("item aktif memiliki data-active dan kelas indikator aksen brand", () => {
+    render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    const activeBtn = screen.getByText("Bank Soal").closest("[data-sidebar='menu-button']");
+    expect(activeBtn).toBeInTheDocument();
+    expect(activeBtn).toHaveAttribute("data-active");
+    expect(activeBtn?.className).toContain("data-active:text-brand");
+  });
 });

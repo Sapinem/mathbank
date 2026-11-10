@@ -1,4 +1,4 @@
-import { uuidPk } from "./_columns";
+import { uuidPk, versionColumn } from "./_columns";
 import {
   pgTable,
   varchar,
@@ -30,6 +30,7 @@ export const events = pgTable(
       .notNull(),
     description: text("description"),
     isActive: boolean("is_active").default(true).notNull(),
+    version: versionColumn(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

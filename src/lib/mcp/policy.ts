@@ -9,7 +9,8 @@ import type { Actor } from "@/lib/auth/actor";
  * perubahan kebijakan cukup diubah di satu berkas.
  *
  * Aturan pokok untuk `agent` (L1):
- *  - Boleh: buat soal, cari, enrichment; `question:edit` & `taxonomy:manage` = **own**.
+ *  - Boleh: buat soal, cari, enrichment; `question:edit` = **own**,
+ *    `taxonomy:manage` = **yes** (ADR-0026: tabel taksonomi tak punya pemilik).
  *  - TIDAK boleh: bundle, hapus, ubah status (setReady/archive).
  *  - `answer_key` **tidak pernah** masuk keluaran tool (proyeksi aman).
  */
@@ -21,7 +22,7 @@ export const MCP_CAPABILITIES = {
   "question.edit": "question:edit", // `own` → wajib `ownerId`
   "question.flag": "question:flag",
   "taxonomy.read": "question:view", // baca topik/sumber = izin baca soal
-  "taxonomy.manage": "taxonomy:manage", // `own` untuk agent
+  "taxonomy.manage": "taxonomy:manage", // `yes` untuk agent (ADR-0026)
   "enrichment.run": "enrichment:run",
   "media.manage": "media:manage",
 } as const;

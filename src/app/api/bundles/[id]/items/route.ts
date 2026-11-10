@@ -39,11 +39,16 @@ export const POST = wrapRoute({
   },
   params: paramsSchema,
   body: postSchema,
-  handler: async ({ params, body, actor }) =>
-    addItem(params.id, body.questionId, actor, {
-      role: body.role,
-      sectionName: body.sectionName,
-    }),
+  ifMatch: true,
+  etagFrom: (res: { bundleVersion?: number }) => res.bundleVersion,
+  handler: async ({ params, body, actor, expectedVersion }) =>
+    addItem(
+      params.id,
+      body.questionId,
+      actor,
+      { role: body.role, sectionName: body.sectionName },
+      expectedVersion,
+    ),
 });
 
 /** PUT /api/bundles/[id]/items — susun ulang urutan item. */
@@ -56,8 +61,10 @@ export const PUT = wrapRoute({
   },
   params: paramsSchema,
   body: putSchema,
-  handler: async ({ params, body, actor }) => {
-    await reorderItems(params.id, body.itemIds, actor);
-    return { ok: true };
+  ifMatch: true,
+  etagFrom: (res: { bundleVersion?: number }) => res.bundleVersion,
+  handler: async ({ params, body, actor, expectedVersion }) => {
+    const res = await reorderItems(params.id, body.itemIds, actor, expectedVersion);
+    return { ok: true, bundleVersion: res.bundleVersion };
   },
 });

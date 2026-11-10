@@ -1,6 +1,25 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import postgres from "postgres";
 import type { Actor } from "@/lib/auth/actor";
+
+vi.mock("@/lib/embedding/bge-m3", () => ({
+  embedText: vi.fn(async () => ({
+    ok: true,
+    vector: Array.from({ length: 1024 }, () => 0.01),
+  })),
+  embedTexts: vi.fn(),
+  embeddingModel: () => "bge-m3",
+  EMBEDDING_DIM: 1024,
+}));
+vi.mock("@/lib/ai/client", () => ({
+  chatJson: vi.fn(async () => ({
+    ok: true,
+    data: { difficulty: 3, cognitiveLevel: "apply", topics: [], tags: [] },
+  })),
+  chat: vi.fn(),
+  listModels: vi.fn(),
+  health: vi.fn(),
+}));
 
 /**
  * Tes INTEGRASI MCP (M11) — server nyata + DB uji, lewat transport in-memory.
@@ -193,12 +212,20 @@ describe("M11 — MCP tools", () => {
     expect(c.isError).toBe(false);
     const qid = c.parsed.id as string;
 
-    // 2. Agen mengupdate soal miliknya
+    // 2. ADR-0030: agen WAJIB membaca versi dulu (tanpa versi = timpa senyap).
+    const read = await call(client, "get_question", { id: qid });
+    expect(read.isError).toBe(false);
+    const version = read.parsed.version as number;
+    expect(typeof version).toBe("number");
+
+    // 3. Agen mengupdate soal miliknya dengan versi yang benar
     const u = await call(client, "update_question", {
       id: qid,
+      version,
       contentMarkdown: "Soal draf diperbarui oleh agen.",
     });
     expect(u.isError).toBe(false);
+    expect(u.parsed.version).toBe(version + 1);
 
     // 3. Update soal milik orang lain -> ditolak (own)
     const rows = await sql`
@@ -208,9 +235,95 @@ describe("M11 — MCP tools", () => {
     const otherId = rows[0].id as string;
     const uOther = await call(client, "update_question", {
       id: otherId,
+      version: 1,
       contentMarkdown: "Coba ganti soal orang lain.",
     });
     expect(uOther.isError).toBe(true);
+  });
+
+  it("ADR-0030: mutasi soal TANPA version ditolak dan tidak mengubah isi", async () => {
+    const c = await call(client, "create_question", {
+      questionType: "single_choice",
+      difficulty: 2,
+      cognitiveLevel: "remember",
+      grade: "SMA-10",
+      contentMarkdown: "Soal tanpa versi.",
+      topicIds: [],
+    });
+    expect(c.isError).toBe(false);
+    const qid = c.parsed.id as string;
+
+    const u = await call(client, "update_question", {
+      id: qid,
+      contentMarkdown: "Percobaan menimpa tanpa versi.",
+    });
+    expect(u.isError).toBe(true);
+    expect(u.parsed.code).toBe("PRECONDITION_REQUIRED");
+
+    const f = await call(client, "flag_question", { id: qid, flagged: true });
+    expect(f.isError).toBe(true);
+    expect(f.parsed.code).toBe("PRECONDITION_REQUIRED");
+
+    // Bukti tidak ada yang berubah: isi maupun status flag tetap.
+    const read = await call(client, "get_question", { id: qid });
+    expect(read.parsed.contentMarkdown).toBe("Soal tanpa versi.");
+    expect(read.parsed.isFlagged).toBe(false);
+  });
+
+  it("create_question dan update_question mendukung array grades (ADR-0024)", async () => {
+    const c = await call(client, "create_question", {
+      questionType: "single_choice",
+      difficulty: 3,
+      cognitiveLevel: "apply",
+      grades: ["SMA-10", "SMA-11"],
+      contentMarkdown: "Soal multi-jenjang.",
+      topicIds: [],
+    });
+    expect(c.isError).toBe(false);
+    const id = c.parsed.id as string;
+
+    const g = await call(client, "get_question", { id });
+    expect(g.isError).toBe(false);
+    expect(g.parsed.grades).toEqual(["SMA-10", "SMA-11"]);
+    const version = g.parsed.version as number;
+
+    const u = await call(client, "update_question", {
+      id,
+      version,
+      grades: ["SMA-11", "SMA-12"],
+    });
+    expect(u.isError).toBe(false);
+
+    const g2 = await call(client, "get_question", { id });
+    expect(g2.parsed.grades).toEqual(["SMA-11", "SMA-12"]);
+  });
+
+  it("embed_questions via MCP oleh agent sukses memproses soal guru (enrichment:run)", async () => {
+    const rows = await sql`
+      INSERT INTO questions (question_type, difficulty, cognitive_level, grade, content_markdown, author_id, status)
+      VALUES ('essay', 3, 'apply', 'SMA-11', 'Soal guru untuk di-embed agen.', 'guru-lain', 'draft')
+      RETURNING id`;
+    const id = rows[0].id as string;
+
+    const r = await call(client, "embed_questions", { questionIds: [id], force: true });
+    expect(r.isError).toBe(false);
+    expect((r.parsed as { ok: number }).ok).toBe(1);
+  });
+
+  it("enrich_question dengan versi tidak cocok ditolak (PRECONDITION_FAILED)", async () => {
+    const c = await call(client, "create_question", {
+      questionType: "single_choice",
+      difficulty: 2,
+      cognitiveLevel: "remember",
+      grade: "SMA-10",
+      contentMarkdown: "Soal draf enrich.",
+      topicIds: [],
+    });
+    const id = c.parsed.id as string;
+
+    const r = await call(client, "enrich_question", { questionId: id, version: 9999 });
+    expect(r.isError).toBe(true);
+    expect(r.parsed.code).toBe("PRECONDITION_FAILED");
   });
 
   it("ARC-06: API key menyempit → tool di luar izin TIDAK didaftarkan", async () => {

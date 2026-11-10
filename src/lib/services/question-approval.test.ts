@@ -27,7 +27,11 @@ const tx = vi.hoisted(() => ({
     }),
   }),
   update: () => ({
-    set: () => ({ where: async () => undefined }),
+    set: () => ({
+      where: () => ({
+        returning: async () => [{ id: "q-1" }],
+      }),
+    }),
   }),
   delete: () => ({ where: async () => undefined }),
   select: () => ({

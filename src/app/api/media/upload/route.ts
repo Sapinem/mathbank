@@ -70,6 +70,8 @@ export const POST = wrapRoute({
       shortId: res.shortId,
       shortcode: res.shortcode,
       reused: res.reused,
+      width: res.width ?? null,
+      height: res.height ?? null,
     };
   },
 });

@@ -1,14 +1,15 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { questions } from "@/lib/db/schema/question";
 import { solutions } from "@/lib/db/schema/solution";
-import { bundleItems } from "@/lib/db/schema/bundle";
 import { questionTopics, questionTags } from "@/lib/db/schema/taxonomy";
-import { isQuestionUsedInBundles } from "./bundle-service";
 import { contentHash } from "@/lib/ingest/hash";
 import { findQuestionByContentHash } from "@/lib/ingest/dedup";
 import { assertCan, NotFoundError, ConflictError } from "@/lib/auth/guards";
 import { isUniqueViolation } from "@/lib/db/errors";
+import { versionPredicate } from "@/lib/db/optimistic";
+import { assertVersionMatches } from "@/lib/api/version";
+import { throwVersionedWriteMiss } from "./versioned";
 import type { Actor } from "@/lib/auth/actor";
 import { recordAudit } from "./audit";
 import { getQuestion, getQuestionInternal, type PublicQuestion } from "./question-read";
@@ -18,6 +19,9 @@ import type {
   CreateQuestionInput,
   UpdateQuestionInput,
 } from "@/lib/contracts/question";
+
+export { setQuestionFlag } from "./question-flag";
+export { deleteQuestion, hardDeleteQuestion } from "./question-delete";
 
 /**
  * Tulis soal (M14 — pecahan `question-service.ts`).
@@ -110,7 +114,8 @@ export async function createQuestion(
           questionType: input.questionType,
           difficulty: input.difficulty,
           cognitiveLevel: input.cognitiveLevel,
-          grade: input.grade,
+          grade: input.grade ?? (input.grades?.length ? input.grades[0] : null),
+          grades: input.grades?.length ? input.grades : (input.grade ? [input.grade] : []),
           contentMarkdown: input.contentMarkdown,
           // Hash konten (ADR-0012) — dedup lintas-sumber.
           contentHash: calculatedHash,
@@ -183,12 +188,21 @@ export async function updateQuestion(
   id: string,
   input: UpdateQuestionInput,
   actor: Actor,
+  /**
+   * Versi yang diharapkan (ADR-0030). `"*"` atau `undefined` = tanpa
+   * prakondisi, untuk pemanggil internal yang bukan request HTTP.
+   */
+  expectedVersion?: number | "*",
 ): Promise<PublicQuestion> {
   const existing = await getQuestionInternal(id);
   if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
 
   // Izin: reviewer/admin boleh semua; teacher hanya miliknya sendiri
   assertCan(actor, "question:edit", { ownerId: existing.authorId });
+
+  // Prakondisi SEBELUM aturan bisnis: bila salinan klien sudah basi, apa pun
+  // yang ia kirim akan menimpa perubahan orang lain — tolak lebih awal.
+  if (expectedVersion !== undefined) assertVersionMatches(existing.version, expectedVersion);
 
   // Fase 1 — status lock: isi/kunci soal `ready`/`archived` tidak boleh
   // diubah diam-diam tanpa penelaahan ulang. Ditolak (bukan auto-downgrade)
@@ -267,6 +281,7 @@ export async function updateQuestion(
       if (fields.difficulty !== undefined) patch.difficulty = fields.difficulty;
       if (fields.cognitiveLevel !== undefined) patch.cognitiveLevel = fields.cognitiveLevel;
       if (fields.grade !== undefined) patch.grade = fields.grade;
+      if (fields.grades !== undefined) patch.grades = fields.grades;
       if (fields.contentMarkdown !== undefined) patch.contentMarkdown = fields.contentMarkdown;
       if (gated) {
         patch.dataPayload = gated.dataPayload;
@@ -301,8 +316,21 @@ export async function updateQuestion(
         // Pembahasan utama sudah masuk `answer_key.explanationMarkdown` lewat gerbang.
       }
 
-      if (Object.keys(patch).length) {
-        await tx.update(questions).set(patch).where(eq(questions.id, id));
+      // ADR-0030: `version` masuk WHERE, bukan dibandingkan di memori —
+      // pemeriksaan dan penulisan jadi satu operasi atomik.
+      //
+      // Baris tetap disentuh walau `patch` kosong (mis. hanya topicIds yang
+      // berubah) supaya versi ikut naik; kalau tidak, ETag akan berbohong
+      // dengan bilang "belum berubah" padahal isinya sudah berbeda.
+      if (Object.keys(patch).length || expectedVersion !== undefined) {
+        const rows = await tx
+          .update(questions)
+          .set(Object.keys(patch).length ? patch : { version: sql`${questions.version}` })
+          .where(versionPredicate(questions, id, expectedVersion ?? "*"))
+          .returning({ id: questions.id });
+        if (rows.length === 0) {
+          return throwVersionedWriteMiss(questions, id, expectedVersion, "Soal tidak ditemukan.", { dbOrTx: tx });
+        }
       }
       if (topicIds) {
         await tx.delete(questionTopics).where(eq(questionTopics.questionId, id));
@@ -340,122 +368,4 @@ export async function updateQuestion(
   const updated = await getQuestion(id, { viewer: actor });
   if (!updated) throw new NotFoundError();
   return updated;
-}
-
-/** Tandai/lepas tanda masalah kualitas. */
-export async function setQuestionFlag(
-  id: string,
-  flagged: boolean,
-  notes: string | null,
-  actor: Actor,
-): Promise<PublicQuestion> {
-  const existing = await getQuestionInternal(id);
-  if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
-  assertCan(actor, "question:flag", { ownerId: existing.authorId });
-
-  await db
-    .update(questions)
-    .set({ isFlagged: flagged, flagNotes: flagged ? notes : null })
-    .where(eq(questions.id, id));
-
-  await recordAudit({
-    entityType: "question",
-    entityId: id,
-    action: "update",
-    actor,
-    changeSummary: flagged ? "Soal ditandai" : "Tanda dilepas",
-  });
-
-  const updated = await getQuestion(id, { viewer: actor });
-  if (!updated) throw new NotFoundError();
-  return updated;
-}
-
-/** Hapus lunak (soft delete). */
-export async function deleteQuestion(id: string, actor: Actor): Promise<void> {
-  const existing = await getQuestionInternal(id);
-  if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
-
-  assertCan(actor, "question:delete", { ownerId: existing.authorId });
-
-  // RESTRICT: soal yang dipakai paket AKTIF (M7) tak boleh dihapus.
-  // T-M7-3: paket TERARSIP tidak memblokir — jika tidak, soal mustahil dihapus
-  // setelah paket yang memakainya diarsipkan (dead-end).
-  // MAT-39: koleksi dihapus — `bundles` kini satu-satunya wadah (origin/bundle_type).
-  if (await isQuestionUsedInBundles(id)) {
-    throw new ConflictError(
-      "Soal ini dipakai di paket soal — keluarkan dari paket dulu.",
-    );
-  }
-
-  await db
-    .update(questions)
-    .set({ deletedAt: new Date() })
-    .where(eq(questions.id, id));
-
-  await recordAudit({
-    entityType: "question",
-    entityId: id,
-    action: "delete",
-    actor,
-    changeSummary: "Soal dihapus (lunak)",
-  });
-}
-
-/**
- * Hapus PERMANEN (hard delete) — buang baris dari DB.
- *
- * **T-M4-4:** izin `question:hardDelete` (matriks: admin `yes`, guru/penelaah `own`)
- * kini benar-benar dipakai. Aturan:
- * - **Hanya** soal yang sudah **soft-deleted** (`deletedAt` terisi) boleh dihapus
- *   permanen — cegah penghapusan tak sengaja atas soal aktif.
- * - RESTRICT: soal yang dipakai paket atau koleksi tetap dilarang (FK `restrict` juga menjaga).
- * - Anak (opsi/solusi/topik/label/media) di-CASCADE otomatis oleh DB.
- */
-export async function hardDeleteQuestion(id: string, actor: Actor): Promise<void> {
-  // includeDeleted: soal yang ingin dihapus permanen PASTI ber-deletedAt (sudah soft-delete).
-  const existing = await getQuestionInternal(id, { includeDeleted: true });
-  if (!existing) throw new NotFoundError("Soal tidak ditemukan.");
-
-  assertCan(actor, "question:hardDelete", { ownerId: existing.authorId });
-
-  if (!existing.deletedAt) {
-    throw new ConflictError(
-      "Hapus permanen hanya untuk soal yang sudah dihapus (soft-delete).",
-    );
-  }
-
-  // T-M7-3: cegah pelanggaran FK restrict pada relasi anak & paket soal.
-  const [child] = await db
-    .select({ id: questions.id })
-    .from(questions)
-    .where(eq(questions.parentId, id))
-    .limit(1);
-  if (child) {
-    throw new ConflictError(
-      "Soal ini memiliki butir turunan (stimulus beranak) — hapus soal turunan lebih dulu.",
-    );
-  }
-
-  // RESTRICT: soal yang dipakai paket AKTIF tak boleh dihapus (Constraint #46).
-  if (await isQuestionUsedInBundles(id)) {
-    throw new ConflictError(
-      "Soal ini dipakai di paket soal aktif — keluarkan dari paket dulu.",
-    );
-  }
-
-  // Atomik: bersihkan referensi item dari paket yang sudah terarsip agar foreign key RESTRICT tidak gagal,
-  // lalu hapus soal secara permanen.
-  await db.transaction(async (tx) => {
-    await tx.delete(bundleItems).where(eq(bundleItems.questionId, id));
-    await tx.delete(questions).where(eq(questions.id, id));
-  });
-
-  await recordAudit({
-    entityType: "question",
-    entityId: id,
-    action: "delete",
-    actor,
-    changeSummary: "Soal dihapus PERMANEN",
-  });
 }

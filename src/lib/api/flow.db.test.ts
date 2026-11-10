@@ -44,10 +44,22 @@ const reviewer: Actor = {
 };
 const agent: Actor = { id: "flow-agent", name: "Agen", roles: ["agent"], via: "session" };
 
-function req(method: string, path: string, body?: unknown): Request {
+/**
+ * ADR-0030: setiap mutasi baris WAJIB membawa `If-Match`. Baris yang baru
+ * di-seed selalu ber-versi 1; uji yang mengubah dua kali memberi versinya sendiri
+ * lewat argumen `headers`.
+ */
+function req(
+  method: string,
+  path: string,
+  body?: unknown,
+  headers: Record<string, string> = {},
+): Request {
+  const base: Record<string, string> = { "if-match": '"1"' };
+  if (body) base["content-type"] = "application/json";
   return new Request(`http://localhost:3000${path}`, {
     method,
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers: { ...base, ...headers },
     body: body ? JSON.stringify(body) : undefined,
   });
 }

@@ -51,6 +51,11 @@ CREATE INDEX IF NOT EXISTS idx_questions_listing
   ON questions (status, created_at DESC)
   WHERE deleted_at IS NULL;
 
+-- ADR-0025: Default view daftar soal menyaring status <> 'archived'
+CREATE INDEX IF NOT EXISTS idx_questions_active_listing
+  ON questions (created_at DESC)
+  WHERE deleted_at IS NULL AND status <> 'archived';
+
 -- Statistik baru agar planner langsung memakai indeks di atas.
 ANALYZE questions;
 

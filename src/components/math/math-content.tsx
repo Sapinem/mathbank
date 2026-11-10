@@ -2,7 +2,13 @@
 
 import katex from "katex";
 import { cn } from "@/lib/utils";
-import { tokenizeMath, type Token } from "@/lib/math/tokenize";
+import { tokenizeMath, type Token, type ImageSizeModifier } from "@/lib/math/tokenize";
+
+/** Proyeksi metadata dimensi media untuk MathContent. */
+export interface MathContentMediaItem {
+  width?: number | null;
+  height?: number | null;
+}
 
 /**
  * Renderer matematika + markdown ringan (L3/L6).
@@ -53,7 +59,15 @@ function escapeHtml(s: string): string {
 
 /** Inline markdown ringan: **tebal**, *miring*, `kode`, dan baris baru. */
 function renderText(text: string): string {
-  return escapeHtml(text)
+  // Normalisasi baris kosong berlebihan:
+  // 1. Ganti CRLF / CR -> LF.
+  // 2. Runtunan 3+ baris baru (termasuk baris dengan spasi/tab) diciutkan menjadi
+  //    maksimal 2 baris baru (\n\n = jeda paragraf biasa).
+  const collapsed = text
+    .replace(/\r\n|\r/g, "\n")
+    .replace(/\n[ \t]*(?:\n[ \t]*)+/g, "\n\n");
+
+  return escapeHtml(collapsed)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, '<code class="font-mono text-xs bg-transparent px-1 py-0.5 rounded">$1</code>')
@@ -128,10 +142,12 @@ export function MathContent({
   content,
   className,
   noScroll = false,
+  mediaLookup,
 }: {
   content: string;
   className?: string;
   noScroll?: boolean;
+  mediaLookup?: Record<string, MathContentMediaItem>;
 }) {
   const tokens = tokenizeMath(content);
   return (
@@ -145,22 +161,36 @@ export function MathContent({
       )}
     >
       {tokens.map((t, i) => (
-        <TokenView key={i} token={t} />
+        <TokenView key={i} token={t} mediaLookup={mediaLookup} />
       ))}
     </span>
   );
 }
 
 /** Render satu token (teks / rumus / gambar / tabel). Dipakai juga oleh sel tabel. */
-function TokenView({ token }: { token: Token }) {
+function TokenView({
+  token,
+  mediaLookup,
+}: {
+  token: Token;
+  mediaLookup?: Record<string, MathContentMediaItem>;
+}) {
   if (token.kind === "img") {
-    return <MediaImage shortId={token.shortId} />;
+    const meta = mediaLookup?.[token.shortId];
+    return (
+      <MediaImage
+        shortId={token.shortId}
+        size={token.size}
+        width={meta?.width}
+        height={meta?.height}
+      />
+    );
   }
   if (token.kind === "unavailableImage") {
     return <UnavailableImage alt={token.alt} />;
   }
   if (token.kind === "table") {
-    return <MarkdownTable token={token} />;
+    return <MarkdownTable token={token} mediaLookup={mediaLookup} />;
   }
   if (token.kind === "text") {
     return <span dangerouslySetInnerHTML={{ __html: renderText(token.value) }} />;
@@ -186,7 +216,13 @@ function TokenView({ token }: { token: Token }) {
  * lebih lebar dari layar, dan inilah satu-satunya tempat gulir horizontal yang
  * tepat — tanpa mengganggu tata letak teks di sekitarnya.
  */
-function MarkdownTable({ token }: { token: Extract<Token, { kind: "table" }> }) {
+function MarkdownTable({
+  token,
+  mediaLookup,
+}: {
+  token: Extract<Token, { kind: "table" }>;
+  mediaLookup?: Record<string, MathContentMediaItem>;
+}) {
   const alignClass = (a: "left" | "center" | "right" | null) =>
     a === "center" ? "text-center" : a === "right" ? "text-right" : "text-left";
   return (
@@ -202,7 +238,7 @@ function MarkdownTable({ token }: { token: Extract<Token, { kind: "table" }> }) 
                   alignClass(token.align[ci] ?? null),
                 )}
               >
-                <CellContent value={cell} />
+                <CellContent value={cell} mediaLookup={mediaLookup} />
               </th>
             ))}
           </tr>
@@ -218,7 +254,7 @@ function MarkdownTable({ token }: { token: Extract<Token, { kind: "table" }> }) 
                     alignClass(token.align[ci] ?? null),
                   )}
                 >
-                  <CellContent value={cell} />
+                  <CellContent value={cell} mediaLookup={mediaLookup} />
                 </td>
               ))}
             </tr>
@@ -230,12 +266,18 @@ function MarkdownTable({ token }: { token: Extract<Token, { kind: "table" }> }) 
 }
 
 /** Isi satu sel tabel — tokenisasi ulang agar rumus/gambar ikut ter-render. */
-function CellContent({ value }: { value: string }) {
+function CellContent({
+  value,
+  mediaLookup,
+}: {
+  value: string;
+  mediaLookup?: Record<string, MathContentMediaItem>;
+}) {
   const tokens = tokenizeMath(value);
   return (
     <>
       {tokens.map((t, i) => (
-        <TokenView key={i} token={t} />
+        <TokenView key={i} token={t} mediaLookup={mediaLookup} />
       ))}
     </>
   );
@@ -270,30 +312,61 @@ function UnavailableImage({ alt }: { alt: string }) {
 }
 
 /**
- * Gambar dari shortcode `{{img:<shortId>}}`.
+ * Gambar dari shortcode `{{img:<shortId>}}` atau `{{img:<shortId>|<size>}}`.
  *
- * Berkas disajikan lewat `/img/{shortId}` (route yang menerjemahkan short_id →
- * berkas). Shortcode `{{img:…}}` TIDAK membawa dimensi, jadi jangan menebak
- * rasio (mis. 4:3): `aspect-ratio` memaksa kotak yang salah untuk gambar
- * non-4:3 dan `width` menarik gambar kecil ke atas (blur). Biarkan browser
- * memakai rasio asli berkas.
- * Bila gagal dimuat, teks pengganti ditampilkan agar soal tetap terbaca
- * dan guru tahu ada gambar yang bermasalah — bukan ruang kosong tanpa penjelasan.
+ * Berkas disajikan lewat `/img/{shortId}` (route yang menerjemahkan short_id → berkas).
+ * Secara default dirender sebagai blok terpusat (center) tanpa border kartu abu-abu kaku.
+ * Bila modifier `size` bernilai "sm", dirender inline-block agar pas di baris teks/opsi.
+ * Bila dimensi (width/height) disediakan, dipasang atribut width, height, dan style.aspectRatio
+ * guna mengeliminasi CLS (Cumulative Layout Shift).
  */
-function MediaImage({ shortId, alt }: { shortId: string; alt?: string }) {
+export function MediaImage({
+  shortId,
+  alt,
+  size = "md",
+  width,
+  height,
+}: {
+  shortId: string;
+  alt?: string;
+  size?: ImageSizeModifier;
+  width?: number | null;
+  height?: number | null;
+}) {
+  const effectiveSize = size || "md";
+  const isSmall = effectiveSize === "sm";
+
   return (
-    <span className="inline-block align-middle">
+    <span
+      data-slot="media-image"
+      data-size={effectiveSize}
+      className={cn(
+        isSmall
+          ? "my-1 inline-block text-left align-middle"
+          : "my-3 block text-center clear-both",
+      )}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element -- media dari storage lokal (bukan CDN); next/image butuh loader khusus. */}
       <img
         src={`/img/${shortId}`}
         alt={alt || `Gambar ${shortId}`}
         loading="lazy"
-        className="my-2 inline-block max-h-96 max-w-full rounded border border-border"
+        decoding="async"
+        width={width ?? undefined}
+        height={height ?? undefined}
+        style={width && height ? { aspectRatio: `${width} / ${height}` } : undefined}
+        className={cn(
+          "inline-block h-auto object-contain",
+          effectiveSize === "sm" && "max-h-28 max-w-[200px]",
+          effectiveSize === "md" && "max-h-80 max-w-full",
+          effectiveSize === "lg" && "max-h-[28rem] max-w-full",
+          effectiveSize === "full" && "max-h-[36rem] w-full",
+        )}
         onError={(e) => {
           const el = e.currentTarget;
           el.style.display = "none";
           const fallback = el.nextElementSibling as HTMLElement | null;
-          if (fallback) fallback.style.display = "inline";
+          if (fallback) fallback.style.display = isSmall ? "inline" : "inline-block";
         }}
       />
       <span className="hidden rounded border border-border bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">

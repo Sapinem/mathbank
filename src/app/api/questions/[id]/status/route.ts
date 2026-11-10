@@ -23,6 +23,7 @@ export const PATCH = wrapRoute({
   },
   params: paramsSchema,
   body: changeStatusSchema,
-  handler: async ({ params, body, actor }) =>
-    changeQuestionStatus(params.id, body.status, actor, body.notes),
+  ifMatch: true,
+  handler: async ({ params, body, actor, expectedVersion }) =>
+    changeQuestionStatus(params.id, body.status, actor, body.notes, { expectedVersion }),
 });

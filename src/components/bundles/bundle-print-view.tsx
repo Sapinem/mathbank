@@ -3,58 +3,56 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Printer } from "lucide-react";
+import {
+  ArrowLeft,
+  Printer,
+  SlidersHorizontal,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/states";
-import { MathContent } from "@/components/math/math-content";
-import { readMatchingPayload } from "@/components/questions/matching-view";
-import {
-  matchingKeySummary,
-  matchingResponseLabel,
-  premiseLabel,
-  responseLabel,
-} from "@/components/questions/matching-labels";
-import { readMatrixGridPayload } from "@/components/questions/matrix-grid-view";
-import { isOptionBased, correctLabelsOf } from "@/lib/contracts/question";
-import { useBundle } from "@/lib/hooks/use-bundles";
-import type { BundleItemView } from "@/lib/hooks/use-bundles";
+import { useBundle, useUpdateBundle } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
+import { getPrintTheme, DEFAULT_THEME_ID } from "@/lib/print/themes/registry";
+import { PrintWatermark } from "./print-watermark";
+import { BundlePrintSettingsDrawer } from "./print/bundle-print-settings-drawer";
+import { BundlePrintHeader } from "./print/bundle-print-header";
+import { BundlePrintFooter } from "./print/bundle-print-footer";
+import { PrintQuestionItem } from "./print/print-question-item";
+import { PrintAnswerKeySheet } from "./print/print-answer-key-sheet";
+import { PrintExplanationSheet } from "./print/print-explanation-sheet";
+import { PrintAnswerSheet } from "./print/print-answer-sheet";
+import { explanationOf } from "./print/item-helpers";
 import { cn } from "@/lib/utils";
 
 /**
- * Tampilan cetak paket soal (MAT-40) — standar cetak A4 / PDF.
+ * Tampilan cetak paket soal (MAT-40 / Pilar 4) - standar cetak A4 / PDF.
  *
- * Alur: pilih opsi cetak (kolom opsi, kunci, lembar jawaban, pembahasan) →
- * `window.print()`. Gaya `@media print` ada di `src/styles/print.css`; hanya
- * `.print-sheet` yang tampil saat mencetak (shell aplikasi disembunyikan).
+ * Alur:
+ *  - Layar utama menampilkan naskah A4 secara WYSIWYG (bersih & fokus).
+ *  - Bilah atas sticky memuat navigasi kembali, judul naskah, tombol aksi cetak,
+ *    dan tombol pembuka Sliding Panel (Sheet Drawer).
+ *  - Pengaturan cetak (kolom naskah, opsi, kunci, pembahasan, tinggi coret-coretan)
+ *    dikelola di dalam Sliding Panel kanan (`@/components/ui/sheet`).
+ *  - Pengaturan dapat disimpan permanen sebagai baku paket ke database (`useUpdateBundle`).
+ *  - Ruang coret-coretan siswa (scratch space) 100% kosong tanpa keterangan teks,
+ *    dan otomatis menyusut jika pembahasan di bawah soal aktif.
+ *  - Running header judul naskah disuntikkan via CSS Custom Property
+ *    (`--print-bundle-title`) agar tampil di Chromium (menggantikan `string-set` yang diabaikan Blink).
  *
- * MAT-40 peningkatan:
- *  - Layout A4 standar (`@page { size: A4; margin: 15mm; }`).
- *  - `page-break-inside: avoid` pada tiap butir soal.
- *  - Opsi jawaban (A–E) adaptif 1 atau 2 kolom.
- *  - KaTeX rendered tajam dan terisolasi (`.katex-inline`).
- *  - Opsi cetak lembar kunci jawaban DAN pembahasan terpisah.
- *  - Touch targets 44px (WCAG 2.2 AA) pada semua tombol aksi.
- *
- * Catatan akses: kunci hanya muncul bila API mengirimkannya (aktor berhak —
- * `canSeeAnswerKey`). Bila tak ada, opsi "Tampilkan kunci" dinonaktifkan.
- *
- * Fase 4 — penyatuan dengan detail: matriks/matching cetak memakai reader
- * payload dan helper label yang SAMA dengan komponen detail
- * (`readMatrixGridPayload`, `readMatchingPayload`, `matching-labels.ts`),
- * sehingga penomoran baris, label premis/respons, dan pemetaan kunci tidak
- * bisa lagi berbeda antara layar dan kertas. DOM-nya sengaja tetap berbeda
- * (tabel di kertas vs daftar di layar): tabel lebih hemat tempat di kolom
- * cetak sempit, sementara daftar detail lebih mudah dibaca di layar.
- * Kunci matching cetak kini menampilkan LABEL respons (mis. "2"), bukan
- * ID respons mentah (mis. "r1").
+ * Komposisi (sejak pemecahan 717 → 526 baris):
+ *  - berkas ini memegang STATE sesi cetak + bilah atas + kanvas naskah;
+ *  - satu butir soal → `print/print-question-item.tsx`;
+ *  - lembar kunci/pembahasan/jawaban → `print/print-*-sheet.tsx`;
+ *  - pembaca data soal → `print/item-helpers.ts`.
+ * Pembagian ini sengaja: komponen turunan tidak menerima setter, hanya nilai
+ * jadi, sehingga tidak ada dua tempat yang bisa mengubah state cetak.
  */
 
-type ColumnMode = "1" | "2";
-/** Cara kunci jawaban disajikan. */
-type KeyMode = "hidden" | "inline" | "separate";
-/** Cara pembahasan disajikan (Axiom 3-Way Mode). */
-type ExplanationMode = "none" | "inline" | "end";
+import type { ColumnMode, KeyMode, ExplanationMode } from "./print/types";
+export type { ColumnMode, KeyMode, ExplanationMode };
 
 /**
  * Nilai `size` CSS untuk tiap `pageSize`. `null` = pakai `@page` bawaan
@@ -66,31 +64,44 @@ const PRINT_PAGE_SIZE_CSS: Record<NonNullable<BundlePrintConfig["pageSize"]>, st
   Letter: "Letter",
 };
 
-/** Baca label opsi benar dari `answerKey` (bila ada). */
-function itemCorrectLabels(item: BundleItemView): string[] {
-  return correctLabelsOf(item.question.answerKey);
-}
+/** Pilihan ukuran ruang coret-coretan (cm). */
+const ANSWER_SPACE_OPTIONS = [0, 2, 3, 4, 5] as const;
 
-/** Baca teks pembahasan dari `answerKey` (bila ada). */
-function explanationOf(item: BundleItemView): string | null {
-  const key = item.question.answerKey;
-  if (!key) return null;
-  const exp = key.explanation ?? (key as Record<string, unknown>).explanationMarkdown;
-  if (typeof exp === "string" && exp.trim().length > 0) return exp.trim();
-  return null;
-}
+/** Preset palet warna brand institusi (Axiom Multi-brand parity). */
+const BRAND_PRESET_COLORS = [
+  { label: "Biru MathBank", value: "#0158ca" },
+  { label: "Hijau Zamrud", value: "#0b6b3a" },
+  { label: "Hitam Formal", value: "#111111" },
+] as const;
 
-export function BundlePrintView() {
+export function BundlePrintView({
+  initialSettingsOpen,
+}: {
+  initialSettingsOpen?: boolean;
+} = {}) {
   const params = useParams<{ id: string }>();
   const bundleId = params.id;
   const { data: bundle, isPending, isError, error } = useBundle(bundleId);
+  const updateBundle = useUpdateBundle(bundleId, bundle?.version);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(initialSettingsOpen ?? false);
 
   const [columns, setColumns] = useState<ColumnMode>("1");
-  // Kolom NASKAH (bukan opsi) — default dari printConfig, bisa ditimpa sesi ini.
+  // Kolom NASKAH (bukan opsi) - default dari printConfig, bisa ditimpa sesi ini.
   const [bodyColumns, setBodyColumns] = useState<ColumnMode | null>(null);
   const [keyModeOverride, setKeyModeOverride] = useState<KeyMode | null>(null);
   const [includeAnswerSheet, setIncludeAnswerSheet] = useState(true);
   const [explanationModeOverride, setExplanationModeOverride] = useState<ExplanationMode | null>(null);
+  const [answerSpaceCmOverride, setAnswerSpaceCmOverride] = useState<number | null>(null);
+  const [fitToScreen, setFitToScreen] = useState(false);
+  const [backgroundGridOverride, setBackgroundGridOverride] = useState<boolean | null>(null);
+  const [backgroundWatermarkOverride, setBackgroundWatermarkOverride] = useState<boolean | null>(null);
+  const [columnBreaksOverride, setColumnBreaksOverride] = useState<string[] | null>(null);
+  const [brandColorOverride, setBrandColorOverride] = useState<string | null>(null);
+  const [themeIdOverride, setThemeIdOverride] = useState<string | null>(null);
+  const [themeOptionsOverride, setThemeOptionsOverride] = useState<Record<string, Record<string, unknown>> | null>(null);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   if (isPending) return <LoadingState label="Menyiapkan naskah…" />;
   if (isError)
@@ -105,499 +116,417 @@ export function BundlePrintView() {
   // Bisa tampilkan pembahasan bila ada minimal satu soal punya explanation.
   const canShowExplanation = items.some((it) => explanationOf(it) != null);
 
-  // Default TIDAK diduplikasi di sini — setiap field dibaca dengan fallback
+  // Default TIDAK diduplikasi di sini - setiap field dibaca dengan fallback
   // masing-masing di bawah (satu sumber: DEFAULT_BUNDLE_PRINT_CONFIG di skema).
   const config: BundlePrintConfig = bundle.printConfig ?? {};
   const effectiveKeyMode: KeyMode =
     keyModeOverride ?? (config.includeAnswerKey ? "separate" : "hidden");
   const effectiveExplanationMode: ExplanationMode =
     explanationModeOverride ?? config.explanationPlacement ?? "none";
+  const effectiveAnswerSpaceCm: number =
+    answerSpaceCmOverride ?? (config.answerSpaceCm ?? 3);
+  const effectiveBackgroundGrid: boolean =
+    backgroundGridOverride ?? (config.backgroundGrid ?? false);
+  const effectiveBackgroundWatermark: boolean =
+    backgroundWatermarkOverride ?? (config.backgroundWatermark ?? true);
+  const effectiveColumnBreaks: string[] =
+    columnBreaksOverride ?? (config.columnBreaks ?? []);
+  const effectiveBrandColor: string =
+    brandColorOverride ?? (config.brandColor ?? "#0158ca");
+  const effectiveThemeId: string =
+    themeIdOverride ?? (config.themeId || DEFAULT_THEME_ID);
+  const effectiveThemeOptions: Record<string, Record<string, unknown>> =
+    themeOptionsOverride ?? (config.themeOptions || {});
+  const activeTheme = getPrintTheme(effectiveThemeId);
+
+  const handleThemeChange = (newThemeId: string) => {
+    setThemeIdOverride(newThemeId);
+  };
+
+  const handleThemeOptionChange = (tId: string, key: string, value: unknown) => {
+    setThemeOptionsOverride((prev) => {
+      const current = prev ?? config.themeOptions ?? {};
+      const themeSpecific = current[tId] ?? {};
+      return {
+        ...current,
+        [tId]: {
+          ...themeSpecific,
+          [key]: value,
+        },
+      };
+    });
+  };
+
+  const toggleColumnBreak = (questionId: string) => {
+    setColumnBreaksOverride((prev) => {
+      const current = prev ?? config.columnBreaks ?? [];
+      if (current.includes(questionId)) {
+        return current.filter((id) => id !== questionId);
+      }
+      return [...current, questionId];
+    });
+  };
+
   const institution = config.institutionName || "MATH MY ID";
-  const tagline = config.tagline ?? "Bank Soal & Kurasi Matematika";
+  const tagline = config.tagline ?? null;
   const instructions = config.instructions ?? bundle.instructions;
   const durationMinutes = config.durationMinutes ?? bundle.durationMinutes;
   const isTwoColumn = bodyColumns ? bodyColumns === "2" : config.twoColumnLayout !== false;
   const pageSizeCss = PRINT_PAGE_SIZE_CSS[config.pageSize ?? "A4"];
-  const answerSpaceCm = config.answerSpaceCm ?? 4;
+
+  // Preset A: Mode Ujian Siswa (Bersih)
+  const applyStudentPreset = () => {
+    setBodyColumns("2");
+    setColumns("1");
+    setKeyModeOverride("hidden");
+    setExplanationModeOverride("none");
+    setAnswerSpaceCmOverride(3);
+    setIncludeAnswerSheet(true);
+    setBackgroundGridOverride(false);
+    setBackgroundWatermarkOverride(true);
+  };
+
+  // Preset B: Pedoman Guru (Lengkap dengan Pembahasan)
+  const applyTeacherPreset = () => {
+    setBodyColumns("2");
+    setColumns("1");
+    if (canShowKey) setKeyModeOverride("inline");
+    if (canShowExplanation) setExplanationModeOverride("inline");
+    setAnswerSpaceCmOverride(0);
+    setIncludeAnswerSheet(false);
+    setBackgroundGridOverride(false);
+    setBackgroundWatermarkOverride(false);
+  };
+
+  // Simpan pengaturan aktif sebagai baku naskah ke database
+  const handleSaveDefault = async () => {
+    if (!updateBundle) return;
+    setIsSaving(true);
+    try {
+      await updateBundle.mutateAsync({
+        printConfig: {
+          twoColumnLayout: isTwoColumn,
+          includeAnswerKey: effectiveKeyMode === "separate",
+          explanationPlacement: effectiveExplanationMode,
+          answerSpaceCm: effectiveAnswerSpaceCm,
+          backgroundGrid: effectiveBackgroundGrid,
+          backgroundWatermark: effectiveBackgroundWatermark,
+          columnBreaks: effectiveColumnBreaks,
+          brandColor: effectiveBrandColor,
+          themeId: effectiveThemeId,
+          themeOptions: effectiveThemeOptions,
+        },
+        version: bundle.version,
+      });
+      toast.success("Pengaturan cetak disimpan sebagai baku paket.");
+    } catch (err) {
+      toast.error("Gagal menyimpan pengaturan", {
+        description: (err as Error).message,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const safeBrandColor = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(effectiveBrandColor)
+    ? effectiveBrandColor
+    : "#0158ca";
+  const safePrintBundleTitle = JSON.stringify(bundle.title).replace(/<\/style/gi, "<\\/style");
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="print-page-root flex flex-col gap-6 bg-muted/20 min-h-screen pb-12 print:block print:min-h-0 print:p-0 print:m-0 print:bg-white">
+      {/* Suntikkan CSS Custom Property untuk running header Chromium (aman dari injeksi style/XSS) */}
+      <style>{`
+        @media print {
+          :root {
+            --print-bundle-title: ${safePrintBundleTitle};
+            --paper-brand: ${safeBrandColor};
+          }
+        }
+      `}</style>
+
       {/* pageSize tidak bisa diatur lewat class (`@page` adalah konteks dokumen),
-          jadi ukuran kertas non-A4 disuntik sebagai stylesheet khusus cetak.
-          Margin TIDAK ditulis di sini: `@page` mencascade per-properti, jadi
-          margin tetap milik `print.css` (satu sumber geometri kertas). */}
+          jadi ukuran kertas non-A4 disuntik sebagai stylesheet khusus cetak. */}
       {pageSizeCss && (
         <style>{`@media print { @page { size: ${pageSizeCss} portrait; } }`}</style>
       )}
-      {/* ── Bilah kontrol (tidak ikut tercetak) ─────────────────── */}
-      <div className="no-print flex flex-wrap items-end gap-4 rounded-lg border bg-card p-4">
-        {/* Kolom Opsi */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Kolom Opsi</span>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant={columns === "1" ? "default" : "outline"}
-              onClick={() => setColumns("1")}
-              className="min-h-[44px]"
-            >
-              1 kolom
-            </Button>
-            <Button
-              size="sm"
-              variant={columns === "2" ? "default" : "outline"}
-              onClick={() => setColumns("2")}
-              className="min-h-[44px]"
-            >
-              2 kolom
-            </Button>
-          </div>
-        </div>
 
-        {/* Kolom Naskah — printConfig hanya bisa diubah lewat API, jadi halaman
-            cetak ini wajib punya kendali lokal agar pengguna tidak terkunci. */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Kolom Naskah</span>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant={!isTwoColumn ? "default" : "outline"}
-              onClick={() => setBodyColumns("1")}
-              className="min-h-[44px]"
-            >
-              Naskah 1 kolom
-            </Button>
-            <Button
-              size="sm"
-              variant={isTwoColumn ? "default" : "outline"}
-              onClick={() => setBodyColumns("2")}
-              className="min-h-[44px]"
-            >
-              Naskah 2 kolom
-            </Button>
-          </div>
-        </div>
-
-        {/* Kunci jawaban */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Kunci jawaban</span>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant={effectiveKeyMode === "hidden" ? "default" : "outline"}
-              onClick={() => setKeyModeOverride("hidden")}
-              className="min-h-[44px]"
-            >
-              Sembunyikan
-            </Button>
-            <Button
-              size="sm"
-              variant={effectiveKeyMode === "inline" ? "default" : "outline"}
-              disabled={!canShowKey}
-              onClick={() => setKeyModeOverride("inline")}
-              className="min-h-[44px]"
-            >
-              Tandai tebal
-            </Button>
-            <Button
-              size="sm"
-              variant={effectiveKeyMode === "separate" ? "default" : "outline"}
-              disabled={!canShowKey}
-              onClick={() => setKeyModeOverride("separate")}
-              className="min-h-[44px]"
-            >
-              Lembar terpisah
-            </Button>
-          </div>
-        </div>
-
-        {/* Lembar Jawaban */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Lembar jawaban</span>
-          <Button
-            size="sm"
-            variant={includeAnswerSheet ? "default" : "outline"}
-            onClick={() => setIncludeAnswerSheet((v) => !v)}
-            className="min-h-[44px]"
-          >
-            {includeAnswerSheet ? "Sertakan (di akhir)" : "Tanpa lembar jawaban"}
-          </Button>
-        </div>
-
-        {/* Pembahasan (Axiom 3-Way Mode) */}
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">Pembahasan</span>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant={effectiveExplanationMode === "none" ? "default" : "outline"}
-              disabled={!canShowExplanation}
-              onClick={() =>
-                setExplanationModeOverride(effectiveExplanationMode === "none" ? "end" : "none")
-              }
-              className="min-h-[44px]"
-            >
-              {effectiveExplanationMode === "none" ? "Tanpa pembahasan" : "Sembunyikan"}
-            </Button>
-            <Button
-              size="sm"
-              variant={effectiveExplanationMode === "inline" ? "default" : "outline"}
-              disabled={!canShowExplanation}
-              onClick={() => setExplanationModeOverride("inline")}
-              className="min-h-[44px]"
-            >
-              Di bawah soal
-            </Button>
-            <Button
-              size="sm"
-              variant={effectiveExplanationMode === "end" ? "default" : "outline"}
-              disabled={!canShowExplanation}
-              onClick={() => setExplanationModeOverride("end")}
-              className="min-h-[44px]"
-            >
-              Lembar akhir
-            </Button>
-          </div>
-        </div>
-
-        <div className="ml-auto flex gap-2">
+      {/* ── Bilah Atas Sticky (no-print) ────────────────────────── */}
+      <div className="no-print sticky top-0 z-10 flex items-center justify-between gap-2 sm:gap-3 border-b bg-background/95 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur shadow-xs">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Button
             variant="outline"
+            size="sm"
             render={<Link href={`/bundles/${bundleId}`} />}
             nativeButton={false}
-            className="min-h-[44px]"
+            className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3 shrink-0"
+            aria-label="Kembali"
+            title="Kembali ke Detail Paket"
           >
-            <ArrowLeft data-icon="inline-start" /> Kembali
+            <ArrowLeft data-icon="inline-start" />
+            <span className="hidden sm:inline">Kembali</span>
           </Button>
-          <Button onClick={() => window.print()} className="min-h-[44px]">
-            <Printer data-icon="inline-start" /> Cetak / Simpan PDF
+
+          <div className="flex flex-col min-w-0">
+            <span
+              data-slot="topbar-title"
+              className="font-semibold text-sm truncate max-w-[130px] xs:max-w-[180px] sm:max-w-xs md:max-w-md"
+            >
+              Naskah: {bundle.title}
+            </span>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
+              <span>{questionItems.length} Soal</span>
+              <span>·</span>
+              <span>{isTwoColumn ? "2 Kolom" : "1 Kolom"}</span>
+              <span className="hidden xs:inline">·</span>
+              <span className="hidden xs:inline">
+                {effectiveKeyMode === "hidden"
+                  ? "Tanpa Kunci"
+                  : effectiveKeyMode === "inline"
+                    ? "Kunci Tebal"
+                    : "Kunci Terpisah"}
+              </span>
+              {effectiveExplanationMode !== "none" && (
+                <>
+                  <span className="hidden sm:inline">·</span>
+                  <span className="hidden sm:inline">
+                    {effectiveExplanationMode === "inline" ? "Bahas di Soal" : "Bahas di Akhir"}
+                  </span>
+                </>
+              )}
+              {effectiveAnswerSpaceCm > 0 && effectiveExplanationMode !== "inline" && (
+                <>
+                  <span className="hidden md:inline">·</span>
+                  <span className="hidden md:inline">Coretan {effectiveAnswerSpaceCm}cm</span>
+                </>
+              )}
+              {effectiveBackgroundWatermark && (
+                <>
+                  <span className="hidden md:inline">·</span>
+                  <span className="hidden md:inline">Tanda Air</span>
+                </>
+              )}
+              {effectiveBackgroundGrid && (
+                <>
+                  <span className="hidden md:inline">·</span>
+                  <span className="hidden md:inline">Kertas Kotak</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setFitToScreen((prev) => !prev)}
+            className="min-h-[44px] min-w-[44px] px-2 sm:px-2.5 text-xs shrink-0"
+            aria-label={fitToScreen ? "Ukuran Asli (100%)" : "Pas Layar"}
+            title={fitToScreen ? "Ukuran Asli (100%)" : "Pas Layar"}
+          >
+            {fitToScreen ? (
+              <Minimize2 className="size-4" data-icon="inline-start" />
+            ) : (
+              <Maximize2 className="size-4" data-icon="inline-start" />
+            )}
+            <span className="hidden sm:inline">{fitToScreen ? "100%" : "Pas Layar"}</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSettingsOpen(true)}
+            className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3 shrink-0"
+            aria-label="Pengaturan Cetak"
+            title="Pengaturan Cetak"
+          >
+            <SlidersHorizontal data-icon="inline-start" />
+            <span className="hidden sm:inline">Pengaturan</span>
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => window.print()}
+            className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3 shrink-0"
+            aria-label="Cetak atau simpan PDF"
+            title="Cetak atau simpan PDF"
+          >
+            <Printer data-icon="inline-start" />
+            <span className="hidden sm:inline">Cetak PDF</span>
           </Button>
         </div>
       </div>
 
-      {!canShowKey && (
-        <p className="no-print text-sm text-muted-foreground">
-          Peran Anda tidak berhak melihat kunci jawaban — opsi kunci dinonaktifkan.
-        </p>
-      )}
-      {!canShowExplanation && (
-        <p className="no-print text-sm text-muted-foreground">
-          Tidak ada pembahasan tersedia untuk paket ini.
-        </p>
-      )}
+      {/* ── Sliding Panel (Sheet Drawer Kanan) ──────────────────── */}
+      <BundlePrintSettingsDrawer
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        activeThemeId={effectiveThemeId}
+        onThemeChange={handleThemeChange}
+        themeOptions={effectiveThemeOptions}
+        onThemeOptionChange={handleThemeOptionChange}
+        applyStudentPreset={applyStudentPreset}
+        applyTeacherPreset={applyTeacherPreset}
+        canShowKey={canShowKey}
+        canShowExplanation={canShowExplanation}
+        isTwoColumn={isTwoColumn}
+        setBodyColumns={setBodyColumns}
+        columns={columns}
+        setColumns={setColumns}
+        effectiveBackgroundWatermark={effectiveBackgroundWatermark}
+        setBackgroundWatermarkOverride={setBackgroundWatermarkOverride}
+        effectiveBackgroundGrid={effectiveBackgroundGrid}
+        setBackgroundGridOverride={setBackgroundGridOverride}
+        questionItems={questionItems}
+        effectiveColumnBreaks={effectiveColumnBreaks}
+        toggleColumnBreak={toggleColumnBreak}
+        effectiveBrandColor={effectiveBrandColor}
+        setBrandColorOverride={setBrandColorOverride}
+        brandPresetColors={BRAND_PRESET_COLORS}
+        effectiveAnswerSpaceCm={effectiveAnswerSpaceCm}
+        setAnswerSpaceCmOverride={setAnswerSpaceCmOverride}
+        answerSpaceOptions={ANSWER_SPACE_OPTIONS}
+        effectiveKeyMode={effectiveKeyMode}
+        setKeyModeOverride={setKeyModeOverride}
+        effectiveExplanationMode={effectiveExplanationMode}
+        setExplanationModeOverride={setExplanationModeOverride}
+        includeAnswerSheet={includeAnswerSheet}
+        setIncludeAnswerSheet={setIncludeAnswerSheet}
+        handleSaveDefault={handleSaveDefault}
+        isSaving={isSaving}
+      />
 
       {/* ── Naskah (yang dicetak) ───────────────────────────────── */}
-      {/* MAT-40: A4 physical page preview — max-w-[210mm] mensimulasikan lebar
-          kertas A4; padding 15mm menyelaraskan dengan @page margin. */}
-      <div className="print-sheet worksheet mx-auto w-full max-w-[210mm] rounded-lg border bg-white p-[15mm] text-black shadow-sm print:border-0 print:p-0 print:shadow-none">
-        {/* Kop Resmi (Format Varian C Prototype Soal) */}
-        <header className="header print-header mb-4">
-          <div className="headerTop flex justify-between items-start">
-            <div className="headerLeft flex items-center gap-2">
-              <div className="logo bg-[#0b6b3a] text-white px-2 py-1 rounded text-[10px] font-bold text-center leading-tight">
-                MATH<br />MY ID
-              </div>
-              <div className="institution text-xs font-bold leading-tight">
-                {institution.toUpperCase()}
-                {tagline && (
-                  <span className="tagline block font-normal text-[10px] text-gray-600">
-                    {tagline}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="title print-bundle-title text-2xl font-extrabold text-[#0b6b3a] tracking-wide text-right">
-              {bundle.title}
-            </div>
-          </div>
-          <hr className="headerRule border-t-[2.5px] border-[#0b6b3a] my-2" />
-          <div className="headerInfo flex justify-between text-xs">
-            <div className="flex flex-col">
-              <b>{bundle.grade ? `Kelas ${bundle.grade}` : "Matematika"}</b>
-              <i className="not-italic text-gray-600">
-                {[bundle.year ? `Tahun ${bundle.year}` : null, `${questionItems.length} Soal`]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </i>
-            </div>
-            <div className="right text-right flex flex-col">
-              <i className="not-italic text-gray-600">
-                {new Intl.DateTimeFormat("id-ID", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                }).format(new Date())}
-              </i>
-              {durationMinutes && (
-                <i className="not-italic text-gray-600">Waktu: {durationMinutes} menit</i>
-              )}
-            </div>
-          </div>
-        </header>
+      {/* Wrapper horizontal scroll: di mobile naskah mulai dari x=0 (kiri) dan bisa discroll ke kanan tanpa terpotong di kiri */}
+      <div
+        className={cn(
+          "print-scroll-wrapper w-full p-2 sm:p-8 print:p-0 print:m-0 print:overflow-visible print:block",
+          fitToScreen ? "overflow-x-hidden" : "overflow-x-auto",
+        )}
+      >
+        <div
+          className={cn(
+            "print-sheet worksheet mx-auto bg-white text-black border rounded-sm print:border-0 print:p-0 print:shadow-none print:w-full print:min-w-0 print:max-w-none print:min-h-0",
+            fitToScreen && "worksheet-fit-screen",
+            effectiveBackgroundGrid && "worksheet-grid",
+            effectiveBackgroundWatermark && "worksheet-watermark",
+          )}
+          style={{ "--paper-brand": effectiveBrandColor } as React.CSSProperties}
+        >
+        {effectiveBackgroundWatermark && <PrintWatermark />}
 
-        {instructions && (
-          <div className="instruction print-instruction border border-[#0b6b3a] rounded-md p-2.5 mb-4 text-xs italic">
+        {/* Cover blok putih halaman 1 di cetak agar fixed running header tidak bocor ke halaman 1 */}
+        <div data-slot="print-page1-header-cover" className="print-page1-header-cover hidden print:block" aria-hidden="true" />
+
+        {/* Running Header Halaman Lanjutan (Halaman 2+) */}
+        {activeTheme.Header ? (
+          <activeTheme.Header
+            title={bundle.title}
+            exerciseLabel="Latihan 1"
+            options={effectiveThemeOptions[activeTheme.id] ?? {}}
+          />
+        ) : (
+          <BundlePrintHeader
+            title={bundle.title}
+            exerciseLabel="Latihan 1"
+          />
+        )}
+
+        {/* Kop Resmi Naskah Halaman Pertama dari Tema Aktif */}
+        <activeTheme.Kop
+          title={bundle.title}
+          grade={bundle.grade}
+          year={bundle.year}
+          questionCount={questionItems.length}
+          durationMinutes={durationMinutes}
+          exerciseLabel="Latihan 1"
+          institutionName={institution}
+          tagline={tagline ?? undefined}
+          logoUrl={config.institutionLogoUrl && !logoFailed ? config.institutionLogoUrl : undefined}
+          onLogoError={() => setLogoFailed(true)}
+          options={effectiveThemeOptions[activeTheme.id] ?? {}}
+          instructions={instructions}
+          brandColor={effectiveBrandColor}
+        />
+
+        {activeTheme.id === "math-my-id" && instructions && (
+          <div
+            className="instruction print-instruction border rounded-md p-2.5 mb-4 text-xs italic"
+            style={{
+              borderColor: effectiveBrandColor,
+              backgroundColor: `${effectiveBrandColor}0d`,
+            }}
+          >
             {instructions}
           </div>
         )}
 
-        {/* Daftar soal — 1 atau 2 kolom */}
+        {/* Daftar soal - 1 atau 2 kolom (Tata letak A4 statis) */}
         <ol
           className={cn(
             isTwoColumn
-              ? "print-columns columns-1 gap-8 sm:columns-2 [&>li]:break-inside-avoid"
+              ? "print-columns [&>li]:break-inside-avoid"
               : "print-single-column flex flex-col gap-5",
           )}
         >
-          {items.map((it) => {
-            if (it.item.role === "stimulus") {
-              return (
-                <li key={it.item.id} className="print-question print-stimulus list-none">
-                  <div className="rounded border-l-4 border-gray-300 bg-gray-50 p-3 text-sm">
-                    <MathContent content={it.question.contentMarkdown} />
-                  </div>
-                </li>
-              );
-            }
-            // Nomor urut soal (1..n)
-            const num = questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
-            const correct = itemCorrectLabels(it);
-            const showNumber = config.showQuestionNumber !== false;
+          {items.map((it, idx) => {
+            const isSectionStart = Boolean(
+              it.item.sectionName && it.item.sectionName !== items[idx - 1]?.item.sectionName,
+            );
+            const qId = it.item.questionId ?? it.question.id;
+            const isForceColumn = isTwoColumn && effectiveColumnBreaks.includes(qId);
+            const ordinal =
+              it.item.role === "stimulus"
+                ? 0
+                : questionItems.findIndex((q) => q.item.id === it.item.id) + 1;
             return (
-              <li key={it.item.id} className="print-question print-item flex gap-2">
-                {showNumber && (
-                  <span className="print-item-number w-6 shrink-0 text-right font-medium tabular-nums">{num}.</span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <MathContent content={it.question.contentMarkdown} />
-                  {isOptionBased(it.question.questionType as never) &&
-                    it.question.questionType !== "matrix_grid" &&
-                    it.question.questionType !== "matching" &&
-                    it.question.options.length > 0 && (
-                      <ul
-                        className={cn(
-                          "print-options mt-1.5 gap-1 text-sm",
-                          columns === "2"
-                            ? "grid grid-cols-1 sm:grid-cols-2"
-                            : "flex flex-col",
-                        )}
-                      >
-                        {it.question.options.map((o) => {
-                          const isKey =
-                            effectiveKeyMode === "inline" && (o.isCorrect || correct.includes(o.label));
-                          return (
-                            <li key={o.id} className="flex gap-2 break-inside-avoid">
-                              <span className={isKey ? "font-bold" : "font-medium"}>
-                                {o.label}.
-                              </span>
-                              <span className={isKey ? "font-bold" : undefined}>
-                                <MathContent content={o.contentMarkdown} />
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-
-                  {/* Render khusus untuk soal matrix_grid (Tabel Pernyataan).
-                      Fase 4: payload dibaca lewat reader yang sama dengan
-                      detail (`readMatrixGridPayload`), dan baris diberi nomor
-                      1-based yang sama dengan penomoran detail. */}
-                  {it.question.questionType === "matrix_grid" && (() => {
-                    const { labels, rows } = readMatrixGridPayload(it.question.dataPayload);
-                    if (rows.length === 0) return null;
-                    return (
-                      <div className="mt-2 overflow-x-auto break-inside-avoid">
-                        <table className="w-full border-collapse border border-gray-300 text-xs print:border-black">
-                          <thead>
-                            <tr className="bg-gray-100 print:bg-gray-200">
-                              <th className="w-8 border border-gray-300 p-1.5 text-center font-medium print:border-black">No.</th>
-                              <th className="border border-gray-300 p-1.5 text-left font-medium print:border-black">Pernyataan</th>
-                              {labels.map((l, li) => (
-                                <th key={li} className="w-16 border border-gray-300 p-1.5 text-center font-medium print:border-black">{l}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {rows.map((r, ri) => (
-                              <tr key={ri} className="border-t border-gray-200 print:border-black">
-                                <td className="border border-gray-300 p-1.5 text-center print:border-black">
-                                  {ri + 1}.
-                                </td>
-                                <td className="border border-gray-300 p-1.5 print:border-black">
-                                  <MathContent content={r.text} />
-                                </td>
-                                {labels.map((l, li) => {
-                                  const isSelected = effectiveKeyMode === "inline" && r.answer === l;
-                                  return (
-                                    <td key={li} className="border border-gray-300 p-1.5 text-center font-bold print:border-black">
-                                      {isSelected ? "✓" : "○"}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Render khusus untuk soal matching (Premis & Pilihan Respons).
-                      Fase 4: payload, label, dan kunci memakai logika yang
-                      sama dengan detail — premis A, B, … / respons 1, 2, …
-                      dan kunci menampilkan LABEL respons, bukan ID mentah. */}
-                  {it.question.questionType === "matching" && (() => {
-                    const { premises, responses } = readMatchingPayload(it.question.dataPayload);
-                    const matchingPairs = (it.question.answerKey as { matchingPairs?: Record<string, string> } | null)?.matchingPairs ?? {};
-                    if (premises.length === 0 && responses.length === 0) return null;
-                    return (
-                      <div className="mt-2 grid grid-cols-2 gap-4 text-xs break-inside-avoid">
-                        <div className="flex flex-col gap-1.5 border-r border-gray-200 pr-2 print:border-black">
-                          <span className="font-semibold text-gray-700 print:text-black">Premis / Pertanyaan:</span>
-                          {premises.map((p, pi) => {
-                            const keyLabel = matchingResponseLabel(matchingPairs, p.id, responses);
-                            return (
-                            <div key={p.id ?? pi} className="flex gap-1.5 rounded border border-gray-200 bg-gray-50 p-1 print:border-black print:bg-transparent">
-                              <span className="font-bold">{premiseLabel(pi)}.</span>
-                              <div className="flex-1">
-                                <MathContent content={p.contentMarkdown} />
-                                {effectiveKeyMode === "inline" && keyLabel && (
-                                  <span className="ml-1 text-[10px] font-bold text-green-700 print:text-black">
-                                    → {keyLabel}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            );
-                          })}
-                        </div>
-                        <div className="flex flex-col gap-1.5 pl-2">
-                          <span className="font-semibold text-gray-700 print:text-black">Pilihan Jawaban:</span>
-                          {responses.map((res, ri) => (
-                            <div key={res.id ?? ri} className="flex gap-1.5 rounded border border-gray-200 bg-gray-50 p-1 print:border-black print:bg-transparent">
-                              <span className="font-bold">{responseLabel(ri)}.</span>
-                              <div className="flex-1">
-                                <MathContent content={res.contentMarkdown} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Area ruang jawaban untuk soal isian / esai (Axiom answerSpaceCm) */}
-                  {!isOptionBased(it.question.questionType as never) && (
-                    <div
-                      className="mt-2.5 rounded border border-dashed border-gray-300 break-inside-avoid print:border-gray-400"
-                      style={{ height: `${answerSpaceCm}cm` }}
-                    >
-                      <span className="block p-1 text-[9px] text-gray-400 select-none no-print">
-                        Area Jawaban Siswa ({answerSpaceCm} cm)
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Pembahasan tepat di bawah soal (inline mode) */}
-                  {effectiveExplanationMode === "inline" && (() => {
-                    const exp = explanationOf(it);
-                    if (!exp) return null;
-                    return (
-                      <div className="mt-2.5 rounded border-l-2 border-[#0b6b3a] bg-gray-50 p-2.5 text-xs text-gray-800 break-inside-avoid print:bg-transparent print:border-l print:text-black">
-                        <span className="mb-1 block font-bold text-[#0b6b3a] print:text-black">
-                          Pembahasan:
-                        </span>
-                        <MathContent content={exp} />
-                      </div>
-                    );
-                  })()}
-                </div>
-              </li>
+              <PrintQuestionItem
+                key={it.item.id}
+                item={it}
+                ordinal={ordinal}
+                isFirst={idx === 0}
+                sectionName={isSectionStart ? (it.item.sectionName ?? null) : null}
+                forceColumn={isForceColumn}
+                showNumber={config.showQuestionNumber !== false}
+                optionColumns={columns}
+                keyMode={effectiveKeyMode}
+                explanationMode={effectiveExplanationMode}
+                answerSpaceCm={effectiveAnswerSpaceCm}
+              />
             );
           })}
         </ol>
 
-        {/* Lembar kunci jawaban terpisah */}
         {effectiveKeyMode === "separate" && canShowKey && (
-          <section className="print-sheet-answerkey mt-8 border-t pt-4">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Kunci Jawaban</h2>
-            <ol className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:grid-cols-3">
-              {questionItems.map((it, i) => {
-                const correct = itemCorrectLabels(it);
-                const text = it.question.answerKey?.text ?? null;
-                // Fase 4: kunci matching di lembar terpisah memakai label,
-                // bukan ID mentah (mis. "A→2, B→1").
-                const matchingPayload =
-                  it.question.questionType === "matching"
-                    ? readMatchingPayload(it.question.dataPayload)
-                    : null;
-                const matchingShown = matchingPayload
-                  ? matchingKeySummary(
-                      (it.question.answerKey as { matchingPairs?: Record<string, string> } | null)?.matchingPairs,
-                      matchingPayload.premises,
-                      matchingPayload.responses,
-                    )
-                  : "";
-                const shown = matchingShown
-                  ? matchingShown
-                  : correct.length > 0
-                    ? correct.join(", ")
-                    : (text ?? "—");
-                return (
-                  <li key={it.item.id} className="flex gap-2 tabular-nums">
-                    <span className="w-6 text-right font-medium">{i + 1}.</span>
-                    <span>{shown}</span>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
+          <PrintAnswerKeySheet items={questionItems} />
         )}
 
-        {/* Lembar pembahasan terpisah di akhir naskah (end mode) */}
         {effectiveExplanationMode === "end" && canShowExplanation && (
-          <section className="print-sheet-explanation mt-8 border-t pt-4">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Pembahasan</h2>
-            <ol className="flex flex-col gap-4 text-sm leading-relaxed">
-              {questionItems.map((it, i) => {
-                const explanation = explanationOf(it);
-                if (!explanation) return null;
-                return (
-                  <li key={it.item.id} className="print-question flex gap-2 break-inside-avoid">
-                    <span className="w-6 shrink-0 text-right font-medium tabular-nums">
-                      {i + 1}.
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <MathContent content={explanation} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
+          <PrintExplanationSheet items={questionItems} />
         )}
 
-        {/* Lembar jawaban kosong */}
-        {includeAnswerSheet && (
-          <section className="print-sheet-answers mt-8 border-t pt-4">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide">Lembar Jawaban</h2>
-            <p className="mb-3 text-xs">Nama: ______________________  Kelas: ____________</p>
-            <table className="w-full border-collapse text-sm">
-              <tbody>
-                {questionItems.map((it, i) => (
-                  <tr key={it.item.id} className="border-b">
-                    <td className="w-10 border px-2 py-1.5 text-right font-medium tabular-nums">
-                      {i + 1}
-                    </td>
-                    <td className="border px-2 py-1.5">&nbsp;</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+        {includeAnswerSheet && <PrintAnswerSheet items={questionItems} />}
+
+        {/* Seksi Tambahan Khusus Tema (Bila Ada) */}
+        {activeTheme.ExtraSection && (
+          <activeTheme.ExtraSection
+            title={bundle.title}
+            institutionName={institution}
+            options={effectiveThemeOptions[activeTheme.id] ?? {}}
+          />
         )}
+
+        {/* Running Footer Semua Halaman */}
+        {activeTheme.Footer ? (
+          <activeTheme.Footer
+            institutionName={institution}
+            options={effectiveThemeOptions[activeTheme.id] ?? {}}
+          />
+        ) : (
+          <BundlePrintFooter pageNumber={1} />
+        )}
+        </div>
       </div>
     </div>
   );

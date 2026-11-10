@@ -22,6 +22,8 @@
 
 export interface TopicNode {
   id: string;
+  /** Nomor revisi (ADR-0030) — dipakai sebagai ETag / If-Match. */
+  version: number;
   name: string;
   parentId: string | null;
   level: number;

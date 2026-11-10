@@ -4,7 +4,7 @@ import { updateBundleSchema } from "@/lib/contracts/bundle";
 import {
   getBundle,
   updateBundle,
-  archiveBundle,
+  deleteBundle,
   listBundleItems,
 } from "@/lib/services/bundle-service";
 import { NotFoundError } from "@/lib/auth/guards";
@@ -18,6 +18,7 @@ export const GET = wrapRoute({
   authz: { kind: "route", permission: "question:view" },
   params: paramsSchema,
   query: emptyQuerySchema,
+  etagFrom: (b: { version: number }) => b.version,
   handler: async ({ params, actor }) => {
     const [b, items] = await Promise.all([
       getBundle(params.id),
@@ -43,13 +44,16 @@ export const PATCH = wrapRoute({
   },
   params: paramsSchema,
   body: updateBundleSchema,
-  handler: async ({ params, body, actor }) => updateBundle(params.id, body, actor),
+  ifMatch: true,
+  etagFrom: (b: { version: number }) => b.version,
+  handler: async ({ params, body, actor, expectedVersion }) =>
+    updateBundle(params.id, body, actor, expectedVersion),
 });
 
 /**
- * DELETE /api/bundles/[id] — arsipkan paket (soft-delete).
+ * DELETE /api/bundles/[id] — hapus paket (soft-delete).
  *
- * Alasan sama seperti PATCH: ditegakkan di `archiveBundle` → `assertBundleWrite`.
+ * Alasan sama seperti PATCH: ditegakkan di `deleteBundle` → `assertBundleWrite`.
  */
 export const DELETE = wrapRoute({
   rateLimit: { capacity: 20, refillPerSec: 0.5 },
@@ -59,8 +63,9 @@ export const DELETE = wrapRoute({
   },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ params, actor }) => {
-    await archiveBundle(params.id, actor);
+  ifMatch: true,
+  handler: async ({ params, actor, expectedVersion }) => {
+    await deleteBundle(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

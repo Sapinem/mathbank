@@ -62,7 +62,7 @@ async function handleMcp(req: NextRequest): Promise<Response> {
 
   // 2. Rate limit per-kunci API (SEC-02). Kunci pakai apiKeyId bila ada; fallback id aktor / IP.
   const targetId = actor.apiKeyId ?? actor.id;
-  const rl = checkRateLimit(
+  const rl = await checkRateLimit(
     rateLimitKey(targetId, clientIp(req), "mcp:call"),
     MCP_RATE_POLICY,
   );

@@ -14,6 +14,7 @@ export const GET = wrapRoute({
   rateLimit: true,
   params: paramsSchema,
   query: emptyQuerySchema,
+  etagFrom: (d: { asset: { version: number } }) => d.asset.version,
   handler: async ({ params }) => {
     const shortId = params.shortId ?? "";
     if (!isValidShortId(shortId)) throw new NotFoundError("Media tidak ditemukan.");
@@ -29,10 +30,11 @@ export const PATCH = wrapRoute({
   rateLimit: true,
   params: paramsSchema,
   body: updateMediaSchema,
-  handler: async ({ params, body }) => {
+  ifMatch: true,
+  handler: async ({ params, body, expectedVersion }) => {
     const shortId = params.shortId ?? "";
     if (!isValidShortId(shortId)) throw new NotFoundError("Media tidak ditemukan.");
-    const updated = await updateMediaMeta(shortId, body);
+    const updated = await updateMediaMeta(shortId, body, expectedVersion);
     if (!updated) throw new NotFoundError("Media tidak ditemukan.");
     return updated;
   },
@@ -50,11 +52,12 @@ export const DELETE = wrapRoute({
   rateLimit: true,
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ params }) => {
+  ifMatch: true,
+  handler: async ({ params, expectedVersion }) => {
     const shortId = params.shortId ?? "";
     if (!isValidShortId(shortId)) throw new NotFoundError("Media tidak ditemukan.");
 
-    const result = await deleteAsset(shortId);
+    const result = await deleteAsset(shortId, expectedVersion);
     if (!result) throw new NotFoundError("Media tidak ditemukan.");
     if ("inUse" in result) {
       throw new ConflictError(

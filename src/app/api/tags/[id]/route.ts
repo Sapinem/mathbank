@@ -12,7 +12,9 @@ export const PATCH = wrapRoute({
   authz: { kind: "route", permission: "taxonomy:manage" },
   params: paramsSchema,
   body: patchSchema,
-  handler: async ({ body, actor, params }) => updateTag(params.id, body, actor),
+  ifMatch: true,
+  handler: async ({ body, actor, params, expectedVersion }) =>
+    updateTag(params.id, body, actor, expectedVersion),
 });
 
 /** DELETE /api/tags/[id] — hapus label (RESTRICT bila dipakai soal). */
@@ -21,8 +23,9 @@ export const DELETE = wrapRoute({
   authz: { kind: "route", permission: "taxonomy:manage" },
   params: paramsSchema,
   query: emptyQuerySchema,
-  handler: async ({ actor, params }) => {
-    await deleteTag(params.id, actor);
+  ifMatch: true,
+  handler: async ({ actor, params, expectedVersion }) => {
+    await deleteTag(params.id, actor, expectedVersion);
     return { ok: true };
   },
 });

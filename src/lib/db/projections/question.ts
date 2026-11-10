@@ -27,6 +27,7 @@ export function questionColumns(opts: { withAnswerKey?: boolean } = {}) {
     difficulty: questions.difficulty,
     cognitiveLevel: questions.cognitiveLevel,
     grade: questions.grade,
+    grades: questions.grades,
     contentMarkdown: questions.contentMarkdown,
     dataPayload: questions.dataPayload,
     status: questions.status,
@@ -42,6 +43,7 @@ export function questionColumns(opts: { withAnswerKey?: boolean } = {}) {
     lastReviewedAt: questions.lastReviewedAt,
     deletedAt: questions.deletedAt,
     createdAt: questions.createdAt,
+    version: questions.version,
     updatedAt: questions.updatedAt,
   };
   return opts.withAnswerKey ? { ...cols, answerKey: questions.answerKey } : cols;

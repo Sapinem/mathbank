@@ -4,14 +4,32 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { GripVertical, Search, X, ArrowLeft, LayoutList, Loader2, Plus, ListPlus, Clock } from "lucide-react";
+import {
+  GripVertical,
+  ArrowLeft,
+  LayoutList,
+  Plus,
+  ListPlus,
+  Clock,
+  ChevronUp,
+  ChevronDown,
+  SlidersHorizontal,
+  ArrowUpDown,
+  BookOpen,
+  AlertTriangle,
+  CheckCircle2,
+  X,
+} from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { SlotInspectorDrawer } from "@/components/bundles/slot-inspector-drawer";
+import { BundleQuestionPicker } from "@/components/bundles/bundle-question-picker";
 import {
   Sheet,
   SheetContent,
@@ -28,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { MathContent } from "@/components/math/math-content";
+import { cn } from "@/lib/utils";
 import {
   useBundle,
   useAddBundleItem,
@@ -36,85 +55,198 @@ import {
   useUpdateBundle,
   type BundleItemView,
 } from "@/lib/hooks/use-bundles";
-import { useQuestions } from "@/lib/hooks/use-questions";
+import { TYPE_LABELS } from "@/lib/display/labels";
 
-/** Satu baris item paket yang dapat diseret (dnd-kit useSortable). */
+/** Satu baris item paket dengan Trio-Mode Reorder dan Slot Inspector. */
 function SortableRow({
   item,
   index,
+  totalItems,
   onRemove,
+  onMoveStep,
+  onInspect,
+  onQuickShift,
 }: {
   item: BundleItemView;
   index: number;
+  totalItems: number;
   onRemove: (itemId: string, nomor: number) => void;
+  onMoveStep: (index: number, direction: -1 | 1) => void;
+  onInspect: (item: BundleItemView, ordinal: number) => void;
+  onQuickShift: (item: BundleItemView, ordinal: number) => void;
 }) {
   const { ref, handleRef, isDragging } = useSortable({ id: item.item.id, index });
   const nomor = index + 1;
+  const isStimulus = item.item.role === "stimulus";
+  const hasKey = Boolean(item.question.answerKey?.correct?.length || item.question.answerKey?.text);
 
   return (
     <li
       ref={ref}
-      className={`flex items-start gap-3 rounded-md border bg-card px-3 py-2 ${
-        isDragging ? "opacity-60" : ""
-      }`}
+      className={cn(
+        "flex items-start gap-2.5 rounded-lg border bg-card p-2.5 shadow-2xs transition-all",
+        isDragging && "opacity-60 ring-2 ring-primary/40",
+        isStimulus && "border-info/40 bg-info/5",
+      )}
     >
+      {/* 1. Drag Handle Desktop */}
       <button
         ref={handleRef}
         type="button"
-        aria-label={`Geser soal nomor ${nomor}`}
-        className="mt-0.5 cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        aria-label={`Geser urutan butir ${nomor}`}
+        className="mt-1 hidden cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing sm:flex"
       >
         <GripVertical className="size-4" />
       </button>
-      <span className="mt-0.5 w-6 shrink-0 text-right text-sm font-medium tabular-nums text-muted-foreground">
-        {nomor}.
-      </span>
-      <div className="min-w-0 flex-1">
+
+      {/* 2. Tombol Mikro-Langkah Naik/Turun (A11y & Keyboard) */}
+      <div className="flex flex-col gap-1">
+        <button
+          type="button"
+          onClick={() => onMoveStep(index, -1)}
+          disabled={index === 0}
+          aria-label={`Naikkan soal nomor ${nomor}`}
+          title="Naikkan satu nomor"
+          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25 relative after:absolute after:-top-2.5 after:bottom-0 after:-inset-x-2.5 after:content-['']"
+        >
+          <ChevronUp className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onMoveStep(index, 1)}
+          disabled={index === totalItems - 1}
+          aria-label={`Turunkan soal nomor ${nomor}`}
+          title="Turunkan satu nomor"
+          className="flex size-6 items-center justify-center rounded border border-border/70 text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-25 relative after:absolute after:top-0 after:-bottom-2.5 after:-inset-x-2.5 after:content-['']"
+        >
+          <ChevronDown className="size-3.5" />
+        </button>
+      </div>
+
+      {/* 3. Badge Nomor Butir (Klik untuk Quick-Shift) */}
+      <button
+        type="button"
+        onClick={() => onQuickShift(item, nomor)}
+        title="Klik untuk pindahkan posisi butir secara instan"
+        aria-label={`Nomor butir ${item.item.itemNumber || nomor}, klik untuk lompat posisi`}
+        className="mt-0.5 min-h-[44px] min-w-[44px] px-2 py-1 rounded-md border border-border/80 bg-muted/60 text-center font-mono text-xs font-semibold tabular-nums text-foreground hover:border-primary hover:bg-primary/10 hover:text-primary transition-colors flex items-center justify-center pointer-coarse:min-h-[44px] pointer-coarse:min-w-[44px]"
+      >
+        {item.item.itemNumber || `${nomor}.`}
+      </button>
+
+      {/* 4. Konten Naskah & Metadata Chip */}
+      <div className="min-w-0 flex-1 flex flex-col gap-1.5">
         <MathContent
           content={item.question.contentMarkdown}
           noScroll
-          className="truncate text-sm"
+          className="line-clamp-2 text-sm leading-relaxed"
         />
-        <div className="mt-1 flex gap-1">
-          <Badge variant="outline" className="text-[10px]">
-            {item.question.questionType}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant="outline" className="text-[10px] font-normal">
+            {TYPE_LABELS[item.question.questionType] ?? item.question.questionType}
           </Badge>
-          {item.item.role === "stimulus" && (
-            <Badge variant="secondary" className="text-[10px]">
-              Stimulus
+          {isStimulus && (
+            <Badge variant="secondary" className="gap-1 border-info/30 bg-info/10 text-info text-[10px]">
+              <BookOpen className="size-3" /> Wacana
+            </Badge>
+          )}
+          {item.item.sectionName && (
+            <Badge variant="outline" className="border-border/80 text-[10px] text-muted-foreground">
+              {item.item.sectionName}
+            </Badge>
+          )}
+          {item.item.notes && (
+            <span className="font-mono text-[10px] text-muted-foreground" title={item.item.notes}>
+              (Ada Catatan)
+            </span>
+          )}
+          {!isStimulus && !hasKey && (
+            <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-[10px] text-amber-600">
+              Tanpa Kunci
             </Badge>
           )}
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={`Keluarkan soal nomor ${nomor}`}
-        onClick={() => onRemove(item.item.id, nomor)}
-      >
-        <X />
-      </Button>
+
+      {/* 5. Aksi Slot: Inspector Drawer & Hapus */}
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Pengaturan naskah butir ${nomor}`}
+          title="Pengaturan Butir (Nomor, Peran, Seksi, Catatan)"
+          onClick={() => onInspect(item, nomor)}
+          className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground"
+        >
+          <SlidersHorizontal className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Keluarkan soal nomor ${nomor}`}
+          title="Keluarkan dari paket"
+          onClick={() => onRemove(item.item.id, nomor)}
+          className="min-h-[44px] min-w-[44px] text-muted-foreground hover:text-destructive"
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
     </li>
   );
 }
 
-/** Daftar item paket dengan drag-and-drop. */
+/** Daftar item paket dengan Trio-Mode Reorder dan DragDropProvider. */
 function BundleItemList({
   items,
   onRemove,
   onReorder,
+  onInspect,
+  onQuickShift,
+  onOpenPicker,
 }: {
   items: BundleItemView[];
   onRemove: (itemId: string, nomor: number) => void;
   onReorder: (ids: string[]) => void;
+  onInspect: (item: BundleItemView, ordinal: number) => void;
+  onQuickShift: (item: BundleItemView, ordinal: number) => void;
+  onOpenPicker?: () => void;
 }) {
   if (items.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        Belum ada soal. Tambahkan dari bank soal di sebelah kiri.
-      </p>
+      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/80 p-8 text-center">
+        <p className="text-muted-foreground text-sm font-medium">
+          Belum ada butir soal dalam naskah ini.
+        </p>
+        <p className="text-xs text-muted-foreground max-w-sm">
+          Pilih dan tambahkan butir dari panel Bank Soal di sebelah kiri (atau klik tombol di bawah pada layar mobile).
+        </p>
+        {onOpenPicker && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onOpenPicker}
+            className="lg:hidden mt-2 gap-1.5 min-h-[44px]"
+          >
+            <Plus className="size-4" data-icon="inline-start" /> Buka Bank Soal
+          </Button>
+        )}
+      </div>
     );
   }
+
+  function handleMoveStep(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const ids = items.map((i) => i.item.id);
+    const itemA = ids[index]!;
+    const itemB = ids[target]!;
+    const next = [...ids];
+    next[index] = itemB;
+    next[target] = itemA;
+    onReorder(next);
+  }
+
   return (
     <DragDropProvider
       onDragEnd={(event) => {
@@ -133,7 +265,16 @@ function BundleItemList({
     >
       <ul className="flex flex-col gap-2">
         {items.map((it, idx) => (
-          <SortableRow key={it.item.id} item={it} index={idx} onRemove={onRemove} />
+          <SortableRow
+            key={it.item.id}
+            item={it}
+            index={idx}
+            totalItems={items.length}
+            onRemove={onRemove}
+            onMoveStep={handleMoveStep}
+            onInspect={onInspect}
+            onQuickShift={onQuickShift}
+          />
         ))}
       </ul>
     </DragDropProvider>
@@ -152,15 +293,25 @@ export function BundleBuilder() {
   const params = useParams<{ id: string }>();
   const bundleId = params.id;
   const { data: bundle, isPending, isError, error } = useBundle(bundleId);
-  const addItem = useAddBundleItem(bundleId);
-  const removeItem = useRemoveBundleItem(bundleId);
-  const reorder = useReorderBundleItems(bundleId);
-  const updateBundle = useUpdateBundle(bundleId);
+  const addItem = useAddBundleItem(bundleId, bundle?.version);
+  const removeItem = useRemoveBundleItem(bundleId, bundle?.version);
+  const reorder = useReorderBundleItems(bundleId, bundle?.version);
+  const updateBundle = useUpdateBundle(bundleId, bundle?.version);
 
-  const [q, setQ] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState(false);
   const [confirmRemoveItem, setConfirmRemoveItem] = useState<{ id: string; nomor: number } | null>(null);
+
+  // Slot Inspector Drawer State
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectSlotItem, setInspectSlotItem] = useState<BundleItemView | null>(null);
+  const [inspectSlotOrdinal, setInspectSlotOrdinal] = useState(1);
+
+  // Quick-Shift Popover/Dialog State
+  const [quickShiftOpen, setQuickShiftOpen] = useState(false);
+  const [quickShiftItem, setQuickShiftItem] = useState<BundleItemView | null>(null);
+  const [quickShiftCurrentOrdinal, setQuickShiftCurrentOrdinal] = useState(1);
+  const [quickShiftTarget, setQuickShiftTarget] = useState("");
 
   // MAT-40: pengaturan durasi & petunjuk pengerjaan (editable, auto-save).
   // Pattern: derived state dari bundle + local override untuk editing.
@@ -177,11 +328,6 @@ export function BundleBuilder() {
     setInstructionsDraft(bundle.instructions ?? "");
   }
 
-  const { data: results, isPending: searchPending } = useQuestions({
-    q: q.trim() || undefined,
-    limit: 20,
-  });
-
   const usedIds = new Set((bundle?.items ?? []).map((i) => i.item.questionId));
 
   if (isPending) return <LoadingState label="Memuat paket…" />;
@@ -189,62 +335,83 @@ export function BundleBuilder() {
     return <ErrorState title="Gagal memuat paket" description={(error as Error).message} />;
   if (!bundle) return null;
 
+  const totalItems = bundle.items.length;
+  const stimulusCount = bundle.items.filter((i) => i.item.role === "stimulus").length;
+  const scoredCount = totalItems - stimulusCount;
+  const missingKeyCount = bundle.items.filter(
+    (i) => i.item.role !== "stimulus" && !i.question.answerKey?.correct?.length && !i.question.answerKey?.text,
+  ).length;
+
   /** Simpan pengaturan durasi & petunjuk. */
   function saveSettings() {
     const patch: Record<string, unknown> = {};
     const dur = durationDraft.trim() === "" ? null : parseInt(durationDraft, 10);
     if (dur !== null && (!Number.isFinite(dur) || dur < 1 || dur > 600)) return;
-    if (dur !== (bundle!.durationMinutes ?? null)) patch.durationMinutes = dur ?? undefined;
+    if (dur !== (bundle!.durationMinutes ?? null)) patch.durationMinutes = dur;
     const instr = instructionsDraft.trim() === "" ? null : instructionsDraft.trim();
     if (instr !== (bundle!.instructions ?? null)) patch.instructions = instr;
     if (Object.keys(patch).length === 0) return;
-    updateBundle.mutate(patch);
+    updateBundle.mutate(patch, {
+      onSuccess: () => toast.success("Pengaturan naskah disimpan."),
+      onError: (e) => toast.error("Gagal menyimpan pengaturan", { description: (e as Error).message }),
+    });
   }
 
-  /** Panel bank soal — dipakai di desktop (aside) & mobile (Sheet). */
-  const pickerContent = (
-    <div className="flex flex-col gap-3">
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Cari soal…"
-          aria-label="Cari soal untuk paket"
-          className="pl-9 text-base sm:text-sm"
-        />
-      </div>
-      {searchPending ? (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Mencari…
-        </p>
-      ) : (results?.items ?? []).length === 0 ? (
-        <p className="text-muted-foreground text-sm">Tak ada soal cocok.</p>
-      ) : (
-        <ul className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto">
-          {(results?.items ?? []).map((item) => {
-            const sudah = usedIds.has(item.id);
-            return (
-              <li key={item.id} className="flex items-center gap-3 rounded-md border px-3 py-2">
-                <MathContent
-                  content={item.contentMarkdown}
-                  noScroll
-                  className="min-w-0 flex-1 truncate text-sm"
-                />
-                <Button
-                  size="sm"
-                  variant={sudah ? "ghost" : "outline"}
-                  disabled={sudah || addItem.isPending}
-                  onClick={() => addItem.mutate({ questionId: item.id })}
-                >
-                  {sudah ? "Ada" : "Tambah"}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+  /** Pindahkan posisi item secara langsung (Quick-Shift). */
+  function executeQuickShift() {
+    if (!quickShiftItem || !bundle) return;
+    const targetNum = parseInt(quickShiftTarget, 10);
+    const total = bundle.items.length;
+    if (!Number.isFinite(targetNum) || targetNum < 1 || targetNum > total) {
+      toast.error(`Nomor posisi tujuan harus antara 1 sampai ${total}.`);
+      return;
+    }
+    const fromIndex = bundle.items.findIndex((i) => i.item.id === quickShiftItem.item.id);
+    if (fromIndex === -1) {
+      toast.error("Butir soal tidak ditemukan dalam paket.");
+      setQuickShiftOpen(false);
+      return;
+    }
+    const toIndex = targetNum - 1;
+    if (fromIndex === toIndex) {
+      setQuickShiftOpen(false);
+      return;
+    }
+    const ids = bundle.items.map((i) => i.item.id);
+    const next = [...ids];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved!);
+    reorder.mutate(next, {
+      onSuccess: () => {
+        toast.success(`Soal berhasil dipindahkan ke posisi #${targetNum}.`);
+        setQuickShiftOpen(false);
+      },
+      onError: (e) =>
+        toast.error("Gagal memindahkan posisi soal", {
+          description: (e as Error).message,
+        }),
+    });
+  }
+
+  const handleAddQuestion = (input: { questionId: string; role?: "question" | "stimulus" }) => {
+    addItem.mutate(input, {
+      onSuccess: () => {
+        toast.success("Soal ditambahkan ke paket.");
+        setPickerOpen(false);
+      },
+      onError: (e) =>
+        toast.error("Gagal menambahkan soal", {
+          description: (e as Error).message,
+        }),
+    });
+  };
+
+  const pickerComponent = (
+    <BundleQuestionPicker
+      usedIds={usedIds}
+      onAddQuestion={handleAddQuestion}
+      isAdding={addItem.isPending}
+    />
   );
 
   return (
@@ -258,7 +425,8 @@ export function BundleBuilder() {
           </Button>
         }
       />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="p-4 sm:p-6 max-w-7xl w-full mx-auto flex flex-col gap-4">
+        <div className="grid gap-4 lg:grid-cols-2">
         {/* Kiri: bank soal (desktop) */}
 
         {/* Kiri: pengaturan naskah (durasi & petunjuk) */}
@@ -337,7 +505,7 @@ export function BundleBuilder() {
             <CardTitle>Bank Soal</CardTitle>
             <CardDescription>Cari & tambahkan soal ke paket.</CardDescription>
           </CardHeader>
-          <CardContent>{pickerContent}</CardContent>
+          <CardContent>{pickerComponent}</CardContent>
         </Card>
 
         {/* Sheet pemilih soal (mobile/tablet) */}
@@ -346,21 +514,44 @@ export function BundleBuilder() {
             <SheetHeader className="mb-2">
               <SheetTitle className="text-base">Tambah Soal</SheetTitle>
             </SheetHeader>
-            {pickerContent}
+            {pickerComponent}
           </SheetContent>
         </Sheet>
 
         {/* Kanan: isi paket */}
         <Card>
           <CardHeader>
-            <CardTitle>
-              <span className="inline-flex items-center gap-2">
-                <LayoutList className="size-4" /> Isi Paket
-              </span>
-            </CardTitle>
-            <CardDescription>
-              Geser untuk mengurutkan. Stimulus ditampilkan sekali.
-            </CardDescription>
+            <div className="flex flex-col gap-1.5">
+              <CardTitle>
+                <span className="inline-flex items-center gap-2">
+                  <LayoutList className="size-4" /> Isi Paket ({totalItems})
+                </span>
+              </CardTitle>
+              <CardDescription>
+                Trio-Mode: geser kartu (desktop), tombol naik/turun, atau klik nomor untuk pindah instan.
+              </CardDescription>
+
+              {/* Indikator Kelengkapan Mutu Pedagogis Naskah */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <Badge variant="outline" className="font-mono text-[11px]">
+                  {scoredCount} Soal Bernomor
+                </Badge>
+                {stimulusCount > 0 && (
+                  <Badge variant="secondary" className="gap-1 border-info/30 bg-info/10 text-info text-[11px]">
+                    <BookOpen className="size-3" /> {stimulusCount} Wacana
+                  </Badge>
+                )}
+                {missingKeyCount > 0 ? (
+                  <Badge variant="outline" className="gap-1 border-amber-500/40 bg-amber-500/10 text-amber-600 text-[11px]">
+                    <AlertTriangle className="size-3" /> {missingKeyCount} Tanpa Kunci
+                  </Badge>
+                ) : totalItems > 0 ? (
+                  <Badge variant="outline" className="gap-1 border-success/30 bg-success/10 text-success text-[11px]">
+                    <CheckCircle2 className="size-3" /> Kunci Lengkap
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <Button
@@ -376,16 +567,37 @@ export function BundleBuilder() {
                 setConfirmRemoveItem({ id, nomor });
                 setIsRemoveOpen(true);
               }}
-              onReorder={(ids) => reorder.mutate(ids)}
+              onReorder={(ids) =>
+                reorder.mutate(ids, {
+                  onError: (e) =>
+                    toast.error("Gagal menyusun urutan soal", {
+                      description: (e as Error).message,
+                    }),
+                })
+              }
+              onInspect={(item, ordinal) => {
+                setInspectSlotItem(item);
+                setInspectSlotOrdinal(ordinal);
+                setInspectorOpen(true);
+              }}
+              onQuickShift={(item, ordinal) => {
+                setQuickShiftItem(item);
+                setQuickShiftCurrentOrdinal(ordinal);
+                setQuickShiftTarget(String(ordinal));
+                setQuickShiftOpen(true);
+              }}
+              onOpenPicker={() => setPickerOpen(true)}
             />
           </CardContent>
         </Card>
       </div>
-      <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground lg:hidden">
+      <p className="flex items-center gap-2 text-xs text-muted-foreground lg:hidden">
         <ListPlus className="size-3.5" />
         Di layar kecil: buka &ldquo;Tambah Soal&rdquo; untuk memilih soal.
       </p>
+    </div>
 
+      {/* Dialog Konfirmasi Hapus Item */}
       <Dialog
         open={isRemoveOpen}
         onOpenChange={(open) => {
@@ -413,7 +625,15 @@ export function BundleBuilder() {
               onClick={() => {
                 if (confirmRemoveItem) {
                   removeItem.mutate(confirmRemoveItem.id, {
-                    onSuccess: () => setIsRemoveOpen(false),
+                    onSuccess: () => {
+                      setIsRemoveOpen(false);
+                      setConfirmRemoveItem(null);
+                      toast.success("Soal dikeluarkan dari paket.");
+                    },
+                    onError: (e) =>
+                      toast.error("Gagal mengeluarkan soal", {
+                        description: (e as Error).message,
+                      }),
                   });
                 }
               }}
@@ -423,6 +643,67 @@ export function BundleBuilder() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Quick-Shift: Pindah Posisi Soal Instan (Mobile / Touch Friendly) */}
+      <Dialog open={quickShiftOpen} onOpenChange={setQuickShiftOpen}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <ArrowUpDown className="size-4" />
+              <span>Pindah Posisi Soal</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Pindahkan butir soal #{quickShiftCurrentOrdinal} langsung ke nomor posisi tujuan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 py-2">
+            <label htmlFor="quick-shift-target" className="text-xs font-medium text-muted-foreground">
+              Nomor Posisi Tujuan (1 - {bundle.items.length}):
+            </label>
+            <Input
+              id="quick-shift-target"
+              type="number"
+              min={1}
+              max={bundle.items.length}
+              value={quickShiftTarget}
+              onChange={(e) => setQuickShiftTarget(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  executeQuickShift();
+                }
+              }}
+              className="min-h-[44px] text-center font-mono text-base"
+            />
+          </div>
+          <DialogFooter className="flex-row gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setQuickShiftOpen(false)}
+              className="flex-1 sm:flex-initial"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={executeQuickShift}
+              disabled={reorder.isPending}
+              className="flex-1 sm:flex-initial"
+            >
+              {reorder.isPending ? "Memindah…" : "Pindahkan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Drawer Slot Inspector: Edit itemNumber, role, sectionName, notes */}
+      <SlotInspectorDrawer
+        open={inspectorOpen}
+        onOpenChange={setInspectorOpen}
+        bundleId={bundle.id}
+        bundleVersion={bundle.version}
+        slotItem={inspectSlotItem}
+        slotOrdinal={inspectSlotOrdinal}
+      />
     </>
   );
 }

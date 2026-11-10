@@ -1,4 +1,4 @@
-import { uuidPk } from "./_columns";
+import { uuidPk, versionColumn } from "./_columns";
 import {
   pgTable,
   uuid,
@@ -29,6 +29,13 @@ export interface BundlePrintConfig {
   pageSize?: "A4" | "Letter";
   explanationPlacement?: "none" | "inline" | "end";
   answerSpaceCm?: number;
+  backgroundGrid?: boolean;
+  backgroundWatermark?: boolean;
+  columnBreaks?: string[];
+  institutionLogoUrl?: string;
+  brandColor?: string;
+  themeId?: string;
+  themeOptions?: Record<string, Record<string, unknown>>;
 }
 
 export const DEFAULT_BUNDLE_PRINT_CONFIG: BundlePrintConfig = {
@@ -38,7 +45,13 @@ export const DEFAULT_BUNDLE_PRINT_CONFIG: BundlePrintConfig = {
   showQuestionNumber: true,
   pageSize: "A4",
   explanationPlacement: "none",
-  answerSpaceCm: 4,
+  answerSpaceCm: 3,
+  backgroundGrid: false,
+  backgroundWatermark: true,
+  columnBreaks: [],
+  brandColor: "#0158ca",
+  themeId: "math-my-id",
+  themeOptions: {},
 };
 
 /** bundles — paket/naskah soal. UTS/PAS = bundle_type 'exam' tanpa event. */
@@ -66,6 +79,7 @@ export const bundles = pgTable(
     createdById: text("created_by_id"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    version: versionColumn(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [

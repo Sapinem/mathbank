@@ -19,7 +19,7 @@ const robotoMono = Roboto_Mono({
 
 export const metadata: Metadata = {
   title: "MathBank",
-  description: "Bank soal matematika — kurasi, susun, terbitkan.",
+  description: "Bank soal matematika - kurasi, susun, terbitkan.",
 };
 
 /**

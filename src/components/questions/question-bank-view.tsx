@@ -4,15 +4,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import {
+  Plus,
+  X,
+  Layers,
+  CheckCircle2,
+  FilePenLine,
+  Flag,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
+import { ListWorkbenchPagination } from "@/components/ui/list-workbench-pagination";
 import { QuestionCard } from "@/components/questions/question-card";
 import { modeClass, type ViewMode } from "@/components/questions/view-mode-toggle";
 import { QuestionFilterDrawer } from "@/components/questions/question-filter-drawer";
 import { QuestionFilterBar } from "@/components/questions/question-filter-bar";
 import { ErrorState, EmptyState } from "@/components/ui/states";
+import { useDebouncedSearchParam } from "@/lib/hooks/use-debounced-search-param";
 import {
   Dialog,
   DialogContent,
@@ -22,10 +31,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useQuestions, useBulkQuestionAction, type BulkAction } from "@/lib/hooks/use-questions";
-import { useTopics, useSources, useGrades } from "@/lib/hooks/use-reference";
+import { useTopics, useSources, useGrades, useTags } from "@/lib/hooks/use-reference";
 import type { ListQuestionsQuery } from "@/lib/contracts/question";
+import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
 /** Baca daftar nilai dari URL (tunggal maupun banyak, dukung CSV). */
 function readList(params: URLSearchParams, key: string): string[] {
@@ -37,7 +47,7 @@ function readList(params: URLSearchParams, key: string): string[] {
  *
  * Tinggi tiap baris disamakan dengan `QuestionCard` mode list (`h-11`) agar
  * transisi skeleton → konten nyata tidak menggeser tata letak (zero layout
- * shift). Untuk mode grid/masonry dipakai kartu setinggi `min-h-[280px]`.
+ * shift). Untuk mode grid/masonry dipakai kartu setinggi `min-h-[300px]`.
  */
 function QuestionListSkeleton({ mode }: { mode: ViewMode }) {
   if (mode === "grid" || mode === "masonry") {
@@ -46,7 +56,7 @@ function QuestionListSkeleton({ mode }: { mode: ViewMode }) {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="flex min-h-[280px] flex-col gap-3 rounded-xl border border-border/70 bg-card/60 p-4"
+            className="flex min-h-[300px] flex-col gap-3 rounded-xl border border-border/70 bg-card/60 p-4"
           >
             <div className="flex items-center gap-2">
               <Skeleton className="size-6 rounded-md" />
@@ -71,13 +81,15 @@ function QuestionListSkeleton({ mode }: { mode: ViewMode }) {
       aria-hidden="true"
     >
       {Array.from({ length: 10 }).map((_, i) => (
-        <div key={i} className="flex h-11 items-center gap-2.5 px-4">
+        <div key={i} className="flex h-11 items-center gap-2.5 px-3">
           <Skeleton className="size-4 rounded" />
+          <Skeleton className="h-3 flex-1" />
+          <Skeleton className="h-3 w-28 hidden sm:block" />
           <Skeleton className="size-6 rounded-md" />
           <Skeleton className="h-4 w-8" />
-          <Skeleton className="h-4 w-10" />
-          <Skeleton className="h-3 flex-1" />
-          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-8 hidden md:block" />
+          <Skeleton className="h-4 w-10 hidden md:block" />
+          <Skeleton className="size-2 rounded-full" />
         </div>
       ))}
     </div>
@@ -102,17 +114,25 @@ export function QuestionBankView({
     .map(Number)
     .filter((n) => !Number.isNaN(n));
   const topicId = readList(params, "topicId");
+  const tagId = params.get("tagId") ?? undefined;
   const status = (params.get("status") as ListQuestionsQuery["status"]) ?? undefined;
+  const cognitiveLevel = (params.get("cognitiveLevel") as ListQuestionsQuery["cognitiveLevel"]) ?? undefined;
   const sourceId = params.get("sourceId") ?? undefined;
+  const flagged = params.get("flagged") === "true" ? true : undefined;
   const q = params.get("q") ?? undefined;
-  const page = Number(params.get("page") ?? "0");
+  const limitParam = Number(params.get("limit") ?? String(DEFAULT_PAGE_SIZE));
+  const pageSize = [20, 50, 100].includes(limitParam) ? limitParam : DEFAULT_PAGE_SIZE;
+  const rawPage = Number(params.get("page") ?? "0");
+  const page = Number.isInteger(rawPage) && rawPage >= 0 ? rawPage : 0;
 
-  const [search, setSearch] = useState(q ?? "");
+  const [search, setSearch] = useDebouncedSearchParam("/questions", "q", 300);
   const [filtersOpen, setFiltersOpen] = useState(defaultFiltersOpen);
   const mode = (params.get("mode") as ViewMode) ?? "list";
 
   // Seleksi massal
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectionModeManual, setSelectionModeManual] = useState(false);
+  const isSelectionMode = selectionModeManual || selected.size > 0;
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
   const bulk = useBulkQuestionAction();
   const [bulkMsg, setBulkMsg] = useState<string | null>(null);
@@ -128,6 +148,7 @@ export function QuestionBankView({
 
   function clearSelection() {
     setSelected(new Set());
+    setSelectionModeManual(false);
     setBulkMsg(null);
   }
 
@@ -168,27 +189,42 @@ export function QuestionBankView({
   const query: Partial<ListQuestionsQuery> = {
     q,
     status,
+    cognitiveLevel,
     questionType,
     grade,
     difficulty,
     topicId,
+    tagId,
     sourceId,
-    limit: PAGE_SIZE,
-    offset: page * PAGE_SIZE,
+    flagged,
+    limit: pageSize,
+    offset: page * pageSize,
   };
 
   const { data, isLoading, isError, error } = useQuestions(query);
   const { data: topics } = useTopics();
+  const { data: tags } = useTags();
   const { data: sources } = useSources();
   const { data: grades } = useGrades();
 
-  /** Perbarui satu param tunggal (q, status, sourceId, mode, page). */
+  /** Perbarui satu param tunggal (q, status, sourceId, mode, page, limit). */
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(params.toString());
     if (value) next.set(key, value);
     else next.delete(key);
     if (key !== "page") next.delete("page");
-    router.replace(`/questions?${next.toString()}`);
+    router.replace(`/questions${next.toString() ? `?${next.toString()}` : ""}`);
+  }
+
+  /** Perbarui banyak param sekaligus secara atomik (mencegah clobbering closure). */
+  function setParams(entries: Record<string, string | null>) {
+    const next = new URLSearchParams(params.toString());
+    for (const [key, value] of Object.entries(entries)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+      if (key !== "page") next.delete("page");
+    }
+    router.replace(`/questions${next.toString() ? `?${next.toString()}` : ""}`);
   }
 
   /** Tambah/hapus satu nilai pada param multi-nilai (checkbox/toggle di drawer). */
@@ -221,25 +257,34 @@ export function QuestionBankView({
   }
 
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const stats = data?.stats;
+
+  function handlePageSizeChange(newSize: number) {
+    setParam("limit", newSize === DEFAULT_PAGE_SIZE ? null : String(newSize));
+  }
 
   /** Ada filter/pencarian aktif — menentukan deskripsi & tombol reset state kosong. */
   const hasActiveFilter =
     topicId.length > 0 ||
+    Boolean(tagId) ||
     grade.length > 0 ||
     difficulty.length > 0 ||
     questionType.length > 0 ||
     Boolean(status) ||
     Boolean(sourceId) ||
+    Boolean(flagged) ||
     Boolean(q);
 
   const filterValues = {
     topicId,
+    tagId,
     grade,
     difficulty,
+    cognitiveLevel: cognitiveLevel ? [cognitiveLevel] : [],
     questionType,
     status,
     sourceId,
+    flagged,
   };
 
   return (
@@ -251,6 +296,93 @@ export function QuestionBankView({
         description="Cari, saring, dan kelola soal."
       />
 
+      {/* 0.5. STATISTIK RINGKAS (ACT-04 & Omni-List Model) */}
+      <div className="grid grid-cols-2 gap-3 px-3 pt-3 sm:grid-cols-4 sm:px-4">
+        <button
+          type="button"
+          onClick={() => setParams({ status: null, flagged: null })}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
+            !status && !flagged
+              ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+              : "border-border/70 bg-card/60",
+          )}
+        >
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+            <Layers className="size-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-bold tracking-tight tabular-nums font-mono">
+              {stats?.total ?? total}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">Total Soal</div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setParam("status", status === "ready" ? null : "ready")}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
+            status === "ready"
+              ? "border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20"
+              : "border-border/70 bg-card/60",
+          )}
+        >
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="size-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-bold tracking-tight tabular-nums font-mono">
+              {stats?.ready ?? 0}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">Siap Pakai</div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setParam("status", status === "review" ? null : "review")}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
+            status === "review"
+              ? "border-amber-500/50 bg-amber-500/5 ring-1 ring-amber-500/20"
+              : "border-border/70 bg-card/60",
+          )}
+        >
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <FilePenLine className="size-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-bold tracking-tight tabular-nums font-mono">
+              {stats?.review ?? 0}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">Perlu Telaah</div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setParam("flagged", flagged ? null : "true")}
+          className={cn(
+            "flex items-center gap-3 rounded-xl border p-3.5 shadow-2xs text-left transition-all hover:bg-card pointer-coarse:min-h-[44px]",
+            flagged
+              ? "border-rose-500/50 bg-rose-500/5 ring-1 ring-rose-500/20"
+              : "border-border/70 bg-card/60",
+          )}
+        >
+          <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+            <Flag className="size-4.5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl font-bold tracking-tight tabular-nums font-mono">
+              {stats?.flagged ?? 0}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">Ditandai (Flag)</div>
+          </div>
+        </button>
+      </div>
+
       {/* 1. Horizontal Compound Filter Bar */}
       <QuestionFilterBar
         onOpenDrawer={() => setFiltersOpen(true)}
@@ -260,13 +392,16 @@ export function QuestionBankView({
         onClearSearch={clearSearch}
         filters={filterValues}
         topics={topics ?? []}
-        grades={grades ?? []}
+        tags={tags ?? []}
         sources={sources ?? []}
         onRemoveTopic={(id) => toggleValue("topicId", id)}
+        onClearTag={() => setParam("tagId", null)}
         onRemoveGrade={(id) => toggleValue("grade", id)}
         onRemoveDifficulty={(lvl) => toggleValue("difficulty", String(lvl))}
+        onRemoveCognitive={() => setParam("cognitiveLevel", null)}
         onRemoveType={(t) => toggleValue("questionType", t)}
         onClearStatus={() => setParam("status", null)}
+        onClearFlagged={() => setParam("flagged", null)}
         onClearSource={() => setParam("sourceId", null)}
         onResetAll={() => router.replace("/questions")}
         totalFiltered={total}
@@ -281,13 +416,17 @@ export function QuestionBankView({
         onOpenChange={setFiltersOpen}
         filters={filterValues}
         topics={topics ?? []}
+        tags={tags ?? []}
         grades={grades ?? []}
         sources={sources ?? []}
         onToggleTopic={(id) => toggleValue("topicId", id)}
+        onSelectTag={(id) => setParam("tagId", id)}
         onToggleGrade={(id) => toggleValue("grade", id)}
         onToggleDifficulty={(lvl) => toggleValue("difficulty", String(lvl))}
+        onToggleCognitive={(lvl) => setParam("cognitiveLevel", cognitiveLevel === lvl ? null : lvl)}
         onToggleType={(t) => toggleValue("questionType", t)}
         onSelectStatus={(s) => setParam("status", s)}
+        onToggleFlagged={() => setParam("flagged", flagged ? null : "true")}
         onSelectSource={(s) => setParam("sourceId", s)}
         onReset={() => {
           router.replace("/questions");
@@ -338,6 +477,7 @@ export function QuestionBankView({
                 selected={selected.has(question.id)}
                 onToggleSelect={toggleSelect}
                 mode={mode}
+                isSelectionMode={isSelectionMode}
               />
             ))}
           </div>
@@ -346,7 +486,7 @@ export function QuestionBankView({
 
       {/* 4. Bar Seleksi Massal */}
       {selected.size > 0 && (
-        <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-lg border border-border bg-popover shadow-lg sm:mx-4">
+        <div className="sticky bottom-3 z-10 mx-3 mb-3 rounded-lg border border-border bg-popover shadow-lg sm:mx-4 animate-in fade-in slide-in-from-bottom-2 duration-150">
           {/* Baris atas: jumlah terpilih + tombol aksi utama */}
           <div className="flex items-center gap-2 px-3 py-2">
             <span className="shrink-0 text-sm font-medium">{selected.size} terpilih</span>
@@ -450,34 +590,15 @@ export function QuestionBankView({
         </DialogContent>
       </Dialog>
 
-      {/* 5. Paginasi — Ringkas, tetap satu baris di mobile */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2 text-sm sm:px-4">
-          <span className="truncate text-muted-foreground">
-            Hal. {page + 1}/{totalPages}
-          </span>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page === 0}
-              onClick={() => setParam("page", String(page - 1))}
-              className="min-h-[44px]"
-            >
-              Sebelumnya
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page + 1 >= totalPages}
-              onClick={() => setParam("page", String(page + 1))}
-              className="min-h-[44px]"
-            >
-              Berikutnya
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* 5. Paginasi — Model Terpadu (Linear / IBM Carbon Workbench) */}
+      <ListWorkbenchPagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        itemLabel="soal"
+        onPageChange={(newPage) => setParam("page", newPage === 0 ? null : String(newPage))}
+        onPageSizeChange={handlePageSizeChange}
+      />
     </div>
   );
 }

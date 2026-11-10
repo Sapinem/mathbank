@@ -44,7 +44,7 @@ export function QuestionEditor({
 }) {
   const router = useRouter();
   const create = useCreateQuestion();
-  const update = useUpdateQuestion(existing?.id ?? "");
+  const update = useUpdateQuestion(existing?.id ?? "", existing?.version);
   const { data: grades } = useGrades();
   const { data: stimulusParents } = useStimulusParents();
 

@@ -121,7 +121,9 @@ Yang perlu dibaca cepat dari snapshot terbaru:
 
 Invarian skema tetap dijaga `pnpm db:verify` (angka minimum: `src/lib/db/schema-expectations.ts`).
 
-- ADR berlaku: **0009** (bundle satu tabel), **0010** (event), **0011** (stimulus), **0014** (sumber menempel bundle), **0015** (gabung books/institutions), **0016** (`collections`), **0017** (buang enum `exercise`), **0018** (drop `collections.origin`), **0019** (isolasi vektor), **0020** (event makro vs provenance naskah), **0021** (print config), **0022** (`wrapRoute`, larangan Server Actions), **0023** (evaluator invarian skema), **0024** (denormalisasi grade soal dari bundle & pembersihan non-kelas), **0025** (pemisahan status arsip domain vs hapus lunak), **0026** (deklarasi otorisasi eksplisit per method route). Total 26 ADR di `docs/ADR/`.
+- ADR berlaku: **0009** (bundle satu tabel), **0010** (event), **0011** (stimulus), **0014** (sumber menempel bundle), **0015** (gabung books/institutions), **0016** (`collections`), **0017** (buang enum `exercise`), **0018** (drop `collections.origin`), **0019** (isolasi vektor), **0020** (event makro vs provenance naskah), **0021** (print config), **0022** (`wrapRoute`, larangan Server Actions), **0023** (evaluator invarian skema), **0024** (denormalisasi grade soal dari bundle & pembersihan non-kelas), **0025** (pemisahan status arsip domain vs hapus lunak), **0026** (deklarasi otorisasi eksplisit per method route), **0027** (OpenAPI dari kode),
+**0028** (cabut prefix `v1` ingest), **0029** (store bersama rate limit/idempotensi),
+**0030** (`version` + `If-Match`). Total 30 ADR di `docs/ADR/`.
 - **Utang terbuka:** soal belum bertopik & tanpa media (angka di snapshot §1) · **kelengkapan pedagogis** — berapa soal `ready`, berapa punya `distractorRationale`/`rubric` (angka di snapshot §2; jangan disalin ke sini) · layanan embedding Ollama `:11434` perlu dipastikan aktif (`ollama serve`) · `main` tertinggal jauh di belakang branch kerja sehingga CI belum pernah menguji pekerjaan terbaru.
 
 ## 9. Arsitektur 6 lapisan & layanan embedding

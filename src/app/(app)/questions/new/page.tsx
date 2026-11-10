@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { QuestionEditor } from "@/components/questions/question-editor";
 
-export const metadata = { title: "Soal Baru — MathBank" };
+export const metadata = { title: "Soal Baru - MathBank" };
 
 export default function NewQuestionPage() {
   return (

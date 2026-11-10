@@ -11,7 +11,7 @@
  *
  * ⚠️ JANGAN impor file ini dari komponen klien (menarik `@/lib/db`).
  */
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ne, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { bundles, bundleItems } from "@/lib/db/schema/bundle";
 import { questions } from "@/lib/db/schema/question";
@@ -29,7 +29,6 @@ import type {
   BundleCore,
   BundleListResult,
   BundleItemWithQuestion,
-  BundleValidation,
   BundleItemRow,
 } from "./bundle-shared";
 import type { Actor } from "@/lib/auth/actor";
@@ -156,8 +155,13 @@ export async function listBundles(
   const conds = [isNull(bundles.deletedAt)];
   if (filter?.bundleType) conds.push(eq(bundles.bundleType, filter.bundleType));
   if (filter?.origin) conds.push(eq(bundles.origin, filter.origin));
-  if (filter?.status && filter.status !== "active") {
+  if (filter?.status === "archived") {
+    conds.push(eq(bundles.status, "archived"));
+  } else if (filter?.status && filter.status !== "active") {
     conds.push(eq(bundles.status, filter.status));
+  } else {
+    // default (atau status: "active"): hanya paket aktif (bukan arsip)
+    conds.push(ne(bundles.status, "archived"));
   }
   const q = filter?.q?.trim();
   if (q) {
@@ -287,82 +291,9 @@ export async function listBundleItems(
   }));
 }
 
-/**
- * Validasi paket: kelengkapan soal & kunci. Peringatan ≠ error.
- */
-export async function validateBundle(
-  id: string,
-): Promise<BundleValidation> {
-  const items = await db
-    .select({
-      questionId: bundleItems.questionId,
-      itemNumber: bundleItems.itemNumber,
-      deletedAt: questions.deletedAt,
-      answerKey: questions.answerKey,
-    })
-    .from(bundleItems)
-    .innerJoin(questions, eq(questions.id, bundleItems.questionId))
-    .where(eq(bundleItems.bundleId, id));
-
-  const withoutAnswerKey: BundleValidation["withoutAnswerKey"] = [];
-  const missingQuestions: string[] = [];
-  for (const it of items) {
-    if (it.deletedAt) {
-      missingQuestions.push(it.questionId);
-      continue;
-    }
-    // `answer_key` kosong = tak punya kunci (`{}` bukan null).
-    const key = it.answerKey as Record<string, unknown> | null | undefined;
-    const takPunyaKunci =
-      key === null ||
-      key === undefined ||
-      (typeof key === "object" && Object.keys(key).length === 0);
-    if (takPunyaKunci) {
-      withoutAnswerKey.push({
-        questionId: it.questionId,
-        itemNumber: it.itemNumber,
-      });
-    }
-  }
-  return {
-    itemCount: items.length,
-    withoutAnswerKey,
-    missingQuestions,
-    valid: missingQuestions.length === 0,
-  };
-}
-
-/** Apakah sebuah soal dipakai di paket AKTIF mana pun? (untuk RESTRICT hapus soal) */
-export async function isQuestionUsedInBundles(
-  questionId: string,
-): Promise<boolean> {
-  // T-M7-3: hanya paket AKTIF yang memblokir — paket terarsip tak boleh
-  // menyandera soal (jika tidak, soal mustahil dihapus setelah paket diarsip).
-  const [row] = await db
-    .select({ id: bundleItems.id })
-    .from(bundleItems)
-    .innerJoin(bundles, eq(bundles.id, bundleItems.bundleId))
-    .where(
-      and(eq(bundleItems.questionId, questionId), isNull(bundles.deletedAt)),
-    )
-    .limit(1);
-  return Boolean(row);
-}
-
-/** ID paket AKTIF yang memakai sekumpulan soal. */
-export async function bundlesUsingQuestions(
-  questionIds: string[],
-): Promise<string[]> {
-  if (questionIds.length === 0) return [];
-  const rows = await db
-    .selectDistinct({ bundleId: bundleItems.bundleId })
-    .from(bundleItems)
-    .innerJoin(bundles, eq(bundles.id, bundleItems.bundleId))
-    .where(
-      and(
-        inArray(bundleItems.questionId, questionIds),
-        isNull(bundles.deletedAt),
-      ),
-    );
-  return rows.map((r) => r.bundleId);
-}
+export {
+  validateBundle,
+  isQuestionUsedInBundles,
+  bundlesUsingQuestions,
+  type BundleValidation,
+} from "./bundle-usage";

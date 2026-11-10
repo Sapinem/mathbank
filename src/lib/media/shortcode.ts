@@ -14,15 +14,35 @@
  */
 import { isValidShortId } from "./short-id";
 
-/** Pola shortcode — longgar terhadap spasi agar teks hasil salin-tempel tetap dikenali. */
-const SHORTCODE_RE = /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})\s*\}\}/g;
+/** Modifier ukuran gambar opsional. */
+export type ImageSizeModifier = "sm" | "md" | "lg" | "full";
 
-/** Bangun shortcode kanonik dari sebuah short_id. */
-export function mediaShortcode(shortId: string): string {
+export const VALID_SIZE_MODIFIERS = new Set<string>(["sm", "md", "lg", "full"]);
+
+/** Pola shortcode — longgar terhadap spasi agar teks hasil salin-tempel tetap dikenali. */
+export const SHORTCODE_RE =
+  /\{\{\s*img\s*:\s*([0-9A-Za-z]{8})(?:\s*\|\s*(sm|md|lg|full))?\s*\}\}/g;
+
+/** Bangun shortcode kanonik dari sebuah short_id dengan opsi modifier ukuran. */
+export function mediaShortcode(shortId: string, size?: ImageSizeModifier): string {
   if (!isValidShortId(shortId)) {
     throw new Error(`short_id tidak sah: "${shortId}" (harus 8 karakter base62)`);
   }
-  return `{{img:${shortId}}}`;
+  return size ? `{{img:${shortId}|${size}}}` : `{{img:${shortId}}}`;
+}
+
+/** Urai sebuah shortcode gambar (mis. `{{img:a7Kx9mP2|sm}}`). */
+export function parseImageShortcode(
+  raw: string,
+): { shortId: string; size?: ImageSizeModifier } | null {
+  const match = raw.match(
+    /^\{\{\s*img\s*:\s*([0-9A-Za-z]{8})(?:\s*\|\s*(sm|md|lg|full))?\s*\}\}$/,
+  );
+  if (!match) return null;
+  return {
+    shortId: match[1]!,
+    ...(match[2] ? { size: match[2] as ImageSizeModifier } : {}),
+  };
 }
 
 /** Apakah teks memuat minimal satu shortcode media? */
@@ -53,7 +73,10 @@ export function extractShortIds(text: string): string[] {
  * menulis spasi: `{{ img : a7Kx9mP2 }}` → `{{img:a7Kx9mP2}}`.
  */
 export function normalizeShortcodes(text: string): string {
-  return text.replace(SHORTCODE_RE, (_, id: string) => `{{img:${id}}}`);
+  return text.replace(
+    SHORTCODE_RE,
+    (_, id: string, size?: string) => (size ? `{{img:${id}|${size}}}` : `{{img:${id}}}`),
+  );
 }
 
 /** URL penyajian berkas untuk sebuah short_id (`/img/{shortId}`). */

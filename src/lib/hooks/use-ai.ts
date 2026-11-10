@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { SettingItem } from "@/lib/services/settings-service";
 import { questionKeys } from "@/lib/hooks/use-questions";
+import { api } from "@/lib/api/fetcher";
 
 /**
  * Hook Pengaturan AI (M10) — React Query.
@@ -11,16 +12,6 @@ import { questionKeys } from "@/lib/hooks/use-questions";
  * - `useAiModels`    : daftar model dari provider (untuk pemilih)
  * - `useAiHealth`    : cek LLM + embedding
  */
-
-async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message ?? `HTTP ${res.status}`);
-  return json.data as T;
-}
 
 export const aiKeys = {
   settings: ["ai", "settings"] as const,
@@ -31,7 +22,7 @@ export const aiKeys = {
 export function useAiSettings() {
   return useQuery({
     queryKey: aiKeys.settings,
-    queryFn: () => apiFetch<{ items: SettingItem[] }>("/api/ai/settings"),
+    queryFn: () => api<{ items: SettingItem[] }>("/api/ai/settings"),
     staleTime: 5 * 60_000,
   });
 }
@@ -49,7 +40,7 @@ export function useSaveAiSettings() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: AiSettingsInput) =>
-      apiFetch<{ items: SettingItem[] }>("/api/ai/settings", {
+      api<{ items: SettingItem[] }>("/api/ai/settings", {
         method: "POST",
         body: JSON.stringify(input),
       }),
@@ -65,7 +56,7 @@ export function useSaveAiSettings() {
 export function useAiModels(enabled = true) {
   return useQuery({
     queryKey: aiKeys.models,
-    queryFn: () => apiFetch<{ models: string[]; error?: string }>("/api/ai/models"),
+    queryFn: () => api<{ models: string[]; error?: string }>("/api/ai/models"),
     enabled,
     staleTime: 60_000,
     retry: false,
@@ -76,7 +67,7 @@ export function useAiHealth(enabled = true) {
   return useQuery({
     queryKey: aiKeys.health,
     queryFn: () =>
-      apiFetch<{
+      api<{
         llm: { enabled: boolean; model: string | null; ok: boolean; error: string | null };
         embedding: { ok: boolean; error: string | null };
       }>("/api/ai/health"),
@@ -114,7 +105,7 @@ export function useEnrichQuestion() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (questionId: string) =>
-      apiFetch<EnrichResult>("/api/ai/enrich", {
+      api<EnrichResult>("/api/ai/enrich", {
         method: "POST",
         body: JSON.stringify({ questionId }),
       }),

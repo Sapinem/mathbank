@@ -1,8 +1,7 @@
 # STRATEGI INGEST — M9: Parsing Korpus (mathcyber · m4thlab · defantri)
 
-> **Status:** 📋 rencana (butuh persetujuan) · **Milestone:** M9 (Fase 2) · **Tanggal:** 2026-09-30
-> **Perubahan arah:** M9 **BUKAN** PDF. Fokus: **parsing korpus HTML** yang sudah dicrawl
-> (mathcyber, m4thlab, defantri, pusmendik). Keputusan pemilik produk 2026-09-30.
+> **Status:** 🟢 Diperbarui (ADR-0031) · **Milestone:** M9 (Fase 2 / Ingest Decoupling) · **Tanggal:** 2026-11-09  
+> **Pembaruan Arsitektur (ADR-0031):** Core API MathBank difokuskan murni sebagai **Quality Gate & Persistence Gateway** (`POST /api/ingest/questions`). Seluruh parser spesifik sumber dipindahkan ke modul mandiri di `scripts/ingest/sources/*`. Endpoint lama (`/api/ingest/upload` & `/api/ingest/commit`) berstatus deprecated (s.d. 2027-02-08).
 
 ---
 
@@ -101,9 +100,9 @@ rawHtml
 ### 4.3 Endpoint (L4) — **dua wajah**
 | Endpoint | Auth | Untuk |
 |---|---|---|
-| `POST /api/v1/ingest/upload` | **machine** | Kirim artikel (JSON `{url,title,rawHtml,source}`) → antrean |
-| `GET /api/v1/ingest/queue` | session | Lihat antrean (UI) |
-| `POST /api/v1/ingest/commit` | **machine** | Proses antrean → soal draft |
+| `POST /api/ingest/upload` | **machine** | Kirim artikel (JSON `{url,title,rawHtml,source}`) → antrean |
+| `GET /api/ingest/queue` | session | Lihat antrean (UI) |
+| `POST /api/ingest/commit` | **machine** | Proses antrean → soal draft |
 | `GET /api/ingest/sources` | session | Daftar sumber korpus |
 
 ### 4.4 Halaman Ingest & Integrasi (aktifkan dari tersembunyi)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -20,12 +20,11 @@ import {
   X,
   LayoutGrid,
   List,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListWorkbenchPagination } from "@/components/ui/list-workbench-pagination";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { STATUS_SHORT_LABELS as STATUS_LABELS } from "@/lib/display/labels";
 import {
   Table,
   TableBody,
@@ -57,6 +57,8 @@ import {
   TopicCoverageChip,
 } from "@/components/bundles/bundle-enrichment";
 import { cn } from "@/lib/utils";
+import { useDebouncedSearchParam } from "@/lib/hooks/use-debounced-search-param";
+import { StatusIcon } from "@/components/questions/question-status-badge";
 import {
   useBundlesPage,
   useCreateBundle,
@@ -64,33 +66,12 @@ import {
   useDuplicateBundle,
 } from "@/lib/hooks/use-bundles";
 import type { BundleRow, BundleType, BundleOrigin } from "@/lib/services/bundle-service";
+import { statusBadgeClass } from "@/lib/display/bundle-labels";
 
 const TYPE_LABELS: Record<BundleType, string> = {
   source: "Sumber",
   exam: "Ujian",
 };
-
-const STATUS_LABELS: Record<BundleRow["status"], string> = {
-  draft: "Draf",
-  review: "Telaah",
-  ready: "Siap",
-  archived: "Arsip",
-};
-
-function statusBadgeClass(status: BundleRow["status"]): string {
-  switch (status) {
-    case "ready":
-      return "border-success/30 bg-success/10 text-success";
-    case "review":
-      return "border-gold/30 bg-gold/10 text-gold";
-    case "draft":
-      return "border-border bg-muted/60 text-muted-foreground";
-    case "archived":
-      return "border-border/60 bg-muted/30 text-muted-foreground/70";
-    default:
-      return "";
-  }
-}
 
 /**
  * Tab jenis paket — sinkron dengan URL `?type=`.
@@ -111,52 +92,62 @@ const ORIGIN_TABS: { id: "all" | BundleOrigin; label: string; param: string }[] 
   { id: "ingest", label: "Ingest", param: "ingest" },
 ];
 
-/** Jumlah paket per halaman — dipakai sebagai `limit` API (paginasi server-side). */
-const BUNDLES_PAGE_SIZE = 20;
-
 export function BundleListView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ── URL-driven filter state (MAT-40) ──────────────────────
+  // ── URL-driven filter, search, & pagination state (Single Source of Truth) ──
   const typeParam = searchParams.get("type") as BundleType | null;
   const originParam = searchParams.get("origin") as BundleOrigin | null;
+  const statusParam = searchParams.get("status") as BundleRow["status"] | null;
+  const qParam = searchParams.get("q") ?? "";
+  const modeParam = (searchParams.get("mode") as "grid" | "list") ?? "grid";
+  const pageParam = Number(searchParams.get("page") ?? "0");
+  const limitParam = Number(searchParams.get("limit") ?? "20");
+
   const typeFilter: "all" | BundleType =
     typeParam === "exam" || typeParam === "source" ? typeParam : "all";
   const originFilter: "all" | BundleOrigin =
     originParam === "ingest" || originParam === "manual" ? originParam : "all";
+  const statusFilter: "all" | BundleRow["status"] =
+    statusParam && ["draft", "review", "ready", "archived"].includes(statusParam)
+      ? statusParam
+      : "all";
+  const viewMode: "grid" | "list" = modeParam === "list" ? "list" : "grid";
+  const pageSize = [20, 50, 100].includes(limitParam) ? limitParam : 20;
+  const page = Number.isInteger(pageParam) && pageParam >= 0 ? pageParam : 0;
 
-  // ── State filter & halaman ──────────────────────────────
-  // Status & pencarian kini **server-side** (ACT-04): nilainya ikut ke query
-  // API, jadi daftar tak perlu menarik seluruh paket ke memori.
-  const [search, setSearch] = useState(""); // input mentah (responsif)
-  const [debouncedSearch, setDebouncedSearch] = useState(""); // 300 ms
-  const [statusFilter, setStatusFilter] = useState<"all" | BundleRow["status"]>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  // Halaman daftar (0-based). Direset ke 0 saat filter/pencarian berubah.
-  const [page, setPage] = useState(0);
+  // Local state untuk input search yang ter-debounce 300 ms ke URL
+  const [search, setSearch] = useDebouncedSearchParam("/bundles", "q", 300);
 
-  // Debounce: satu request per jeda ketik, bukan per karakter.
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
-    return () => clearTimeout(t);
-  }, [search]);
+  /** Helper untuk memperbarui satu parameter URL */
+  function setParam(key: string, value: string | null) {
+    const next = new URLSearchParams(searchParams.toString());
+    if (value) next.set(key, value);
+    else next.delete(key);
+    if (key !== "page") next.delete("page");
+    router.replace(`/bundles${next.toString() ? `?${next.toString()}` : ""}`, { scroll: false });
+  }
+
+  /** Reset seluruh filter dan pencarian */
+  function resetAllFilters() {
+    setSearch("");
+    router.replace("/bundles", { scroll: false });
+  }
 
   /**
    * ACT-04 — SATU request HTTP per halaman.
    *
-   * Filter (jenis/asal/status/cari) + `limit` + `offset` dikirim ke server;
-   * sebelumnya daftar menelusuri SEMUA halaman (hingga 50 roundtrip
-   * sekuensial) hanya untuk menampilkan 20 baris. Statistik ikut di amplop
-   * (`stats`) sehingga kartu ringkas tetap akurat tanpa request tambahan.
+   * Filter (jenis/asal/status/cari) + `limit` + `offset` dikirim ke server.
+   * Statistik ikut di amplop (`stats`) sehingga kartu ringkas tetap akurat tanpa request tambahan.
    */
   const { data: pageData, isPending, isError, error } = useBundlesPage({
     bundleType: typeFilter !== "all" ? typeFilter : undefined,
     origin: originFilter !== "all" ? originFilter : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
-    q: debouncedSearch || undefined,
-    limit: BUNDLES_PAGE_SIZE,
-    offset: page * BUNDLES_PAGE_SIZE,
+    q: qParam || undefined,
+    limit: pageSize,
+    offset: page * pageSize,
   });
   const data: BundleRow[] = pageData?.items ?? [];
   /** Total paket cocok filter menurut API (seluruh halaman). */
@@ -167,7 +158,17 @@ export function BundleListView() {
   const duplicate = useDuplicateBundle();
 
   // Dialog & local-only state
-  const [open, setOpen] = useState(false);
+  // `?new=true` harus reaktif: aksi command palette bisa dijalankan saat
+  // pengguna SUDAH berada di /bundles, dan initializer useState tidak jalan
+  // lagi. URL adalah sumber kebenaran; menutup dialog juga membersihkan param.
+  const open = searchParams.get("new") === "true";
+  const setOpen = (next: boolean) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) params.set("new", "true");
+    else params.delete("new");
+    const qs = params.toString();
+    router.replace(`/bundles${qs ? `?${qs}` : ""}`, { scroll: false });
+  };
   const [title, setTitle] = useState("");
   const [type, setType] = useState<BundleType>(typeFilter !== "all" ? typeFilter : "exam");
   const [formErr, setFormErr] = useState<string | null>(null);
@@ -182,8 +183,8 @@ export function BundleListView() {
     else params.set("type", nextType);
     if (nextOrigin === "all") params.delete("origin");
     else params.set("origin", nextOrigin);
+    params.delete("page");
     const qs = params.toString();
-    setPage(0); // filter berubah → kembali ke halaman pertama
     router.replace(`/bundles${qs ? `?${qs}` : ""}`, { scroll: false });
   }
 
@@ -221,9 +222,9 @@ export function BundleListView() {
   const sourceCount = stats?.byType.source ?? 0;
   const totalItems = stats?.totalItems ?? 0;
 
-  // Paginasi server-side: halaman ini sudah berisi maksimal `BUNDLES_PAGE_SIZE`
+  // Paginasi server-side: halaman ini sudah berisi maksimal `pageSize`
   // baris, jadi tak ada lagi `filter`/`slice` di klien.
-  const totalPages = Math.max(1, Math.ceil(total / BUNDLES_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages - 1);
 
   // Jaring aman tanpa efek: bila halaman ini kosong padahal ada hasil (mis.
@@ -231,7 +232,7 @@ export function BundleListView() {
   // lihat cabang `total > 0 && data.length === 0` di bawah.
 
   const hasFilterActive =
-    debouncedSearch !== "" || statusFilter !== "all" || typeFilter !== "all" || originFilter !== "all";
+    qParam !== "" || statusFilter !== "all" || typeFilter !== "all" || originFilter !== "all";
 
   return (
     <>
@@ -289,12 +290,11 @@ export function BundleListView() {
           </div>
         </div>
 
-        {/* TAB FILTER URL-DRIVEN: Jenis & Asal (MAT-40) */}
+        {/* TAB UTAMA & TOOLBAR FILTER */}
         <div className="flex flex-col gap-3">
-          {/* Sub-tab Jenis Paket */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Jenis Paket</span>
-            <div className="inline-flex w-fit rounded-lg border border-border p-0.5 bg-muted/20">
+          {/* Baris Tab Jenis Paket & Toggle Tampilan */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/20">
               {TYPE_TABS.map((tab) => (
                 <button
                   key={tab.id}
@@ -302,9 +302,9 @@ export function BundleListView() {
                   onClick={() => updateUrl({ type: tab.id })}
                   aria-pressed={typeFilter === tab.id}
                   className={cn(
-                    "min-h-[44px] rounded-md px-3 py-1 text-xs font-medium motion-safe:transition-colors",
+                    "min-h-[44px] rounded-md px-3.5 py-1 text-xs font-medium motion-safe:transition-colors",
                     typeFilter === tab.id
-                      ? "bg-background text-foreground shadow-2xs"
+                      ? "bg-background text-foreground shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -312,41 +312,51 @@ export function BundleListView() {
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Sub-tab Asal Paket */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Asal Paket</span>
-            <div className="inline-flex w-fit rounded-lg border border-border p-0.5 bg-muted/20">
-              {ORIGIN_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => updateUrl({ origin: tab.id })}
-                  aria-pressed={originFilter === tab.id}
-                  className={cn(
-                    "min-h-[44px] rounded-md px-3 py-1 text-xs font-medium motion-safe:transition-colors",
-                    originFilter === tab.id
-                      ? "bg-background text-foreground shadow-2xs"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
+            {/* Toggle Mode Tampilan (Grid / List) & Indikator Halaman */}
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <span className="text-xs font-mono text-muted-foreground">
+                {data.length} dari {totalBundles} paket
+                {totalPages > 1 && (
+                  <>
+                    {" · "}
+                    <span className="text-foreground/80">
+                      hal. {safePage + 1}/{totalPages}
+                    </span>
+                  </>
+                )}
+              </span>
+              <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5 bg-muted/20">
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  aria-label="Tampilan Kisi Kartu"
+                  onClick={() => setParam("mode", "grid")}
+                  className="min-h-[44px] min-w-[44px]"
                 >
-                  {tab.label}
-                </button>
-              ))}
+                  <LayoutGrid className="size-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  aria-label="Tampilan Tabel Rinci"
+                  onClick={() => setParam("mode", "list")}
+                  className="min-h-[44px] min-w-[44px]"
+                >
+                  <List className="size-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* TOOLBAR PENCARIAN & STATUS */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Toolbar Pencarian, Status, dan Asal Paket */}
           <div className="flex flex-1 flex-wrap items-center gap-2">
             {/* Input Cari */}
             <div className="relative min-w-48 max-w-xs flex-1">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cari judul naskah/tahun…"
                 aria-label="Cari naskah"
                 className="h-9 pl-8.5 pr-8 text-sm bg-muted/20"
@@ -354,7 +364,10 @@ export function BundleListView() {
               {search && (
                 <button
                   type="button"
-                  onClick={() => setSearch("")}
+                  onClick={() => {
+                    setSearch("");
+                    setParam("q", null);
+                  }}
                   aria-label="Hapus kata kunci"
                   className="absolute right-0 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-muted-foreground hover:text-foreground"
                 >
@@ -366,7 +379,7 @@ export function BundleListView() {
             {/* Filter Status */}
             <Select
               value={statusFilter}
-              onValueChange={(v) => { setStatusFilter(v as "all" | BundleRow["status"]); setPage(0); }}
+              onValueChange={(v) => setParam("status", v === "all" ? null : v)}
             >
               <SelectTrigger className="h-9 min-w-32 text-xs">
                 <SelectValue placeholder="Status" />
@@ -377,8 +390,26 @@ export function BundleListView() {
                   <SelectItem value="draft">Draf</SelectItem>
                   <SelectItem value="review">Telaah</SelectItem>
                   <SelectItem value="ready">Siap</SelectItem>
-                  {/* "Arsip" tak ditawarkan: mengarsipkan = soft-delete, jadi
-                      paket terarsip tak pernah muncul di daftar aktif. */}
+                  <SelectItem value="archived">Arsip</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            {/* Filter Asal Paket */}
+            <Select
+              value={originFilter}
+              onValueChange={(v) => updateUrl({ origin: v as "all" | BundleOrigin })}
+            >
+              <SelectTrigger className="h-9 min-w-28 text-xs">
+                <SelectValue placeholder="Asal Paket" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {ORIGIN_TABS.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -388,51 +419,12 @@ export function BundleListView() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setSearch("");
-                  setStatusFilter("all");
-                  updateUrl({ type: "all", origin: "all" });
-                }}
+                onClick={resetAllFilters}
                 className="h-9 text-xs text-muted-foreground hover:text-foreground"
               >
-                Reset
+                Reset Filter
               </Button>
             )}
-          </div>
-
-          {/* Toggle Mode Tampilan (Grid / List) */}
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <span className="text-xs font-mono text-muted-foreground">
-              {data.length} dari {totalBundles} paket
-              {totalPages > 1 && (
-                <>
-                  {" · "}
-                  <span className="text-foreground/80">
-                    hal. {safePage + 1}/{totalPages}
-                  </span>
-                </>
-              )}
-            </span>
-            <div className="flex items-center gap-0.5 rounded-lg border border-border p-0.5 bg-muted/20">
-              <Button
-                variant={viewMode === "grid" ? "secondary" : "ghost"}
-                size="icon-sm"
-                aria-label="Tampilan Kisi Kartu"
-                onClick={() => setViewMode("grid")}
-                className="min-h-[44px] min-w-[44px]"
-              >
-                <LayoutGrid className="size-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "secondary" : "ghost"}
-                size="icon-sm"
-                aria-label="Tampilan Tabel Rinci"
-                onClick={() => setViewMode("list")}
-                className="min-h-[44px] min-w-[44px]"
-              >
-                <List className="size-4" />
-              </Button>
-            </div>
           </div>
         </div>
 
@@ -448,11 +440,7 @@ export function BundleListView() {
             action={
               <Button
                 variant="outline"
-                onClick={() => {
-                  setSearch("");
-                  setStatusFilter("all");
-                  updateUrl({ type: "all", origin: "all" });
-                }}
+                onClick={resetAllFilters}
                 className="mt-2"
               >
                 Reset Semua Filter
@@ -474,7 +462,7 @@ export function BundleListView() {
             title="Halaman ini kosong"
             description={`Hanya tersedia ${totalPages} halaman untuk filter saat ini.`}
             action={
-              <Button variant="outline" onClick={() => setPage(0)} className="mt-2">
+              <Button variant="outline" onClick={() => setParam("page", null)} className="mt-2">
                 Ke Halaman Pertama
               </Button>
             }
@@ -515,6 +503,7 @@ export function BundleListView() {
                       variant="outline"
                       className={cn("text-[11px] font-normal", statusBadgeClass(b.status))}
                     >
+                      <StatusIcon status={b.status} data-icon="inline-start" aria-hidden="true" />
                       {STATUS_LABELS[b.status]}
                     </Badge>
                   </div>
@@ -635,7 +624,7 @@ export function BundleListView() {
                       {b.origin === "ingest" ? "Ingest" : "Manual"}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground tabular-nums">
-                      {b.year ?? "—"}
+                      {b.year ?? "-"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums font-mono font-medium">
                       {b.itemCount}
@@ -644,7 +633,7 @@ export function BundleListView() {
                       {b.enrichment && b.enrichment.questionCount > 0 ? (
                         <DifficultyAverageChip avg={b.enrichment.avgDifficulty} />
                       ) : (
-                        <span className="text-muted-foreground/60">—</span>
+                        <span className="text-muted-foreground/60">-</span>
                       )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -654,17 +643,18 @@ export function BundleListView() {
                           coverage={b.enrichment.topicCoverage}
                         />
                       ) : (
-                        <span className="text-muted-foreground/60">—</span>
+                        <span className="text-muted-foreground/60">-</span>
                       )}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-right tabular-nums font-mono">
-                      {b.durationMinutes ? `${b.durationMinutes} mnt` : "—"}
+                      {b.durationMinutes ? `${b.durationMinutes} mnt` : "-"}
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
                         className={cn("text-xs font-normal", statusBadgeClass(b.status))}
                       >
+                        <StatusIcon status={b.status} data-icon="inline-start" aria-hidden="true" />
                         {STATUS_LABELS[b.status]}
                       </Badge>
                     </TableCell>
@@ -707,45 +697,17 @@ export function BundleListView() {
           </div>
         )}
 
-        {/* PAGINASI (20 per halaman) */}
-        {!isPending && !isError && totalPages > 1 && (
-          <nav
-            className="flex items-center justify-between gap-3 pt-1"
-            aria-label="Navigasi halaman paket"
-          >
-            <span className="text-xs text-muted-foreground">
-              Menampilkan {safePage * BUNDLES_PAGE_SIZE + 1}–
-              {Math.min((safePage + 1) * BUNDLES_PAGE_SIZE, total)} dari{" "}
-              {total} paket
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={safePage <= 0}
-                onClick={() => {
-                  setPage(Math.max(0, safePage - 1));
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                <ChevronLeft data-icon="inline-start" /> Sebelumnya
-              </Button>
-              <span className="text-xs font-medium tabular-nums">
-                {safePage + 1} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={safePage >= totalPages - 1}
-                onClick={() => {
-                  setPage(Math.min(totalPages - 1, safePage + 1));
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                Berikutnya <ChevronRight data-icon="inline-end" />
-              </Button>
-            </div>
-          </nav>
+        {/* PAGINASI TERPADU (Model Workbench) */}
+        {!isPending && !isError && (
+          <ListWorkbenchPagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            itemLabel="paket"
+            onPageChange={(newPage) => setParam("page", newPage === 0 ? null : String(newPage))}
+            onPageSizeChange={(newSize) => setParam("limit", newSize === 20 ? null : String(newSize))}
+            className="rounded-xl border border-border/70"
+          />
         )}
       </div>
 
@@ -818,7 +780,9 @@ export function BundleListView() {
               variant="destructive"
               onClick={() => {
                 if (!confirm) return;
-                archive.mutate(confirm.id, {
+                archive.mutate(
+                  { id: confirm.id, version: confirm.version },
+                  {
                   onSuccess: () => {
                     setConfirm(null);
                     toast.success("Paket diarsipkan.");

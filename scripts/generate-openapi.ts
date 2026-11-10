@@ -85,6 +85,8 @@ interface DocRow {
   verb: string;
   label: string;
   summary: string;
+  /** Penanda konkurensi optimistik (ADR-0030): If-Match / ETag / —. */
+  version: string;
 }
 
 function labelOf(operation: Json): string {
@@ -103,11 +105,13 @@ function renderDocsTable(spec: Json): string {
   for (const [path, operations] of Object.entries(paths)) {
     for (const [verb, operation] of Object.entries(operations)) {
       const tag = String((operation.tags as string[] | undefined)?.[0] ?? "system");
+      const meta = (operation["x-mathbank"] ?? {}) as Json;
       const row: DocRow = {
         path,
         verb: verb.toUpperCase(),
         label: labelOf(operation),
         summary: String(operation.summary ?? ""),
+        version: meta.ifMatch ? "If-Match" : meta.etag ? "ETag" : "—",
       };
       const list = byTag.get(tag) ?? [];
       list.push(row);
@@ -128,10 +132,11 @@ function renderDocsTable(spec: Json): string {
       [
         `### ${tag} — ${description}`.trimEnd(),
         "",
-        "| Method | Path | Izin | Ringkasan |",
-        "|--------|------|:----:|-----------|",
+        "| Method | Path | Izin | Versi | Ringkasan |",
+        "|--------|------|:----:|:-----:|-----------|",
         ...rows.map(
-          (row) => `| \`${row.verb}\` | \`${row.path}\` | ${row.label} | ${row.summary} |`,
+          (row) =>
+            `| \`${row.verb}\` | \`${row.path}\` | ${row.label} | ${row.version} | ${row.summary} |`,
         ),
       ].join("\n"),
     );

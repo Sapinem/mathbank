@@ -1,11 +1,41 @@
 /** Label & gaya tampilan untuk enum soal (Bahasa Indonesia). */
 
+import type { LucideIcon } from "lucide-react";
+import {
+  FilePenLine,
+  Clock,
+  CheckCircle2,
+  Archive,
+  HelpCircle,
+} from "lucide-react";
+
 export const STATUS_LABELS: Record<string, string> = {
   draft: "Draf",
   review: "Perlu Telaah",
   ready: "Siap",
   archived: "Arsip",
 };
+
+/** Label status ringkas (mis. untuk kartu atau tombol filter yang sempit). */
+export const STATUS_SHORT_LABELS: Record<string, string> = {
+  draft: "Draf",
+  review: "Telaah",
+  ready: "Siap",
+  archived: "Arsip",
+};
+
+/** Ikon Lucide resmi per status FSM. */
+export const STATUS_ICONS: Record<string, LucideIcon> = {
+  draft: FilePenLine,
+  review: Clock,
+  ready: CheckCircle2,
+  archived: Archive,
+};
+
+/** Ambil komponen ikon Lucide untuk status tertentu (fallback: HelpCircle). */
+export function getStatusIcon(status: string): LucideIcon {
+  return STATUS_ICONS[status] ?? HelpCircle;
+}
 
 export const TYPE_LABELS: Record<string, string> = {
   stimulus: "Stimulus",
@@ -125,4 +155,44 @@ export function cognitiveCode(level: string): string {
     create: "C6",
   };
   return map[level] ?? "—";
+}
+
+/** Format jenjang kelas ringkas: "10", "11W", "11L", "SMP 08", "SD 04", dsb. */
+export function formatGradeBadge(grade: string): string {
+  const g = grade.trim();
+  const lower = g.toLowerCase();
+
+  // SMP (7, 8, 9) -> "07", "08", "09" (hanya angka 2 digit tanpa teks 'SMP')
+  if (lower.startsWith("smp")) {
+    const num = lower.replace("smp", "").replace(/[^0-9]/g, "");
+    return num ? num.padStart(2, "0") : g.toUpperCase();
+  }
+  if (["7", "8", "9"].includes(lower)) {
+    return `0${lower}`;
+  }
+
+  // SD (1 s/d 6) -> "01" s/d "06" (hanya angka 2 digit tanpa teks 'SD')
+  if (lower.startsWith("sd")) {
+    const num = lower.replace("sd", "").replace(/[^0-9]/g, "");
+    return num ? num.padStart(2, "0") : g.toUpperCase();
+  }
+  if (["1", "2", "3", "4", "5", "6"].includes(lower)) {
+    return `0${lower}`;
+  }
+
+  // SMA Wajib / Lanjut
+  if (lower === "11w" || lower === "sma-11w") return "11W";
+  if (lower === "11l" || lower === "sma-11l") return "11L";
+  if (lower === "12w" || lower === "sma-12w") return "12W";
+  if (lower === "12l" || lower === "sma-12l") return "12L";
+
+  // SMA Standar / Ujian
+  if (lower === "10" || lower === "sma-10") return "10";
+  if (lower === "11") return "11";
+  if (lower === "12") return "12";
+  if (lower === "utbk") return "UTBK";
+  if (lower === "mandiri") return "MDR";
+  if (lower === "umum") return "UMUM";
+
+  return g.toUpperCase();
 }
