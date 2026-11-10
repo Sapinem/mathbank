@@ -10,6 +10,8 @@ import { api } from "@/lib/api/fetcher";
  * - `useRevokeAgentKey` : cabut kunci
  */
 
+export type ApiKeyPreset = "read_only_guest" | "read_only_full" | "agent_full";
+
 export interface AgentKeyInfo {
   id: string;
   version: number;
@@ -20,6 +22,7 @@ export interface AgentKeyInfo {
   expiresAt: string | null;
   lastRequest: string | null;
   requestCount: number | null;
+  preset: ApiKeyPreset;
 }
 
 export const agentKeyKeys = {
@@ -38,11 +41,21 @@ export function useAgentKeys(enabled = true) {
 export function useCreateAgentKey() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name?: string; expiresInDays?: number }) =>
-      api<{ id: string; key: string; prefix: string | null; name: string | null }>(
-        "/api/system/agent-keys",
-        { method: "POST", body: JSON.stringify(input) },
-      ),
+    mutationFn: (input: {
+      name?: string;
+      expiresInDays?: number;
+      preset?: ApiKeyPreset;
+    }) =>
+      api<{
+        id: string;
+        key: string;
+        prefix: string | null;
+        name: string | null;
+        preset?: ApiKeyPreset;
+      }>("/api/system/agent-keys", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: agentKeyKeys.all }),
   });
 }

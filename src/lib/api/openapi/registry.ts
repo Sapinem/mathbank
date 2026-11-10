@@ -255,6 +255,7 @@ const agentKeySchema = z.looseObject({
   expiresAt: iso.nullable(),
   lastRequest: iso.nullable(),
   requestCount: z.number().int().nullable(),
+  preset: z.enum(["read_only_guest", "read_only_full", "agent_full"]).optional(),
 });
 
 const queueItemSchema = z.looseObject({
@@ -666,7 +667,13 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
   "POST /api/system/agent-keys": {
     summary: "Buat API key agen (rahasia sekali)",
     tags: ["system"],
-    response: z.object({ id: z.string(), key: z.string(), prefix: z.string().nullable(), name: z.string().nullable() }),
+    response: z.object({
+      id: z.string(),
+      key: z.string(),
+      prefix: z.string().nullable(),
+      name: z.string().nullable(),
+      preset: z.enum(["read_only_guest", "read_only_full", "agent_full"]).optional(),
+    }),
     notes: ["`key` hanya dikembalikan sekali; server menyimpan hash-nya."],
   },
   "DELETE /api/system/agent-keys/[id]": {

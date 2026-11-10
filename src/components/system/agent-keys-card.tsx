@@ -22,7 +22,15 @@ import {
   useCreateAgentKey,
   useRevokeAgentKey,
   type AgentKeyInfo,
+  type ApiKeyPreset,
 } from "@/lib/hooks/use-agent-keys";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /**
  * Kartu "Akses Agen" (M11-e) — kelola API key untuk agen MCP.
@@ -40,6 +48,7 @@ export function AgentKeysCard() {
   const [expiresDays, setExpiresDays] = useState("90");
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [preset, setPreset] = useState<ApiKeyPreset>("read_only_guest");
   const [revokeId, setRevokeId] = useState<string | null>(null);
 
   const items = data?.items ?? [];
@@ -49,16 +58,18 @@ export function AgentKeysCard() {
       {
         name: name.trim() || undefined,
         expiresInDays: Number(expiresDays) || 0,
+        preset,
       },
       {
         onSuccess: (res) => {
           setNewKey(res.key);
           setName("");
           setExpiresDays("90");
-          toast.success("API key agen berhasil dibuat.");
+          setPreset("read_only_guest");
+          toast.success("API key berhasil dibuat.");
         },
         onError: (e) => {
-          toast.error("Gagal membuat kunci agen", { description: (e as Error).message });
+          toast.error("Gagal membuat kunci", { description: (e as Error).message });
         },
       },
     );
@@ -76,12 +87,11 @@ export function AgentKeysCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <KeyRound className="size-4" /> Akses Agen (MCP)
+          <KeyRound className="size-4" /> Manajemen API Key & Akses Agen
         </CardTitle>
         <CardDescription>
-          API key untuk agen AI (Claude, Cursor, dsb.) mengakses MathBank lewat MCP.
-          Agen <strong>tidak pernah</strong> melihat kunci jawaban. Kunci hanya
-          ditampilkan sekali saat dibuat.
+          Kelola API key untuk integrasi REST API pihak ketiga, pembaca tamu, dan agen AI (MCP).
+          Kunci hanya ditampilkan sekali saat dibuat dan disimpan dalam bentuk hash.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -130,9 +140,9 @@ export function AgentKeysCard() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Buat API key agen</DialogTitle>
+            <DialogTitle>Buat API key baru</DialogTitle>
             <DialogDescription>
-              Beri nama untuk membedakan agen. Atur masa berlaku (0 = tanpa kedaluwarsa).
+              Tentukan tipe akses, nama, dan masa berlaku kunci API (0 = tanpa kedaluwarsa).
             </DialogDescription>
           </DialogHeader>
 
@@ -155,6 +165,38 @@ export function AgentKeysCard() {
           ) : (
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
+                <label htmlFor="key-preset" className="text-sm font-medium">
+                  Tipe Akses (Preset)
+                </label>
+                <Select
+                  value={preset}
+                  onValueChange={(v) => v && setPreset(v as ApiKeyPreset)}
+                >
+                  <SelectTrigger id="key-preset" className="w-full" aria-label="Tipe akses preset">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="read_only_guest">
+                      Read-Only Tamu (Publik / Siswa)
+                    </SelectItem>
+                    <SelectItem value="read_only_full">
+                      Read-Only Pendidik (LMS / Auditor)
+                    </SelectItem>
+                    <SelectItem value="agent_full">
+                      Agen MCP (Full Access)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {preset === "read_only_guest" &&
+                    "Akses baca katalog soal & paket. Kunci jawaban dan pembahasan disembunyikan otomatis."}
+                  {preset === "read_only_full" &&
+                    "Akses baca katalog soal & paket lengkap, termasuk kunci jawaban dan pembahasan."}
+                  {preset === "agent_full" &&
+                    "Akses agen AI MCP untuk menyusun, mengedit, dan menjalankan pengayaan soal."}
+                </p>
+              </div>
+              <div className="flex flex-col gap-1.5">
                 <label htmlFor="key-name" className="text-sm font-medium">
                   Nama
                 </label>
@@ -162,7 +204,13 @@ export function AgentKeysCard() {
                   id="key-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="mis. Claude Desktop"
+                  placeholder={
+                    preset === "read_only_guest"
+                      ? "mis. Aplikasi Tamu / Siswa"
+                      : preset === "read_only_full"
+                        ? "mis. Integrasi Moodle LMS"
+                        : "mis. Claude Desktop"
+                  }
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -246,6 +294,25 @@ export function AgentKeysCard() {
   );
 }
 
+function PresetBadge({ preset }: { preset?: ApiKeyPreset }) {
+  switch (preset) {
+    case "read_only_guest":
+      return <Badge variant="secondary">Tamu (Read-Only)</Badge>;
+    case "read_only_full":
+      return (
+        <Badge
+          variant="outline"
+          className="border-blue-500/40 text-blue-600 dark:text-blue-400"
+        >
+          Pendidik (Read-Only)
+        </Badge>
+      );
+    case "agent_full":
+    default:
+      return <Badge variant="default">Agen MCP</Badge>;
+  }
+}
+
 function KeyRow({
   k,
   onRevoke,
@@ -259,8 +326,9 @@ function KeyRow({
   return (
     <li className="flex items-center justify-between gap-3 p-3">
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm font-medium">{k.name || "Agen MCP"}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate text-sm font-medium">{k.name || "API Key"}</span>
+          <PresetBadge preset={k.preset} />
           {expired ? (
             <Badge variant="destructive">kedaluwarsa</Badge>
           ) : (

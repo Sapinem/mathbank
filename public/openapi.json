@@ -23576,6 +23576,14 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "preset": {
+                                "type": "string",
+                                "enum": [
+                                  "read_only_guest",
+                                  "read_only_full",
+                                  "agent_full"
+                                ]
                               }
                             },
                             "required": [
@@ -23830,6 +23838,15 @@
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 365
+                  },
+                  "preset": {
+                    "default": "read_only_guest",
+                    "type": "string",
+                    "enum": [
+                      "read_only_guest",
+                      "read_only_full",
+                      "agent_full"
+                    ]
                   }
                 }
               }
@@ -23863,6 +23880,14 @@
                           "type": [
                             "string",
                             "null"
+                          ]
+                        },
+                        "preset": {
+                          "type": "string",
+                          "enum": [
+                            "read_only_guest",
+                            "read_only_full",
+                            "agent_full"
                           ]
                         }
                       },
