@@ -12,6 +12,12 @@ overrides:
   # MAX_DEPTH=128 stack-exhaustion guard at code level, auditConfig acknowledges
   # the advisory as resolved. Mirrors mathcore commit f7239fb.
   braces: 3.0.3
+  # Gelombang 1 upgrade dependensi (2026-11-09): tutup GHSA vite (1 high,
+  # 3 moderate, 2 low; patched >=8.3.3). Vite adalah peer transitif —
+  # `pnpm update` tidak menyentuhnya.
+  # Catatan: deepmerge TIDAK di-override — 4.3.2 belum terbit (latest 4.3.1),
+  # jadi advisory low-nya belum bisa ditutup. Lihat rencana Gelombang 7.
+  vite: "^8.3.3"
 patchedDependencies:
   braces@3.0.3: patches/braces@3.0.3.patch
 auditConfig:
