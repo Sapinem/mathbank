@@ -31,10 +31,14 @@
 | [0021](0021-konfigurasi-cetak-print-config-bundles.md) | Konfigurasi Cetak Naskah A4 via `bundles.print_config` (KISS) & CSS Paged Media 2-Kolom | Diusulkan (v2.0) |
 | [0022](0022-wraproute-pipeline-banned-server-actions.md) | Pipa Tunggal API Gateway `wrapRoute()` & Larangan Server Actions untuk Mutasi | Diusulkan (v2.0) |
 | [0023](0023-satu-evaluator-invarian-skema.md) | Satu evaluator invarian skema di modul murni; hitungan tabel mengecualikan sisa migrasi | **Diterapkan** |
+| [0024](0024-denormalisasi-grade-soal-dari-bundle.md) | Denormalisasi grade soal dari bundle & pembersihan kategori non-kelas | **Diterapkan** |
+| [0025](0025-pemisahan-status-arsip-dan-hapus-lunak.md) | Pemisahan status arsip (FSM) dan hapus lunak (soft delete) | **Diterapkan** |
 | [0026](0026-deklarasi-otorisasi-eksplisit.md) | Deklarasi otorisasi eksplisit per method route (`authz` wajib + pemeriksa mesin) | **Diterapkan** |
 | [0027](0027-kontrak-openapi-dari-kode.md) | Kontrak OpenAPI 3.1 dihasilkan dari kode (registry + deklarasi `wrapRoute`) | **Diterapkan** |
 | [0028](0028-cabut-prefix-v1-ingest.md) | Cabut prefix `v1` dari jalur ingest; `/api/v1/ingest/*` jadi alias 90 hari | **Diterapkan** |
 | [0029](0029-store-bersama-rate-limit-idempotensi.md) | Rate limit & idempotensi memakai store PostgreSQL bersama (fail-open / fail-closed) | **Diterapkan** |
+| [0030](0030-konkurensi-optimistik-if-match.md) | Konkurensi optimistik lewat `version` + `If-Match` | **Diterapkan** |
+| [0031](0031-kanonisasi-ingest-dan-depresiasi-queue-mentah.md) | Kanonisasi jalur ingest dan depresiasi antrean HTML mentah | **Diterapkan** |
 
 ## Cara menambah ADR
 
