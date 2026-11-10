@@ -207,7 +207,7 @@ describe("bulkQuestionAction — kinerja 200 soal (ACT-05)", () => {
 
     const [check] = await sql<{ n: number }[]>`
       SELECT count(*)::int AS n FROM questions
-       WHERE id = ANY(${sql.array(ids)}::uuid[]) AND status = 'ready'`;
+       WHERE id = ANY(${ids}::uuid[]) AND status = 'ready'`;
     expect(check.n).toBe(N);
   }, 120_000);
 });
