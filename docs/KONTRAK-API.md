@@ -323,14 +323,26 @@ itu, dua penyunting bersamaan saling menimpa tanpa jejak.
   mensyaratkan perbandingan kuat untuk `If-Match`.
 - **22 operasi** menuntut `If-Match` (kolom *Versi* di §4). Dikecualikan:
   `DELETE /api/mcp` (tak menyentuh baris) dan `PATCH /api/settings` (singleton).
-- **4 GET** memancarkan `ETag`: `questions/{id}`, `bundles/{id}`, `topics/{id}`,
-  `media/{shortId}`.
-- **Mutasi paket juga memancarkan `ETag` baru**: `PATCH /api/bundles/{id}` dan
-  `POST`/`PUT`/`PATCH`/`DELETE` `/api/bundles/{id}/items[/{itemId}]` mengembalikan versi
-  bundle setelah perubahan, sehingga klien dapat melanjutkan rantai `If-Match` tanpa
-  `GET` ulang. Total **9 operasi** ber-`ETag` — 4 GET di atas + 5 mutasi ini. Sebaliknya
-  `PATCH`/`DELETE /api/questions/{id}` **tidak** mengembalikan `ETag`; untuk versi soal
-  terbaru, lakukan `GET` ulang.
+
+**Operasi yang memancarkan `ETag`** — 9 operasi: 4 GET (versi baris yang dibaca) dan
+5 mutasi paket (versi bundle setelah perubahan).
+
+| Method | Path | `If-Match` | ETag dari |
+|---|---|:--:|---|
+| `GET` | `/api/questions/{id}` | — | `version` soal |
+| `GET` | `/api/bundles/{id}` | — | `version` bundle |
+| `GET` | `/api/topics/{id}` | — | `version` topik |
+| `GET` | `/api/media/{shortId}` | — | `version` aset media |
+| `PATCH` | `/api/bundles/{id}` | wajib | `version` bundle setelah perubahan |
+| `POST` | `/api/bundles/{id}/items` | wajib | `version` bundle setelah perubahan |
+| `PUT` | `/api/bundles/{id}/items` | wajib | `version` bundle setelah perubahan |
+| `PATCH` | `/api/bundles/{id}/items/{itemId}` | wajib | `version` bundle setelah perubahan |
+| `DELETE` | `/api/bundles/{id}/items/{itemId}` | wajib | `version` bundle setelah perubahan |
+
+Karena mutasi paket mengembalikan versi baru, klien dapat melanjutkan rantai `If-Match`
+tanpa `GET` ulang. Sebaliknya `PATCH`/`DELETE /api/questions/{id}` **tidak**
+mengembalikan `ETag`; untuk versi soal terbaru, lakukan `GET` ulang.
+
 - `version` dinaikkan **trigger DB**, bukan kode aplikasi, sehingga penulis mana pun
   (service, seed, SQL manual) ikut menjaga invarian.
 
