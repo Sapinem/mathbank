@@ -154,6 +154,7 @@ Saat ini, 1.809 butir soal di MathBank memuat gambar lewat shortcode `{{img:<sho
 - Arsitektur Database: `src/lib/db/schema/media.ts` (kolom `width`, `height`, `mime_type` sudah tersedia di skema).
 - Direktori Media: `storage/media/` memuat 3.341 berkas sharded per hash dengan median lebar 567px dan median tinggi 365px.
 - Audit & Konvensi Proyek: `CONSTRAINTS.md` (#28b nama identifier Inggris, #7 `flex flex-col gap-*`), `docs/PRINT-THEMES.md` (geometri cetak naskah `mathmyid.cls`).
+- Mockup Pratinjau: `docs/mockup/preview-question-image.png` — tangkapan layar halaman Detail Soal yang memperlihatkan dua diagram balok tampil rata tengah, tanpa bingkai kartu abu-abu, dan berskala proporsional; ini target tampilan `MediaImage` di web (U5).
 
 ---
 
