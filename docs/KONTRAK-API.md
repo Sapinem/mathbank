@@ -275,6 +275,32 @@ Ditegakkan sebagai **guard service** (`assertReady()` di `fsm/question-fsm.ts`),
 
 ---
 
+## 8. Field `preset` pada API Key Agen
+
+`preset` menentukan cakupan izin kunci API agen pada `/api/system/agent-keys`. Nilainya
+adalah **enum publik** — mengganti nama salah satu nilai adalah breaking change (ADR-0027).
+
+**Bentuk field:**
+
+| Lokasi | Tipe | Wajib | Default |
+|---|---|:--:|---|
+| Body `POST /api/system/agent-keys` | enum | tidak | `read_only_guest` |
+| Respons `POST /api/system/agent-keys` | enum | ya | — |
+| Item respons `GET /api/system/agent-keys` | enum | ya | — (kunci lama tanpa metadata dilaporkan `agent_full`) |
+
+**Nilai dan konsekuensinya:**
+
+| Nilai | Mutasi data | Kunci jawaban | Peruntukan |
+|---|---|---|---|
+| `read_only_guest` | ditolak `403 FORBIDDEN` | tidak terlihat | integrasi publik/siswa |
+| `read_only_full` | ditolak `403 FORBIDDEN` | terlihat | integrasi LMS/auditor |
+| `agent_full` | diizinkan: buat, ubah, tandai soal | tidak terlihat | agen MCP |
+
+Nilai di luar enum ditolak `400 VALIDATION_ERROR` (Zod). Sumber kebenaran skema ada di
+`src/lib/api/openapi/registry.ts`; `public/openapi.json` dihasilkan darinya.
+
+---
+
 ## 9. Konkurensi Optimistik — `ETag` & `If-Match` (ADR-0030)
 
 Setiap mutasi baris yang sudah ada **wajib** menyertakan versi yang dibaca. Tanpa
