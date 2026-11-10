@@ -324,10 +324,10 @@ itu, dua penyunting bersamaan saling menimpa tanpa jejak.
 - **22 operasi** menuntut `If-Match` (kolom *Versi* di §4). Dikecualikan:
   `DELETE /api/mcp` (tak menyentuh baris) dan `PATCH /api/settings` (singleton).
 
-**Operasi yang memancarkan `ETag`** — 9 operasi: 4 GET (versi baris yang dibaca) dan
-5 mutasi paket (versi bundle setelah perubahan).
+**Operasi berversi: `If-Match` dan `ETag`** — sembilan operasi memancarkan `ETag`;
+`DELETE /api/questions/{id}` mewajibkan `If-Match` tetapi **tidak** mengembalikan `ETag`.
 
-| Method | Path | `If-Match` | ETag dari |
+| Method | Path | `If-Match` | `ETag` respons |
 |---|---|:--:|---|
 | `GET` | `/api/questions/{id}` | — | `version` soal |
 | `GET` | `/api/bundles/{id}` | — | `version` bundle |
@@ -338,9 +338,10 @@ itu, dua penyunting bersamaan saling menimpa tanpa jejak.
 | `PUT` | `/api/bundles/{id}/items` | wajib | `version` bundle setelah perubahan |
 | `PATCH` | `/api/bundles/{id}/items/{itemId}` | wajib | `version` bundle setelah perubahan |
 | `DELETE` | `/api/bundles/{id}/items/{itemId}` | wajib | `version` bundle setelah perubahan |
+| `DELETE` | `/api/questions/{id}` | wajib | — |
 
 Karena mutasi paket mengembalikan versi baru, klien dapat melanjutkan rantai `If-Match`
-tanpa `GET` ulang. Sebaliknya `PATCH`/`DELETE /api/questions/{id}` **tidak**
+tanpa `GET` ulang. Sebaliknya `DELETE /api/questions/{id}` (dan `PATCH` soal) **tidak**
 mengembalikan `ETag`; untuk versi soal terbaru, lakukan `GET` ulang.
 
 - `version` dinaikkan **trigger DB**, bukan kode aplikasi, sehingga penulis mana pun
