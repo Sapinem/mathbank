@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { KeyRound, Plus, Trash2, Loader2, Copy, Check, TriangleAlert } from "lucide-react";
+import { KeyRound, Plus, Trash2, Loader2, Copy, Check, TriangleAlert, FileCode } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -107,7 +107,7 @@ export function AgentKeysCard() {
           <>
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Belum ada kunci. Buat satu untuk menghubungkan agen MCP.
+                Belum ada API key. Buat satu untuk akses agen MCP atau integrasi pihak ketiga.
               </p>
             ) : (
               <ul className="flex flex-col divide-y rounded-md border">
@@ -121,10 +121,18 @@ export function AgentKeysCard() {
                 ))}
               </ul>
             )}
-            <div>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
               <Button size="sm" onClick={() => setCreateOpen(true)}>
                 <Plus data-icon="inline-start" /> Buat kunci baru
               </Button>
+              <a
+                href="/openapi.json"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
+              >
+                <FileCode className="size-3.5" /> Spesifikasi OpenAPI (/openapi.json)
+              </a>
             </div>
           </>
         )}
@@ -255,7 +263,7 @@ export function AgentKeysCard() {
           <DialogHeader>
             <DialogTitle>Cabut kunci ini?</DialogTitle>
             <DialogDescription>
-              Agen yang memakai kunci ini akan langsung kehilangan akses. Tindakan
+              Klien atau agen yang memakai kunci ini akan langsung kehilangan akses. Tindakan
               ini tak bisa dibatalkan.
             </DialogDescription>
           </DialogHeader>
@@ -274,10 +282,10 @@ export function AgentKeysCard() {
                   {
                     onSuccess: () => {
                       setRevokeId(null);
-                      toast.success("Kunci agen berhasil dicabut.");
+                      toast.success("API key berhasil dicabut.");
                     },
                     onError: (e) =>
-                      toast.error("Gagal mencabut kunci agen", {
+                      toast.error("Gagal mencabut API key", {
                         description: (e as Error).message,
                       }),
                   },
