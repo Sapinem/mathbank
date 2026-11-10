@@ -15,7 +15,10 @@ const createSchema = z.object({
   preset: z
     .enum(["read_only_guest", "read_only_full", "agent_full"])
     .optional()
-    .default("read_only_guest"),
+    .default("read_only_guest")
+    .describe(
+      "Cakupan izin kunci: `read_only_guest` hanya baca tanpa kunci jawaban, `read_only_full` baca termasuk kunci jawaban, `agent_full` baca-tulis untuk agen MCP.",
+    ),
 });
 
 const emptyQuerySchema = z.object({}).optional();

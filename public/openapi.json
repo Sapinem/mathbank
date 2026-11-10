@@ -23583,7 +23583,8 @@
                                   "read_only_guest",
                                   "read_only_full",
                                   "agent_full"
-                                ]
+                                ],
+                                "description": "Cakupan izin kunci: `read_only_guest` hanya baca tanpa kunci jawaban, `read_only_full` baca termasuk kunci jawaban, `agent_full` baca-tulis untuk agen MCP."
                               }
                             },
                             "required": [
@@ -23595,7 +23596,8 @@
                               "createdAt",
                               "expiresAt",
                               "lastRequest",
-                              "requestCount"
+                              "requestCount",
+                              "preset"
                             ],
                             "additionalProperties": {}
                           }
@@ -23841,6 +23843,7 @@
                   },
                   "preset": {
                     "default": "read_only_guest",
+                    "description": "Cakupan izin kunci: `read_only_guest` hanya baca tanpa kunci jawaban, `read_only_full` baca termasuk kunci jawaban, `agent_full` baca-tulis untuk agen MCP.",
                     "type": "string",
                     "enum": [
                       "read_only_guest",
@@ -23888,14 +23891,16 @@
                             "read_only_guest",
                             "read_only_full",
                             "agent_full"
-                          ]
+                          ],
+                          "description": "Cakupan izin kunci: `read_only_guest` hanya baca tanpa kunci jawaban, `read_only_full` baca termasuk kunci jawaban, `agent_full` baca-tulis untuk agen MCP."
                         }
                       },
                       "required": [
                         "id",
                         "key",
                         "prefix",
-                        "name"
+                        "name",
+                        "preset"
                       ]
                     }
                   },

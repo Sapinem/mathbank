@@ -245,6 +245,12 @@ const mediaAssetSchema = z.looseObject({
   version: z.number().int(),
 });
 
+const apiKeyPresetSchema = z
+  .enum(["read_only_guest", "read_only_full", "agent_full"])
+  .describe(
+    "Cakupan izin kunci: `read_only_guest` hanya baca tanpa kunci jawaban, `read_only_full` baca termasuk kunci jawaban, `agent_full` baca-tulis untuk agen MCP.",
+  );
+
 const agentKeySchema = z.looseObject({
   id: z.string(),
   version: z.number().int(),
@@ -255,7 +261,7 @@ const agentKeySchema = z.looseObject({
   expiresAt: iso.nullable(),
   lastRequest: iso.nullable(),
   requestCount: z.number().int().nullable(),
-  preset: z.enum(["read_only_guest", "read_only_full", "agent_full"]).optional(),
+  preset: apiKeyPresetSchema,
 });
 
 const queueItemSchema = z.looseObject({
@@ -672,7 +678,7 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
       key: z.string(),
       prefix: z.string().nullable(),
       name: z.string().nullable(),
-      preset: z.enum(["read_only_guest", "read_only_full", "agent_full"]).optional(),
+      preset: apiKeyPresetSchema,
     }),
     notes: ["`key` hanya dikembalikan sekali; server menyimpan hash-nya."],
   },
