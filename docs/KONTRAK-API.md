@@ -183,9 +183,9 @@ Validasi menambah `details`:
 
 | Method | Path | Izin | Ringkasan |
 |--------|------|:----:|-----------|
-| `POST` | `/api/v1/ingest/commit` | `question:create` | Commit antrean → soal draft |
-| `GET` | `/api/v1/ingest/queue` | `ingest:queue:read` | Antrean ingest + ringkasan status |
-| `POST` | `/api/v1/ingest/upload` | `question:create` | Unggah naskah ke antrean ingest |
+| `POST` | `/api/ingest/commit` | `question:create` | Commit antrean → soal draft |
+| `GET` | `/api/ingest/queue` | `ingest:queue:read` | Antrean ingest + ringkasan status |
+| `POST` | `/api/ingest/upload` | `question:create` | Unggah naskah ke antrean ingest |
 
 ### system — Pengaturan, API key agen, dev.
 

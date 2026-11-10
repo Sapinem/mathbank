@@ -579,18 +579,18 @@ export const OPERATIONS: Readonly<Record<string, OperationDoc>> = {
     tags: ["ai"],
     response: z.object({ items: z.array(settingsItemSchema) }),
   },
-  "POST /api/v1/ingest/upload": {
+  "POST /api/ingest/upload": {
     summary: "Unggah naskah ke antrean ingest",
     tags: ["ingest"],
     response: z.object({ id: uuid, status: z.enum(["pending", "processing", "completed", "failed", "skipped"]), deduped: z.boolean() }),
   },
-  "GET /api/v1/ingest/queue": {
+  "GET /api/ingest/queue": {
     summary: "Antrean ingest + ringkasan status",
     tags: ["ingest"],
     response: z.object({ items: z.array(queueItemSchema), counts: z.record(z.string(), z.number()) }),
     notes: ["Izin khusus `ingest:queue:read` — `question:view` tertutup untuk peran `machine`."],
   },
-  "POST /api/v1/ingest/commit": {
+  "POST /api/ingest/commit": {
     summary: "Commit antrean → soal draft",
     tags: ["ingest"],
     response: z.looseObject({ summary: z.record(z.string(), z.unknown()), results: z.array(z.unknown()), eventsTagged: z.number().int(), unknownEvents: z.array(z.string()), eventsError: z.string().optional() }),
