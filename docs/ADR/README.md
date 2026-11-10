@@ -39,6 +39,7 @@
 | [0029](0029-store-bersama-rate-limit-idempotensi.md) | Rate limit & idempotensi memakai store PostgreSQL bersama (fail-open / fail-closed) | **Diterapkan** |
 | [0030](0030-konkurensi-optimistik-if-match.md) | Konkurensi optimistik lewat `version` + `If-Match` | **Diterapkan** |
 | [0031](0031-kanonisasi-ingest-dan-depresiasi-queue-mentah.md) | Kanonisasi jalur ingest dan depresiasi antrean HTML mentah | **Diterapkan** |
+| [0032](0032-semantik-own-mcp-taxonomy.md) | Semantik `own` pada kapabilitas MCP `taxonomy.manage` (MCP mewarisi matriks L1) | **Diterapkan** |
 
 ## Cara menambah ADR
 

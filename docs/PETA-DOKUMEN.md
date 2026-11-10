@@ -66,6 +66,7 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
   - `docs/ADR/0029-store-bersama-rate-limit-idempotensi.md`: ✅ (rate limit & idempotensi di PostgreSQL bersama; fail-open / fail-closed)
   - `docs/ADR/0030-konkurensi-optimistik-if-match.md`: ✅ (`version` + trigger `bump_version`; `ETag`/`If-Match` wajib pada 21 mutasi baris; 428/412)
   - `docs/ADR/0031-kanonisasi-ingest-dan-depresiasi-queue-mentah.md`: ✅ (kanonisasi jalur ingest POST /api/ingest/questions, quality gate murni di core & pemindahan adapter sumber ke scripts/ingest/)
+  - `docs/ADR/0032-semantik-own-mcp-taxonomy.md`: ✅ (MCP mewarisi matriks L1; `taxonomy.manage` = `yes` untuk agent, `own` hanya untuk izin yang punya kolom pemilik)
 - `docs/ARAHAN-4-PILAR-ARSITEKTUR-V2.md`: 📋 **Arahan 4 Pilar Arsitektur V2** — cetak biru integrasi empat pilar utama MathBank V2.
 - `public/openapi.json`: 🟢 **Spesifikasi OpenAPI 3.1 (artefak)** — DIHASILKAN oleh `pnpm openapi:generate` dari `route-inventory.ts` + deklarasi `wrapRoute` + `src/lib/api/openapi/registry.ts`; disajikan di `/openapi.json`. Jangan disunting tangan (ADR-0027).
 - `docs/bakeoff/`: Evaluasi kompetitif multi-kandidat arsitektur (Compound Engineering Bake-off):
