@@ -23,10 +23,12 @@ describe("MCP policy (L1)", () => {
     expect(canMcp(a, "question.edit", { ownerId: null })).toBe(false);
   });
 
-  it("taxonomy.manage = own untuk agent", () => {
+  it("taxonomy.manage = yes untuk agent (ADR-0026: tabel tanpa pemilik)", () => {
     const a = actor(["agent"], "agent-1");
+    // `own` mustahil dipenuhi pada tabel taksonomi (tak ada kolom pemilik),
+    // jadi matriks L1 memakai `yes` untuk teacher/reviewer/agent — ADR-0026.
     expect(canMcp(a, "taxonomy.manage", { ownerId: "agent-1" })).toBe(true);
-    expect(canMcp(a, "taxonomy.manage", { ownerId: "x" })).toBe(false);
+    expect(canMcp(a, "taxonomy.manage", { ownerId: "x" })).toBe(true);
   });
 
   it("Fase 3: question.flag — teacher own, agent/reviewer yes (L1, tidak diubah)", () => {
