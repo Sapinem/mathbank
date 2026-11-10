@@ -9,11 +9,11 @@
 
 Permukaan MCP punya lapisan kapabilitas sendiri (`MCP_CAPABILITIES`) yang memetakan nama ramah ke izin L1. `canMcp()` tidak menyimpan matriks terpisah: ia mendelegasikan ke `effectiveAccess()`/`can()` sehingga hasilnya selalu mengikuti `PERMISSIONS` di `src/lib/auth/permissions.ts`.
 
-Ketika `taxonomy:manage` masih bernilai `own`, matriks itu mematikan fitur taksonomi untuk semua peran non-admin. `assertCan(actor, perm)` di gerbang route dipanggil tanpa `ownerId`, dan `own` tanpa `ownerId` **selalu ditolak** (CONSTRAINT #35). Tabel `topics`, `tags`, `sources`, dan `events` juga tidak punya kolom pemilik, sehingga `own` tak mungkin dipenuhi dari mana pun. ADR-0026 menutup cacat ini dengan mengubah `taxonomy:manage` dan `reference:manage` menjadi `"yes"` untuk teacher/reviewer/agent.
+Sebelum ADR ini, `taxonomy:manage` masih bernilai `own`. Nilai itu mematikan fitur taksonomi untuk semua peran non-admin: `assertCan(actor, perm)` di gerbang route dipanggil tanpa `ownerId`, dan `own` tanpa `ownerId` **selalu ditolak** (CONSTRAINT #35). Tabel `topics`, `tags`, `sources`, dan `events` juga tidak punya kolom pemilik, sehingga `own` tak mungkin dipenuhi dari mana pun. ADR-0026 menutup cacat tersebut dengan mengubah `taxonomy:manage` dan `reference:manage` menjadi `"yes"` untuk teacher/reviewer/agent.
 
-Yang tertinggal adalah **divergensi di lapisan MCP**: komentar `src/lib/mcp/policy.ts` masih menyatakan `taxonomy:manage = own` untuk agent, dan `src/lib/mcp/policy.test.ts` menuntut `canMcp(agent, "taxonomy.manage", { ownerId: "orang-lain" }) === false`. Kode mengembalikan `true` karena matriks L1 sudah `yes`, jadi suite tes merah permanen — bukan karena regresi, tetapi karena tes dan komentar mewakili kebijakan yang sudah dibatalkan ADR-0026.
+Yang tersisa saat itu adalah **divergensi di lapisan MCP**: komentar `src/lib/mcp/policy.ts` masih menyatakan `taxonomy:manage = own` untuk agent, dan `src/lib/mcp/policy.test.ts` menuntut `canMcp(agent, "taxonomy.manage", { ownerId: "orang-lain" }) === false`. Kode mengembalikan `true` karena matriks L1 sudah `yes`, sehingga suite tes merah permanen — bukan karena regresi, tetapi karena tes dan komentar mewakili kebijakan yang sudah dibatalkan ADR-0026.
 
-Keputusan yang harus diambil: apakah MCP **menambah** lapisan `own` di atas matriks L1, atau **mewarisi** matriks itu apa adanya.
+Pertanyaan yang harus dijawab saat itu: apakah MCP **menambah** lapisan `own` di atas matriks L1, atau **mewarisi** matriks itu apa adanya. Divergensi tersebut ditutup oleh keputusan di bawah dan oleh commit penyelarasan tes.
 
 ## Keputusan
 
