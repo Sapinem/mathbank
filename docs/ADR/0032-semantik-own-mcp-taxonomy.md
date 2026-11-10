@@ -49,5 +49,5 @@ Keputusan yang harus diambil: apakah MCP **menambah** lapisan `own` di atas matr
 - Kode: `src/lib/mcp/policy.ts` (`MCP_CAPABILITIES`, `canMcp`), `src/lib/mcp/policy.test.ts`, `src/lib/auth/permissions.ts` (`taxonomy:manage`).
 - ADR-0026 §"Koreksi matriks" adalah asal keputusan `yes`; ADR ini hanya menegaskan bahwa lapisan MCP tidak menyimpang darinya.
 - Penyelarasan tes dan komentar: commit `4717290` (`test(mcp): selaraskan taxonomy.manage dengan ADR-0026`) di branch `chore/deps-upgrade-only` (PR #15).
-- Penomoran: berkas ADR 0028–0031 berada di branch `chore/deps-upgrade-2026-11` (PR #14). Nomor 0032 dipakai agar tidak bertabrakan saat kedua branch bergabung; urutan pada branch ini terlihat melompat sampai PR #14 mendarat.
+- Penomoran: ADR 0028–0031 berada di branch `chore/deps-upgrade-2026-11` (PR #14); branch `chore/deps-upgrade-only` (PR #15) hanya memuat 0001–0027 + 0032. Nomor 0032 dipakai agar tidak bertabrakan saat kedua branch bergabung. Berkas ini ada di kedua branch dengan isi identik, sehingga penggabungan tidak menimbulkan konflik.
 - Verifikasi: `pnpm check` exit 0 — 1.335 tes lulus, cakupan 90,41 / 81,8 / 92,16 / 92,91, `build` sukses.
