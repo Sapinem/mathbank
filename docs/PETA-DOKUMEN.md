@@ -120,6 +120,7 @@ Dokumen berikut melengkapi pilar kanonikal utama untuk kebutuhan operasional spe
   - `docs/plans/2026-10-06-temuan-event-tidak-terisi.md`: ✅ **Temuan event tidak terisi** — diperbaiki (backfill `event_id`).
   - `docs/plans/2026-10-06-temuan-pembahasan-defantri.md`: ✅ **Temuan pembahasan defantri** — bug pembahasan benar-salah diperbaiki.
   - `docs/plans/2026-10-08-rencana-konsolidasi-bank-soal-ce.md`: 📋 **Rencana Konsolidasi Bank Soal (compound-engineering loop)** — diagnosa 3 lapis masalah lintas 15 folder proyek.
+  - `docs/plans/2026-11-09-1831-chore-upgrade-dependensi-plan.md`: 📋 **Upgrade Dependensi ke Versi Terbaru (Plan)** — Evaluasi 49 dependensi langsung (20 tertinggal, 8 advisory termasuk 1 high) dan rencana 9 gelombang: tutup advisory vite/deepmerge, Next 16.4.5, better-auth 1.7.18, toolchain lint/tes, UI minors, lalu dua major terisolasi (`postgres` 4, `jsdom` 31) dengan gerbang verifikasi dan rollback per gelombang.
   - `docs/plans/perbaikan-manual-mathcyber.md`: ⚠️ **Daftar perbaikan manual mathcyber** — ekspresi KaTeX yang perlu koreksi tangan.
   - `docs/plans/mathcyber-clean.json`: 📦 **Artefak data** — hasil pembersihan mathcyber (input skrip, bukan dokumen naratif).
 - **`docs/RENCANA-ADOPSI-ARSITEKTUR-MATHCORE-SOAL.md`**: 📋 **Rencana Adopsi Arsitektur** — 5 inovasi unggul dari MathCore (isolasi tabel vektor 1:1, banned Server Actions) dan Soal (silsilah multi-kemunculan AD-13, paged media CSS A4 2-kolom, toleransi parsial ingest MCP) untuk menyempurnakan MathBank.
