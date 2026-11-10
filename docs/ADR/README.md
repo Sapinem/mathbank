@@ -32,6 +32,7 @@
 | [0022](0022-wraproute-pipeline-banned-server-actions.md) | Pipa Tunggal API Gateway `wrapRoute()` & Larangan Server Actions untuk Mutasi | Diusulkan (v2.0) |
 | [0023](0023-satu-evaluator-invarian-skema.md) | Satu evaluator invarian skema di modul murni; hitungan tabel mengecualikan sisa migrasi | **Diterapkan** |
 | [0026](0026-deklarasi-otorisasi-eksplisit.md) | Deklarasi otorisasi eksplisit per method route (`authz` wajib + pemeriksa mesin) | **Diterapkan** |
+| [0032](0032-semantik-own-mcp-taxonomy.md) | Semantik `own` pada kapabilitas MCP `taxonomy.manage` (MCP mewarisi matriks L1) | **Diterapkan** |
 
 ## Cara menambah ADR
 
