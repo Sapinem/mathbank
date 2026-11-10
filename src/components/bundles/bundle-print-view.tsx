@@ -1,17 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import {
+  ArrowLeft,
+  Printer,
+  SlidersHorizontal,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { useBundle, useUpdateBundle } from "@/lib/hooks/use-bundles";
 import type { BundlePrintConfig } from "@/lib/db/schema/bundle";
 import { getPrintTheme, DEFAULT_THEME_ID } from "@/lib/print/themes/registry";
 import { PrintWatermark } from "./print-watermark";
 import { BundlePrintSettingsDrawer } from "./print/bundle-print-settings-drawer";
-import { BundlePrintStudioToolbar } from "./print/bundle-print-studio-toolbar";
-import { HeaderCatalogView } from "@/lib/print/themes/math-my-id/catalog/header-catalog-view";
-import { FooterCatalogView } from "@/lib/print/themes/math-my-id/catalog/footer-catalog-view";
 import { BundlePrintHeader } from "./print/bundle-print-header";
 import { BundlePrintFooter } from "./print/bundle-print-footer";
 import { PrintQuestionItem } from "./print/print-question-item";
@@ -89,7 +95,6 @@ export function BundlePrintView({
   const [explanationModeOverride, setExplanationModeOverride] = useState<ExplanationMode | null>(null);
   const [answerSpaceCmOverride, setAnswerSpaceCmOverride] = useState<number | null>(null);
   const [fitToScreen, setFitToScreen] = useState(false);
-  const [studioViewMode, setStudioViewMode] = useState<"a4" | "catalog-header" | "catalog-footer">("a4");
   const [backgroundGridOverride, setBackgroundGridOverride] = useState<boolean | null>(null);
   const [backgroundWatermarkOverride, setBackgroundWatermarkOverride] = useState<boolean | null>(null);
   const [columnBreaksOverride, setColumnBreaksOverride] = useState<string[] | null>(null);
@@ -150,23 +155,6 @@ export function BundlePrintView({
         },
       };
     });
-  };
-
-  const mathMyIdOpts = (effectiveThemeOptions["math-my-id"] ?? {}) as Record<string, unknown>;
-  const currentHeaderCode = typeof mathMyIdOpts.headerCode === "string" ? mathMyIdOpts.headerCode : "A1";
-  const currentFooterCode = typeof mathMyIdOpts.footerCode === "string" ? mathMyIdOpts.footerCode : "F1";
-  const is1Line = Boolean(mathMyIdOpts.is1Line ?? false);
-
-  const handleHeaderCodeChange = (code: string) => {
-    handleThemeOptionChange("math-my-id", "headerCode", code);
-  };
-
-  const handleFooterCodeChange = (code: string) => {
-    handleThemeOptionChange("math-my-id", "footerCode", code);
-  };
-
-  const handleToggleLines = () => {
-    handleThemeOptionChange("math-my-id", "is1Line", !is1Line);
   };
 
   const toggleColumnBreak = (questionId: string) => {
@@ -263,24 +251,112 @@ export function BundlePrintView({
         <style>{`@media print { @page { size: ${pageSizeCss} portrait; } }`}</style>
       )}
 
-      {/* ── Bilah Atas Studio (no-print) ────────────────────────── */}
-      <BundlePrintStudioToolbar
-        bundleId={bundleId}
-        title={bundle.title}
-        studioViewMode={studioViewMode}
-        onViewModeChange={setStudioViewMode}
-        headerCode={currentHeaderCode}
-        onHeaderCodeChange={handleHeaderCodeChange}
-        footerCode={currentFooterCode}
-        onFooterCodeChange={handleFooterCodeChange}
-        is1Line={is1Line}
-        onToggleLines={handleToggleLines}
-        onToggleSettings={() => setIsSettingsOpen(true)}
-        onPrint={() => window.print()}
-        isMathMyIdTheme={effectiveThemeId === "math-my-id"}
-        fitToScreen={fitToScreen}
-        onToggleFitToScreen={() => setFitToScreen((prev) => !prev)}
-      />
+      {/* ── Bilah Atas Sticky (no-print) ────────────────────────── */}
+      <div className="no-print sticky top-0 z-10 flex items-center justify-between gap-2 sm:gap-3 border-b bg-background/95 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur shadow-xs">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href={`/bundles/${bundleId}`} />}
+            nativeButton={false}
+            className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3 shrink-0"
+            aria-label="Kembali"
+            title="Kembali ke Detail Paket"
+          >
+            <ArrowLeft data-icon="inline-start" />
+            <span className="hidden sm:inline">Kembali</span>
+          </Button>
+
+          <div className="flex flex-col min-w-0">
+            <span
+              data-slot="topbar-title"
+              className="font-semibold text-sm truncate max-w-[130px] xs:max-w-[180px] sm:max-w-xs md:max-w-md"
+            >
+              Naskah: {bundle.title}
+            </span>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
+              <span>{questionItems.length} Soal</span>
+              <span>·</span>
+              <span>{isTwoColumn ? "2 Kolom" : "1 Kolom"}</span>
+              <span className="hidden xs:inline">·</span>
+              <span className="hidden xs:inline">
+                {effectiveKeyMode === "hidden"
+                  ? "Tanpa Kunci"
+                  : effectiveKeyMode === "inline"
+                    ? "Kunci Tebal"
+                    : "Kunci Terpisah"}
+              </span>
+              {effectiveExplanationMode !== "none" && (
+                <>
+                  <span className="hidden sm:inline">·</span>
+                  <span className="hidden sm:inline">
+                    {effectiveExplanationMode === "inline" ? "Bahas di Soal" : "Bahas di Akhir"}
+                  </span>
+                </>
+              )}
+              {effectiveAnswerSpaceCm > 0 && effectiveExplanationMode !== "inline" && (
+                <>
+                  <span className="hidden md:inline">·</span>
+                  <span className="hidden md:inline">Coretan {effectiveAnswerSpaceCm}cm</span>
+                </>
+              )}
+              {effectiveBackgroundWatermark && (
+                <>
+                  <span className="hidden md:inline">·</span>
+                  <span className="hidden md:inline">Tanda Air</span>
+                </>
+              )}
+              {effectiveBackgroundGrid && (
+                <>
+                  <span className="hidden md:inline">·</span>
+                  <span className="hidden md:inline">Kertas Kotak</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setFitToScreen((prev) => !prev)}
+            className="min-h-[44px] min-w-[44px] px-2 sm:px-2.5 text-xs shrink-0"
+            aria-label={fitToScreen ? "Ukuran Asli (100%)" : "Pas Layar"}
+            title={fitToScreen ? "Ukuran Asli (100%)" : "Pas Layar"}
+          >
+            {fitToScreen ? (
+              <Minimize2 className="size-4" data-icon="inline-start" />
+            ) : (
+              <Maximize2 className="size-4" data-icon="inline-start" />
+            )}
+            <span className="hidden sm:inline">{fitToScreen ? "100%" : "Pas Layar"}</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSettingsOpen(true)}
+            className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3 shrink-0"
+            aria-label="Pengaturan Cetak"
+            title="Pengaturan Cetak"
+          >
+            <SlidersHorizontal data-icon="inline-start" />
+            <span className="hidden sm:inline">Pengaturan</span>
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => window.print()}
+            className="min-h-[44px] min-w-[44px] px-2.5 sm:px-3 shrink-0"
+            aria-label="Cetak atau simpan PDF"
+            title="Cetak atau simpan PDF"
+          >
+            <Printer data-icon="inline-start" />
+            <span className="hidden sm:inline">Cetak PDF</span>
+          </Button>
+        </div>
+      </div>
 
       {/* ── Sliding Panel (Sheet Drawer Kanan) ──────────────────── */}
       <BundlePrintSettingsDrawer
@@ -321,47 +397,12 @@ export function BundlePrintView({
         isSaving={isSaving}
       />
 
-      {/* ── Mode Galeri Katalog (Khusus di Layar, Tersembunyi saat Cetak) ── */}
-      {studioViewMode === "catalog-header" && (
-        <div className="no-print print:hidden w-full">
-          <HeaderCatalogView
-            title={bundle.title}
-            course={bundle.grade ? `Kelas ${bundle.grade}` : tagline}
-            exerciseLabel="Latihan 1"
-            durationMinutes={durationMinutes}
-            currentHeaderCode={currentHeaderCode}
-            logoStyle={mathMyIdOpts.logoStyle === "circle" ? "circle" : "mi"}
-            onSelectHeader={(code) => {
-              handleHeaderCodeChange(code);
-              setStudioViewMode("a4");
-            }}
-            onBackToA4={() => setStudioViewMode("a4")}
-          />
-        </div>
-      )}
-
-      {studioViewMode === "catalog-footer" && (
-        <div className="no-print print:hidden w-full">
-          <FooterCatalogView
-            pageNumber={1}
-            totalPages={6}
-            currentFooterCode={currentFooterCode}
-            onSelectFooter={(code) => {
-              handleFooterCodeChange(code);
-              setStudioViewMode("a4");
-            }}
-            onBackToA4={() => setStudioViewMode("a4")}
-          />
-        </div>
-      )}
-
       {/* ── Naskah (yang dicetak) ───────────────────────────────── */}
       {/* Wrapper horizontal scroll: di mobile naskah mulai dari x=0 (kiri) dan bisa discroll ke kanan tanpa terpotong di kiri */}
       <div
         className={cn(
           "print-scroll-wrapper w-full p-2 sm:p-8 print:p-0 print:m-0 print:overflow-visible print:block",
           fitToScreen ? "overflow-x-hidden" : "overflow-x-auto",
-          studioViewMode !== "a4" && "hidden print:block",
         )}
       >
         <div

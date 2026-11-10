@@ -682,31 +682,5 @@ describe("BundlePrintView (M8 - halaman cetak)", () => {
         })
       );
     });
-
-    it("Studio Cetak: berpindah antar tab mode a4, catalog-header, dan catalog-footer", () => {
-      render(<BundlePrintView />);
-
-      // Awalnya mode a4 aktif
-      expect(screen.getByTestId("tab-mode-a4")).toHaveClass("bg-blue-600");
-      expect(screen.getByText("Pemantapan ASTS I")).toBeInTheDocument();
-
-      // Pindah ke katalog header
-      fireEvent.click(screen.getByTestId("tab-mode-catalog-header"));
-      expect(screen.getByText("24 Variasi Header Math My ID (A1–F4)")).toBeInTheDocument();
-
-      // Klik salah satu kartu header di galeri katalog, otomatis kembali ke a4
-      const cardA2 = screen.getByTestId("header-card-A2");
-      fireEvent.click(cardA2);
-      expect(screen.getByTestId("tab-mode-a4")).toHaveClass("bg-blue-600");
-
-      // Pindah ke katalog footer
-      fireEvent.click(screen.getByTestId("tab-mode-catalog-footer"));
-      expect(screen.getByText("32 Variasi Footer Math My ID (F1–G16)")).toBeInTheDocument();
-
-      // Klik salah satu kartu footer di galeri katalog, otomatis kembali ke a4
-      const cardF3 = screen.getByTestId("footer-card-F3");
-      fireEvent.click(cardF3);
-      expect(screen.getByTestId("tab-mode-a4")).toHaveClass("bg-blue-600");
-    });
   });
 });

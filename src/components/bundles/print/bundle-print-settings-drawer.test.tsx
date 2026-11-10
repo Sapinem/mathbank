@@ -102,7 +102,7 @@ describe("BundlePrintSettingsDrawer with Themes", () => {
     );
   });
 
-  it("merender slot opsi kustom ketika tema aktif math-my-id (U6)", () => {
+  it("tidak merender slot opsi kustom ketika tema aktif math-my-id", () => {
     render(
       <BundlePrintSettingsDrawer
         {...createProps({
@@ -111,7 +111,6 @@ describe("BundlePrintSettingsDrawer with Themes", () => {
       />
     );
 
-    expect(screen.getByText(/opsi khusus: standar mathbank/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/gaya strip header/i)).toBeInTheDocument();
+    expect(screen.queryByText(/opsi khusus:/i)).not.toBeInTheDocument();
   });
 });
